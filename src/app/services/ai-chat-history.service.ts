@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { AccountStateService } from './account-state.service';
-import { AiGeneratedImageSettings, AiGeneratedMediaProvider } from './ai.service';
+import { AiGeneratedImageSettings, AiGeneratedMediaProvider, AiGeneratedVoiceSettings } from './ai.service';
 import { DatabaseService, StoredAiChatHistoryEntry } from './database.service';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
@@ -41,6 +41,7 @@ export interface AiHistoryGeneratedAudio {
   mimeType?: string;
   voiceId?: string;
   language?: string;
+  voiceSettings?: AiGeneratedVoiceSettings;
 }
 
 export interface AiHistoryMessage {

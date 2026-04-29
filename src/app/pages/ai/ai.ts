@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress } from '../../services/ai.service';
+import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress, AiVoiceGenerationProgress } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
@@ -907,7 +907,6 @@ export class AiComponent {
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
   readonly voiceSettingsPanelOpen = signal(false);
-  readonly dictationEnabled = signal(false);
   readonly isDictating = this.speechService.isRecording;
   readonly isDictationTranscribing = this.speechService.isTranscribing;
   readonly audioPlayback = signal<Record<string, AudioPlaybackState>>({});
@@ -923,7 +922,8 @@ export class AiComponent {
   readonly activeModelProgress = computed(() => {
     const model = this.selectedModel();
     if (model?.loading) {
-      return Math.max(0, Math.min(100, Math.round(model.progress)));
+      const progress = Math.max(0, Math.min(94, Math.round(model.progress)));
+      return progress > 0 ? progress : null;
     }
 
     return null;
@@ -1121,7 +1121,6 @@ export class AiComponent {
 
         this.showHistoryDrawer.set(false);
         this.applyChatPrompt(selection.prompt);
-        this.snackBar.open(`Prompt ready: ${selection.title}`, 'Dismiss', { duration: 2600 });
         this.aiService.clearQueuedStandardPrompt();
       });
     });
@@ -1394,12 +1393,8 @@ export class AiComponent {
     this.voiceSettingsPanelOpen.update(value => !value);
   }
 
-  toggleDictationEnabled(): void {
-    this.dictationEnabled.update(value => !value);
-  }
-
   async togglePromptDictation(): Promise<void> {
-    if (!this.dictationEnabled() || !this.isBrowser || this.isGenerating()) {
+    if (!this.isBrowser || this.isGenerating()) {
       return;
     }
 
@@ -1480,14 +1475,100 @@ export class AiComponent {
     this.focusComposerPromptPlaceholder(prompt);
   }
 
-  applyVoicePrompt(prompt: string): void {
-    const voiceModel = this.voiceModels().find(model => model.task === 'text-to-speech');
+  applyVoicePrompt(prompt: string, audio?: AiGeneratedAudio): void {
+    const voiceModel = audio
+      ? this.resolveVoiceModelForAudio(audio)
+      : this.voiceModels().find(model => model.task === 'text-to-speech');
     if (voiceModel) {
+      if (audio) {
+        this.applyVoiceSettingsFromAudio(audio);
+      }
       this.selectedModelId.set(voiceModel.id);
     }
 
     this.composerText.set(prompt);
     this.focusComposerPromptPlaceholder(prompt);
+  }
+
+  async regenerateVoice(audio: AiGeneratedAudio): Promise<void> {
+    const voiceModel = this.resolveVoiceModelForAudio(audio);
+    if (!voiceModel || this.isGenerating()) {
+      return;
+    }
+
+    this.applyVoiceSettingsFromAudio(audio);
+    this.selectedModelId.set(voiceModel.id);
+    this.composerText.set('');
+    await this.generateVoiceMessage(voiceModel, audio.prompt);
+  }
+
+  useAudioPromptInComposer(audio: AiGeneratedAudio): void {
+    this.applyVoicePrompt(audio.prompt, audio);
+  }
+
+  private resolveVoiceModelForAudio(audio: AiGeneratedAudio): ModelInfo | undefined {
+    const modelId = audio.voiceSettings?.modelId || audio.model;
+    return this.voiceModels().find(model => model.id === modelId)
+      ?? this.voiceModels().find(model => model.task === 'text-to-speech');
+  }
+
+  private applyVoiceSettingsFromAudio(audio: AiGeneratedAudio): void {
+    const settings = audio.voiceSettings;
+    if (!settings) {
+      return;
+    }
+
+    if (settings.provider === 'xai') {
+      this.aiService.updateCloudSettings({
+        xaiVoiceId: typeof settings.voice === 'string' ? settings.voice : this.aiService.cloudSettings().xaiVoiceId,
+        xaiVoiceLanguage: settings.language || this.aiService.cloudSettings().xaiVoiceLanguage,
+        xaiVoiceCodec: settings.codec === 'wav' ? 'wav' : this.aiService.cloudSettings().xaiVoiceCodec,
+      });
+      return;
+    }
+
+    if (settings.modelId === this.aiService.kokoroSpeechModelId) {
+      this.aiService.updateCloudSettings({
+        kokoroVoiceId: typeof settings.voice === 'string' ? settings.voice : this.aiService.cloudSettings().kokoroVoiceId,
+        kokoroVoiceSpeed: typeof settings.speed === 'number' ? settings.speed : this.aiService.cloudSettings().kokoroVoiceSpeed,
+      });
+      return;
+    }
+
+    if (settings.modelId === this.aiService.piperSpeechModelId) {
+      this.aiService.updateCloudSettings({
+        piperVoiceId: typeof settings.voice === 'number' ? settings.voice : this.aiService.cloudSettings().piperVoiceId,
+        piperVoiceSpeed: typeof settings.speed === 'number' ? settings.speed : this.aiService.cloudSettings().piperVoiceSpeed,
+      });
+      return;
+    }
+
+    if (settings.modelId === this.aiService.supertonicSpeechModelId) {
+      this.aiService.updateCloudSettings({
+        supertonicVoiceId: typeof settings.voice === 'string' ? settings.voice : this.aiService.cloudSettings().supertonicVoiceId,
+        supertonicVoiceSpeed: typeof settings.speed === 'number' ? settings.speed : this.aiService.cloudSettings().supertonicVoiceSpeed,
+        supertonicLanguage: settings.language || this.aiService.cloudSettings().supertonicLanguage,
+      });
+    }
+  }
+
+  private reusableMessageContent(message: ConversationMessage): string {
+    const content = message.content.trim();
+    if (content) {
+      return message.content;
+    }
+
+    const audioPrompt = message.generatedAudios?.[0]?.prompt;
+    if (audioPrompt) {
+      return audioPrompt;
+    }
+
+    const videoPrompt = message.generatedVideos?.[0]?.prompt;
+    if (videoPrompt) {
+      return videoPrompt;
+    }
+
+    return message.generatedImages?.[0]?.revisedPrompt || message.generatedImages?.[0]?.prompt || '';
   }
 
   applyActiveQuickPrompt(prompt: AiQuickPrompt): void {
@@ -1534,13 +1615,11 @@ export class AiComponent {
       this.createNewChat();
     }
 
-    this.snackBar.open(`Removed '${history.title}'.`, 'Dismiss', { duration: 3000 });
   }
 
   async copyMessage(message: ConversationMessage): Promise<void> {
     try {
       await this.copyTextToClipboard(message.content);
-      this.snackBar.open(message.role === 'assistant' ? 'Reply copied.' : 'Prompt copied.', 'Dismiss', { duration: 2400 });
     } catch (error) {
       this.logger.warn('Failed to copy AI message', error);
       this.snackBar.open('Could not copy that message.', 'Dismiss', { duration: 3500 });
@@ -1555,7 +1634,6 @@ export class AiComponent {
 
     try {
       await this.copyTextToClipboard(this.suggestionShareContent(suggestion));
-      this.snackBar.open('Suggestion copied.', 'Dismiss', { duration: 2400 });
     } catch (error) {
       this.logger.warn('Failed to copy AI suggestion', error);
       this.snackBar.open('Could not copy that suggestion.', 'Dismiss', { duration: 3500 });
@@ -1571,7 +1649,6 @@ export class AiComponent {
     const content = this.suggestionShareContent(suggestion);
     this.composerText.set(content);
     this.focusComposerPromptPlaceholder(content);
-    this.snackBar.open('Suggestion moved into the composer.', 'Dismiss', { duration: 2400 });
   }
 
   async shareSuggestionToArticleEditor(): Promise<void> {
@@ -1583,7 +1660,6 @@ export class AiComponent {
     const articleSource = this.suggestionArticleSource(suggestion);
     const draft = this.parseArticleDraft(articleSource);
     await this.layout.createArticle(undefined, undefined, draft);
-    this.snackBar.open('Opened in article editor.', 'Dismiss', { duration: 2600 });
   }
 
   async shareSuggestionToNoteEditor(): Promise<void> {
@@ -1593,7 +1669,6 @@ export class AiComponent {
     }
 
     await this.eventService.createNote({ content: this.suggestionShareContent(suggestion) });
-    this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
   }
 
   async shareToArticleEditor(): Promise<void> {
@@ -1604,7 +1679,6 @@ export class AiComponent {
 
     const draft = this.parseArticleDraft(message.content);
     await this.layout.createArticle(undefined, undefined, draft);
-    this.snackBar.open('Opened in article editor.', 'Dismiss', { duration: 2600 });
   }
 
   async shareToNoteEditor(): Promise<void> {
@@ -1624,7 +1698,6 @@ export class AiComponent {
 
     try {
       await this.copyTextToClipboard(message.content.trim());
-      this.snackBar.open('Copied for public chat. Open a public chat and paste it there.', 'Dismiss', { duration: 3200 });
     } catch (error) {
       this.logger.warn('Failed to copy AI message for public chat', error);
       this.snackBar.open('Could not copy the message for public chat.', 'Dismiss', { duration: 3500 });
@@ -1652,7 +1725,6 @@ export class AiComponent {
         content: image.revisedPrompt || image.prompt,
         files: [file],
       });
-      this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
     } catch (error) {
       this.logger.error('Failed to open generated image in note editor', error);
       this.snackBar.open('Could not open the generated image in note editor.', 'Dismiss', { duration: 3500 });
@@ -1669,10 +1741,7 @@ export class AiComponent {
       const file = await this.createFileFromGeneratedImage(image);
       const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
       if (uploadResult.status === 'success' && uploadResult.item) {
-        const published = await this.layout.publishSingleItem(uploadResult.item);
-        if (published) {
-          this.snackBar.open('Generated image published.', 'Dismiss', { duration: 2600 });
-        }
+        await this.layout.publishSingleItem(uploadResult.item);
         return;
       }
 
@@ -1695,7 +1764,6 @@ export class AiComponent {
         content: video.prompt,
         files: [file],
       });
-      this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
     } catch (error) {
       this.logger.error('Failed to open generated video in note editor', error);
       this.snackBar.open('Could not open the generated video in note editor.', 'Dismiss', { duration: 3500 });
@@ -1712,10 +1780,7 @@ export class AiComponent {
       const file = await this.createFileFromGeneratedVideo(video);
       const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
       if (uploadResult.status === 'success' && uploadResult.item) {
-        const published = await this.layout.publishSingleItem(uploadResult.item);
-        if (published) {
-          this.snackBar.open('Generated video published.', 'Dismiss', { duration: 2600 });
-        }
+        await this.layout.publishSingleItem(uploadResult.item);
         return;
       }
 
@@ -1727,9 +1792,9 @@ export class AiComponent {
   }
 
   reuseMessage(message: ConversationMessage): void {
-    this.composerText.set(message.content);
-    this.focusComposerPromptPlaceholder(message.content);
-    this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
+    const content = this.reusableMessageContent(message);
+    this.composerText.set(content);
+    this.focusComposerPromptPlaceholder(content);
   }
 
   async deleteMessage(message: ConversationMessage): Promise<void> {
@@ -1774,7 +1839,6 @@ export class AiComponent {
       this.clearConversation();
     }
 
-    this.snackBar.open(message.role === 'assistant' ? 'Reply deleted.' : 'Prompt deleted.', 'Dismiss', { duration: 2400 });
   }
 
   async retryLastReply(): Promise<void> {
@@ -1909,19 +1973,6 @@ export class AiComponent {
     const prompt = `Use this video concept as context and turn it into a polished post, storyboard, or campaign idea:\n\n${video.prompt}`;
     this.composerText.set(prompt);
     this.focusComposerPromptPlaceholder(prompt);
-    this.snackBar.open('Video prompt moved into text chat.', 'Dismiss', { duration: 2400 });
-  }
-
-  useAudioPromptInChat(audio: AiGeneratedAudio): void {
-    const textModel = this.localChatModels()[0] ?? this.cloudChatModels()[0];
-    if (textModel) {
-      this.selectedModelId.set(textModel.id);
-    }
-
-    const prompt = `Use this voice-over concept as context and turn it into a polished post, script, or campaign idea:\n\n${audio.prompt}`;
-    this.composerText.set(prompt);
-    this.focusComposerPromptPlaceholder(prompt);
-    this.snackBar.open('Voice prompt moved into text chat.', 'Dismiss', { duration: 2400 });
   }
 
   async extendGeneratedVideo(video: AiGeneratedVideo): Promise<void> {
@@ -1939,7 +1990,6 @@ export class AiComponent {
       this.setComposerAttachments([attachment]);
       this.composerText.set(`Continue this video seamlessly. Keep the same subject and style, then: [describe what happens next]`);
       this.focusComposerPromptPlaceholder(this.composerText());
-      this.snackBar.open('Source video attached. Add what should happen next.', 'Dismiss', { duration: 3000 });
     } catch (error) {
       this.logger.error('Failed to prepare generated video for extension', error);
       this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the generated video for extension.');
@@ -1967,7 +2017,6 @@ export class AiComponent {
       this.setComposerAttachments([attachment]);
       this.composerText.set(prompt);
       this.focusComposerPromptPlaceholder(prompt);
-      this.snackBar.open(target === 'image' ? 'Image attached for remix.' : 'Image attached for chat.', 'Dismiss', { duration: 2600 });
     } catch (error) {
       this.logger.error('Failed to prepare generated image for follow-up prompt', error);
       this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the image for the next prompt.');
@@ -2107,7 +2156,6 @@ export class AiComponent {
     } catch (error) {
       this.logger.warn('Direct download failed for generated image; opening in new tab instead.', error);
       if (this.openUrlInNewTab(image.originalUrl || image.src)) {
-        this.snackBar.open('Opened the original image in a new tab.', 'Dismiss', { duration: 3200 });
         return;
       }
 
@@ -2127,7 +2175,6 @@ export class AiComponent {
     } catch (error) {
       this.logger.warn('Failed to download generated video', error);
       if (this.openUrlInNewTab(video.originalUrl || video.src)) {
-        this.snackBar.open('Opened the original video in a new tab.', 'Dismiss', { duration: 3200 });
         return;
       }
 
@@ -2407,7 +2454,8 @@ export class AiComponent {
           const progress = data as { status?: string; progress?: number };
           if (progress.status === 'progress' && typeof progress.progress === 'number') {
             const currentProgress = this.models().find(candidate => candidate.id === model.id)?.progress ?? 0;
-            this.updateModelStatus(model.id, { progress: Math.max(currentProgress, progress.progress) });
+            const normalizedProgress = progress.progress <= 1 ? progress.progress * 100 : progress.progress;
+            this.updateModelStatus(model.id, { progress: Math.max(currentProgress, Math.min(normalizedProgress, 94)) });
           }
         },
         model.loadOptions,
@@ -2649,6 +2697,28 @@ export class AiComponent {
     }));
   }
 
+  private handleVoiceGenerationProgress(messageId: string, progress: AiVoiceGenerationProgress): AiGeneratedAudio | null {
+    if (progress.status !== 'audio-chunk') {
+      return null;
+    }
+
+    this.conversation.update(messages => messages.map(message => {
+      if (message.id !== messageId) {
+        return message;
+      }
+
+      return {
+        ...message,
+        generatedAudios: [
+          ...(message.generatedAudios ?? []),
+          progress.audio,
+        ],
+      };
+    }));
+
+    return progress.audio;
+  }
+
   private appendToMessage(id: string, text: string): void {
     this.conversation.update(messages => messages.map(message => {
       if (message.id !== id) {
@@ -2749,17 +2819,7 @@ export class AiComponent {
       return true;
     }
 
-    const notice = model.cached
-      ? `Loading ${model.name}...`
-      : `Downloading ${model.name} for first use...`;
-    this.snackBar.open(notice, undefined, { duration: 2400 });
-
-    const loaded = await this.loadModel(model);
-    if (loaded) {
-      this.snackBar.open(`${model.name} is ready.`, undefined, { duration: 1800 });
-    }
-
-    return loaded;
+    return this.loadModel(model);
   }
 
   private focusComposerPromptPlaceholder(prompt: string): void {
@@ -3086,15 +3146,6 @@ export class AiComponent {
     }
 
     this.selectedModelId.set(model.id);
-    this.snackBar.open(
-      intent.task === 'image-generation'
-        ? `Using ${model.name} to generate the image.`
-        : intent.task === 'video-generation'
-          ? `Using ${model.name} to generate the video.`
-          : `Using ${model.name} to upscale the image.`,
-      'Dismiss',
-      { duration: 2400 },
-    );
 
     if (intent.task === 'image-generation') {
       await this.generateImageMessage(model, intent.prompt, attachments);
@@ -3192,9 +3243,15 @@ export class AiComponent {
         this.createPendingAssistantMessage(assistantMessageId!),
       ]);
 
+      const streamedAudioUrls: string[] = [];
       const audios = model.source === 'cloud'
         ? await this.aiService.generateVoice(prompt, model.provider ?? 'xai')
-        : await this.aiService.generateVoice(prompt, 'local', model.id);
+        : await this.aiService.generateVoice(prompt, 'local', model.id, progress => {
+          const audio = this.handleVoiceGenerationProgress(assistantMessageId!, progress);
+          if (audio?.src.startsWith('blob:')) {
+            streamedAudioUrls.push(audio.src);
+          }
+        });
       const cachedAudios = await Promise.all(audios.map(audio => this.cacheGeneratedAudio(audio)));
 
       this.conversation.update(messages => messages.map(message => {
@@ -3209,6 +3266,7 @@ export class AiComponent {
           generatedAudios: cachedAudios,
         };
       }));
+      this.releaseObjectUrls(streamedAudioUrls);
       this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } catch (err) {
@@ -3473,7 +3531,6 @@ export class AiComponent {
     this.replaceMessageContent(assistantMessageId, currentReply || 'Generation stopped.', false);
     this.finishMessageProcessing(assistantMessageId);
     this.persistCurrentConversation();
-    this.snackBar.open('Generation stopped.', 'Dismiss', { duration: 1800 });
   }
 
   private async buildImageGenerationOptions(model: ModelInfo, attachments: ComposerAttachment[]): Promise<AiImageGenerationOptions | undefined> {
@@ -3982,6 +4039,12 @@ export class AiComponent {
     }
   }
 
+  private releaseObjectUrls(urls: string[]): void {
+    for (const url of urls) {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   private blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -4200,6 +4263,7 @@ export class AiComponent {
       mimeType: audio.mimeType,
       voiceId: audio.voiceId,
       language: audio.language,
+      voiceSettings: audio.voiceSettings,
     };
   }
 

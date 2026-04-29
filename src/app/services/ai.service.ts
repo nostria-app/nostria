@@ -87,6 +87,22 @@ export interface AiGeneratedAudio {
   mimeType?: string;
   voiceId?: string;
   language?: string;
+  voiceSettings?: AiGeneratedVoiceSettings;
+}
+
+export interface AiGeneratedVoiceSettings {
+  modelId: string;
+  provider: AiGeneratedMediaProvider;
+  voice?: string | number;
+  speed?: number;
+  language?: string;
+  codec?: 'mp3' | 'wav';
+}
+
+export interface AiVoiceGenerationProgress {
+  status: 'audio-chunk';
+  progress: number;
+  audio: AiGeneratedAudio;
 }
 
 export interface AiCloudSettings {
@@ -704,9 +720,14 @@ export class AiService {
     return this.postMessage('transcribe', { audio, params });
   }
 
-  async synthesizeSpeech(text: string, params?: unknown) {
+  async synthesizeSpeech(text: string, params?: unknown, progressCallback?: (data: unknown) => void) {
     if (!this.settings.settings().aiEnabled || !this.settings.settings().aiSpeechEnabled) throw new Error('AI Speech Synthesis is disabled');
-    return this.postMessage('synthesize', { text, params });
+    return this.postMessage('synthesize', { text, params }, progressCallback);
+  }
+
+  async synthesizeSpeechStream(text: string, params?: unknown, progressCallback?: (data: unknown) => void) {
+    if (!this.settings.settings().aiEnabled || !this.settings.settings().aiSpeechEnabled) throw new Error('AI Speech Synthesis is disabled');
+    return this.postMessage('synthesize-stream', { text, params }, progressCallback);
   }
 
   async checkModel(task: string, model: string): Promise<{ loaded: boolean, cached: boolean }> {
@@ -905,14 +926,19 @@ export class AiService {
     return this.generateXAiVideo(trimmedPrompt, options, progressCallback);
   }
 
-  async generateVoice(prompt: string, provider: AiCloudProvider | 'local' = 'xai', model = this.speechModelId): Promise<AiGeneratedAudio[]> {
+  async generateVoice(
+    prompt: string,
+    provider: AiCloudProvider | 'local' = 'xai',
+    model = this.speechModelId,
+    progressCallback?: (data: AiVoiceGenerationProgress) => void,
+  ): Promise<AiGeneratedAudio[]> {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
       throw new Error('Voice prompt cannot be empty.');
     }
 
     if (provider === 'local') {
-      return this.generateLocalVoice(trimmedPrompt, model);
+      return this.generateLocalVoice(trimmedPrompt, model, progressCallback);
     }
 
     const apiKey = this.cloudSettings().xaiApiKey;
@@ -923,15 +949,22 @@ export class AiService {
     return this.generateXAiVoice(trimmedPrompt);
   }
 
-  private async generateLocalVoice(prompt: string, model: string): Promise<AiGeneratedAudio[]> {
+  private async generateLocalVoice(
+    prompt: string,
+    model: string,
+    progressCallback?: (data: AiVoiceGenerationProgress) => void,
+  ): Promise<AiGeneratedAudio[]> {
     const params = this.getLocalVoiceSynthesisParams(model);
-    const payload = await this.synthesizeSpeech(prompt, params) as { blob?: Blob; voiceId?: string | number; language?: string };
+    const payload = await (model === this.kokoroSpeechModelId && progressCallback
+      ? this.synthesizeSpeechStream(prompt, params, data => this.reportLocalVoiceProgress(data, model, prompt, params, progressCallback))
+      : this.synthesizeSpeech(prompt, params)) as { blob?: Blob; voiceId?: string | number; language?: string };
     if (!(payload?.blob instanceof Blob)) {
       throw new Error('The local speech model did not return audio content.');
     }
 
     const mimeType = payload.blob.type || 'audio/wav';
     const voiceId = payload.voiceId === undefined ? this.getLocalVoiceLabel(model, params) : String(payload.voiceId);
+    const voiceSettings = this.buildLocalVoiceSettings(model, params);
     return [{
       id: `local-audio-${Date.now()}`,
       provider: 'local',
@@ -942,6 +975,7 @@ export class AiService {
       mimeType,
       voiceId,
       language: payload.language ?? this.getLocalVoiceLanguage(model, params),
+      voiceSettings,
     }];
   }
 
@@ -1298,6 +1332,48 @@ export class AiService {
     return typeof params['language'] === 'string' ? params['language'] : 'en';
   }
 
+  private buildLocalVoiceSettings(model: string, params: Record<string, unknown>): AiGeneratedVoiceSettings {
+    return {
+      modelId: model,
+      provider: 'local',
+      voice: typeof params['voice'] === 'string' || typeof params['voice'] === 'number' ? params['voice'] : undefined,
+      speed: typeof params['speed'] === 'number' ? params['speed'] : undefined,
+      language: typeof params['language'] === 'string' ? params['language'] : this.getLocalVoiceLanguage(model, params),
+    };
+  }
+
+  private reportLocalVoiceProgress(
+    data: unknown,
+    model: string,
+    prompt: string,
+    params: Record<string, unknown>,
+    progressCallback: (data: AiVoiceGenerationProgress) => void,
+  ): void {
+    const payload = data as { status?: string; blob?: Blob; progress?: number; voiceId?: string | number; language?: string; chunkIndex?: number };
+    if (payload.status !== 'audio-chunk' || !(payload.blob instanceof Blob)) {
+      return;
+    }
+
+    const mimeType = payload.blob.type || 'audio/wav';
+    const voiceId = payload.voiceId === undefined ? this.getLocalVoiceLabel(model, params) : String(payload.voiceId);
+    progressCallback({
+      status: 'audio-chunk',
+      progress: typeof payload.progress === 'number' ? Math.max(0, Math.min(100, Math.round(payload.progress))) : 0,
+      audio: {
+        id: `local-audio-stream-${Date.now()}-${payload.chunkIndex ?? 0}`,
+        provider: 'local',
+        providerLabel: this.getProviderLabel('local'),
+        model,
+        prompt,
+        src: URL.createObjectURL(payload.blob),
+        mimeType,
+        voiceId,
+        language: payload.language ?? this.getLocalVoiceLanguage(model, params),
+        voiceSettings: this.buildLocalVoiceSettings(model, params),
+      },
+    });
+  }
+
   private normalizeChoiceSetting(value: unknown, fallback: string, choices: readonly string[]): string {
     const trimmed = typeof value === 'string' ? value.trim() : '';
     return choices.includes(trimmed) ? trimmed : fallback;
@@ -1603,6 +1679,13 @@ export class AiService {
         mimeType: blob.type || (cloudSettings.xaiVoiceCodec === 'wav' ? 'audio/wav' : 'audio/mpeg'),
         voiceId: cloudSettings.xaiVoiceId,
         language: cloudSettings.xaiVoiceLanguage,
+        voiceSettings: {
+          modelId: 'cloud-voice:xai',
+          provider: 'xai',
+          voice: cloudSettings.xaiVoiceId,
+          language: cloudSettings.xaiVoiceLanguage,
+          codec: cloudSettings.xaiVoiceCodec,
+        },
       }];
     } finally {
       this.clearAbortController(controller);

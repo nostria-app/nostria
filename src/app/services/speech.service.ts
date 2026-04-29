@@ -1,5 +1,4 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { AiService } from './ai.service';
 import { SettingsService } from './settings.service';
 
@@ -27,7 +26,6 @@ export interface TranscriptionRule {
 export class SpeechService {
   private aiService = inject(AiService);
   private settings = inject(SettingsService);
-  private snackBar = inject(MatSnackBar);
 
   // Recording state
   isRecording = signal(false);
@@ -201,7 +199,6 @@ export class SpeechService {
       this.startSilenceDetection(this.stream, options);
     } catch (err) {
       console.error('Error accessing microphone:', err);
-      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
     }
   }
 
@@ -289,15 +286,18 @@ export class SpeechService {
       // Check/Load Whisper model
       const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
       if (!status.loaded) {
-        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en', undefined, {
+          device: 'wasm',
+          dtype: 'fp32',
+        });
       }
 
       // Convert Blob to Float32Array
       const arrayBuffer = await blob.arrayBuffer();
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
+      const audioData = new Float32Array(audioBuffer.getChannelData(0));
+      await audioContext.close();
 
       const result = await this.aiService.transcribeAudio(audioData) as { text: string };
 
@@ -309,7 +309,6 @@ export class SpeechService {
       }
     } catch (err) {
       console.error('Transcription error:', err);
-      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
     } finally {
       this.isTranscribing.set(false);
       this.currentOptions.onTranscribingStateChange?.(false);
@@ -327,15 +326,18 @@ export class SpeechService {
       // Check/Load Whisper model
       const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
       if (!status.loaded) {
-        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en', undefined, {
+          device: 'wasm',
+          dtype: 'fp32',
+        });
       }
 
       // Convert Blob to Float32Array
       const arrayBuffer = await blob.arrayBuffer();
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
+      const audioData = new Float32Array(audioBuffer.getChannelData(0));
+      await audioContext.close();
 
       const result = await this.aiService.transcribeAudio(audioData) as { text: string };
 
@@ -349,7 +351,6 @@ export class SpeechService {
       return null;
     } catch (err) {
       console.error('Transcription error:', err);
-      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
       return null;
     } finally {
       this.isTranscribing.set(false);

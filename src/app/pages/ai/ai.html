@@ -360,13 +360,13 @@
               </div>
               <div class="generated-audio-actions-shell">
                 <div class="message-actions generated-image-actions generated-audio-actions">
-                  <button type="button" class="message-action-button" (click)="applyVoicePrompt(audio.prompt)">
+                  <button type="button" class="message-action-button" (click)="regenerateVoice(audio)">
                     <mat-icon>refresh</mat-icon>
                     <span>Generate again</span>
                   </button>
-                  <button type="button" class="message-action-button" (click)="useAudioPromptInChat(audio)">
+                  <button type="button" class="message-action-button" (click)="useAudioPromptInComposer(audio)">
                     <mat-icon>chat</mat-icon>
-                    <span>Draft text</span>
+                    <span>Use in composer</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="downloadAudio(audio)">
                     <mat-icon>download</mat-icon>
@@ -584,14 +584,6 @@
         </div>
         }
 
-        <div class="voice-settings-section">
-          <div class="voice-settings-label">Dictation</div>
-          <button type="button" class="voice-wide-select" [class.voice-wide-select-active]="dictationEnabled()"
-            (click)="toggleDictationEnabled()" [disabled]="isGenerating()">
-            <mat-icon>{{ dictationEnabled() ? 'mic' : 'mic_off' }}</mat-icon>
-            <span>{{ dictationEnabled() ? 'Enabled' : 'Disabled' }}</span>
-          </button>
-        </div>
       </section>
       }
 
@@ -612,14 +604,12 @@
         </button>
         }
 
-        @if (dictationEnabled()) {
         <button mat-icon-button type="button" class="composer-dictation-button" (click)="togglePromptDictation()"
           [disabled]="isGenerating() || isDictationTranscribing()"
           [attr.aria-label]="isDictating() ? 'Stop dictation' : 'Start dictation'"
           [attr.title]="isDictating() ? 'Stop dictation' : 'Start dictation'">
           <mat-icon>{{ isDictating() ? 'stop_circle' : isDictationTranscribing() ? 'hourglass_empty' : 'mic' }}</mat-icon>
         </button>
-        }
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"

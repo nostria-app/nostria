@@ -155,6 +155,10 @@ class KokoroLocalTTS {
   }
 
   async synthesize(text: string, options: { voice?: string; speed?: number }): Promise<Blob> {
+    return (await this.synthesizeRaw(text, options)).toBlob();
+  }
+
+  async synthesizeRaw(text: string, options: { voice?: string; speed?: number }): Promise<PiperRawAudio> {
     const voice = this.validateVoice(options.voice);
     const voicePrefix = voice.at(0) === 'b' ? 'b' : 'a';
     const phonemes = await phonemizeKokoroText(text, voicePrefix);
@@ -170,7 +174,7 @@ class KokoroLocalTTS {
       speed: new Tensor('float32', [speed], [1]),
     });
 
-    return rawAudioToWavBlob(waveform.data, 24000);
+    return new PiperRawAudio(waveform.data, 24000);
   }
 
   private validateVoice(voice: unknown): string {
@@ -427,6 +431,9 @@ addEventListener('message', async ({ data }) => {
       case 'synthesize':
         await handleSynthesize(payload, id);
         break;
+      case 'synthesize-stream':
+        await handleSynthesizeStream(payload, id);
+        break;
       case 'check':
         await handleCheck(payload, id);
         break;
@@ -471,7 +478,12 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
     const translator = await pipeline(task, model, { ...options, progress_callback: progressCallback });
     translators.set(model, translator);
   } else if (task === 'automatic-speech-recognition') {
-    transcriber = await pipeline(task, model, { ...options, progress_callback: progressCallback });
+    transcriber = await pipeline(task, model, {
+      dtype: 'fp32',
+      device: 'wasm',
+      ...options,
+      progress_callback: progressCallback
+    });
   } else if (task === 'text-to-speech') {
     if (model === KOKORO_MODEL_ID) {
       kokoroTts = await KokoroLocalTTS.fromPretrained(model, {
@@ -878,6 +890,17 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
   });
 }
 
+async function handleSynthesizeStream(payload: { text: string, params?: any }, id: string) {
+  const modelId = payload.params?.model ?? SPEECHT5_MODEL_ID;
+
+  if (modelId === KOKORO_MODEL_ID) {
+    await handleKokoroSynthesizeStream(payload, id);
+    return;
+  }
+
+  await handleSynthesize(payload, id);
+}
+
 async function handleKokoroSynthesize(payload: { text: string, params?: any }, id: string) {
   if (!kokoroTts) {
     throw new Error('Kokoro text-to-speech model not loaded');
@@ -893,6 +916,50 @@ async function handleKokoroSynthesize(payload: { text: string, params?: any }, i
     payload: {
       blob,
       sampling_rate: 24000,
+      voiceId: voice,
+      language: voice.startsWith('b') ? 'en-gb' : 'en-us',
+    }
+  });
+}
+
+async function handleKokoroSynthesizeStream(payload: { text: string, params?: any }, id: string) {
+  if (!kokoroTts) {
+    throw new Error('Kokoro text-to-speech model not loaded');
+  }
+
+  const voice = typeof payload.params?.voice === 'string' ? payload.params.voice : 'af_heart';
+  const speed = normalizeVoiceSpeed(payload.params?.speed);
+  const textChunks = chunkTextForTts(payload.text);
+  if (textChunks.length === 0) {
+    throw new Error('Voice prompt cannot be empty.');
+  }
+  const audioChunks: PiperRawAudio[] = [];
+
+  for (let index = 0; index < textChunks.length; index++) {
+    const audio = await kokoroTts.synthesizeRaw(textChunks[index], { voice, speed });
+    audioChunks.push(audio);
+    postMessage({
+      type: 'progress',
+      id,
+      payload: {
+        status: 'audio-chunk',
+        blob: audio.toBlob(),
+        progress: ((index + 1) / textChunks.length) * 100,
+        chunkIndex: index,
+        voiceId: voice,
+        language: voice.startsWith('b') ? 'en-gb' : 'en-us',
+      }
+    });
+  }
+
+  const audio = mergeAudioChunks(audioChunks);
+  const blob = audio.toBlob();
+  postMessage({
+    type: 'result',
+    id,
+    payload: {
+      blob,
+      sampling_rate: audio.samplingRate,
       voiceId: voice,
       language: voice.startsWith('b') ? 'en-gb' : 'en-us',
     }

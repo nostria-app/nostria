@@ -303,6 +303,14 @@ export interface StoredAiChatHistoryEntry {
       mimeType?: string;
       voiceId?: string;
       language?: string;
+      voiceSettings?: {
+        modelId: string;
+        provider: 'openai' | 'xai' | 'local';
+        voice?: string | number;
+        speed?: number;
+        language?: string;
+        codec?: 'mp3' | 'wav';
+      };
     }[];
   }[];
 }
