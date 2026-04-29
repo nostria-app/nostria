@@ -385,9 +385,9 @@
               </div>
               <div class="generated-image-copy">
                 <div class="generated-image-meta">
-                  <span>{{ audio.providerLabel }}</span>
-                  <span>{{ audio.voiceId || audio.model }}</span>
-                  <span>{{ audio.language || 'auto' }}</span>
+                  <span [attr.title]="audio.model">{{ audioModelDisplayLabel(audio) }}</span>
+                  <span [attr.title]="audio.voiceId || null">{{ audioVoiceDisplayLabel(audio) }}</span>
+                  <span>{{ audioVoiceSettingsDisplayLabel(audio) }}</span>
                 </div>
                 <p>{{ audio.prompt }}</p>
               </div>
@@ -564,6 +564,19 @@
           [cdkConnectedOverlayPositions]="voiceSettingsPanelPositions" [cdkConnectedOverlayPush]="true"
           (backdropClick)="closeVoiceSettingsPanel()">
           <section class="voice-settings-panel" aria-label="Voice generation settings">
+            @if (!isXAiVoiceGenerationMode()) {
+            <div class="voice-settings-section">
+              <div class="voice-settings-label">Speed</div>
+              <div class="voice-speed-row">
+                <input class="voice-speed-slider" type="range" min="0.5" max="2" step="0.25"
+                  [value]="isKokoroVoiceGenerationMode() ? cloudSettings().kokoroVoiceSpeed : isPiperVoiceGenerationMode() ? cloudSettings().piperVoiceSpeed : cloudSettings().supertonicVoiceSpeed"
+                  (input)="isKokoroVoiceGenerationMode() ? updateKokoroVoiceSpeed($any($event.target).value) : isPiperVoiceGenerationMode() ? updatePiperVoiceSpeed($any($event.target).value) : updateSupertonicVoiceSpeed($any($event.target).value)"
+                  [disabled]="isGenerating()" aria-label="Voice speed" />
+                <span>{{ activeVoiceSpeedLabel() }}</span>
+              </div>
+            </div>
+            }
+
             <div class="voice-settings-section">
               <div class="voice-settings-label">Voice</div>
               <div class="voice-card-grid">
@@ -640,19 +653,6 @@
                 <span>{{ xAiVoiceCodecLabel() }}</span>
                 <mat-icon>expand_more</mat-icon>
               </button>
-            </div>
-            }
-
-            @if (!isXAiVoiceGenerationMode()) {
-            <div class="voice-settings-section">
-              <div class="voice-settings-label">Speed</div>
-              <div class="voice-speed-row">
-                <input class="voice-speed-slider" type="range" min="0.5" max="2" step="0.25"
-                  [value]="isKokoroVoiceGenerationMode() ? cloudSettings().kokoroVoiceSpeed : isPiperVoiceGenerationMode() ? cloudSettings().piperVoiceSpeed : cloudSettings().supertonicVoiceSpeed"
-                  (input)="isKokoroVoiceGenerationMode() ? updateKokoroVoiceSpeed($any($event.target).value) : isPiperVoiceGenerationMode() ? updatePiperVoiceSpeed($any($event.target).value) : updateSupertonicVoiceSpeed($any($event.target).value)"
-                  [disabled]="isGenerating()" aria-label="Voice speed" />
-                <span>{{ activeVoiceSpeedLabel() }}</span>
-              </div>
             </div>
             }
           </section>

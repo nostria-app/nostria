@@ -834,6 +834,57 @@ export class AiComponent {
 
     return '1.0x';
   });
+
+  audioModelDisplayLabel(audio: AiGeneratedAudio): string {
+    const modelId = audio.voiceSettings?.modelId || audio.model;
+    const model = this.voiceModels().find(candidate => candidate.id === modelId || candidate.cloudModel === audio.model);
+    if (model) {
+      return model.name;
+    }
+
+    if (audio.provider === 'xai') {
+      return 'xAI / Grok Voice';
+    }
+
+    return this.humanizeModelId(audio.model);
+  }
+
+  audioVoiceDisplayLabel(audio: AiGeneratedAudio): string {
+    const modelId = audio.voiceSettings?.modelId || audio.model;
+    const voice = this.getGeneratedAudioVoiceValue(audio);
+    const option = this.findGeneratedAudioVoiceOption(modelId, audio.provider, voice);
+
+    if (option) {
+      return 'description' in option && option.description ? `${option.label} (${option.description})` : option.label;
+    }
+
+    if (voice !== undefined) {
+      return this.humanizeVoiceId(String(voice));
+    }
+
+    return 'Default voice';
+  }
+
+  audioVoiceSettingsDisplayLabel(audio: AiGeneratedAudio): string {
+    const settings = audio.voiceSettings;
+    const parts: string[] = [];
+
+    if (typeof settings?.speed === 'number') {
+      parts.push(`${settings.speed.toFixed(1)}x`);
+    }
+
+    const language = settings?.language || audio.language;
+    if (language) {
+      parts.push(this.voiceLanguageDisplayLabel(language));
+    }
+
+    if (settings?.codec) {
+      parts.push(settings.codec.toUpperCase());
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : 'Auto';
+  }
+
   readonly activeQuickPrompts = computed(() => {
     if (this.isImageGenerationMode()) {
       return this.imageQuickPrompts;
@@ -2813,6 +2864,119 @@ export class AiComponent {
     }
 
     return Math.min(Math.max(parsed, min), max);
+  }
+
+  private getGeneratedAudioVoiceValue(audio: AiGeneratedAudio): string | number | undefined {
+    const voice = audio.voiceSettings?.voice;
+    if (typeof voice === 'string' || typeof voice === 'number') {
+      return voice;
+    }
+
+    return audio.voiceId;
+  }
+
+  private findGeneratedAudioVoiceOption(
+    modelId: string,
+    provider: AiGeneratedAudio['provider'],
+    voice: string | number | undefined,
+  ): VoiceChoiceOption | ChoiceOption | undefined {
+    if (voice === undefined) {
+      return undefined;
+    }
+
+    const voiceKey = String(voice);
+
+    if (provider === 'xai' || modelId === 'cloud-voice:xai') {
+      return this.xAiVoiceOptions.find(option => option.value === voiceKey);
+    }
+
+    if (modelId === this.aiService.kokoroSpeechModelId) {
+      return this.kokoroVoiceOptions.find(option => option.value === voiceKey);
+    }
+
+    if (modelId === this.aiService.supertonicSpeechModelId) {
+      return this.supertonicVoiceOptions.find(option => option.value === voiceKey);
+    }
+
+    if (modelId === this.aiService.piperSpeechModelId) {
+      const piperIndex = typeof voice === 'number'
+        ? voice
+        : this.parsePiperVoiceIndex(voiceKey);
+      return Number.isFinite(piperIndex)
+        ? this.piperVoiceOptions.find(option => option.value === String(piperIndex))
+        : undefined;
+    }
+
+    return undefined;
+  }
+
+  private parsePiperVoiceIndex(value: string): number {
+    const voiceNumberMatch = /^voice\s+(\d+)$/i.exec(value.trim());
+    if (voiceNumberMatch) {
+      return Number.parseInt(voiceNumberMatch[1], 10) - 1;
+    }
+
+    return Number.parseInt(value, 10);
+  }
+
+  private voiceLanguageDisplayLabel(language: string): string {
+    const normalized = language.trim();
+    if (!normalized || normalized.toLowerCase() === 'auto') {
+      return 'Auto';
+    }
+
+    const normalizedKey = normalized.toLowerCase().replace('_', '-');
+    const languageOption = [...this.xAiVoiceLanguageOptions, ...this.supertonicLanguageOptions]
+      .find(option => option.value.toLowerCase() === normalizedKey);
+    if (languageOption) {
+      return languageOption.label;
+    }
+
+    switch (normalizedKey) {
+      case 'en':
+        return 'English';
+      case 'en-us':
+        return 'English (US)';
+      case 'en-gb':
+        return 'English (UK)';
+      case 'es':
+      case 'es-es':
+        return 'Spanish';
+      case 'pt':
+      case 'pt-br':
+        return 'Portuguese';
+      case 'fr':
+        return 'French';
+      case 'de':
+        return 'German';
+      case 'ja':
+        return 'Japanese';
+      case 'ko':
+        return 'Korean';
+      case 'zh':
+        return 'Chinese';
+      default:
+        return normalized;
+    }
+  }
+
+  private humanizeVoiceId(voiceId: string): string {
+    const cleaned = voiceId
+      .replace(/^[a-z]{2}_/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+
+    return cleaned
+      ? cleaned.replace(/\b\w/g, match => match.toUpperCase())
+      : voiceId;
+  }
+
+  private humanizeModelId(modelId: string): string {
+    const finalSegment = modelId.split('/').at(-1) ?? modelId;
+    return finalSegment
+      .replace(/-?ONNX$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim() || modelId;
   }
 
   private findAudioPlayer(audio: AiGeneratedAudio, event: Event): HTMLAudioElement | null {
