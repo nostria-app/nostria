@@ -102,6 +102,7 @@ export class ArticleComponent implements OnDestroy {
   private pendingContentUpdate: ReturnType<typeof setTimeout> | null = null;
   private pendingTtsHighlightUpdate: ReturnType<typeof setTimeout> | null = null;
   private lastHighlightedSpeechText = '';
+  private lastArticleTtsHighlightKey = '';
 
   id = computed(() => {
     const ev = this.event();
@@ -228,7 +229,6 @@ export class ArticleComponent implements OnDestroy {
     effect(() => {
       const state = this.ttsSequence.state();
       const item = this.ttsSequence.currentItem();
-      const paragraphIndex = this.ttsSequence.activeParagraphIndex();
       const ev = this.event();
 
       untracked(() => {
@@ -241,7 +241,17 @@ export class ArticleComponent implements OnDestroy {
           return;
         }
 
-        this.scheduleArticleTtsHighlight(item.paragraphs[paragraphIndex] || item.text);
+        if (state.status === 'loading' || state.status === 'generating') {
+          return;
+        }
+
+        const speechText = item.text;
+        this.scheduleArticleTtsHighlight(
+          speechText,
+          item.articleTarget,
+          this.getArticleHighlightKey(state.requestId, state.currentIndex, item),
+          item.articleBlockIndex,
+        );
       });
     });
   }
@@ -422,21 +432,40 @@ export class ArticleComponent implements OnDestroy {
   }
 
   private buildArticleTtsItems(event: Event): TtsSequenceItem[] {
-    const sections = [
-      this.title(),
-      this.summary(),
-      this.extractRenderedArticleText() || extractTextForTts(event.content),
-    ]
-      .map(section => section.trim())
-      .filter(Boolean);
-    const text = sections.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
-    const chunks = this.chunkArticleSpeechText(text);
+    const items: TtsSequenceItem[] = [];
 
-    return chunks.map((chunk, index) => ({
-      eventId: event.id,
+    items.push(...this.buildArticleTtsItemsForSection(event.id, this.title(), 'title'));
+    items.push(...this.buildArticleTtsItemsForSection(event.id, this.summary(), 'summary'));
+
+    const bodyBlocks = this.extractRenderedArticleBlocks();
+    const effectiveBodyBlocks = bodyBlocks.length > 0
+      ? bodyBlocks
+      : this.chunkArticleSpeechText(extractTextForTts(event.content));
+
+    effectiveBodyBlocks.forEach((block, blockIndex) => {
+      items.push(...this.buildArticleTtsItemsForSection(event.id, block, 'body', blockIndex));
+    });
+
+    return items.map((item, index) => ({
+      ...item,
+      label: items.length > 1 ? `Section ${index + 1} of ${items.length}` : item.label,
+    }));
+  }
+
+  private buildArticleTtsItemsForSection(
+    eventId: string,
+    text: string,
+    target: TtsSequenceItem['articleTarget'],
+    articleBlockIndex?: number,
+  ): TtsSequenceItem[] {
+    const chunks = this.chunkArticleSpeechText(text.trim());
+    return chunks.map(chunk => ({
+      eventId,
       text: chunk,
       paragraphs: splitTtsParagraphs(chunk),
-      label: chunks.length > 1 ? `Section ${index + 1} of ${chunks.length}` : (chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk),
+      label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
+      articleTarget: target,
+      articleBlockIndex,
     }));
   }
 
@@ -546,29 +575,107 @@ export class ArticleComponent implements OnDestroy {
       .trim();
   }
 
-  private scheduleArticleTtsHighlight(speechText: string): void {
+  private extractRenderedArticleBlocks(): string[] {
+    const sanitizedHtml = this.sanitizer.sanitize(SecurityContext.HTML, this.parsedContent()) ?? '';
+    if (!sanitizedHtml.trim() || typeof document === 'undefined') {
+      return [];
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = sanitizedHtml;
+    container.querySelectorAll('script, style, img, video, audio, iframe, pre, code').forEach(node => node.remove());
+
+    const blockElements = Array.from(container.querySelectorAll<HTMLElement>([
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'p',
+      'li',
+      'blockquote',
+    ].join(', '))).filter(element => {
+      if (element.tagName !== 'LI' && element.closest('li')) {
+        return false;
+      }
+
+      if (element.tagName !== 'BLOCKQUOTE' && element.closest('blockquote')) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return blockElements
+      .map(element => this.cleanArticleSpeechText(element.innerText || element.textContent || ''))
+      .filter(Boolean);
+  }
+
+  private cleanArticleSpeechText(text: string): string {
+    return text
+      .replace(/\b(?:https?|wss?):\/\/\S+/gi, ' ')
+      .replace(/\b(?:web\+)?nostr:\S+/gi, ' ')
+      .replace(/\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private getArticleHighlightKey(requestId: number, currentIndex: number, item: TtsSequenceItem): string {
+    if (item.articleTarget === 'body' && item.articleBlockIndex !== undefined) {
+      return `${requestId}:body:${item.articleBlockIndex}`;
+    }
+
+    if (item.articleTarget === 'title' || item.articleTarget === 'summary') {
+      return `${requestId}:${item.articleTarget}`;
+    }
+
+    return `${requestId}:${currentIndex}:${item.articleTarget ?? 'match'}`;
+  }
+
+  private scheduleArticleTtsHighlight(
+    speechText: string,
+    articleTarget?: TtsSequenceItem['articleTarget'],
+    highlightKey = '',
+    articleBlockIndex?: number,
+  ): void {
+    if (highlightKey && highlightKey === this.lastArticleTtsHighlightKey && this.hasArticleTtsHighlight()) {
+      return;
+    }
+
     if (this.pendingTtsHighlightUpdate) {
       clearTimeout(this.pendingTtsHighlightUpdate);
     }
 
     this.pendingTtsHighlightUpdate = setTimeout(() => {
       this.pendingTtsHighlightUpdate = null;
-      this.applyArticleTtsHighlight(speechText);
-    }, 80);
+      this.applyArticleTtsHighlight(speechText, articleTarget, highlightKey, articleBlockIndex);
+    }, 20);
   }
 
-  private applyArticleTtsHighlight(speechText: string): void {
+  private applyArticleTtsHighlight(
+    speechText: string,
+    articleTarget?: TtsSequenceItem['articleTarget'],
+    highlightKey = '',
+    articleBlockIndex?: number,
+  ): void {
+    if (highlightKey && highlightKey === this.lastArticleTtsHighlightKey && this.hasArticleTtsHighlight()) {
+      return;
+    }
+
     const normalizedSpeechText = this.normalizeSpeechMatchText(speechText);
     this.clearArticleTtsHighlight();
 
     if (!normalizedSpeechText) {
       this.lastHighlightedSpeechText = '';
+      this.lastArticleTtsHighlightKey = '';
       return;
     }
 
-    const target = this.findArticleSpeechElement(normalizedSpeechText);
+    const target = this.findArticleSpeechElement(normalizedSpeechText, articleTarget, articleBlockIndex);
     if (!target) {
       this.lastHighlightedSpeechText = normalizedSpeechText;
+      this.lastArticleTtsHighlightKey = '';
       return;
     }
 
@@ -579,35 +686,122 @@ export class ArticleComponent implements OnDestroy {
     }
 
     this.lastHighlightedSpeechText = normalizedSpeechText;
+    this.lastArticleTtsHighlightKey = highlightKey;
   }
 
   private clearArticleTtsHighlight(): void {
     const root = this.host.nativeElement as HTMLElement;
     root.querySelectorAll('.article-tts-active-section')
       .forEach((element: Element) => element.classList.remove('article-tts-active-section'));
+    this.lastArticleTtsHighlightKey = '';
   }
 
-  private findArticleSpeechElement(normalizedSpeechText: string): HTMLElement | null {
+  private hasArticleTtsHighlight(): boolean {
     const root = this.host.nativeElement as HTMLElement;
-    const candidates = Array.from(root.querySelectorAll([
+    return !!root.querySelector('.article-tts-active-section');
+  }
+
+  private findArticleSpeechElement(
+    normalizedSpeechText: string,
+    articleTarget?: TtsSequenceItem['articleTarget'],
+    articleBlockIndex?: number,
+  ): HTMLElement | null {
+    const root = this.host.nativeElement as HTMLElement;
+    const explicitTarget = this.findExplicitArticleSpeechElement(root, articleTarget, articleBlockIndex);
+    if (explicitTarget) {
+      return explicitTarget;
+    }
+
+    const candidates = [
+      ...this.getArticleHeaderCandidates(root),
+      ...this.getArticleBodyCandidates(root),
+    ];
+
+    const directMatch = candidates.find(candidate => {
+      const candidateText = this.normalizeSpeechMatchText(candidate.innerText || candidate.textContent || '');
+      return candidateText.length > 0
+        && (candidateText.includes(normalizedSpeechText) || normalizedSpeechText.includes(candidateText));
+    });
+
+    if (directMatch) {
+      return directMatch;
+    }
+
+    const speechTokens = this.getSpeechMatchTokens(normalizedSpeechText);
+    if (speechTokens.length === 0) {
+      return null;
+    }
+
+    let bestCandidate: HTMLElement | null = null;
+    let bestScore = 0;
+
+    for (const candidate of candidates) {
+      const candidateTokens = new Set(this.getSpeechMatchTokens(candidate.innerText || candidate.textContent || ''));
+      if (candidateTokens.size === 0) {
+        continue;
+      }
+
+      const score = speechTokens.filter(token => candidateTokens.has(token)).length / speechTokens.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+    }
+
+    return bestScore >= 0.58 ? bestCandidate : null;
+  }
+
+  private findExplicitArticleSpeechElement(
+    root: HTMLElement,
+    articleTarget?: TtsSequenceItem['articleTarget'],
+    articleBlockIndex?: number,
+  ): HTMLElement | null {
+    if (articleTarget === 'title') {
+      return root.querySelector<HTMLElement>('.article-title');
+    }
+
+    if (articleTarget === 'summary') {
+      return root.querySelector<HTMLElement>('.article-summary');
+    }
+
+    if (articleTarget === 'body' && articleBlockIndex !== undefined) {
+      return this.getArticleBodyCandidates(root)[articleBlockIndex] ?? null;
+    }
+
+    return null;
+  }
+
+  private getArticleHeaderCandidates(root: HTMLElement): HTMLElement[] {
+    return Array.from(root.querySelectorAll([
       '.article-title',
       '.article-summary',
-      '.markdown-content p',
-      '.markdown-content li',
-      '.markdown-content blockquote',
+    ].join(', '))) as HTMLElement[];
+  }
+
+  private getArticleBodyCandidates(root: HTMLElement): HTMLElement[] {
+    const candidates = Array.from(root.querySelectorAll([
       '.markdown-content h1',
       '.markdown-content h2',
       '.markdown-content h3',
       '.markdown-content h4',
       '.markdown-content h5',
       '.markdown-content h6',
+      '.markdown-content p',
+      '.markdown-content li',
+      '.markdown-content blockquote',
     ].join(', '))) as HTMLElement[];
 
-    return candidates.find(candidate => {
-      const candidateText = this.normalizeSpeechMatchText(candidate.innerText || candidate.textContent || '');
-      return candidateText.length > 0
-        && (candidateText.includes(normalizedSpeechText) || normalizedSpeechText.includes(candidateText));
-    }) ?? null;
+    return candidates.filter(element => {
+      if (element.tagName !== 'LI' && element.closest('li')) {
+        return false;
+      }
+
+      if (element.tagName !== 'BLOCKQUOTE' && element.closest('blockquote')) {
+        return false;
+      }
+
+      return true;
+    });
   }
 
   private normalizeSpeechMatchText(text: string): string {
@@ -618,6 +812,13 @@ export class ArticleComponent implements OnDestroy {
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
+  }
+
+  private getSpeechMatchTokens(text: string): string[] {
+    return this.normalizeSpeechMatchText(text)
+      .replace(/[^\p{L}\p{N}\s']/gu, ' ')
+      .split(/\s+/)
+      .filter(token => token.length > 2);
   }
 
   private isAddressableFormat(value: string): boolean {

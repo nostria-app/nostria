@@ -24,6 +24,8 @@ export interface TtsSequenceItem {
   text: string;
   paragraphs: string[];
   label: string;
+  articleTarget?: 'title' | 'summary' | 'body';
+  articleBlockIndex?: number;
 }
 
 export interface TtsSequenceState {
