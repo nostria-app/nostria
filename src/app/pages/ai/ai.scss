@@ -462,6 +462,30 @@
   color: var(--mat-sys-primary);
 }
 
+:host ::ng-deep .model-selector-menu.mat-mdc-menu-panel {
+  width: min(420px, calc(100vw - 24px));
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: min(62dvh, 460px);
+  overflow: auto;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 16px;
+  background: var(--mat-sys-surface-container-high);
+  box-shadow: var(--mat-sys-level3);
+}
+
+:host ::ng-deep .model-selector-menu .mat-mdc-menu-content {
+  padding: 6px;
+}
+
+:host ::ng-deep .model-selector-menu .mat-mdc-menu-item {
+  min-height: 64px;
+  border-radius: 12px;
+}
+
+:host ::ng-deep .model-selector-menu .mat-mdc-menu-item-text {
+  width: 100%;
+}
+
 .chat-header-controls {
   width: auto;
   flex: 0 0 auto;
@@ -1455,9 +1479,9 @@
 }
 
 .composer-panel-settings-open {
-  position: static;
-  bottom: auto;
-  margin-top: 0;
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
 }
 
 .composer-processing-status {
@@ -1593,12 +1617,25 @@
   content: none;
 }
 
+::ng-deep .cdk-overlay-container:has(.voice-settings-overlay-pane) {
+  z-index: 6000;
+}
+
+::ng-deep .voice-settings-overlay-backdrop {
+  background: transparent;
+}
+
+::ng-deep .voice-settings-overlay-pane {
+  z-index: 6001;
+}
+
 .voice-settings-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 18px;
-  width: min(620px, 100%);
-  margin: 0 0 6px;
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(620px, calc(100dvh - 96px));
+  margin: 0;
   padding: 18px;
   border-radius: 18px;
   border: 1px solid var(--mat-sys-outline-variant);
@@ -1606,6 +1643,9 @@
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
   backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: 0 14px 36px color-mix(in srgb, var(--mat-sys-scrim) 16%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
 }
 
 .voice-settings-section {

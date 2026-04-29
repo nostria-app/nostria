@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -143,6 +144,7 @@ interface FetchedPromptContext {
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    OverlayModule,
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss',
@@ -911,6 +913,10 @@ export class AiComponent {
     { label: 'Sharpen photo', prompt: 'Upscale the attached photo and preserve natural textures.' },
     { label: 'Improve screenshot', prompt: 'Upscale the attached screenshot while keeping UI text crisp.' },
   ];
+  readonly voiceSettingsPanelPositions: ConnectedPosition[] = [
+    { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -12 },
+    { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 12 },
+  ];
   readonly conversation = signal<ConversationMessage[]>([]);
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
@@ -1427,6 +1433,10 @@ export class AiComponent {
 
   toggleVoiceSettingsPanel(): void {
     this.voiceSettingsPanelOpen.update(value => !value);
+  }
+
+  closeVoiceSettingsPanel(): void {
+    this.voiceSettingsPanelOpen.set(false);
   }
 
   async togglePromptDictation(): Promise<void> {
