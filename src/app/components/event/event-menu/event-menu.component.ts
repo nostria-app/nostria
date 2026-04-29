@@ -233,6 +233,11 @@ export class EventMenuComponent {
   // YouTube URL patterns: youtube.com/watch?v=, youtu.be/, youtube.com/embed/, youtube.com/shorts/, youtube.com/live/
   // Supports YouTube subdomains (e.g., music.youtube.com)
   private youtubeRegex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s]*)?/gi;
+  private readonly markdownLinkRegex = /\[([^\]]+)\]\((?:(?:https?|wss?):\/\/|(?:web\+)?nostr:)[^)]+\)/gi;
+  private readonly urlRegex = /\b(?:https?|wss?):\/\/[^\s<>"{}|\\^`[\]]+/gi;
+  private readonly nostrUriRegex = /\b(?:web\+)?nostr:[^\s<>"{}|\\^`[\]]+/gi;
+  private readonly nip19ReferenceRegex = /\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+\b/gi;
+  private readonly nostrTagReferenceRegex = /#\[\d+\]/g;
 
   // Extract media URLs from event content
   mediaUrls = computed<{ url: string; type: 'audio' | 'video'; isYouTube?: boolean; youtubeId?: string }[]>(() => {
@@ -371,6 +376,12 @@ export class EventMenuComponent {
     const event = this.event();
     if (!event || this.isReadingAloud()) return;
 
+    const speechText = this.extractTextForTts(event.content);
+    if (!speechText) {
+      this.snackBar.open('No readable text found for speech.', 'Dismiss', { duration: 3000 });
+      return;
+    }
+
     try {
       this.isReadingAloud.set(true);
 
@@ -379,7 +390,7 @@ export class EventMenuComponent {
       }
 
       this.snackBar.open(`Generating speech with ${model.label}...`, 'Dismiss', { duration: 2000 });
-      const [audio] = await this.ai.generateVoice(event.content, 'local', model.id);
+      const [audio] = await this.ai.generateVoice(speechText, 'local', model.id);
       if (!audio) {
         throw new Error('No audio was generated.');
       }
@@ -392,6 +403,17 @@ export class EventMenuComponent {
     } finally {
       this.isReadingAloud.set(false);
     }
+  }
+
+  private extractTextForTts(content: string): string {
+    return content
+      .replace(this.markdownLinkRegex, '$1')
+      .replace(this.urlRegex, ' ')
+      .replace(this.nostrUriRegex, ' ')
+      .replace(this.nip19ReferenceRegex, ' ')
+      .replace(this.nostrTagReferenceRegex, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   async shareEventDialog(): Promise<void> {
