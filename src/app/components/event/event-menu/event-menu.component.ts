@@ -30,7 +30,7 @@ import { ReportingService, type ReportTarget } from '../../../services/reporting
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { AiService } from '../../../services/ai.service';
+import { AiModelLoadOptions, AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
 import { PlaylistService } from '../../../services/playlist.service';
 import { FavoritesService } from '../../../services/favorites.service';
@@ -48,11 +48,17 @@ import { UserRelaysService } from '../../../services/relays/user-relays';
 import { LoggerService } from '../../../services/logger.service';
 import { CreateListDialogComponent, type CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
 import { isImageUrl } from '../../../services/format/utils';
-import { CollectionSetsService, EmojiSet } from '../../../services/collection-sets.service';
 import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-gifs-dialog/save-to-gifs-dialog.component';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 import { DeleteEventService } from '../../../services/delete-event.service';
+
+interface LocalTtsMenuOption {
+  id: string;
+  label: string;
+  description: string;
+  loadOptions?: AiModelLoadOptions;
+}
 
 @Component({
   selector: 'app-event-menu',
@@ -95,7 +101,6 @@ export class EventMenuComponent {
   private environmentInjector = inject(EnvironmentInjector);
   private platformId = inject(PLATFORM_ID);
   private logger = inject(LoggerService);
-  private collectionSets = inject(CollectionSetsService);
   private imageCacheService = inject(ImageCacheService);
   private deleteEventService = inject(DeleteEventService);
 
@@ -103,6 +108,29 @@ export class EventMenuComponent {
   view = input<'icon' | 'full'>('icon');
 
   record = signal<NostrRecord | null>(null);
+  readonly isReadingAloud = signal(false);
+  private readonly webGpuAvailable = isPlatformBrowser(this.platformId)
+    && typeof navigator !== 'undefined'
+    && 'gpu' in navigator;
+  readonly localTtsMenuOptions: LocalTtsMenuOption[] = [
+    {
+      id: this.ai.kokoroSpeechModelId,
+      label: 'Kokoro 82M',
+      description: this.webGpuAvailable ? 'WebGPU' : 'WASM',
+      loadOptions: this.webGpuAvailable ? { dtype: 'fp32', device: 'webgpu' } : { dtype: 'q8', device: 'wasm' },
+    },
+    {
+      id: this.ai.supertonicSpeechModelId,
+      label: 'Supertonic 2',
+      description: this.webGpuAvailable ? 'WebGPU' : 'WASM',
+      loadOptions: this.webGpuAvailable ? { dtype: 'fp32', device: 'webgpu' } : { dtype: 'fp32', device: 'wasm' },
+    },
+    {
+      id: this.ai.piperSpeechModelId,
+      label: 'Piper LibriTTS',
+      description: 'WASM',
+    },
+  ];
 
   isOurEvent = computed<boolean>(() => {
     const event = this.event();
@@ -165,6 +193,10 @@ export class EventMenuComponent {
   // Check if AI options should be shown
   showAiOptions = computed<boolean>(() => {
     return !!this.settings.settings().aiEnabled && this.isTextNote();
+  });
+
+  showReadAloudOptions = computed<boolean>(() => {
+    return !!this.settings.settings().aiEnabled && !!this.settings.settings().aiSpeechEnabled && this.isTextNote();
   });
 
   canShowProfileMenu = computed<boolean>(() => {
@@ -279,7 +311,7 @@ export class EventMenuComponent {
 
   hasImages = computed<boolean>(() => this.imageUrls().length > 0);
 
-  async ensureModelLoaded(task: string, model: string): Promise<boolean> {
+  async ensureModelLoaded(task: string, model: string, options?: AiModelLoadOptions): Promise<boolean> {
     // 1. Check if model is already loaded
     if (this.ai.isModelLoaded(model)) {
       return true;
@@ -312,7 +344,7 @@ export class EventMenuComponent {
       // 4. Load model
       await this.ai.loadModel(task, model, (data) => {
         dialogRef.componentInstance.updateProgress(data as { status: string, progress?: number, file?: string });
-      });
+      }, options);
       dialogRef.close(true);
       return true;
     } catch (error) {
@@ -335,24 +367,30 @@ export class EventMenuComponent {
     });
   }
 
-  async readAloud() {
+  async readAloud(model: LocalTtsMenuOption) {
     const event = this.event();
-    if (!event) return;
+    if (!event || this.isReadingAloud()) return;
 
     try {
-      if (!(await this.ensureModelLoaded('text-to-speech', this.ai.speechModelId))) {
+      this.isReadingAloud.set(true);
+
+      if (!(await this.ensureModelLoaded('text-to-speech', model.id, model.loadOptions))) {
         return;
       }
 
-      this.snackBar.open('Generating speech...', 'Dismiss', { duration: 2000 });
-      const result = await this.ai.synthesizeSpeech(event.content) as { blob: Blob, sampling_rate: number };
+      this.snackBar.open(`Generating speech with ${model.label}...`, 'Dismiss', { duration: 2000 });
+      const [audio] = await this.ai.generateVoice(event.content, 'local', model.id);
+      if (!audio) {
+        throw new Error('No audio was generated.');
+      }
 
-      const url = URL.createObjectURL(result.blob);
-      const audio = new Audio(url);
-      audio.play();
-      audio.onended = () => URL.revokeObjectURL(url);
+      const player = new Audio(audio.src);
+      player.play();
+      player.onended = () => URL.revokeObjectURL(audio.src);
     } catch (error) {
       this.snackBar.open(`Speech generation failed: ${error}`, 'Dismiss', { duration: 3000 });
+    } finally {
+      this.isReadingAloud.set(false);
     }
   }
 

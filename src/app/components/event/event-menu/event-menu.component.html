@@ -106,7 +106,25 @@
     <span>{{ isAuthorBlocked() ? 'Unblock User' : 'Block User' }}</span>
   </button>
   }
+  @if (showReadAloudOptions()) {
+  <mat-divider></mat-divider>
+  <button mat-menu-item [matMenuTriggerFor]="readAloudMenu" [disabled]="isReadingAloud()">
+    <mat-icon>record_voice_over</mat-icon>
+    Read aloud
+  </button>
+  }
 
+  </ng-template>
+</mat-menu>
+
+<mat-menu #readAloudMenu="matMenu">  <ng-template matMenuContent>
+  @for (model of localTtsMenuOptions; track model.id) {
+  <button mat-menu-item (click)="readAloud(model)" [disabled]="isReadingAloud()">
+    <mat-icon>graphic_eq</mat-icon>
+    <span>{{ model.label }}</span>
+    <span class="event-menu-item-meta">{{ model.description }}</span>
+  </button>
+  }
   </ng-template>
 </mat-menu>
 
