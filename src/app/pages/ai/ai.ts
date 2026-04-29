@@ -111,6 +111,11 @@ interface ChoiceOption {
   label: string;
 }
 
+interface DescribedChoiceOption extends ChoiceOption {
+  description: string;
+  icon: string;
+}
+
 interface VoiceChoiceOption extends ChoiceOption {
   description: string;
 }
@@ -573,24 +578,24 @@ export class AiComponent {
     value: String(index + 1),
     label: `${index + 1}`,
   }));
-  readonly xAiVisualAspectRatioOptions: ChoiceOption[] = [
-    { value: 'auto', label: 'Auto' },
-    { value: '1:1', label: '1:1' },
-    { value: '16:9', label: '16:9' },
-    { value: '9:16', label: '9:16' },
-    { value: '4:3', label: '4:3' },
-    { value: '3:4', label: '3:4' },
-    { value: '3:2', label: '3:2' },
-    { value: '2:3', label: '2:3' },
+  readonly xAiVisualAspectRatioOptions: DescribedChoiceOption[] = [
+    { value: 'auto', label: 'Auto', description: 'Best fit', icon: 'select_all' },
+    { value: '1:1', label: '1:1', description: 'Square', icon: 'crop_square' },
+    { value: '16:9', label: '16:9', description: 'Widescreen', icon: 'crop_16_9' },
+    { value: '9:16', label: '9:16', description: 'Social story', icon: 'stay_current_portrait' },
+    { value: '2:3', label: '2:3', description: 'Portrait', icon: 'crop_portrait' },
+    { value: '3:4', label: '3:4', description: 'Traditional', icon: 'crop_portrait' },
+    { value: '1:2', label: '1:2', description: 'Vertical', icon: 'stay_current_portrait' },
+    { value: '2:1', label: '2:1', description: 'Horizontal', icon: 'crop_landscape' },
+    { value: '3:2', label: '3:2', description: 'Standard', icon: 'crop_landscape' },
+    { value: '4:3', label: '4:3', description: 'Classic', icon: 'crop_landscape' },
   ];
-  readonly xAiImageExtendedAspectRatioOptions: ChoiceOption[] = [
+  readonly xAiImageExtendedAspectRatioOptions: DescribedChoiceOption[] = [
     ...this.xAiVisualAspectRatioOptions,
-    { value: '2:1', label: '2:1' },
-    { value: '1:2', label: '1:2' },
-    { value: '19.5:9', label: '19.5:9' },
-    { value: '9:19.5', label: '9:19.5' },
-    { value: '20:9', label: '20:9' },
-    { value: '9:20', label: '9:20' },
+    { value: '19.5:9', label: '19.5:9', description: 'Phone wide', icon: 'crop_landscape' },
+    { value: '9:19.5', label: '9:19.5', description: 'Phone tall', icon: 'stay_current_portrait' },
+    { value: '20:9', label: '20:9', description: 'Ultra wide', icon: 'crop_landscape' },
+    { value: '9:20', label: '9:20', description: 'Ultra tall', icon: 'stay_current_portrait' },
   ];
   readonly openAiImageSizeOptions: ChoiceOption[] = [
     { value: 'auto', label: 'Auto' },
@@ -1618,8 +1623,13 @@ export class AiComponent {
   }
 
   async copyMessage(message: ConversationMessage): Promise<void> {
+    const content = this.reusableMessageContent(message);
+    if (!content.trim()) {
+      return;
+    }
+
     try {
-      await this.copyTextToClipboard(message.content);
+      await this.copyTextToClipboard(content);
     } catch (error) {
       this.logger.warn('Failed to copy AI message', error);
       this.snackBar.open('Could not copy that message.', 'Dismiss', { duration: 3500 });
