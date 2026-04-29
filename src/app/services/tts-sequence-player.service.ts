@@ -2,8 +2,9 @@ import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { type Event, kinds } from 'nostr-tools';
 import { AiModelLoadOptions, AiService } from './ai.service';
-import { extractTextForTts, splitTtsParagraphs } from '../utils/tts-text';
 import { EventTtsPlaybackService } from './event-tts-playback.service';
+import { RepostService } from './repost.service';
+import { TtsTextService } from './tts-text.service';
 
 export interface TtsSequenceModelOption {
   id: string;
@@ -39,6 +40,8 @@ export interface TtsSequenceState {
 export class TtsSequencePlayerService {
   private readonly ai = inject(AiService);
   private readonly eventTtsPlayback = inject(EventTtsPlaybackService);
+  private readonly repostService = inject(RepostService);
+  private readonly ttsText = inject(TtsTextService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
@@ -172,28 +175,14 @@ export class TtsSequencePlayerService {
   private requestId = 0;
 
   start(source: 'feed' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
-    const items = this.buildItems(events);
     this.eventTtsPlayback.close();
     this.close();
-
-    if (items.length === 0) {
-      this.state.set({
-        requestId: ++this.requestId,
-        source,
-        title,
-        items,
-        currentIndex: 0,
-        status: 'error',
-        message: 'No readable text found.',
-      });
-      return;
-    }
 
     const requestId = ++this.requestId;
     this.selectedModelId.set(modelId);
     this.applyCurrentSettings();
-    this.state.set({ requestId, source, title, items, currentIndex: 0, status: 'loading', message: 'Preparing speech...' });
-    void this.generateAndPlay(requestId);
+    this.state.set({ requestId, source, title, items: [], currentIndex: 0, status: 'loading', message: 'Preparing speech...' });
+    void this.prepareAndPlay(requestId, events);
   }
 
   toggle(): void {
@@ -380,20 +369,50 @@ export class TtsSequencePlayerService {
     }
   }
 
-  private buildItems(events: Event[]): TtsSequenceItem[] {
-    return events
-      .filter(event => event.kind === kinds.ShortTextNote || event.kind === kinds.LongFormArticle)
-      .map(event => {
-        const text = extractTextForTts(event.content);
-        const paragraphs = splitTtsParagraphs(event.content);
-        return {
-          eventId: event.id,
-          text,
-          paragraphs,
-          label: text.length > 80 ? `${text.slice(0, 77)}...` : text,
-        };
-      })
-      .filter(item => item.text.length > 0);
+  private async prepareAndPlay(requestId: number, events: Event[]): Promise<void> {
+    const items = await this.buildItems(events);
+    if (!this.isCurrent(requestId)) return;
+
+    if (items.length === 0) {
+      this.patchState({
+        items,
+        currentIndex: 0,
+        status: 'error',
+        message: 'No readable text found.',
+      });
+      return;
+    }
+
+    this.patchState({ items, currentIndex: 0, status: 'loading', message: 'Preparing speech...' });
+    await this.generateAndPlay(requestId);
+  }
+
+  private async buildItems(events: Event[]): Promise<TtsSequenceItem[]> {
+    const items = await Promise.all(events.map(event => this.buildItem(event)));
+    return items.filter((item): item is TtsSequenceItem => !!item && item.text.length > 0);
+  }
+
+  private async buildItem(event: Event): Promise<TtsSequenceItem | null> {
+    const speechEvent = this.resolveSpeechEvent(event);
+    if (!speechEvent || (speechEvent.kind !== kinds.ShortTextNote && speechEvent.kind !== kinds.LongFormArticle)) {
+      return null;
+    }
+
+    const { text, paragraphs } = await this.ttsText.fromEvent(speechEvent);
+    return {
+      eventId: event.id,
+      text,
+      paragraphs,
+      label: text.length > 80 ? `${text.slice(0, 77)}...` : text,
+    };
+  }
+
+  private resolveSpeechEvent(event: Event): Event | null {
+    if (!this.repostService.isRepostEvent(event)) {
+      return event;
+    }
+
+    return this.repostService.decodeRepost(event)?.event ?? null;
   }
 
   private patchState(patch: Partial<TtsSequenceState>): void {

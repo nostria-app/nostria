@@ -2,16 +2,12 @@
 @if (state) {
 <section class="tts-sequence-player" aria-label="Text to speech player">
   <div class="tts-info">
-    <div class="tts-title">{{ state.title }}</div>
-    <div class="tts-subtitle">{{ state.currentIndex + 1 }} / {{ state.items.length }}</div>
-  </div>
-
-  <div class="tts-current-text">
     @if (state.message) {
-    <span>{{ state.message }}</span>
+    <div class="tts-title">{{ state.message }}</div>
     } @else {
-    <span>{{ player.activeParagraph() || player.currentItem()?.label }}</span>
+    <div class="tts-title">{{ player.activeParagraph() || player.currentItem()?.label }}</div>
     }
+    <div class="tts-subtitle">{{ state.currentIndex + 1 }} / {{ state.items.length }}</div>
   </div>
 
   <div class="tts-controls">

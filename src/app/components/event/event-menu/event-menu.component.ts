@@ -53,8 +53,8 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 import { DeleteEventService } from '../../../services/delete-event.service';
 import { EventTtsPlaybackService } from '../../../services/event-tts-playback.service';
-import { extractTextForTts } from '../../../utils/tts-text';
 import { TtsSequencePlayerService } from '../../../services/tts-sequence-player.service';
+import { TtsTextService } from '../../../services/tts-text.service';
 
 interface LocalTtsMenuOption {
   id: string;
@@ -108,6 +108,7 @@ export class EventMenuComponent {
   private deleteEventService = inject(DeleteEventService);
   private eventTtsPlayback = inject(EventTtsPlaybackService);
   private ttsSequence = inject(TtsSequencePlayerService);
+  private ttsText = inject(TtsTextService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -377,7 +378,7 @@ export class EventMenuComponent {
 
     this.ttsSequence.close();
     const playbackRequestId = this.eventTtsPlayback.start(event.id, model.label);
-    const speechText = extractTextForTts(event.content);
+    const { text: speechText } = await this.ttsText.fromEvent(event);
     if (!speechText) {
       this.eventTtsPlayback.close(playbackRequestId);
       this.snackBar.open('No readable text found for speech.', 'Dismiss', { duration: 3000 });
