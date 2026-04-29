@@ -74,6 +74,14 @@ export class SpeechService {
       runtime: 'WASM/CPU',
       loadOptions: { device: 'wasm', dtype: 'fp32' },
     },
+    {
+      id: 'onnx-community/moonshine-base-ONNX',
+      name: 'Moonshine Base',
+      description: 'More accurate Moonshine speech-to-text model for local dictation.',
+      size: '~230MB',
+      runtime: 'WASM/CPU',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
+    },
   ];
 
   readonly selectedTranscriptionModel = signal<DictationModelOption>(this.getInitialTranscriptionModel());
