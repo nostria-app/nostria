@@ -946,6 +946,22 @@
   color: var(--mat-sys-on-surface);
 }
 
+.message-processing-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.message-processing-time mat-icon {
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+}
+
 .generated-images-bubble {
   padding: 8px;
 }

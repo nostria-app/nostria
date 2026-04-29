@@ -389,6 +389,12 @@
           </div>
           }
         </div>
+        @if (processingTimeLabel(message); as processingTime) {
+        <div class="message-processing-time">
+          <mat-icon>timer</mat-icon>
+          <span>{{ processingTime }}</span>
+        </div>
+        }
         } @else {
         <div class="message-bubble user-bubble">
           @if (message.content.trim().length > 0) {

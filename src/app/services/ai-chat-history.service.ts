@@ -46,6 +46,7 @@ export interface AiHistoryGeneratedAudio {
 export interface AiHistoryMessage {
   role: 'user' | 'assistant';
   content: string;
+  processingDurationMs?: number;
   generatedImages?: AiHistoryGeneratedImage[];
   generatedVideos?: AiHistoryGeneratedVideo[];
   generatedAudios?: AiHistoryGeneratedAudio[];
@@ -206,6 +207,7 @@ export class AiChatHistoryService {
       messages: entry.messages.map(message => ({
         role: message.role,
         content: message.content,
+        processingDurationMs: message.processingDurationMs,
         generatedImages: message.generatedImages?.map(image => ({
           ...image,
         })),
@@ -230,6 +232,7 @@ export class AiChatHistoryService {
       messages: entry.messages.map(message => ({
         role: message.role,
         content: message.content,
+        processingDurationMs: message.processingDurationMs,
         generatedImages: message.generatedImages?.map(image => ({
           ...image,
         })),

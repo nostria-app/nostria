@@ -55,6 +55,8 @@ interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
   streaming?: boolean;
+  processingStartedAt?: number;
+  processingDurationMs?: number;
   attachments?: ComposerAttachment[];
   attachmentContext?: string;
   generatedImages?: AiGeneratedImage[];
@@ -1080,6 +1082,7 @@ export class AiComponent {
       id: this.createMessageId(),
       role: message.role,
       content: message.content,
+      processingDurationMs: message.processingDurationMs,
       generatedImages: message.generatedImages?.length
         ? await this.restoreGeneratedImages(message.generatedImages)
         : undefined,
@@ -1573,7 +1576,7 @@ export class AiComponent {
     this.chatError.set('');
     this.conversation.set([
       ...generationConversation,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.autoScrollPinned.set(true);
 
@@ -1581,6 +1584,7 @@ export class AiComponent {
       const loaded = await this.ensureLocalModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+        this.finishMessageProcessing(assistantMessageId);
         this.persistCurrentConversation();
         return;
       }
@@ -1620,6 +1624,7 @@ export class AiComponent {
       }
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
@@ -1635,6 +1640,7 @@ export class AiComponent {
       const message = this.resolveGenerationErrorMessage(model, err, attachmentContext);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -2200,7 +2206,7 @@ export class AiComponent {
     const generationConversation = [...this.conversation(), userMessage];
     this.conversation.set([
       ...generationConversation,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.composerText.set('');
     this.clearAttachedFiles();
@@ -2211,6 +2217,7 @@ export class AiComponent {
       const loaded = await this.ensureLocalModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+        this.finishMessageProcessing(assistantMessageId);
         this.persistCurrentConversation();
         return;
       }
@@ -2250,6 +2257,7 @@ export class AiComponent {
       }
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
@@ -2261,6 +2269,7 @@ export class AiComponent {
       const message = this.resolveGenerationErrorMessage(model, err, preparedPrompt.attachmentContext);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -2289,6 +2298,16 @@ export class AiComponent {
   private createMessageId(): string {
     this.nextMessageId.update(value => value + 1);
     return `msg-${this.nextMessageId()}`;
+  }
+
+  private createPendingAssistantMessage(id: string): ConversationMessage {
+    return {
+      id,
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      processingStartedAt: Date.now(),
+    };
   }
 
   private parsePositiveInt(value: string | number, fallback: number): number {
@@ -2326,6 +2345,56 @@ export class AiComponent {
         streaming,
       };
     }));
+  }
+
+  private finishMessageProcessing(id: string): void {
+    const finishedAt = Date.now();
+    this.conversation.update(messages => messages.map(message => {
+      if (message.id !== id || message.processingDurationMs !== undefined) {
+        return message;
+      }
+
+      return {
+        ...message,
+        processingDurationMs: Math.max(0, finishedAt - (message.processingStartedAt ?? finishedAt)),
+      };
+    }));
+  }
+
+  processingTimeLabel(message: ConversationMessage): string {
+    const duration = message.processingDurationMs ?? (
+      message.streaming && message.processingStartedAt
+        ? Math.max(0, this.statusClock() - message.processingStartedAt)
+        : null
+    );
+
+    if (duration === null) {
+      return '';
+    }
+
+    return message.streaming
+      ? `Processing for ${this.formatProcessingDuration(duration)}`
+      : `Processed in ${this.formatProcessingDuration(duration)}`;
+  }
+
+  private formatProcessingDuration(durationMs: number): string {
+    if (durationMs < 1000) {
+      return `${Math.max(1, Math.round(durationMs))}ms`;
+    }
+
+    const totalSeconds = Math.max(1, Math.round(durationMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes === 0) {
+      return `${totalSeconds}s`;
+    }
+
+    if (seconds === 0) {
+      return `${minutes}m`;
+    }
+
+    return `${minutes}m ${seconds}s`;
   }
 
   private getMessageContent(id: string): string {
@@ -2728,6 +2797,7 @@ export class AiComponent {
       messages: this.conversation().map(message => ({
         role: message.role,
         content: message.content,
+        processingDurationMs: message.processingDurationMs,
         generatedImages: message.generatedImages?.map(image => this.toHistoryGeneratedImage(image)),
         generatedVideos: message.generatedVideos?.map(video => this.toHistoryGeneratedVideo(video)),
         generatedAudios: message.generatedAudios?.map(audio => this.toHistoryGeneratedAudio(audio)),
@@ -2764,7 +2834,7 @@ export class AiComponent {
     this.conversation.set([
       ...this.conversation(),
       userMessage,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.composerText.set('');
     this.clearAttachedFiles();
@@ -2777,6 +2847,7 @@ export class AiComponent {
         const loaded = await this.ensureLocalModelReady(model);
         if (!loaded) {
           this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.finishMessageProcessing(assistantMessageId);
           this.persistCurrentConversation();
           return;
         }
@@ -2799,6 +2870,7 @@ export class AiComponent {
           generatedAudios: cachedAudios,
         };
       }));
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
@@ -2810,6 +2882,7 @@ export class AiComponent {
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Voice generation error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -2837,7 +2910,7 @@ export class AiComponent {
     this.conversation.set([
       ...this.conversation(),
       userMessage,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.composerText.set('');
     this.clearAttachedFiles();
@@ -2850,6 +2923,7 @@ export class AiComponent {
         const loaded = await this.ensureLocalModelReady(model);
         if (!loaded) {
           this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.finishMessageProcessing(assistantMessageId);
           this.persistCurrentConversation();
           return;
         }
@@ -2871,6 +2945,7 @@ export class AiComponent {
           generatedImages: cachedImages,
         };
       }));
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
       this.queueGeneratedImageCacheBackfill(cachedImages);
     } catch (err) {
@@ -2883,6 +2958,7 @@ export class AiComponent {
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Image generation error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -2909,7 +2985,7 @@ export class AiComponent {
     this.conversation.set([
       ...this.conversation(),
       userMessage,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.composerText.set('');
     this.clearAttachedFiles();
@@ -2938,6 +3014,7 @@ export class AiComponent {
           generatedVideos: displayVideos,
         };
       }));
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
@@ -2949,6 +3026,7 @@ export class AiComponent {
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Video generation error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.endVideoOperation();
@@ -2982,7 +3060,7 @@ export class AiComponent {
     this.conversation.set([
       ...this.conversation(),
       userMessage,
-      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+      this.createPendingAssistantMessage(assistantMessageId),
     ]);
     this.composerText.set('');
     this.attachedFiles.set([]);
@@ -2995,6 +3073,7 @@ export class AiComponent {
         const loaded = await this.ensureLocalModelReady(model);
         if (!loaded) {
           this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.finishMessageProcessing(assistantMessageId);
           this.persistCurrentConversation();
           return;
         }
@@ -3016,6 +3095,7 @@ export class AiComponent {
           generatedImages: cachedImages,
         };
       }));
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
       this.queueGeneratedImageCacheBackfill(cachedImages);
     } catch (err) {
@@ -3028,6 +3108,7 @@ export class AiComponent {
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Image upscaling error: ${message}`, false);
+      this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -3038,6 +3119,7 @@ export class AiComponent {
     const currentReply = this.getMessageContent(assistantMessageId).trimEnd();
     this.chatError.set('');
     this.replaceMessageContent(assistantMessageId, currentReply || 'Generation stopped.', false);
+    this.finishMessageProcessing(assistantMessageId);
     this.persistCurrentConversation();
     this.snackBar.open('Generation stopped.', 'Dismiss', { duration: 1800 });
   }

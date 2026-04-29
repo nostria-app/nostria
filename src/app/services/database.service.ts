@@ -261,6 +261,7 @@ export interface StoredAiChatHistoryEntry {
   messages: {
     role: 'user' | 'assistant';
     content: string;
+    processingDurationMs?: number;
     generatedImages?: {
       id: string;
       provider: 'openai' | 'xai' | 'local';
