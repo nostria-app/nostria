@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
@@ -82,6 +82,7 @@ import { resolveClientLogo } from '../../utils/client-logo-map';
 import { visualContentLength } from '../../utils/visual-content-length';
 import { getRuntimeResourceProfile } from '../../utils/runtime-resource-profile';
 import { DatabaseService } from '../../services/database.service';
+import { EventTtsPlaybackService } from '../../services/event-tts-playback.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -283,6 +284,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   relayPool = inject(RelayPoolService);
   parsingService = inject(ParsingService);
   database = inject(DatabaseService);
+  eventTtsPlayback = inject(EventTtsPlaybackService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
@@ -1220,6 +1222,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const reposted = this.repostedRecord();
     if (reposted) return reposted;
     return this.record();
+  });
+
+  activeTtsPlayback = computed(() => {
+    const playback = this.eventTtsPlayback.state();
+    const targetItem = this.targetRecord();
+    return playback && targetItem?.event.id === playback.eventId ? playback : null;
   });
 
   readonly taggedUsersSpamThreshold = 50;

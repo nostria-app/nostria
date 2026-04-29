@@ -52,6 +52,7 @@ import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-g
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 import { DeleteEventService } from '../../../services/delete-event.service';
+import { EventTtsPlaybackService } from '../../../services/event-tts-playback.service';
 
 interface LocalTtsMenuOption {
   id: string;
@@ -103,6 +104,7 @@ export class EventMenuComponent {
   private logger = inject(LoggerService);
   private imageCacheService = inject(ImageCacheService);
   private deleteEventService = inject(DeleteEventService);
+  private eventTtsPlayback = inject(EventTtsPlaybackService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -376,8 +378,10 @@ export class EventMenuComponent {
     const event = this.event();
     if (!event || this.isReadingAloud()) return;
 
+    const playbackRequestId = this.eventTtsPlayback.start(event.id, model.label);
     const speechText = this.extractTextForTts(event.content);
     if (!speechText) {
+      this.eventTtsPlayback.close(playbackRequestId);
       this.snackBar.open('No readable text found for speech.', 'Dismiss', { duration: 3000 });
       return;
     }
@@ -386,6 +390,11 @@ export class EventMenuComponent {
       this.isReadingAloud.set(true);
 
       if (!(await this.ensureModelLoaded('text-to-speech', model.id, model.loadOptions))) {
+        this.eventTtsPlayback.close(playbackRequestId);
+        return;
+      }
+
+      if (!this.eventTtsPlayback.isCurrent(playbackRequestId)) {
         return;
       }
 
@@ -395,10 +404,14 @@ export class EventMenuComponent {
         throw new Error('No audio was generated.');
       }
 
-      const player = new Audio(audio.src);
-      player.play();
-      player.onended = () => URL.revokeObjectURL(audio.src);
+      if (!this.eventTtsPlayback.isCurrent(playbackRequestId)) {
+        URL.revokeObjectURL(audio.src);
+        return;
+      }
+
+      await this.eventTtsPlayback.play(playbackRequestId, audio.src);
     } catch (error) {
+      this.eventTtsPlayback.close(playbackRequestId);
       this.snackBar.open(`Speech generation failed: ${error}`, 'Dismiss', { duration: 3000 });
     } finally {
       this.isReadingAloud.set(false);

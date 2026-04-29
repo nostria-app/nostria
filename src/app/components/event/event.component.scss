@@ -59,6 +59,51 @@
   }
 }
 
+.event-tts-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 3px 6px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  cursor: default;
+}
+
+.event-tts-pill-button {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+.event-tts-pill-text,
+.event-tts-pill-model {
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-tts-pill-model {
+  color: var(--mat-sys-on-surface-variant);
+}
+
 // Dark mode: lift cards above the near-black background for better visual separation
 :host-context(.dark) .note-card {
   background-color: var(--mat-sys-surface-container-low);
