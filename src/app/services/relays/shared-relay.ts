@@ -6,6 +6,20 @@ import { RelaysService } from './relays';
 import { LocalSettingsService } from '../local-settings.service';
 import { PoolService } from './pool.service';
 
+interface SharedRelayFilter {
+  ids?: string[];
+  kinds?: number[];
+  authors?: string[];
+  '#e'?: string[];
+  '#E'?: string[];
+  '#p'?: string[];
+  '#a'?: string[];
+  '#A'?: string[];
+  since?: number;
+  until?: number;
+  limit?: number;
+}
+
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
 
@@ -156,16 +170,7 @@ export class SharedRelayService {
    */
   async get<T extends Event = Event>(
     pubkey: string,
-    filter: {
-      ids?: string[];
-      kinds?: number[];
-      authors?: string[];
-      '#e'?: string[];
-      '#p'?: string[];
-      since?: number;
-      until?: number;
-      limit?: number;
-    },
+    filter: SharedRelayFilter,
     options: { timeout?: number } = {},
   ): Promise<T | null> {
     // Only log for non-metadata requests to reduce console noise
@@ -261,15 +266,7 @@ export class SharedRelayService {
    */
   async getMany<T extends Event = Event>(
     pubkey: string,
-    filter: {
-      kinds?: number[];
-      authors?: string[];
-      '#e'?: string[];
-      '#p'?: string[];
-      since?: number;
-      until?: number;
-      limit?: number;
-    },
+    filter: SharedRelayFilter,
     options: { timeout?: number } = {},
   ): Promise<T[]> {
     this.logger.debug('Getting events with filters (account-relay):', filter);

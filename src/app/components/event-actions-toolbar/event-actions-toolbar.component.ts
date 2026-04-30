@@ -454,17 +454,40 @@ export class EventActionsToolbarComponent {
 
   private async loadCommentCount(event: Event): Promise<number> {
     try {
-      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
-      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+      const isAddressable = event.kind >= 30000 && event.kind < 40000;
 
-      const filter = {
-        kinds: [1111],
-        '#A': [aTagValue],
-        limit: 100,
-      };
+      if (isAddressable) {
+        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        if (!dTag) return 0;
 
-      const comments = await this.sharedRelay.getMany(event.pubkey, filter);
-      return comments?.length || 0;
+        const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+        const comments = await this.sharedRelay.getMany(event.pubkey, {
+          kinds: [1111],
+          '#A': [aTagValue],
+          limit: 100,
+        });
+        return comments?.length || 0;
+      }
+
+      const [lowercaseTagComments, uppercaseTagComments] = await Promise.all([
+        this.sharedRelay.getMany(event.pubkey, {
+          kinds: [1111],
+          '#e': [event.id],
+          limit: 100,
+        }),
+        this.sharedRelay.getMany(event.pubkey, {
+          kinds: [1111],
+          '#E': [event.id],
+          limit: 100,
+        }),
+      ]);
+
+      const dedupedById = new Set<string>();
+      for (const comment of [...lowercaseTagComments, ...uppercaseTagComments]) {
+        dedupedById.add(comment.id);
+      }
+
+      return dedupedById.size;
     } catch (err) {
       this.logger.error('Failed to load comments:', err);
       return 0;

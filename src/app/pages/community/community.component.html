@@ -220,7 +220,11 @@
 
           <!-- Actions row: toolbar + edit -->
           <div class="post-actions-row">
-            <app-event-actions-toolbar [event]="post" bookmarkType="e" [autoLoad]="true"></app-event-actions-toolbar>
+            <app-event-actions-toolbar
+              [event]="post"
+              bookmarkType="e"
+              [autoLoad]="true"
+              (replyClick)="replyToPost(post, $event)"></app-event-actions-toolbar>
 
             <!-- Edit button for own posts — navigates to create-post in edit mode -->
             @if (isAuthenticated() && post.pubkey === currentPubkey()) {

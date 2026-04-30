@@ -390,10 +390,14 @@ export class PublishService {
       return Array.from(allRelayUrls);
     }
 
-    // Special handling for replies, reactions, and reposts (kinds 1, 6, 7, 16)
+    // Special handling for replies, reactions, and reposts.
+    // NIP-22 comments (1111/1244) are reply-like events too, so they need the
+    // same fanout to parent/mentioned users' relays as kind 1 replies.
     // These should be published to the relays of all mentioned users (p-tags)
     if (
       (event.kind === kinds.ShortTextNote ||
+        event.kind === 1111 ||
+        event.kind === 1244 ||
         event.kind === kinds.Reaction ||
         event.kind === kinds.Repost ||
         event.kind === kinds.GenericRepost) &&

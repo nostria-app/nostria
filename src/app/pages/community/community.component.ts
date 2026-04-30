@@ -25,6 +25,7 @@ import { LoggerService } from '../../services/logger.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { UtilitiesService } from '../../services/utilities.service';
+import { EventService } from '../../services/event';
 
 @Component({
   selector: 'app-community',
@@ -58,6 +59,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private utilities = inject(UtilitiesService);
+  private eventService = inject(EventService);
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private layout = inject(LayoutService);
@@ -293,6 +295,26 @@ export class CommunityComponent implements OnInit, OnDestroy {
     this.router.navigate(['/n', this.currentNaddr(), 'post'], {
       state: { editEvent: post, communityEvent: this.community()?.event },
     });
+  }
+
+  /** Reply to a community post using NIP-22, scoped to the community definition. */
+  async replyToPost(post: Event, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    const comm = this.community();
+    if (!comm) return;
+
+    const pubkey = this.currentPubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const result = await this.eventService.createCommentReply(comm.event, post);
+    if (result?.published && result.event) {
+      this.postMap.set(result.event.id, result.event);
+      this.allPosts.set(Array.from(this.postMap.values()));
+    }
   }
 
   private getPreloadedCommunity(naddrStr: string): Community | null {
