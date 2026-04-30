@@ -2207,15 +2207,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const priority = this.getInteractionPreloadPriority(observerRoot);
 
       if (EventComponent.hasPendingInteractionPreload(this)) {
-        this.scheduleVisibleInteractionRetry();
         return;
       }
 
       EventComponent.enqueueInteractionPreload(this, priority);
-
-      if (!this.hasLoadedInteractions()) {
-        this.scheduleVisibleInteractionRetry();
-      }
     }, 900);
   }
 
