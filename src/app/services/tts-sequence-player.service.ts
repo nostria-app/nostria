@@ -5,6 +5,7 @@ import { AiModelLoadOptions, AiService } from './ai.service';
 import { EventTtsPlaybackService } from './event-tts-playback.service';
 import { RepostService } from './repost.service';
 import { TtsTextService } from './tts-text.service';
+import { AiModelDownloadProgressTracker } from '../utils/ai-model-download-progress';
 
 export interface TtsSequenceModelOption {
   id: string;
@@ -319,10 +320,11 @@ export class TtsSequencePlayerService {
     try {
       if (!this.ai.isModelLoaded(model.id)) {
         this.patchState({ status: 'loading', message: `Loading ${model.label}...` });
+        const progressTracker = new AiModelDownloadProgressTracker(model.label);
         await this.ai.loadModel(
           'text-to-speech',
           model.id,
-          data => this.onLoadProgress(requestId, model.label, data),
+          data => this.onLoadProgress(requestId, progressTracker, data),
           model.loadOptions,
         );
       }
@@ -346,13 +348,42 @@ export class TtsSequencePlayerService {
     }
   }
 
-  private onLoadProgress(requestId: number, modelLabel: string, data: unknown): void {
+  private onLoadProgress(requestId: number, progressTracker: AiModelDownloadProgressTracker, data: unknown): void {
     if (!this.isCurrent(requestId)) return;
 
-    const payload = data as { status?: string; progress?: number; file?: string };
-    const progress = typeof payload.progress === 'number' ? ` ${Math.round(payload.progress)}%` : '';
-    const file = payload.file ? ` ${payload.file}` : '';
-    this.patchState({ status: 'loading', message: `Loading ${modelLabel}${progress}${file}` });
+    const progress = progressTracker.update(data);
+    if (!progress) return;
+
+    const percent = progress.progress === null ? '' : ` ${progress.progress}%`;
+    const file = progress.file ? ` · ${progress.file}` : '';
+    const size = this.formatProgressSize(progress.loadedBytes, progress.totalBytes);
+    this.patchState({ status: 'loading', message: `${progress.status} ${progress.modelName}${percent}${file}${size}` });
+  }
+
+  private formatProgressSize(loadedBytes: number | null, totalBytes: number | null): string {
+    if (loadedBytes === null) {
+      return '';
+    }
+
+    if (totalBytes !== null && totalBytes > 0) {
+      return ` · ${this.formatFileSize(loadedBytes)} of ${this.formatFileSize(totalBytes)}`;
+    }
+
+    return ` · ${this.formatFileSize(loadedBytes)}`;
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let value = bytes / 1024;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex++;
+    }
+
+    return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
   }
 
   private async playObjectUrl(requestId: number, src: string): Promise<void> {

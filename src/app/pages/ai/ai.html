@@ -469,6 +469,9 @@
           @if (dictationLoadingHint()) {
           <div class="composer-processing-hint">{{ dictationLoadingHint() }}</div>
           }
+          @if (modelLoadingHint()) {
+          <div class="composer-processing-hint">{{ modelLoadingHint() }}</div>
+          }
         </div>
         @if (activeProcessingProgress() !== null) {
         <span class="composer-processing-progress">{{ activeProcessingProgress() }}%</span>

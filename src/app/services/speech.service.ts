@@ -3,6 +3,7 @@ import { AiService } from './ai.service';
 import { SettingsService } from './settings.service';
 import { LocalStorageService } from './local-storage.service';
 import type { AiModelLoadOptions } from './ai.service';
+import { AiModelDownloadProgressTracker } from '../utils/ai-model-download-progress';
 
 export interface SpeechRecordingOptions {
   /** Silence threshold (0-1), lower = more sensitive. Default: 0.02 */
@@ -536,12 +537,14 @@ export class SpeechService {
       totalBytes: null,
     });
 
+    const progressTracker = new AiModelDownloadProgressTracker(model.name);
+
     try {
       await this.withTimeout(
         this.aiService.loadModel(
           'automatic-speech-recognition',
           model.id,
-          data => this.updateTranscriptionLoadingState(model, data),
+          data => this.updateTranscriptionLoadingState(progressTracker, data),
           model.loadOptions,
         ),
         this.MODEL_LOAD_TIMEOUT_MS,
@@ -566,53 +569,21 @@ export class SpeechService {
     }
   }
 
-  private updateTranscriptionLoadingState(model: DictationModelOption, data: unknown): void {
-    if (!data || typeof data !== 'object') {
+  private updateTranscriptionLoadingState(progressTracker: AiModelDownloadProgressTracker, data: unknown): void {
+    const progress = progressTracker.update(data);
+    if (!progress) {
       return;
     }
 
-    const payload = data as {
-      status?: string;
-      file?: string;
-      name?: string;
-      progress?: number;
-      loaded?: number;
-      total?: number;
-    };
-    const rawProgress = typeof payload.progress === 'number' && Number.isFinite(payload.progress)
-      ? payload.progress
-      : null;
-    const progress = rawProgress === null
-      ? null
-      : Math.max(0, Math.min(99, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
-    const status = this.describeLoadingStatus(payload.status);
-
     this.transcriptionLoadingState.set({
       isLoading: true,
-      modelName: model.name,
-      status,
-      file: payload.file ?? payload.name ?? '',
-      progress,
-      loadedBytes: typeof payload.loaded === 'number' ? payload.loaded : null,
-      totalBytes: typeof payload.total === 'number' ? payload.total : null,
+      modelName: progress.modelName,
+      status: progress.status,
+      file: progress.file,
+      progress: progress.progress,
+      loadedBytes: progress.loadedBytes,
+      totalBytes: progress.totalBytes,
     });
-  }
-
-  private describeLoadingStatus(status: string | undefined): string {
-    switch (status) {
-      case 'initiate':
-        return 'Starting download';
-      case 'download':
-        return 'Downloading';
-      case 'progress':
-        return 'Downloading';
-      case 'done':
-        return 'Downloaded';
-      case 'ready':
-        return 'Loading into memory';
-      default:
-        return status ? status.replace(/[-_]/g, ' ') : 'Loading';
-    }
   }
 
   private withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {

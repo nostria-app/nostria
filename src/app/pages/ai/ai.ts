@@ -30,6 +30,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { CorsProxyService } from '../../services/cors-proxy.service';
 import { SpeechService } from '../../services/speech.service';
+import { AiModelDownloadProgressTracker } from '../../utils/ai-model-download-progress';
 
 interface ModelInfo {
   id: string;
@@ -39,6 +40,10 @@ interface ModelInfo {
   size: string;
   loading: boolean;
   progress: number;
+  loadStatus?: string;
+  loadFile?: string;
+  loadedBytes?: number | null;
+  totalBytes?: number | null;
   loaded: boolean;
   cached: boolean;
   runtime: string;
@@ -1074,7 +1079,8 @@ export class AiComponent {
 
     const model = this.selectedModel();
     if (model?.loading) {
-      return model.cached ? `Loading ${model.name}...` : `Downloading ${model.name}...`;
+      const status = model.loadStatus || (model.cached ? 'Loading into memory' : 'Downloading');
+      return `${status} ${model.name}...`;
     }
 
     const videoStatus = this.activeVideoStatus();
@@ -1113,6 +1119,28 @@ export class AiComponent {
       details.push(`${this.formatFileSize(state.loadedBytes)} of ${this.formatFileSize(state.totalBytes)}`);
     } else if (state.loadedBytes !== null) {
       details.push(this.formatFileSize(state.loadedBytes));
+    }
+
+    return details.join(' · ');
+  });
+  readonly modelLoadingHint = computed(() => {
+    const model = this.selectedModel();
+    if (!model?.loading) {
+      return '';
+    }
+
+    const details: string[] = [];
+    if (model.loadFile) {
+      details.push(model.loadFile);
+    }
+
+    if (model.loadedBytes !== null && model.loadedBytes !== undefined
+      && model.totalBytes !== null && model.totalBytes !== undefined && model.totalBytes > 0) {
+      details.push(`${this.formatFileSize(model.loadedBytes)} of ${this.formatFileSize(model.totalBytes)}`);
+    } else if (model.loadedBytes !== null && model.loadedBytes !== undefined) {
+      details.push(this.formatFileSize(model.loadedBytes));
+    } else if (model.size && model.source === 'local') {
+      details.push(model.size);
     }
 
     return details.join(' · ');
@@ -2781,23 +2809,45 @@ export class AiComponent {
       return false;
     }
 
-    this.updateModelStatus(model.id, { loading: true, progress: 0 });
+    const progressTracker = new AiModelDownloadProgressTracker(model.name);
+    this.updateModelStatus(model.id, {
+      loading: true,
+      progress: 0,
+      loadStatus: model.cached ? 'Loading into memory' : 'Preparing download',
+      loadFile: '',
+      loadedBytes: null,
+      totalBytes: null,
+    });
 
     try {
       await this.aiService.loadModel(
         model.task,
         model.id,
         (data: unknown) => {
-          const progress = data as { status?: string; progress?: number };
-          if (progress.status === 'progress' && typeof progress.progress === 'number') {
-            const currentProgress = this.models().find(candidate => candidate.id === model.id)?.progress ?? 0;
-            const normalizedProgress = progress.progress <= 1 ? progress.progress * 100 : progress.progress;
-            this.updateModelStatus(model.id, { progress: Math.max(currentProgress, Math.min(normalizedProgress, 94)) });
+          const progress = progressTracker.update(data);
+          if (progress) {
+            this.updateModelStatus(model.id, {
+              progress: progress.progress === null
+                ? (this.models().find(candidate => candidate.id === model.id)?.progress ?? 0)
+                : Math.min(progress.progress, 94),
+              loadStatus: progress.status,
+              loadFile: progress.file,
+              loadedBytes: progress.loadedBytes,
+              totalBytes: progress.totalBytes,
+            });
           }
         },
         model.loadOptions,
       );
-      this.updateModelStatus(model.id, { loaded: true, cached: true, progress: 100 });
+      this.updateModelStatus(model.id, {
+        loaded: true,
+        cached: true,
+        progress: 100,
+        loadStatus: 'Loaded',
+        loadFile: '',
+        loadedBytes: null,
+        totalBytes: null,
+      });
       return true;
     } catch (err) {
       this.logger.error('AI model load error:', err);
