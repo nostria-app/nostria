@@ -111,7 +111,7 @@
     "@fontsource/roboto": "^5.2.10",
     "@fontsource/sora": "^5.2.8",
     "@getalby/sdk": "^7.0.0",
-    "@huggingface/transformers": "^4.0.1",
+    "@huggingface/transformers": "^4.2.0",
     "@mediabunny/aac-encoder": "^1.40.1",
     "@microsoft/applicationinsights-web": "^3.3.11",
     "@noble/hashes": "^2.0.1",
