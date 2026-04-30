@@ -39,6 +39,11 @@ interface ReorderableBookmarkItem {
   pubkey?: string;
 }
 
+interface RelaySubscriptionHandle {
+  close?: () => void;
+  unsubscribe?: () => void;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -55,6 +60,9 @@ export class BookmarkService {
   private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
   private deleteEventService = inject(DeleteEventService);
+  private defaultBookmarksSub?: RelaySubscriptionHandle;
+  private bookmarkListsSub?: RelaySubscriptionHandle;
+  private subscribedPubkey: string | null = null;
 
   // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
@@ -175,6 +183,7 @@ export class BookmarkService {
       if (pubkey) {
         await this.initialize();
       } else {
+        this.closeBookmarkSubscriptions();
         this.bookmarkEvent.set(null);
         this.bookmarkLists.set([]);
       }
@@ -196,7 +205,112 @@ export class BookmarkService {
     await this.loadBookmarkLists();
 
     // Subscribe to bookmark lists from relays
-    await this.subscribeToBookmarkLists();
+    if (this.subscribedPubkey !== pubkey) {
+      this.closeBookmarkSubscriptions();
+      this.subscribedPubkey = pubkey;
+      await this.subscribeToDefaultBookmarks();
+      await this.subscribeToBookmarkLists();
+    }
+  }
+
+  private closeBookmarkSubscriptions(): void {
+    this.defaultBookmarksSub?.close?.();
+    this.defaultBookmarksSub?.unsubscribe?.();
+    this.bookmarkListsSub?.close?.();
+    this.bookmarkListsSub?.unsubscribe?.();
+    this.defaultBookmarksSub = undefined;
+    this.bookmarkListsSub = undefined;
+    this.subscribedPubkey = null;
+    this.needsReloadAfterEose = false;
+    if (this.pendingReload) {
+      clearTimeout(this.pendingReload);
+      this.pendingReload = null;
+    }
+  }
+
+  private cloneEvent(event: Event): Event {
+    return {
+      ...event,
+      tags: event.tags.map(tag => [...tag]),
+    };
+  }
+
+  private shouldUseDefaultBookmarkEvent(event: Event): boolean {
+    const current = this.bookmarkEvent();
+    return !current || current.id !== event.id && event.created_at >= current.created_at;
+  }
+
+  private applyDefaultBookmarkEvent(event: Event): void {
+    if (!this.shouldUseDefaultBookmarkEvent(event)) {
+      return;
+    }
+
+    this.bookmarkEvent.set(this.cloneEvent(event));
+    this.logger.info('[BookmarkService] Applied default bookmark update', {
+      bookmarkCount: event.tags.length,
+      eventId: event.id,
+    });
+  }
+
+  private async subscribeToDefaultBookmarks(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      this.defaultBookmarksSub = this.accountRelay.subscribe(
+        {
+          kinds: [kinds.BookmarkList],
+          authors: [pubkey],
+        },
+        async (event: Event) => {
+          await this.database.saveReplaceableEvent(event);
+          this.applyDefaultBookmarkEvent(event);
+        }
+      );
+    } catch (error) {
+      this.logger.error('Failed to subscribe to default bookmarks:', error);
+    }
+  }
+
+  private async applyBookmarkListEvent(event: Event): Promise<void> {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!dTag) {
+      return;
+    }
+
+    const currentLists = this.bookmarkLists();
+    const existing = currentLists.find(list => list.id === dTag);
+    if (existing?.event && existing.event.id === event.id) {
+      return;
+    }
+    if (existing?.event && existing.event.created_at > event.created_at) {
+      return;
+    }
+
+    const updatedList: BookmarkList = {
+      id: dTag,
+      name: event.tags.find(t => t[0] === 'title')?.[1] || existing?.name || 'Untitled List',
+      event: this.cloneEvent(event),
+      originalEvent: undefined,
+      isDefault: false,
+      isPrivate: !!event.content && event.content.length > 0,
+    };
+
+    const updatedLists = existing
+      ? currentLists.map(list => list.id === dTag ? updatedList : list)
+      : [...currentLists, updatedList];
+
+    this.bookmarkLists.set(updatedLists);
+
+    if (updatedList.isPrivate && this.selectedListId() === dTag) {
+      await this.decryptPrivateList(dTag);
+    }
+
+    this.logger.info('[BookmarkService] Applied bookmark list update', {
+      listId: dTag,
+      bookmarkCount: event.tags.length,
+      eventId: event.id,
+    });
   }
 
   /** Pending reload timeout for debouncing */
@@ -211,7 +325,7 @@ export class BookmarkService {
 
     try {
       // Subscribe to kind 30003 bookmark lists
-      this.accountRelay.subscribe(
+      this.bookmarkListsSub = this.accountRelay.subscribe(
         {
           kinds: [30003],
           authors: [pubkey],
@@ -221,8 +335,9 @@ export class BookmarkService {
           const dTag = event.tags.find(t => t[0] === 'd')?.[1];
           if (dTag) {
             const wasSaved = await this.database.saveReplaceableEvent({ ...event, dTag });
-            // Only schedule reload if the event was actually saved (newer than existing)
-            if (wasSaved) {
+            await this.applyBookmarkListEvent(event);
+            // Keep the full reload for EOSE so deleted/replaced local records settle.
+            if (wasSaved && !this.bookmarkLists().some(list => list.id === dTag && list.event?.id === event.id)) {
               this.needsReloadAfterEose = true;
             }
           }
