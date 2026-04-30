@@ -414,13 +414,13 @@ export class ArticleComponent implements OnDestroy {
     }
   }
 
-  startArticleReadAloud(modelId: string): void {
+  async startArticleReadAloud(modelId: string): Promise<void> {
     const event = this.event();
     if (!event || event.kind !== kinds.LongFormArticle) {
       return;
     }
 
-    const items = this.buildArticleTtsItems(event);
+    const items = await this.buildArticleTtsItems(event);
     if (items.length === 0) {
       return;
     }
@@ -442,11 +442,12 @@ export class ArticleComponent implements OnDestroy {
     });
   }
 
-  private buildArticleTtsItems(event: Event): TtsSequenceItem[] {
+  private async buildArticleTtsItems(event: Event): Promise<TtsSequenceItem[]> {
     const items: TtsSequenceItem[] = [];
 
     items.push(...this.buildArticleTtsItemsForSection(event.id, this.title(), 'title'));
     items.push(...this.buildArticleTtsItemsForSection(event.id, this.summary(), 'summary'));
+    items.push(...this.buildArticleTtsItemsForSection(event.id, await this.buildArticleBylineText(event)));
 
     const bodyBlocks = this.extractRenderedArticleBlocks();
     const effectiveBodyBlocks = bodyBlocks.length > 0
@@ -468,7 +469,7 @@ export class ArticleComponent implements OnDestroy {
   private buildArticleTtsItemsForSection(
     eventId: string,
     text: string,
-    target: TtsSequenceItem['articleTarget'],
+    target?: TtsSequenceItem['articleTarget'],
     articleBlockIndex?: number,
     articleParagraphIndex?: number,
   ): TtsSequenceItem[] {
@@ -482,6 +483,66 @@ export class ArticleComponent implements OnDestroy {
       articleBlockIndex,
       articleParagraphIndex,
     }));
+  }
+
+  private async buildArticleBylineText(event: Event): Promise<string> {
+    const authorName = await this.getArticleAuthorName(event.pubkey);
+    const publishedAt = this.publishedAtTimestamp() || event.created_at;
+    const publishedAge = this.formatArticlePublishedAge(publishedAt);
+    return publishedAge ? `Written by ${authorName} ${publishedAge}.` : `Written by ${authorName}.`;
+  }
+
+  private async getArticleAuthorName(pubkey: string): Promise<string> {
+    const profile = await this.data.getProfile(pubkey);
+    const data: unknown = profile?.data;
+    if (data && typeof data === 'object') {
+      const metadata = data as { display_name?: unknown; name?: unknown; nip05?: unknown };
+      const name = this.firstString(metadata.display_name, metadata.name, metadata.nip05);
+      if (name) {
+        return name;
+      }
+    }
+
+    return this.utilities.getTruncatedNpub(pubkey);
+  }
+
+  private firstString(...values: unknown[]): string {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  private formatArticlePublishedAge(timestamp: number): string {
+    const now = this.utilities.currentDate();
+    const diff = now - timestamp;
+
+    if (diff < 0) return 'in the future';
+
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = day * 30;
+    const year = day * 365;
+
+    if (diff < 5) return 'just now';
+    if (diff < minute) return `${Math.floor(diff)} seconds ago`;
+    if (diff < minute * 2) return 'a minute ago';
+    if (diff < hour) return `${Math.floor(diff / minute)} minutes ago`;
+    if (diff < hour * 2) return 'an hour ago';
+    if (diff < day) return `${Math.floor(diff / hour)} hours ago`;
+    if (diff < day * 2) return 'yesterday';
+    if (diff < week) return `${Math.floor(diff / day)} days ago`;
+    if (diff < week * 2) return 'a week ago';
+    if (diff < month) return `${Math.floor(diff / week)} weeks ago`;
+    if (diff < month * 2) return 'a month ago';
+    if (diff < year) return `${Math.floor(diff / month)} months ago`;
+    if (diff < year * 2) return 'a year ago';
+    return `${Math.floor(diff / year)} years ago`;
   }
 
   private chunkArticleSpeechText(text: string): string[] {
