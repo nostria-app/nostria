@@ -895,7 +895,7 @@
           <div class="model-menu-item" [class.model-menu-item-selected]="model.id === selectedDictationModel().id">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ model.name }}</span>
-              <span class="model-menu-meta">{{ model.runtime }} · {{ model.size }}{{ model.highMemory ? ' · high memory' : '' }}</span>
+              <span class="model-menu-meta">{{ dictationModelMenuMeta(model) }}</span>
             </div>
             <div class="model-menu-trailing">
               @if (model.id === selectedDictationModel().id) {
@@ -1070,8 +1070,7 @@
           <div class="model-menu-item" [class.model-menu-item-selected]="chatModel.id === selectedModelId()">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ chatModel.name }}</span>
-              <span class="model-menu-meta">{{ chatModel.runtime }}@if (chatModel.cloudModel) { · {{
-                chatModel.cloudModel }} }</span>
+              <span class="model-menu-meta">{{ modelMenuMeta(chatModel) }}</span>
             </div>
             <div class="model-menu-trailing">
               <span class="status-chip" [class.status-loaded]="chatModel.loaded"

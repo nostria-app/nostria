@@ -29,7 +29,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { CorsProxyService } from '../../services/cors-proxy.service';
-import { SpeechService } from '../../services/speech.service';
+import { SpeechService, type DictationModelOption } from '../../services/speech.service';
 import { AiModelDownloadProgressTracker } from '../../utils/ai-model-download-progress';
 
 interface ModelInfo {
@@ -226,7 +226,7 @@ export class AiComponent {
       task: 'text-generation',
       name: 'Gemma 4 E2B',
       description: 'Instruction-tuned Gemma 4 chat model for local browser inference.',
-      size: '~2B parameters',
+      size: '~3.4 GB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -246,8 +246,8 @@ export class AiComponent {
       id: 'onnx-community/Bonsai-1.7B-ONNX',
       task: 'text-generation',
       name: 'Bonsai 1.7B',
-      description: 'Bonsai chat model for fast local browser inference with q1 quantization.',
-      size: '~1.7B parameters',
+      description: 'Fast Bonsai chat model for local browser inference.',
+      size: '~300 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -265,8 +265,8 @@ export class AiComponent {
       id: 'onnx-community/Bonsai-4B-ONNX',
       task: 'text-generation',
       name: 'Bonsai 4B',
-      description: 'Larger Bonsai chat model for local browser inference with q1 quantization.',
-      size: '~4B parameters',
+      description: 'Larger Bonsai chat model for local browser inference.',
+      size: '~650 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -285,7 +285,7 @@ export class AiComponent {
       task: 'text-generation',
       name: 'Bonsai 8B',
       description: 'High-capacity Bonsai chat model for local browser inference on stronger WebGPU devices.',
-      size: '~8B parameters',
+      size: '~1.3 GB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -304,7 +304,7 @@ export class AiComponent {
       task: 'image-text-to-text',
       name: 'Qwen 3.5 0.8B Vision',
       description: 'Multimodal Qwen 3.5 model for local browser image-aware chat and visual analysis.',
-      size: '~0.8B parameters',
+      size: '~650 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -323,7 +323,7 @@ export class AiComponent {
       task: 'text-generation',
       name: 'Qwen 3.5 0.8B',
       description: 'Verified Qwen 3.5 text-only chat model for local browser inference.',
-      size: '~0.8B parameters',
+      size: '~480 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -342,7 +342,7 @@ export class AiComponent {
       task: 'text-generation',
       name: 'Qwen 3 0.6B',
       description: 'Compact Qwen 3 chat model for fast local browser inference.',
-      size: '~0.6B parameters',
+      size: '~565 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -361,7 +361,7 @@ export class AiComponent {
       task: 'text-generation',
       name: 'DistilGPT2',
       description: 'Small fallback chat model for lighter devices and browsers without WebGPU.',
-      size: '~85MB',
+      size: '~230 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -378,9 +378,9 @@ export class AiComponent {
     {
       id: 'onnx-community/Janus-Pro-1B-ONNX',
       task: 'image-generation',
-      name: 'Janus Pro 1B',
-      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
-      size: '~1B parameters',
+      name: 'Create Images 1B',
+      description: 'Local image generation model for creating pictures from prompts.',
+      size: '~2.4 GB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -392,9 +392,9 @@ export class AiComponent {
     {
       id: 'Xenova/swin2SR-classical-sr-x2-64',
       task: 'image-upscaling',
-      name: 'Swin2SR x2',
-      description: 'Local image upscaling for attached artwork, screenshots, and photos.',
-      size: 'x2 super-resolution',
+      name: 'Upscale 2x',
+      description: 'Doubles image size locally for artwork, screenshots, and photos.',
+      size: '~21 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -432,7 +432,7 @@ export class AiComponent {
       task: 'automatic-speech-recognition',
       name: 'Whisper Tiny',
       description: 'Small English speech-to-text model used for local transcription.',
-      size: '~40MB',
+      size: '~145 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -446,7 +446,7 @@ export class AiComponent {
       task: 'automatic-speech-recognition',
       name: 'Whisper Small',
       description: 'Balanced local Whisper transcription model with better accuracy than Tiny.',
-      size: '~290MB',
+      size: '~945 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -460,7 +460,7 @@ export class AiComponent {
       task: 'automatic-speech-recognition',
       name: 'Whisper Large V3 Turbo',
       description: 'Higher-quality local Whisper Turbo transcription model.',
-      size: '~809MB',
+      size: '~740 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -474,7 +474,7 @@ export class AiComponent {
       task: 'automatic-speech-recognition',
       name: 'Moonshine Tiny',
       description: 'Fast, lightweight local speech-to-text model.',
-      size: '~60MB',
+      size: '~105 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -488,7 +488,7 @@ export class AiComponent {
       task: 'automatic-speech-recognition',
       name: 'Moonshine Base',
       description: 'More accurate Moonshine speech-to-text model for local transcription.',
-      size: '~230MB',
+      size: '~240 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -502,7 +502,7 @@ export class AiComponent {
       task: 'text-to-speech',
       name: 'SpeechT5',
       description: 'Text-to-speech voice synthesis model.',
-      size: '~180MB',
+      size: '~615 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -514,7 +514,7 @@ export class AiComponent {
       task: 'text-to-speech',
       name: 'Kokoro 82M',
       description: 'High-quality local text-to-speech with selectable Kokoro voices.',
-      size: '~92MB q8 · ~310MB fp32',
+      size: this.webGpuAvailable ? '~310 MB download' : '~90 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -528,7 +528,7 @@ export class AiComponent {
       task: 'text-to-speech',
       name: 'Supertonic 2',
       description: 'Fast multilingual on-device text-to-speech with 10 preset voices.',
-      size: '~305MB',
+      size: '~255 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -542,7 +542,7 @@ export class AiComponent {
       task: 'text-to-speech',
       name: 'Piper LibriTTS',
       description: 'Local Piper TTS model with 904 selectable LibriTTS voices.',
-      size: '~79MB',
+      size: '~79 MB download',
       loading: false,
       progress: 0,
       loaded: false,
@@ -2712,6 +2712,34 @@ export class AiComponent {
     }).format(timestamp);
   }
 
+  modelMenuMeta(model: ModelInfo): string {
+    if (model.source === 'cloud') {
+      return model.cloudModel ? `Hosted API · ${model.cloudModel}` : 'Hosted API';
+    }
+
+    const details = [model.size];
+
+    if (model.task === 'image-generation') {
+      details.push('Create images');
+    } else if (model.task === 'image-upscaling') {
+      details.push('Upscale 2x');
+    } else if (model.task === 'image-text-to-text') {
+      details.push('Image chat');
+    } else if (model.task === 'text-to-speech') {
+      details.push('Voice');
+    } else if (model.task === 'automatic-speech-recognition') {
+      details.push('Speech to text');
+    } else if (model.task === 'text-generation') {
+      details.push('Text chat');
+    }
+
+    return details.join(' · ');
+  }
+
+  dictationModelMenuMeta(model: DictationModelOption): string {
+    return `${model.size}${model.highMemory ? ' · high memory' : ''}`;
+  }
+
   statusLabel(model: ModelInfo): string {
     if (model.source === 'cloud') {
       if (model.task === 'text-generation') {
@@ -3698,7 +3726,7 @@ export class AiComponent {
     if (!model) {
       this.chatError.set(
         intent.task === 'image-generation'
-          ? 'No image generation model is available. Select Janus Pro or configure a hosted image provider.'
+        ? 'No image generation model is available. Select Create Images or configure a hosted image provider.'
           : intent.task === 'video-generation'
             ? 'No video generation model is available. Add an xAI API key in AI Settings.'
             : 'No image upscaling model is available.',
