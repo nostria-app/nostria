@@ -202,7 +202,7 @@ export class AiComponent {
   private readonly pendingGeneratedImageCacheIds = new Set<string>();
   private readonly pendingGeneratedVideoCacheIds = new Set<string>();
   private readonly autoPlayedAudioIds = new Set<string>();
-  readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
+  readonly webGpuAvailable = this.aiService.isWebGpuAvailable();
   readonly autoScrollPinned = signal(true);
   readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
   readonly currentConversationId = signal<string | null>(null);

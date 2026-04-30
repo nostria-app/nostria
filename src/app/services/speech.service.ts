@@ -618,6 +618,6 @@ export class SpeechService {
   }
 
   private webGpuAvailable(): boolean {
-    return typeof navigator !== 'undefined' && 'gpu' in navigator;
+    return this.aiService.isWebGpuAvailable();
   }
 }

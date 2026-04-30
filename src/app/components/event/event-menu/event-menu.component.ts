@@ -115,9 +115,7 @@ export class EventMenuComponent {
 
   record = signal<NostrRecord | null>(null);
   readonly isReadingAloud = signal(false);
-  private readonly webGpuAvailable = isPlatformBrowser(this.platformId)
-    && typeof navigator !== 'undefined'
-    && 'gpu' in navigator;
+  private readonly webGpuAvailable = this.ai.isWebGpuAvailable();
   readonly localTtsMenuOptions: LocalTtsMenuOption[] = [
     {
       id: this.ai.kokoroSpeechModelId,

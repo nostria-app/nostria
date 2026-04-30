@@ -1,5 +1,4 @@
-import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { type Event, kinds } from 'nostr-tools';
 import { AiModelLoadOptions, AiService } from './ai.service';
 import { EventTtsPlaybackService } from './event-tts-playback.service';
@@ -65,9 +64,7 @@ export class TtsSequencePlayerService {
   private readonly ttsText = inject(TtsTextService);
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly isBrowser = isPlatformBrowser(this.platformId);
-  private readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
+  private readonly webGpuAvailable = this.ai.isWebGpuAvailable();
 
   readonly models: TtsSequenceModelOption[] = [
     {

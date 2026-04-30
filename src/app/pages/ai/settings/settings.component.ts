@@ -273,6 +273,18 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     await this.settings.updateSettings({ aiVoice: voice });
   }
 
+  toggleTauriWebGpu(): void {
+    const enabled = !this.aiService.cloudSettings().tauriWebGpuEnabled;
+    this.aiService.updateCloudSettings({ tauriWebGpuEnabled: enabled });
+    this.snackBar.open(
+      enabled
+        ? 'Desktop WebGPU enabled on this device. Reopen AI views before loading GPU models.'
+        : 'Desktop WebGPU disabled on this device.',
+      'Dismiss',
+      { duration: 4000 }
+    );
+  }
+
   providerLabel(provider: AiCloudProvider): string {
     return this.aiService.getProviderLabel(provider);
   }

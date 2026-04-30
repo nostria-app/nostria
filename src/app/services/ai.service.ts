@@ -1,4 +1,5 @@
 import { Injectable, computed, effect, signal, inject } from '@angular/core';
+import { isTauri } from '@tauri-apps/api/core';
 
 import { AccountStateService } from './account-state.service';
 import { GrokApiService, GrokHostedPayment, GrokPublicConfig, GrokStatus } from './grok-api.service';
@@ -108,6 +109,7 @@ export interface AiVoiceGenerationProgress {
 export interface AiCloudSettings {
   openaiApiKey?: string;
   xaiApiKey?: string;
+  tauriWebGpuEnabled: boolean;
   preferredImageProvider: AiCloudProvider;
   openaiChatModel: string;
   xaiChatModel: string;
@@ -276,6 +278,7 @@ export class AiService {
   private static readonly TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
 
   private readonly defaultCloudSettings: AiCloudSettings = {
+    tauriWebGpuEnabled: false,
     preferredImageProvider: 'xai',
     openaiChatModel: 'gpt-4.1-mini',
     xaiChatModel: 'grok-4-1-fast-reasoning',
@@ -304,6 +307,8 @@ export class AiService {
   };
 
   private settings = inject(SettingsService);
+  private readonly tauriRuntime = typeof window !== 'undefined' && isTauri();
+  private readonly browserWebGpuSupported = typeof navigator !== 'undefined' && 'gpu' in navigator;
   private localStorage = inject(LocalStorageService);
   private accountState = inject(AccountStateService);
   private grokApi = inject(GrokApiService);
@@ -585,6 +590,14 @@ export class AiService {
 
   isModelLoaded(modelId: string) {
     return this.loadedModels().has(modelId);
+  }
+
+  isTauriRuntime(): boolean {
+    return this.tauriRuntime;
+  }
+
+  isWebGpuAvailable(): boolean {
+    return this.browserWebGpuSupported && (!this.tauriRuntime || this.cloudSettings().tauriWebGpuEnabled);
   }
 
   constructor() {
@@ -1274,6 +1287,7 @@ export class AiService {
 
   private normalizeCloudSettings(settings: Partial<AiCloudSettings>): AiCloudSettings {
     return {
+      tauriWebGpuEnabled: settings.tauriWebGpuEnabled === true,
       preferredImageProvider: settings.preferredImageProvider === 'openai' ? 'openai' : 'xai',
       openaiChatModel: settings.openaiChatModel?.trim() || this.defaultCloudSettings.openaiChatModel,
       xaiChatModel: settings.xaiChatModel?.trim() || this.defaultCloudSettings.xaiChatModel,
