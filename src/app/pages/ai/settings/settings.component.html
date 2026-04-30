@@ -175,15 +175,15 @@
               <div class="toggle-row">
                 <div class="toggle-label">
                   <h3>Use WebGPU in the desktop app</h3>
-                  <p>Try GPU-backed local models in Tauri on this Windows device.</p>
+                  <p>Run GPU-backed local models in Tauri on this Windows device.</p>
                 </div>
                 <mat-slide-toggle [checked]="aiService.cloudSettings().tauriWebGpuEnabled"
                   (change)="toggleTauriWebGpu()">
                 </mat-slide-toggle>
               </div>
               <p class="provider-hint">
-                This is experimental in the Windows desktop WebView. If a model fails while loading or stopping, turn
-                this off and use the WASM/CPU models.
+                Leave this on for faster local models. If a model fails while loading or stopping, turn it off and use
+                the WASM/CPU fallbacks.
               </p>
             </mat-card-content>
           </mat-card>

@@ -278,7 +278,7 @@ export class AiService {
   private static readonly TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
 
   private readonly defaultCloudSettings: AiCloudSettings = {
-    tauriWebGpuEnabled: false,
+    tauriWebGpuEnabled: true,
     preferredImageProvider: 'xai',
     openaiChatModel: 'gpt-4.1-mini',
     xaiChatModel: 'grok-4-1-fast-reasoning',

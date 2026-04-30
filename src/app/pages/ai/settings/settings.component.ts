@@ -278,8 +278,8 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     this.aiService.updateCloudSettings({ tauriWebGpuEnabled: enabled });
     this.snackBar.open(
       enabled
-        ? 'Desktop WebGPU enabled on this device. Reopen AI views before loading GPU models.'
-        : 'Desktop WebGPU disabled on this device.',
+        ? 'Desktop WebGPU enabled on this device.'
+        : 'Desktop WebGPU disabled on this device. Reopen AI views to use WASM/CPU fallbacks.',
       'Dismiss',
       { duration: 4000 }
     );
