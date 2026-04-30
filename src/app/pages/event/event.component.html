@@ -271,8 +271,8 @@
       [attr.aria-label]="threadedEvent.replies.length > 0 ? 'Toggle replies visibility' : null">
     </div>
     <div class="thread-content">
-      <app-event [event]="threadedEvent.event" mode="thread" [replyCountFromParent]="countReplies(threadedEvent)"
-        [repliesFromParent]="threadedEvent.replies" [threadInteractionDisabled]="isAuthorFollowingInteractionLocked()"
+      <app-event [event]="threadedEvent.event" mode="thread" [replyCountFromParent]="replyCountFromLoadedThread(threadedEvent)"
+        [repliesFromParent]="repliesFromLoadedThread(threadedEvent)" [threadInteractionDisabled]="isAuthorFollowingInteractionLocked()"
         [threadInteractionDisabledReason]="authorFollowingInteractionDisabledReason()"></app-event>
 
       @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {

@@ -684,6 +684,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // or the generic thread view (kind 1).
   private readonly NAVIGABLE_KINDS = new Set([
     1,      // Short text note (kind 1) - opens thread
+    1111,   // NIP-22 comment (kind 1111) - opens thread
+    1244,   // Voice comment/audio comment (kind 1244) - opens thread
     30023,  // Long-form article (kind 30023) - opens article page
     30311,  // Live event (kind 30311) - opens stream page
     32100,  // M3U Playlist (kind 32100) - opens event page

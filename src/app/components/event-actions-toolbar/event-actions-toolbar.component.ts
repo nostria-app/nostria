@@ -462,32 +462,15 @@ export class EventActionsToolbarComponent {
 
         const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
         const comments = await this.sharedRelay.getMany(event.pubkey, {
-          kinds: [1111],
+          kinds: [1111, 1244],
           '#A': [aTagValue],
           limit: 100,
         });
         return comments?.length || 0;
       }
 
-      const [lowercaseTagComments, uppercaseTagComments] = await Promise.all([
-        this.sharedRelay.getMany(event.pubkey, {
-          kinds: [1111],
-          '#e': [event.id],
-          limit: 100,
-        }),
-        this.sharedRelay.getMany(event.pubkey, {
-          kinds: [1111],
-          '#E': [event.id],
-          limit: 100,
-        }),
-      ]);
-
-      const dedupedById = new Set<string>();
-      for (const comment of [...lowercaseTagComments, ...uppercaseTagComments]) {
-        dedupedById.add(comment.id);
-      }
-
-      return dedupedById.size;
+      const comments = await this.eventService.loadNip22Comments(event.id, event.pubkey);
+      return comments.length;
     } catch (err) {
       this.logger.error('Failed to load comments:', err);
       return 0;

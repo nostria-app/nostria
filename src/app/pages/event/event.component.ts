@@ -605,6 +605,15 @@ export class EventPageComponent {
     return count;
   }
 
+  replyCountFromLoadedThread(threadedEvent: ThreadedEvent): number | undefined {
+    const count = this.countReplies(threadedEvent);
+    return count > 0 ? count : undefined;
+  }
+
+  repliesFromLoadedThread(threadedEvent: ThreadedEvent): ThreadedEvent[] | undefined {
+    return threadedEvent.replies.length > 0 ? threadedEvent.replies : undefined;
+  }
+
   /**
    * Navigate back - handle both primary outlet and right panel scenarios
    */
