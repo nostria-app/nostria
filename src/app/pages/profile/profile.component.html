@@ -101,6 +101,13 @@
         <span>Share</span>
       </button>
 
+      @if (settings.settings().aiEnabled && settings.settings().aiSpeechEnabled) {
+      <button mat-menu-item [matMenuTriggerFor]="timelineReadAloudMenu">
+        <mat-icon>record_voice_over</mat-icon>
+        <span>Read timeline aloud</span>
+      </button>
+      }
+
       @if (isOwnProfile()) {
       <button mat-menu-item (click)="openShareInviteDialog()">
         <mat-icon>person_add</mat-icon>
@@ -135,6 +142,16 @@
         <span>Block User</span>
       </button>
       }
+      }
+    </mat-menu>
+
+    <mat-menu #timelineReadAloudMenu="matMenu">
+      @for (model of ttsSequence.models; track model.id) {
+      <button mat-menu-item (click)="startTimelineReadAloud(model.id)">
+        <mat-icon>graphic_eq</mat-icon>
+        <span>{{ model.label }}</span>
+        <span class="profile-menu-item-meta">{{ model.description }}</span>
+      </button>
       }
     </mat-menu>
 

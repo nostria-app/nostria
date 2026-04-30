@@ -44,7 +44,7 @@ import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { nip19, kinds } from 'nostr-tools';
+import { nip19, kinds, type Event } from 'nostr-tools';
 import { ProfileState } from '../../services/profile-state';
 import { ProfileStateFactory, PROFILE_STATE } from '../../services/profile-state-factory.service';
 import { ProfileTrackingService } from '../../services/profile-tracking.service';
@@ -82,6 +82,8 @@ import { ProfileHomeComponent } from './profile-home/profile-home.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
 import { BadgeService } from '../../services/badge.service';
+import { SettingsService } from '../../services/settings.service';
+import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
 
 interface GiftCelebrationPayload {
   recipientName?: string;
@@ -180,6 +182,8 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly badgeService = inject(BadgeService);
+  protected readonly settings = inject(SettingsService);
+  protected readonly ttsSequence = inject(TtsSequencePlayerService);
 
   pubkey = signal<string>('');
 
@@ -933,6 +937,15 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       width: '560px',
       maxWidth: 'min(560px, calc(100vw - 24px))',
     });
+  }
+
+  startTimelineReadAloud(modelId: string): void {
+    const events = this.getTimelineTtsEvents();
+    this.ttsSequence.start('feed', `${this.getFormattedName()}'s timeline`, events, modelId);
+  }
+
+  private getTimelineTtsEvents(): Event[] {
+    return this.profileState.sortedTimeline().map(item => item.event);
   }
 
   /**
