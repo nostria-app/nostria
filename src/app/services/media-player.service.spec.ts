@@ -72,6 +72,96 @@ describe('MediaPlayerService - Media Session API', () => {
         expect(service).toBeTruthy();
     });
 
+    it('should allow previous on the first queued item and restart it', () => {
+        const startSpy = vi.spyOn(service, 'start').mockResolvedValue(undefined);
+
+        service.media.set([
+            {
+                artwork: 'https://example.com/cover-1.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track-1.mp3',
+                type: 'Music',
+            },
+            {
+                artwork: 'https://example.com/cover-2.jpg',
+                title: 'Track 2',
+                artist: 'Artist',
+                source: 'https://example.com/track-2.mp3',
+                type: 'Music',
+            },
+        ]);
+        service.index = 0;
+
+        expect(service.canPrevious()).toBe(true);
+
+        service.previous();
+
+        expect(service.index).toBe(0);
+        expect(startSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should wrap previous from the first queued item when repeat all is enabled', () => {
+        const startSpy = vi.spyOn(service, 'start').mockResolvedValue(undefined);
+
+        service.media.set([
+            {
+                artwork: 'https://example.com/cover-1.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track-1.mp3',
+                type: 'Music',
+            },
+            {
+                artwork: 'https://example.com/cover-2.jpg',
+                title: 'Track 2',
+                artist: 'Artist',
+                source: 'https://example.com/track-2.mp3',
+                type: 'Music',
+            },
+        ]);
+        service.index = 0;
+        service.repeat.set('all');
+
+        service.previous();
+
+        expect(service.index).toBe(1);
+        expect(startSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should choose a random previous item when shuffle is enabled', () => {
+        const startSpy = vi.spyOn(service, 'start').mockResolvedValue(undefined);
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+
+        service.media.set([
+            {
+                artwork: 'https://example.com/cover-1.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track-1.mp3',
+                type: 'Music',
+            },
+            {
+                artwork: 'https://example.com/cover-2.jpg',
+                title: 'Track 2',
+                artist: 'Artist',
+                source: 'https://example.com/track-2.mp3',
+                type: 'Music',
+            },
+        ]);
+        service.index = 0;
+        service.shuffle.set(true);
+
+        try {
+            service.previous();
+
+            expect(service.index).toBe(1);
+            expect(startSpy).toHaveBeenCalledTimes(1);
+        } finally {
+            randomSpy.mockRestore();
+        }
+    });
+
     it('should NOT initialize media session handlers in constructor', () => {
         // Media session handlers should not be set during construction (bootstrap)
         expect(setActionHandlerSpy).not.toHaveBeenCalled();

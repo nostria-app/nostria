@@ -84,11 +84,7 @@ export class MediaPlayerService implements OnInitialized {
 
   // Convert to computed signals - consider shuffle and repeat states
   canPrevious = computed(() => {
-    // If shuffle or repeat is enabled, always allow navigation
-    if (this.shuffle() || this.repeat() !== 'off') {
-      return this.media().length > 0;
-    }
-    return this._index() > 0;
+    return this.media().length > 0;
   });
   canNext = computed(() => {
     // If shuffle or repeat is enabled, always allow navigation
@@ -2325,7 +2321,25 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   previous() {
-    this.index--;
+    const mediaLength = this.media().length;
+    if (mediaLength === 0) {
+      return;
+    }
+
+    if (this.shuffle()) {
+      if (mediaLength > 1) {
+        let newIndex = this.index;
+        while (newIndex === this.index) {
+          newIndex = Math.floor(Math.random() * mediaLength);
+        }
+        this.index = newIndex;
+      }
+    } else if (this.index > 0) {
+      this.index--;
+    } else if (this.repeat() === 'all') {
+      this.index = mediaLength - 1;
+    }
+
     this.start();
   }
 
