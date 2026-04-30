@@ -10,6 +10,7 @@
   margin: 0 auto;
   padding: var(--ai-page-vertical-padding) 16px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .ai-shell {
@@ -17,8 +18,9 @@
   display: grid;
   grid-template-columns: var(--ai-history-sidebar-width) minmax(0, 1fr);
   gap: 20px;
-  min-height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
+  min-height: 0;
   height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
+  overflow: hidden;
 }
 
 .ai-shell.ai-shell-split {
@@ -1042,7 +1044,7 @@
 }
 
 .conversation-panel {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
   display: flex;
@@ -2008,7 +2010,13 @@
 @media (max-width: 820px) {
 
   .ai-page {
+    height: calc(100dvh - var(--toolbar-height, 64px));
     padding-inline: 10px;
+    padding-block: 0;
+  }
+
+  .ai-shell {
+    height: 100%;
   }
 
   .history-sidebar,
@@ -2023,6 +2031,12 @@
     border-radius: 0;
     box-shadow: none;
     background: transparent;
+  }
+
+  .prompt-suggestions,
+  .initial-chat-type-picker,
+  .composer-panel {
+    flex: 0 0 auto;
   }
 
   .chat-header,
