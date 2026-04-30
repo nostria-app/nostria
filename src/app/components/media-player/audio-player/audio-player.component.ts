@@ -73,7 +73,7 @@ export class AudioPlayerComponent {
   private imageCache = inject(ImageCacheService);
   private settings = inject(SettingsService);
 
-  canDockToSidebar = computed(() => !this.layout.isHandset() && this.settings.settings().rightSidebarEnabled === true);
+  canDockToSidebar = computed(() => this.layout.rightSidebarVisible() && this.settings.settings().rightSidebarEnabled === true);
 
   footer = input<boolean>(false);
   miniMediaToggleRequested = output<MouseEvent>();

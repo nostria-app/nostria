@@ -77,6 +77,7 @@ export class LayoutService implements OnDestroy {
   private utilities = inject(UtilitiesService);
   isHandset = signal(false);
   isWideScreen = signal(false);
+  rightSidebarVisible = signal(false);
   breakpointObserver = inject(BreakpointObserver);
   optimalProfilePosition = 240;
 
@@ -413,10 +414,15 @@ export class LayoutService implements OnDestroy {
       this.isWideScreen.set(result.matches);
     });
 
-    // Reset sidebar-docked media player when switching to mobile
-    // (sidebar is not visible on handset screens)
+    this.breakpointObserver.observe('(min-width: 1024px)').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
+      this.rightSidebarVisible.set(result.matches);
+    });
+
+    // Reset sidebar-docked media player when the right sidebar is hidden.
     effect(() => {
-      if (this.isHandset() && this.mediaPlayerInSidebar()) {
+      if (!this.rightSidebarVisible() && this.mediaPlayerInSidebar()) {
         this.mediaPlayerInSidebar.set(false);
       }
     });

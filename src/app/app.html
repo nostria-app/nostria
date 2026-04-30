@@ -479,7 +479,7 @@
         </div>
 
         <!-- Right sidebar - mini apps panel (shoutout, favorites, future mini apps) -->
-        @if (app.authenticated() && !layout.isHandset() && settings.settings().rightSidebarEnabled === true) {
+        @if (app.authenticated() && layout.rightSidebarVisible() && settings.settings().rightSidebarEnabled === true) {
         <div class="right-sidebar">
           <!-- <app-shoutout-overlay></app-shoutout-overlay> -->
           @for (widget of runesSettings.visibleSidebarWidgets(); track widget) {
