@@ -1267,6 +1267,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: min(300px, 58vw);
 }
 
 .stream-placeholder-line {
@@ -1279,6 +1280,28 @@
   font-style: normal;
   font-size: 0.82rem;
   color: var(--mat-sys-on-surface-variant);
+  max-width: min(460px, 68vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-progress-rail {
+  position: relative;
+  overflow: hidden;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mat-sys-outline-variant) 55%, transparent);
+}
+
+.stream-progress-rail-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mat-sys-primary);
+  transition: width 180ms ease;
 }
 
 .stream-progress {

@@ -72,29 +72,37 @@
     @if (showChatPanel()) {
     <section class="chat-surface" #chatSurface (scroll)="onConversationScroll($event)">
       <header class="chat-header">
-        @if (hasXAiChatTypePicker()) {
+        @if (hasComposerModePicker()) {
         <section class="initial-chat-type-picker" aria-label="Choose chat type">
           <div class="initial-chat-type-actions" role="group" aria-label="Chat type">
+            @if (hasTextComposerMode()) {
             <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
-              [class.grok-toolbar-chip-active]="isXAiTextMode()" (click)="selectGrokMode('text')">
+              [class.grok-toolbar-chip-active]="currentXAiMode() === 'text'" (click)="selectGrokMode('text')">
               <mat-icon>chat</mat-icon>
               <span>Text</span>
             </button>
+            }
+            @if (hasImageComposerMode()) {
             <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
-              [class.grok-toolbar-chip-active]="isImageGenerationMode()" (click)="selectGrokMode('image')">
+              [class.grok-toolbar-chip-active]="currentXAiMode() === 'image'" (click)="selectGrokMode('image')">
               <mat-icon>image</mat-icon>
               <span>Image</span>
             </button>
+            }
+            @if (hasVideoComposerMode()) {
             <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
-              [class.grok-toolbar-chip-active]="isVideoGenerationMode()" (click)="selectGrokMode('video')">
+              [class.grok-toolbar-chip-active]="currentXAiMode() === 'video'" (click)="selectGrokMode('video')">
               <mat-icon>videocam</mat-icon>
               <span>Video</span>
             </button>
+            }
+            @if (hasVoiceComposerMode()) {
             <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
-              [class.grok-toolbar-chip-active]="isVoiceGenerationMode()" (click)="selectGrokMode('voice')">
+              [class.grok-toolbar-chip-active]="currentXAiMode() === 'voice'" (click)="selectGrokMode('voice')">
               <mat-icon>graphic_eq</mat-icon>
               <span>Voice</span>
             </button>
+            }
           </div>
         </section>
         }
@@ -409,6 +417,17 @@
               </div>
               @if (videoProcessingHint()) {
               <div class="stream-placeholder-hint">{{ videoProcessingHint() }}</div>
+              }
+              @if (dictationLoadingHint()) {
+              <div class="stream-placeholder-hint">{{ dictationLoadingHint() }}</div>
+              }
+              @if (modelLoadingHint()) {
+              <div class="stream-placeholder-hint">{{ modelLoadingHint() }}</div>
+              }
+              @if (activeProcessingProgress() !== null) {
+              <div class="stream-progress-rail" aria-hidden="true">
+                <span class="stream-progress-rail-bar" [style.width.%]="activeProcessingProgress()"></span>
+              </div>
               }
             </div>
             @if (activeProcessingProgress() !== null) {

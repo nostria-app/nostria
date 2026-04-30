@@ -870,7 +870,17 @@ export class AiComponent {
   readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
   readonly isVisualGenerationMode = computed(() => this.isImageMode() || this.isVideoGenerationMode());
   readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
-  readonly hasXAiChatTypePicker = computed(() => this.cloudChatModels().some(model => model.provider === 'xai'));
+  readonly hasTextComposerMode = computed(() => this.localChatModels().some(model => !model.chatDisabledReason) || this.cloudChatModels().length > 0);
+  readonly hasImageComposerMode = computed(() => this.imageModels().some(model => !model.chatDisabledReason));
+  readonly hasVideoComposerMode = computed(() => this.videoModels().some(model => !model.chatDisabledReason));
+  readonly hasVoiceComposerMode = computed(() => this.voiceModels().some(model => !model.chatDisabledReason));
+  readonly hasComposerModePicker = computed(() => [
+    this.hasTextComposerMode(),
+    this.hasImageComposerMode(),
+    this.hasVideoComposerMode(),
+    this.hasVoiceComposerMode(),
+  ].filter(Boolean).length > 1);
+  readonly hasXAiChatTypePicker = this.hasComposerModePicker;
   readonly isXAiComposerMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && (this.isXAiTextMode() || this.isImageGenerationMode() || this.isVideoGenerationMode() || this.isVoiceGenerationMode()));
   readonly composerPlaceholder = computed(() => {
     const compact = this.narrowHistoryMode();
@@ -897,7 +907,7 @@ export class AiComponent {
 
     return compact ? 'Ask anything' : 'Ask anything or use #fetch example.com';
   });
-  readonly currentXAiMode = computed<XAiComposerMode>(() => this.isVoiceGenerationMode() ? 'voice' : this.isVideoGenerationMode() ? 'video' : this.isImageGenerationMode() ? 'image' : 'text');
+  readonly currentXAiMode = computed<XAiComposerMode>(() => this.isVoiceGenerationMode() ? 'voice' : this.isVideoGenerationMode() ? 'video' : this.isImageMode() ? 'image' : 'text');
   readonly currentXAiModeLabel = computed(() => this.xAiModeOptions.find(option => option.value === this.currentXAiMode())?.label ?? 'Text');
   readonly isXAiImageQualityMode = computed(() => this.cloudSettings().xaiImageResolution === '2k');
   readonly xAiImageModeLabel = computed(() => this.isXAiImageQualityMode() ? 'Quality' : 'Speed');
@@ -1167,10 +1177,7 @@ export class AiComponent {
       return '';
     }
 
-    const details: string[] = [];
-    if (state.file) {
-      details.push(state.file);
-    }
+    const details = [state.modelName];
 
     if (state.loadedBytes !== null && state.totalBytes !== null && state.totalBytes > 0) {
       details.push(`${this.formatFileSize(state.loadedBytes)} of ${this.formatFileSize(state.totalBytes)}`);
@@ -1186,10 +1193,7 @@ export class AiComponent {
       return '';
     }
 
-    const details: string[] = [];
-    if (model.loadFile) {
-      details.push(model.loadFile);
-    }
+    const details = [model.name];
 
     if (model.loadedBytes !== null && model.loadedBytes !== undefined
       && model.totalBytes !== null && model.totalBytes !== undefined && model.totalBytes > 0) {
