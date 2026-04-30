@@ -29,6 +29,7 @@ export interface TtsSequenceItem {
   eventPartTotal?: number;
   articleTarget?: 'title' | 'summary' | 'body';
   articleBlockIndex?: number;
+  articleParagraphIndex?: number;
 }
 
 export interface TtsSequenceState {
