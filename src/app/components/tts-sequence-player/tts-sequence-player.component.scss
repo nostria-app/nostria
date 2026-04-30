@@ -100,10 +100,16 @@
   grid-column: 4;
 }
 
-.tts-menu-meta {
-  margin-left: 8px;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.78rem;
+::ng-deep .tts-sequence-menu {
+  .tts-menu-label {
+    color: var(--mat-sys-on-surface);
+  }
+
+  .tts-menu-meta {
+    margin-left: 8px;
+    color: color-mix(in srgb, var(--mat-sys-on-surface-variant) 74%, var(--mat-sys-primary));
+    font-size: 0.78rem;
+  }
 }
 
 @media (max-width: 760px) {

@@ -27,6 +27,7 @@ export interface TtsSequenceItem {
   text: string;
   paragraphs: string[];
   label: string;
+  pauseAfterMs?: number;
   eventPartIndex?: number;
   eventPartTotal?: number;
   articleTarget?: 'title' | 'summary' | 'body';
@@ -212,8 +213,10 @@ export class TtsSequencePlayerService {
 
   private audio: HTMLAudioElement | null = null;
   private currentObjectUrl: string | null = null;
+  private pendingAdvanceTimeout: ReturnType<typeof setTimeout> | null = null;
   private requestId = 0;
   private readonly maxTtsChunkLength = 520;
+  private readonly authorAnnouncementPauseMs = 80;
   private readonly audioCache = new Map<number, AudioCacheEntry>();
 
   start(source: 'feed' | 'profile' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
@@ -456,7 +459,17 @@ export class TtsSequencePlayerService {
       if (!this.isCurrent(requestId)) return;
       const state = this.state();
       if (state && state.currentIndex < state.items.length - 1) {
-        this.jumpTo(state.currentIndex + 1);
+        const delay = state.items[state.currentIndex]?.pauseAfterMs ?? 0;
+        if (delay > 0) {
+          this.pendingAdvanceTimeout = setTimeout(() => {
+            this.pendingAdvanceTimeout = null;
+            if (this.isCurrent(requestId)) {
+              this.jumpTo(state.currentIndex + 1);
+            }
+          }, delay);
+        } else {
+          this.jumpTo(state.currentIndex + 1);
+        }
       } else {
         this.patchState({ status: 'paused', message: 'Finished' });
       }
@@ -621,22 +634,30 @@ export class TtsSequencePlayerService {
     const { event, speechEvent, announceAuthor } = context;
     const { text, paragraphs } = await this.ttsText.fromEvent(speechEvent);
     const chunks = this.chunkSpeechText(paragraphs.length > 0 ? paragraphs : [text]);
-    return chunks.map((chunk, index) => {
-      const speechText = this.withAuthorAnnouncement(
-        chunk,
-        index,
-        announceAuthor ? authorNames.get(speechEvent.pubkey) : undefined,
-      );
+    const items: TtsSequenceItem[] = [];
+    const authorName = announceAuthor ? authorNames.get(speechEvent.pubkey) : undefined;
 
-      return {
+    if (authorName && chunks.length > 0) {
+      const text = `${authorName} wrote.`;
+      items.push({
         eventId: event.id,
-        text: speechText,
-        paragraphs: [speechText],
-        label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
-        eventPartIndex: index,
-        eventPartTotal: chunks.length,
-      };
-    });
+        text,
+        paragraphs: [text],
+        label: text,
+        pauseAfterMs: this.authorAnnouncementPauseMs,
+      });
+    }
+
+    items.push(...chunks.map((chunk, index) => ({
+      eventId: event.id,
+      text: chunk,
+      paragraphs: [chunk],
+      label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
+      eventPartIndex: index,
+      eventPartTotal: chunks.length,
+    })));
+
+    return items;
   }
 
   private createReadableEventContext(event: Event, source: TtsSequenceState['source']): ReadableEventContext | null {
@@ -648,7 +669,7 @@ export class TtsSequencePlayerService {
     return {
       event,
       speechEvent,
-      announceAuthor: source === 'feed' || (source === 'profile' && this.repostService.isRepostEvent(event)),
+      announceAuthor: source === 'feed' || source === 'thread' || (source === 'profile' && this.repostService.isRepostEvent(event)),
     };
   }
 
@@ -687,14 +708,6 @@ export class TtsSequencePlayerService {
     }
 
     return '';
-  }
-
-  private withAuthorAnnouncement(chunk: string, index: number, authorName: string | undefined): string {
-    if (index > 0 || !authorName) {
-      return chunk;
-    }
-
-    return `${authorName} wrote.\n\n${chunk}`;
   }
 
   private chunkSpeechText(paragraphs: string[]): string[] {
@@ -849,6 +862,11 @@ export class TtsSequencePlayerService {
   }
 
   private disposeAudio(): void {
+    if (this.pendingAdvanceTimeout) {
+      clearTimeout(this.pendingAdvanceTimeout);
+      this.pendingAdvanceTimeout = null;
+    }
+
     if (this.audio) {
       this.audio.pause();
       this.audio.src = '';

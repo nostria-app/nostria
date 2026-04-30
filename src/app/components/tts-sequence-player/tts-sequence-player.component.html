@@ -56,21 +56,21 @@
   </button>
 </mat-menu>
 
-<mat-menu #modelMenu="matMenu">
+<mat-menu #modelMenu="matMenu" panelClass="tts-sequence-menu">
   @for (model of player.models; track model.id) {
   <button mat-menu-item (click)="player.selectModel(model.id)">
     <mat-icon>{{ player.selectedModelId() === model.id ? 'check_circle' : 'graphic_eq' }}</mat-icon>
-    <span>{{ model.label }}</span>
+    <span class="tts-menu-label">{{ model.label }}</span>
     <span class="tts-menu-meta">{{ model.description }}</span>
   </button>
   }
 </mat-menu>
 
-<mat-menu #voiceMenu="matMenu">
+<mat-menu #voiceMenu="matMenu" panelClass="tts-sequence-menu">
   @for (voice of player.voiceOptions(); track voice.value) {
   <button mat-menu-item (click)="player.selectVoice(voice.value)">
     <mat-icon>{{ player.selectedVoice() === voice.value ? 'check_circle' : 'record_voice_over' }}</mat-icon>
-    <span>{{ voice.label }}</span>
+    <span class="tts-menu-label">{{ voice.label }}</span>
     @if (voice.description) {
     <span class="tts-menu-meta">{{ voice.description }}</span>
     }
