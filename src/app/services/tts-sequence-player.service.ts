@@ -694,7 +694,7 @@ export class TtsSequencePlayerService {
       return chunk;
     }
 
-    return `${authorName} wrote. ${chunk}`;
+    return `${authorName} wrote.\n\n${chunk}`;
   }
 
   private chunkSpeechText(paragraphs: string[]): string[] {

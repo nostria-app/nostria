@@ -249,7 +249,7 @@
               @let dynamicRenderItems = feedRenderItems().get(dynFeed.id);
               @for (item of dynamicRenderItems || []; track item.key) {
               @if (item.kind === 'event') {
-              <app-event [event]="item.event" [inFeedsPanel]="true"></app-event>
+              <app-event [event]="item.event" [inFeedsPanel]="true" [attr.data-feed-event-id]="item.event.id"></app-event>
               } @else {
               <app-featured-feed-card [card]="item.card" [instanceId]="item.instanceId"></app-featured-feed-card>
               }
@@ -386,7 +386,7 @@
               @if (feedItems && feedItems.length > 0) {
               @for (item of feedItems; track item.key) {
               @if (item.kind === 'event') {
-              <app-event [event]="item.event" [inFeedsPanel]="true"></app-event>
+              <app-event [event]="item.event" [inFeedsPanel]="true" [attr.data-feed-event-id]="item.event.id"></app-event>
               } @else {
               <app-featured-feed-card [card]="item.card" [instanceId]="item.instanceId"></app-featured-feed-card>
               }

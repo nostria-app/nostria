@@ -501,7 +501,37 @@ export class FeedsComponent implements OnDestroy {
       return [];
     }
 
-    return this.allColumnEvents().get(feed.id) ?? this.columnEvents().get(feed.id) ?? [];
+    const events = this.allColumnEvents().get(feed.id) ?? this.columnEvents().get(feed.id) ?? [];
+    const visibleEventId = this.getFirstVisibleFeedEventId();
+    if (!visibleEventId) {
+      return events;
+    }
+
+    const startIndex = events.findIndex(event => event.id === visibleEventId);
+    return startIndex > 0 ? events.slice(startIndex) : events;
+  }
+
+  private getFirstVisibleFeedEventId(): string | null {
+    const container = this.columnsContainer?.nativeElement;
+    if (!container) {
+      return null;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const header = container.querySelector<HTMLElement>('.panel-header');
+    const headerBottom = header?.getBoundingClientRect().bottom ?? containerRect.top;
+    const viewportTop = Math.max(containerRect.top, headerBottom);
+    const viewportBottom = containerRect.bottom;
+    const eventElements = Array.from(container.querySelectorAll<HTMLElement>('[data-feed-event-id]'));
+
+    for (const element of eventElements) {
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom > viewportTop && rect.top < viewportBottom) {
+        return element.dataset['feedEventId'] ?? null;
+      }
+    }
+
+    return null;
   }
 
   // Drag state to prevent unnecessary re-renders during column reordering
