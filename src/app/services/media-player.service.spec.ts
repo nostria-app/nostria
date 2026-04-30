@@ -162,6 +162,34 @@ describe('MediaPlayerService - Media Session API', () => {
         }
     });
 
+    it('should wrap next from the last queued item when repeat all is enabled', () => {
+        const startSpy = vi.spyOn(service, 'start').mockResolvedValue(undefined);
+
+        service.media.set([
+            {
+                artwork: 'https://example.com/cover-1.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track-1.mp3',
+                type: 'Music',
+            },
+            {
+                artwork: 'https://example.com/cover-2.jpg',
+                title: 'Track 2',
+                artist: 'Artist',
+                source: 'https://example.com/track-2.mp3',
+                type: 'Music',
+            },
+        ]);
+        service.index = 1;
+        service.repeat.set('all');
+
+        service.next();
+
+        expect(service.index).toBe(0);
+        expect(startSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('should NOT initialize media session handlers in constructor', () => {
         // Media session handlers should not be set during construction (bootstrap)
         expect(setActionHandlerSpy).not.toHaveBeenCalled();

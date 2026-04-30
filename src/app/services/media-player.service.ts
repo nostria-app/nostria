@@ -2304,9 +2304,13 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   next() {
+    const mediaLength = this.media().length;
+    if (mediaLength === 0) {
+      return;
+    }
+
     if (this.shuffle()) {
       // Pick a random index different from current
-      const mediaLength = this.media().length;
       if (mediaLength > 1) {
         let newIndex = this.index;
         while (newIndex === this.index) {
@@ -2314,8 +2318,12 @@ export class MediaPlayerService implements OnInitialized {
         }
         this.index = newIndex;
       }
-    } else {
+    } else if (this.index < mediaLength - 1) {
       this.index++;
+    } else if (this.repeat() === 'all') {
+      this.index = 0;
+    } else {
+      this.index = Math.max(0, mediaLength - 1);
     }
     this.start();
   }
