@@ -6,8 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { nip19 } from 'nostr-tools';
 import { CommunityService, Community, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
@@ -39,8 +37,6 @@ const PAGE_SIZE = 30;
     MatCardModule,
     MatTooltipModule,
     MatChipsModule,
-    MatFormFieldModule,
-    MatInputModule,
     DatePipe,
     RouterLink,
     UserProfileComponent,
@@ -175,7 +171,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
 
   isAuthenticated = computed(() => this.app.authenticated());
   hasSearchQuery = computed(() => this.searchQuery().trim().length > 0);
-  showSearchField = computed(() => this.showSearch() || this.hasSearchQuery());
   hasActiveCommunityFilters = computed(() => {
     const filters = this.communityFilters();
     return (
@@ -303,7 +298,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   }
 
   toggleSearch(): void {
-    if (this.showSearchField()) {
+    if (this.showSearch()) {
       this.clearSearch();
       this.showSearch.set(false);
       return;

@@ -763,6 +763,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return isKnownRenderableKind(kind);
   }
 
+  shouldHideTaggedReferencesForEvent(event: Event): boolean {
+    return (
+      (event.kind === 1111 || event.kind === 1244) &&
+      event.tags.some(tag => tag[0] === 'A' && tag[1]?.startsWith('34550:'))
+    );
+  }
+
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
     // If navigation is disabled, treat as selected (e.g., in thread view or dialog)
