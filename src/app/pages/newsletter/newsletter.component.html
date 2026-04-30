@@ -183,7 +183,8 @@
         } @else if (recipient.error) {
         <mat-icon class="status-icon error" [matTooltip]="recipient.error">error</mat-icon>
         } @else if (!isSending()) {
-        <button mat-icon-button class="remove-btn" (click)="removeRecipient(recipient.pubkey)" matTooltip="Remove from list">
+        <button mat-icon-button class="remove-btn" (click)="removeRecipient(recipient.pubkey)"
+          matTooltip="Remove from list">
           <mat-icon>close</mat-icon>
         </button>
         }
@@ -198,13 +199,8 @@
     <h3>Your Message</h3>
     <mat-form-field appearance="outline" class="message-field">
       <mat-label>Message</mat-label>
-      <textarea
-        matInput
-        [(ngModel)]="messageText"
-        placeholder="Write your message here..."
-        rows="5"
-        [disabled]="isSending()"
-      ></textarea>
+      <textarea matInput [(ngModel)]="messageText" placeholder="Write your message here..." rows="5"
+        [disabled]="isSending()"></textarea>
       <mat-hint>This message will be sent as an individual DM to each recipient</mat-hint>
     </mat-form-field>
   </div>
@@ -228,22 +224,12 @@
   <!-- Send Button -->
   <div class="send-actions">
     @if (isSending()) {
-    <button
-      mat-flat-button
-      class="send-button"
-      [disabled]="!canSend()"
-      (click)="sendNewsletter()"
-    >
+    <button mat-flat-button class="send-button" [disabled]="!canSend()" (click)="sendNewsletter()">
       <mat-spinner diameter="20"></mat-spinner>
       Sending...
     </button>
     } @else {
-    <button
-      mat-flat-button
-      class="send-button"
-      [disabled]="!canSend()"
-      (click)="sendNewsletter()"
-    >
+    <button mat-flat-button class="send-button" [disabled]="!canSend()" (click)="sendNewsletter()">
       <mat-icon>send</mat-icon>
       Send to {{ recipientCount() }} People
     </button>

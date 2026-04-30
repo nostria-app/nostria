@@ -19,7 +19,8 @@
   <button mat-icon-button (click)="goBack()" matTooltip="Back to Community">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font">{{ isEditMode() ? 'Edit Post in' : 'Create Post in' }} n/{{ community()!.name }}</h2>
+  <h2 class="panel-title title-font">{{ isEditMode() ? 'Edit Post in' : 'Create Post in' }} n/{{ community()!.name }}
+  </h2>
 </div>
 
 <div class="create-post-layout">
@@ -30,17 +31,21 @@
     <div class="tab-body">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Title</mat-label>
-        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title"
+          maxlength="300" />
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Body (optional)</mat-label>
-        <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Write your post content..." rows="8" style="field-sizing: content; min-height: 120px;"></textarea>
+        <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)"
+          placeholder="Write your post content..." rows="8"
+          style="field-sizing: content; min-height: 120px;"></textarea>
       </mat-form-field>
     </div>
     } @else {
     <!-- Post Type Tabs -->
-    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)" class="post-type-tabs">
+    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)"
+      class="post-type-tabs">
       <!-- Text Tab -->
       <mat-tab>
         <ng-template mat-tab-label>
@@ -51,12 +56,15 @@
         <div class="tab-body">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Title</mat-label>
-            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title"
+              maxlength="300" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Body (optional)</mat-label>
-            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Write your post content..." rows="8" style="field-sizing: content; min-height: 120px;"></textarea>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)"
+              placeholder="Write your post content..." rows="8"
+              style="field-sizing: content; min-height: 120px;"></textarea>
           </mat-form-field>
         </div>
       </mat-tab>
@@ -71,16 +79,13 @@
         <div class="tab-body">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Title</mat-label>
-            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title"
+              maxlength="300" />
           </mat-form-field>
 
           <!-- Drop zone -->
-          <div class="drop-zone"
-               [class.drag-over]="isDragOver()"
-               (dragenter)="onDragEnter($event)"
-               (dragover)="onDragOver($event)"
-               (dragleave)="onDragLeave($event)"
-               (drop)="onDrop($event)">
+          <div class="drop-zone" [class.drag-over]="isDragOver()" (dragenter)="onDragEnter($event)"
+            (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
             <mat-icon>cloud_upload</mat-icon>
             <p>Drag and drop files here, or click to browse</p>
             <button mat-flat-button (click)="fileInput.click()">
@@ -116,7 +121,8 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description (optional)</mat-label>
-            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Add a description..." rows="3" style="field-sizing: content; min-height: 60px;"></textarea>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Add a description..."
+              rows="3" style="field-sizing: content; min-height: 60px;"></textarea>
           </mat-form-field>
         </div>
       </mat-tab>
@@ -131,18 +137,22 @@
         <div class="tab-body">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Title</mat-label>
-            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title"
+              maxlength="300" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>URL</mat-label>
-            <input matInput [ngModel]="linkUrl()" (ngModelChange)="linkUrl.set($event)" placeholder="https://..." type="url" />
+            <input matInput [ngModel]="linkUrl()" (ngModelChange)="linkUrl.set($event)" placeholder="https://..."
+              type="url" />
             <mat-icon matPrefix>link</mat-icon>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description (optional)</mat-label>
-            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Add context about this link..." rows="3" style="field-sizing: content; min-height: 60px;"></textarea>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)"
+              placeholder="Add context about this link..." rows="3"
+              style="field-sizing: content; min-height: 60px;"></textarea>
           </mat-form-field>
         </div>
       </mat-tab>
