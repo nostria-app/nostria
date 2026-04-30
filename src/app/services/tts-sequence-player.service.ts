@@ -6,6 +6,8 @@ import { EventTtsPlaybackService } from './event-tts-playback.service';
 import { RepostService } from './repost.service';
 import { TtsTextService } from './tts-text.service';
 import { AiModelDownloadProgressTracker } from '../utils/ai-model-download-progress';
+import { DataService } from './data.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface TtsSequenceModelOption {
   id: string;
@@ -34,7 +36,7 @@ export interface TtsSequenceItem {
 
 export interface TtsSequenceState {
   requestId: number;
-  source: 'feed' | 'thread' | 'article';
+  source: 'feed' | 'profile' | 'thread' | 'article';
   title: string;
   items: TtsSequenceItem[];
   currentIndex: number;
@@ -48,12 +50,20 @@ interface AudioCacheEntry {
   src?: string;
 }
 
+interface ReadableEventContext {
+  event: Event;
+  speechEvent: Event;
+  announceAuthor: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TtsSequencePlayerService {
   private readonly ai = inject(AiService);
   private readonly eventTtsPlayback = inject(EventTtsPlaybackService);
   private readonly repostService = inject(RepostService);
   private readonly ttsText = inject(TtsTextService);
+  private readonly data = inject(DataService);
+  private readonly utilities = inject(UtilitiesService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
@@ -206,7 +216,7 @@ export class TtsSequencePlayerService {
   private readonly maxTtsChunkLength = 520;
   private readonly audioCache = new Map<number, AudioCacheEntry>();
 
-  start(source: 'feed' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
+  start(source: 'feed' | 'profile' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
     this.eventTtsPlayback.close();
     this.close();
     this.clearAudioCache();
@@ -575,7 +585,10 @@ export class TtsSequencePlayerService {
   }
 
   private async prepareAndPlay(requestId: number, events: Event[]): Promise<void> {
-    const items = await this.buildItems(events);
+    const state = this.state();
+    if (!state || state.requestId !== requestId) return;
+
+    const items = await this.buildItems(events, state.source);
     if (!this.isCurrent(requestId)) return;
 
     if (items.length === 0) {
@@ -592,27 +605,96 @@ export class TtsSequencePlayerService {
     await this.generateAndPlay(requestId);
   }
 
-  private async buildItems(events: Event[]): Promise<TtsSequenceItem[]> {
-    const eventItems = await Promise.all(events.map(event => this.buildItemsForEvent(event)));
+  private async buildItems(events: Event[], source: TtsSequenceState['source']): Promise<TtsSequenceItem[]> {
+    const contexts = events
+      .map(event => this.createReadableEventContext(event, source))
+      .filter(context => context !== null);
+    const authorNames = await this.getAuthorNames(contexts);
+    const eventItems = await Promise.all(contexts.map(context => this.buildItemsForEvent(context, authorNames)));
     return eventItems.flat().filter(item => item.text.length > 0);
   }
 
-  private async buildItemsForEvent(event: Event): Promise<TtsSequenceItem[]> {
-    const speechEvent = this.resolveSpeechEvent(event);
-    if (!speechEvent || (speechEvent.kind !== kinds.ShortTextNote && speechEvent.kind !== kinds.LongFormArticle)) {
-      return [];
-    }
-
+  private async buildItemsForEvent(
+    context: ReadableEventContext,
+    authorNames: Map<string, string>,
+  ): Promise<TtsSequenceItem[]> {
+    const { event, speechEvent, announceAuthor } = context;
     const { text, paragraphs } = await this.ttsText.fromEvent(speechEvent);
     const chunks = this.chunkSpeechText(paragraphs.length > 0 ? paragraphs : [text]);
-    return chunks.map((chunk, index) => ({
-      eventId: event.id,
-      text: chunk,
-      paragraphs: [chunk],
-      label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
-      eventPartIndex: index,
-      eventPartTotal: chunks.length,
-    }));
+    return chunks.map((chunk, index) => {
+      const speechText = this.withAuthorAnnouncement(
+        chunk,
+        index,
+        announceAuthor ? authorNames.get(speechEvent.pubkey) : undefined,
+      );
+
+      return {
+        eventId: event.id,
+        text: speechText,
+        paragraphs: [speechText],
+        label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
+        eventPartIndex: index,
+        eventPartTotal: chunks.length,
+      };
+    });
+  }
+
+  private createReadableEventContext(event: Event, source: TtsSequenceState['source']): ReadableEventContext | null {
+    const speechEvent = this.resolveSpeechEvent(event);
+    if (!speechEvent || (speechEvent.kind !== kinds.ShortTextNote && speechEvent.kind !== kinds.LongFormArticle)) {
+      return null;
+    }
+
+    return {
+      event,
+      speechEvent,
+      announceAuthor: source === 'feed' || (source === 'profile' && this.repostService.isRepostEvent(event)),
+    };
+  }
+
+  private async getAuthorNames(contexts: ReadableEventContext[]): Promise<Map<string, string>> {
+    const pubkeys = Array.from(new Set(
+      contexts
+        .filter(context => context.announceAuthor)
+        .map(context => context.speechEvent.pubkey)
+    ));
+    if (pubkeys.length === 0) {
+      return new Map();
+    }
+
+    const profiles = await this.data.batchLoadProfiles(pubkeys, undefined, true);
+    return new Map(pubkeys.map(pubkey => [pubkey, this.getAuthorName(pubkey, profiles)]));
+  }
+
+  private getAuthorName(pubkey: string, profiles: Map<string, { data: unknown }>): string {
+    const data = profiles.get(pubkey)?.data;
+    if (data && typeof data === 'object') {
+      const profile = data as { display_name?: unknown; name?: unknown; nip05?: unknown };
+      const name = this.firstString(profile.display_name, profile.name, profile.nip05);
+      if (name) {
+        return name;
+      }
+    }
+
+    return this.utilities.getTruncatedNpub(pubkey);
+  }
+
+  private firstString(...values: unknown[]): string {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  private withAuthorAnnouncement(chunk: string, index: number, authorName: string | undefined): string {
+    if (index > 0 || !authorName) {
+      return chunk;
+    }
+
+    return `${authorName} wrote. ${chunk}`;
   }
 
   private chunkSpeechText(paragraphs: string[]): string[] {

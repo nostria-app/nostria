@@ -941,7 +941,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
   startTimelineReadAloud(modelId: string): void {
     const events = this.getTimelineTtsEvents();
-    this.ttsSequence.start('feed', `${this.getFormattedName()}'s timeline`, events, modelId);
+    this.ttsSequence.start('profile', `${this.getFormattedName()}'s timeline`, events, modelId);
   }
 
   private getTimelineTtsEvents(): Event[] {
