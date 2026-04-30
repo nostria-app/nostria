@@ -60,6 +60,24 @@
   }
 }
 
+@media (max-width: 768px) {
+  .panel-header {
+    position: fixed;
+    top: calc(var(--safe-area-top, 0px) + var(--toolbar-height, 64px));
+    left: var(--docked-sidenav-width, 0px);
+    right: 0;
+    z-index: 590;
+    width: auto;
+  }
+
+  .article-container,
+  .article-loading,
+  .article-error,
+  .article-empty-state {
+    padding-top: 72px;
+  }
+}
+
 // Loading, error, and empty states
 .article-loading,
 .article-error,

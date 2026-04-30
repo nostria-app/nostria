@@ -12,9 +12,9 @@
 .tts-sequence-player {
   pointer-events: auto;
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) auto minmax(170px, 240px) auto auto;
+  grid-template-columns: minmax(230px, 1fr) auto auto auto;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   min-height: 56px;
   padding: 7px 12px 7px 18px;
   border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
@@ -52,8 +52,7 @@
   line-height: 1.25;
 }
 
-.tts-subtitle,
-.tts-timeline {
+.tts-subtitle {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.82rem;
 }
@@ -66,6 +65,11 @@
   gap: 2px;
 }
 
+.tts-controls button {
+  width: 40px;
+  height: 40px;
+}
+
 .tts-controls button,
 .tts-sequence-player > button[mat-icon-button] {
   display: flex !important;
@@ -75,34 +79,14 @@
 }
 
 .tts-play-button {
+  width: 48px !important;
+  height: 48px !important;
   color: var(--mat-sys-on-tertiary-container);
   background: color-mix(in srgb, var(--mat-sys-tertiary) 70%, var(--mat-sys-surface-container-high));
 }
 
-.tts-timeline {
-  grid-column: 3;
-  display: grid;
-  grid-template-columns: auto minmax(70px, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.tts-progress-track {
-  height: 5px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--mat-sys-outline) 45%, transparent);
-}
-
-.tts-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--mat-sys-tertiary);
-}
-
 .tts-settings-button {
-  grid-column: 4;
+  grid-column: 3;
   border-radius: 999px;
   color: var(--mat-sys-on-tertiary-container);
   background: color-mix(in srgb, var(--mat-sys-tertiary) 62%, var(--mat-sys-surface-container-high));
@@ -113,7 +97,7 @@
 }
 
 .tts-sequence-player > button[mat-icon-button] {
-  grid-column: 5;
+  grid-column: 4;
 }
 
 .tts-menu-meta {
@@ -129,7 +113,7 @@
   }
 
   .tts-sequence-player {
-    grid-template-columns: auto minmax(82px, 1fr) auto auto;
+    grid-template-columns: auto minmax(8px, 1fr) auto auto;
     grid-template-rows: auto auto;
     border-radius: 26px;
     padding: 10px;
@@ -164,13 +148,6 @@
       width: 42px;
       height: 42px;
     }
-  }
-
-  .tts-timeline {
-    grid-column: 2;
-    grid-row: 2;
-    grid-template-columns: auto minmax(40px, 1fr) auto;
-    gap: 6px;
   }
 
   .tts-settings-button {

@@ -7,7 +7,7 @@
     } @else {
     <div class="tts-title">{{ player.activeParagraph() || player.currentItem()?.label }}</div>
     }
-    <div class="tts-subtitle">{{ state.currentIndex + 1 }} / {{ state.items.length }}</div>
+    <div class="tts-subtitle">{{ player.positionLabel() }}</div>
   </div>
 
   <div class="tts-controls">
@@ -29,14 +29,6 @@
     <button mat-icon-button matTooltip="Next post" [disabled]="!player.canNext()" (click)="player.next()">
       <mat-icon>skip_next</mat-icon>
     </button>
-  </div>
-
-  <div class="tts-timeline">
-    <span>{{ formatTime(player.currentTime()) }}</span>
-    <div class="tts-progress-track" aria-hidden="true">
-      <div class="tts-progress-fill" [style.width.%]="progressPercent()"></div>
-    </div>
-    <span>{{ formatTime(player.duration()) }}</span>
   </div>
 
   <button mat-button class="tts-settings-button" [matMenuTriggerFor]="settingsMenu">

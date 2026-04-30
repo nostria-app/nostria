@@ -25,6 +25,8 @@ export interface TtsSequenceItem {
   text: string;
   paragraphs: string[];
   label: string;
+  eventPartIndex?: number;
+  eventPartTotal?: number;
   articleTarget?: 'title' | 'summary' | 'body';
   articleBlockIndex?: number;
 }
@@ -138,10 +140,28 @@ export class TtsSequencePlayerService {
   });
 
   readonly currentModel = computed(() => this.models.find(model => model.id === this.selectedModelId()) ?? this.models[0]);
-  readonly canPrevious = computed(() => (this.state()?.currentIndex ?? 0) > 0);
+  readonly canPrevious = computed(() => {
+    const state = this.state();
+    if (!state || state.currentIndex <= 0) return false;
+    if (state.source === 'article') return true;
+
+    return this.findPreviousEventIndex(state) !== null;
+  });
   readonly canNext = computed(() => {
     const state = this.state();
-    return !!state && state.currentIndex < state.items.length - 1;
+    if (!state || state.currentIndex >= state.items.length - 1) return false;
+    if (state.source === 'article') return true;
+
+    return this.findNextEventIndex(state) !== null;
+  });
+  readonly positionLabel = computed(() => {
+    const state = this.state();
+    if (!state) return '';
+    if (state.source === 'article') return `${state.currentIndex + 1} / ${state.items.length}`;
+
+    const total = this.countContiguousEvents(state.items);
+    const current = this.countContiguousEvents(state.items.slice(0, state.currentIndex + 1));
+    return `${current} / ${total}`;
   });
 
   readonly voiceOptions = computed(() => {
@@ -182,6 +202,7 @@ export class TtsSequencePlayerService {
   private audio: HTMLAudioElement | null = null;
   private currentObjectUrl: string | null = null;
   private requestId = 0;
+  private readonly maxTtsChunkLength = 520;
   private readonly audioCache = new Map<number, AudioCacheEntry>();
 
   start(source: 'feed' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
@@ -237,13 +258,31 @@ export class TtsSequencePlayerService {
   previous(): void {
     const state = this.state();
     if (!state || state.currentIndex <= 0) return;
-    this.jumpTo(state.currentIndex - 1);
+
+    if (state.source === 'article') {
+      this.jumpTo(state.currentIndex - 1);
+      return;
+    }
+
+    const previousEventIndex = this.findPreviousEventIndex(state);
+    if (previousEventIndex !== null) {
+      this.jumpTo(previousEventIndex);
+    }
   }
 
   next(): void {
     const state = this.state();
     if (!state || state.currentIndex >= state.items.length - 1) return;
-    this.jumpTo(state.currentIndex + 1);
+
+    if (state.source === 'article') {
+      this.jumpTo(state.currentIndex + 1);
+      return;
+    }
+
+    const nextEventIndex = this.findNextEventIndex(state);
+    if (nextEventIndex !== null) {
+      this.jumpTo(nextEventIndex);
+    }
   }
 
   close(): void {
@@ -405,8 +444,9 @@ export class TtsSequencePlayerService {
     };
     audio.onended = () => {
       if (!this.isCurrent(requestId)) return;
-      if (this.canNext()) {
-        this.next();
+      const state = this.state();
+      if (state && state.currentIndex < state.items.length - 1) {
+        this.jumpTo(state.currentIndex + 1);
       } else {
         this.patchState({ status: 'paused', message: 'Finished' });
       }
@@ -553,23 +593,144 @@ export class TtsSequencePlayerService {
   }
 
   private async buildItems(events: Event[]): Promise<TtsSequenceItem[]> {
-    const items = await Promise.all(events.map(event => this.buildItem(event)));
-    return items.filter((item): item is TtsSequenceItem => !!item && item.text.length > 0);
+    const eventItems = await Promise.all(events.map(event => this.buildItemsForEvent(event)));
+    return eventItems.flat().filter(item => item.text.length > 0);
   }
 
-  private async buildItem(event: Event): Promise<TtsSequenceItem | null> {
+  private async buildItemsForEvent(event: Event): Promise<TtsSequenceItem[]> {
     const speechEvent = this.resolveSpeechEvent(event);
     if (!speechEvent || (speechEvent.kind !== kinds.ShortTextNote && speechEvent.kind !== kinds.LongFormArticle)) {
-      return null;
+      return [];
     }
 
     const { text, paragraphs } = await this.ttsText.fromEvent(speechEvent);
-    return {
+    const chunks = this.chunkSpeechText(paragraphs.length > 0 ? paragraphs : [text]);
+    return chunks.map((chunk, index) => ({
       eventId: event.id,
-      text,
-      paragraphs,
-      label: text.length > 80 ? `${text.slice(0, 77)}...` : text,
-    };
+      text: chunk,
+      paragraphs: [chunk],
+      label: chunk.length > 80 ? `${chunk.slice(0, 77)}...` : chunk,
+      eventPartIndex: index,
+      eventPartTotal: chunks.length,
+    }));
+  }
+
+  private chunkSpeechText(paragraphs: string[]): string[] {
+    const chunks: string[] = [];
+
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if (trimmed.length <= this.maxTtsChunkLength) {
+        chunks.push(trimmed);
+        continue;
+      }
+
+      chunks.push(...this.splitLongParagraph(trimmed));
+    }
+
+    return chunks.filter(Boolean);
+  }
+
+  private splitLongParagraph(paragraph: string): string[] {
+    const sentences = paragraph.match(/[^.!?]+[.!?]+(?:["')\]]+)?|[^.!?]+$/g)
+      ?.map(sentence => sentence.trim())
+      .filter(Boolean) ?? [paragraph];
+    const chunks: string[] = [];
+    let current = '';
+
+    for (const sentence of sentences) {
+      if (sentence.length > this.maxTtsChunkLength) {
+        if (current) {
+          chunks.push(current);
+          current = '';
+        }
+        chunks.push(...this.splitTextByWords(sentence));
+        continue;
+      }
+
+      const candidate = current ? `${current} ${sentence}` : sentence;
+      if (candidate.length > this.maxTtsChunkLength && current) {
+        chunks.push(current);
+        current = sentence;
+      } else {
+        current = candidate;
+      }
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    return chunks;
+  }
+
+  private splitTextByWords(text: string): string[] {
+    const chunks: string[] = [];
+    let current = '';
+
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length > this.maxTtsChunkLength && current) {
+        chunks.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    return chunks;
+  }
+
+  private findNextEventIndex(state: TtsSequenceState): number | null {
+    const currentEventId = state.items[state.currentIndex]?.eventId;
+    for (let index = state.currentIndex + 1; index < state.items.length; index++) {
+      if (state.items[index].eventId !== currentEventId) {
+        return index;
+      }
+    }
+
+    return null;
+  }
+
+  private findPreviousEventIndex(state: TtsSequenceState): number | null {
+    const currentEventId = state.items[state.currentIndex]?.eventId;
+    let index = state.currentIndex - 1;
+    while (index >= 0 && state.items[index].eventId === currentEventId) {
+      index--;
+    }
+
+    if (index < 0) {
+      return null;
+    }
+
+    const previousEventId = state.items[index].eventId;
+    while (index > 0 && state.items[index - 1].eventId === previousEventId) {
+      index--;
+    }
+
+    return index;
+  }
+
+  private countContiguousEvents(items: TtsSequenceItem[]): number {
+    let count = 0;
+    let previousEventId = '';
+
+    for (const item of items) {
+      if (item.eventId !== previousEventId) {
+        count++;
+        previousEventId = item.eventId;
+      }
+    }
+
+    return count;
   }
 
   private resolveSpeechEvent(event: Event): Event | null {
