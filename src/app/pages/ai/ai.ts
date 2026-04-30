@@ -243,6 +243,63 @@ export class AiComponent {
       },
     },
     {
+      id: 'onnx-community/Bonsai-1.7B-ONNX',
+      task: 'text-generation',
+      name: 'Bonsai 1.7B',
+      description: 'Bonsai chat model for fast local browser inference with q1 quantization.',
+      size: '~1.7B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q1',
+      loadOptions: { device: 'webgpu', dtype: 'q1' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 512,
+        do_sample: false,
+      },
+    },
+    {
+      id: 'onnx-community/Bonsai-4B-ONNX',
+      task: 'text-generation',
+      name: 'Bonsai 4B',
+      description: 'Larger Bonsai chat model for local browser inference with q1 quantization.',
+      size: '~4B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q1',
+      loadOptions: { device: 'webgpu', dtype: 'q1' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 512,
+        do_sample: false,
+      },
+    },
+    {
+      id: 'onnx-community/Bonsai-8B-ONNX',
+      task: 'text-generation',
+      name: 'Bonsai 8B',
+      description: 'High-capacity Bonsai chat model for local browser inference on stronger WebGPU devices.',
+      size: '~8B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q1',
+      loadOptions: { device: 'webgpu', dtype: 'q1' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 512,
+        do_sample: false,
+      },
+    },
+    {
       id: 'onnx-community/Qwen3.5-0.8B-ONNX',
       task: 'image-text-to-text',
       name: 'Qwen 3.5 0.8B Vision',
@@ -3022,7 +3079,7 @@ export class AiComponent {
   private async initializeModelStatus(): Promise<void> {
     for (const model of this.models()) {
       try {
-        const status = await this.aiService.checkModel(model.task, model.id);
+        const status = await this.aiService.checkModel(model.task, model.id, model.loadOptions);
         this.updateModelStatus(model.id, { loaded: status.loaded, cached: status.cached });
       } catch (err) {
         this.logger.warn('Model status check failed', err);
