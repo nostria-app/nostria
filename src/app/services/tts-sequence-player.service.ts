@@ -157,7 +157,7 @@ export class TtsSequencePlayerService {
   readonly positionLabel = computed(() => {
     const state = this.state();
     if (!state) return '';
-    if (state.source === 'article') return `${state.currentIndex + 1} / ${state.items.length}`;
+    if (state.source === 'article') return this.articleProgressLabel(state);
 
     const total = this.countContiguousEvents(state.items);
     const current = this.countContiguousEvents(state.items.slice(0, state.currentIndex + 1));
@@ -731,6 +731,21 @@ export class TtsSequencePlayerService {
     }
 
     return count;
+  }
+
+  private articleProgressLabel(state: TtsSequenceState): string {
+    const total = state.items.length;
+    if (total === 0) return '';
+
+    const duration = this.duration();
+    const currentTime = this.currentTime();
+    const sectionProgress = duration > 0
+      ? Math.min(Math.max(currentTime / duration, 0), 1)
+      : 0;
+    const completedSections = Math.min(total, state.currentIndex + sectionProgress);
+    const percent = Math.min(100, Math.max(0, Math.round((completedSections / total) * 100)));
+
+    return `${percent}% read`;
   }
 
   private resolveSpeechEvent(event: Event): Event | null {
