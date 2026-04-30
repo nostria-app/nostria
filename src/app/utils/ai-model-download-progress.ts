@@ -28,6 +28,7 @@ export function describeAiModelLoadingStatus(status: string | undefined): string
       return 'Starting download';
     case 'download':
     case 'progress':
+    case 'progress_total':
       return 'Downloading';
     case 'done':
       return 'Downloaded';

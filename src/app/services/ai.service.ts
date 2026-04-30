@@ -170,6 +170,7 @@ export interface AiManageableModel {
   description: string;
   runtime: string;
   sizeHint: string;
+  loadOptions?: AiModelLoadOptions;
   cacheKeys?: string[];
   cacheNames?: string[];
 }
@@ -374,6 +375,7 @@ export class AiService {
       description: 'Instruction-tuned Gemma 4 chat model for local browser inference.',
       runtime: 'WebGPU · q4f16',
       sizeHint: '~2B parameters',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
     },
     {
       id: 'onnx-community/Qwen3.5-0.8B-ONNX',
@@ -382,6 +384,7 @@ export class AiService {
       description: 'Multimodal Qwen 3.5 model for local image-aware chat in the browser.',
       runtime: 'WebGPU · q4f16 · vision',
       sizeHint: '~0.8B parameters',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
     },
     {
       id: 'onnx-community/Qwen3.5-0.8B-Text-ONNX',
@@ -390,6 +393,7 @@ export class AiService {
       description: 'Verified Qwen 3.5 text-only chat model for local browser inference.',
       runtime: 'WebGPU · q4f16',
       sizeHint: '~0.8B parameters',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
     },
     {
       id: 'onnx-community/Qwen3-0.6B-ONNX',
@@ -398,6 +402,7 @@ export class AiService {
       description: 'Compact Qwen 3 chat model for fast local browser inference.',
       runtime: 'WebGPU · q4f16',
       sizeHint: '~0.6B parameters',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
     },
     {
       id: 'Xenova/distilgpt2',
@@ -422,6 +427,7 @@ export class AiService {
       description: 'Local image upscaling model for attached artwork, screenshots, and photos.',
       runtime: 'WASM/CPU · q8',
       sizeHint: 'x2 super-resolution',
+      loadOptions: { device: 'wasm', dtype: 'q8' },
     },
     {
       id: 'Xenova/distilbart-cnn-6-6',
@@ -446,6 +452,7 @@ export class AiService {
       description: 'Speech-to-text model used for local transcription.',
       runtime: 'WASM/CPU',
       sizeHint: '~40MB',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
     },
     {
       id: 'Xenova/speecht5_tts',
@@ -463,6 +470,7 @@ export class AiService {
       description: 'High-quality Kokoro voice synthesis running locally in the browser.',
       runtime: 'WebGPU fp32 / WASM q8',
       sizeHint: '~92MB',
+      loadOptions: { device: 'wasm', dtype: 'q8' },
     },
     {
       id: 'onnx-community/Supertonic-TTS-2-ONNX',
@@ -471,6 +479,7 @@ export class AiService {
       description: 'High-quality local voice synthesis with 10 expressive voices.',
       runtime: 'WebGPU/WASM · fp32',
       sizeHint: '~305MB',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
     },
     {
       id: 'rhasspy/piper-voices/en_US-libritts_r-medium',
@@ -758,8 +767,8 @@ export class AiService {
     return this.postMessage('synthesize-stream', { text, params }, progressCallback);
   }
 
-  async checkModel(task: string, model: string): Promise<{ loaded: boolean, cached: boolean }> {
-    return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
+  async checkModel(task: string, model: string, options?: AiModelLoadOptions): Promise<{ loaded: boolean, cached: boolean }> {
+    return this.postMessage('check', { task, model, options }) as Promise<{ loaded: boolean, cached: boolean }>;
   }
 
   queueStandardPrompt(selection: AiStandardPromptSelection): void {
@@ -1148,7 +1157,7 @@ export class AiService {
   }
 
   private async getManagedModelStatus(model: AiManageableModel): Promise<AiManagedModelStatus> {
-    const status = await this.checkModel(model.task, model.id);
+    const status = await this.checkModel(model.task, model.id, model.loadOptions);
     const bytes = await this.getCachedModelBytes(model.id);
 
     return {

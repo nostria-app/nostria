@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, StyleTextToSpeech2Model, TextStreamer } from '@huggingface/transformers';
+import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, LogLevel, ModelRegistry, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, StyleTextToSpeech2Model, TextStreamer } from '@huggingface/transformers';
 
 const HUGGING_FACE_REMOTE_HOST = 'https://huggingface.co/';
 const SPEAKER_EMBEDDINGS_URL = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
@@ -13,6 +13,10 @@ const PIPER_MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/mai
 const PIPER_CONFIG_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts_r/medium/en_US-libritts_r-medium.onnx.json';
 const PHONEMIZER_MODULE_URL = 'https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js';
 const TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
+const ONNX_WASM_PATHS = {
+  mjs: `${ONNX_RUNTIME_ASSET_PATH}ort-wasm-simd-threaded.asyncify.mjs`,
+  wasm: `${ONNX_RUNTIME_ASSET_PATH}ort-wasm-simd-threaded.asyncify.wasm`,
+};
 const KOKORO_VOICES = new Set([
   'af_heart', 'af_alloy', 'af_aoede', 'af_bella', 'af_jessica', 'af_kore', 'af_nicole', 'af_nova', 'af_river', 'af_sarah', 'af_sky',
   'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck', 'am_santa',
@@ -93,7 +97,11 @@ env.allowRemoteModels = true;
 env.remoteHost = HUGGING_FACE_REMOTE_HOST;
 env.allowLocalModels = false;
 env.useBrowserCache = true;
-env.backends.onnx.wasm.wasmPaths = ONNX_RUNTIME_ASSET_PATH;
+env.useWasmCache = true;
+env.logLevel = LogLevel.ERROR;
+if (env.backends.onnx.wasm) {
+  env.backends.onnx.wasm.wasmPaths = ONNX_WASM_PATHS;
+}
 env.fetch = secureWorkerFetch;
 globalThis.fetch = secureWorkerFetch;
 
@@ -162,7 +170,7 @@ class KokoroLocalTTS {
 
   static async fromPretrained(
     modelId: string,
-    options: { dtype?: 'fp32' | 'fp16' | 'q8' | 'q4' | 'q4f16'; device?: 'wasm' | 'webgpu' | 'cpu' | null; progress_callback?: any },
+    options: { dtype?: 'fp32' | 'fp16' | 'q8' | 'q4' | 'q4f16'; device?: 'wasm' | 'webgpu' | 'cpu'; progress_callback?: any },
   ): Promise<KokoroLocalTTS> {
     const [model, tokenizer] = await Promise.all([
       StyleTextToSpeech2Model.from_pretrained(modelId, options),
@@ -248,8 +256,8 @@ class PiperTTS {
     ]);
     progressCallback({ status: 'progress', progress: 0.55 });
 
-    const session = await ort.InferenceSession.create(modelBuffer, {
-      executionProviders: [{ name: 'wasm', simd: true }],
+    const session = await ort.InferenceSession.create(new Uint8Array(modelBuffer), {
+      executionProviders: ['wasm'],
     });
     progressCallback({ status: 'progress', progress: 1 });
 
@@ -333,13 +341,13 @@ class ImageProgressStreamer extends BaseStreamer {
     super();
   }
 
-  put(): void {
+  override put(): void {
     this.generatedTokens += 1;
     const progress = this.totalTokens > 0 ? Math.min(this.generatedTokens / this.totalTokens, 1) : 0;
     this.callback({ status: 'image-progress', progress });
   }
 
-  end(): void {
+  override end(): void {
     this.callback({ status: 'image-progress', progress: 1 });
   }
 }
@@ -412,7 +420,7 @@ async function getMultimodalGenerator(
 
   const processor = AutoProcessor.from_pretrained(modelId, { progress_callback: progressCallback });
   const model = AutoModelForImageTextToText.from_pretrained(modelId, {
-    ...options,
+    ...(options as any),
     progress_callback: progressCallback,
   });
 
@@ -537,6 +545,18 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
     id,
     payload: { task, model, status: 'loaded' }
   });
+}
+
+function normalizeRegistryTask(task: string): string {
+  if (task === 'image-upscaling') {
+    return 'image-to-image';
+  }
+
+  return task;
+}
+
+function supportsPipelineRegistry(task: string): boolean {
+  return task !== 'image-generation' && task !== 'image-text-to-text';
 }
 
 function normalizeChatRole(role: string): 'system' | 'user' | 'assistant' {
@@ -1258,7 +1278,7 @@ function normalizeKokoroDtype(value: unknown): 'fp32' | 'fp16' | 'q8' | 'q4' | '
   return value === 'fp32' || value === 'fp16' || value === 'q4' || value === 'q4f16' ? value : 'q8';
 }
 
-function normalizeKokoroDevice(value: unknown): 'wasm' | 'webgpu' | 'cpu' | null {
+function normalizeKokoroDevice(value: unknown): 'wasm' | 'webgpu' | 'cpu' {
   return value === 'webgpu' || value === 'cpu' ? value : 'wasm';
 }
 
@@ -1326,7 +1346,7 @@ function parseNpy(buffer: ArrayBuffer): Float32Array {
   return new Float32Array(buffer.slice(dataOffset));
 }
 
-async function handleCheck(payload: { task: string, model: string }, id: string) {
+async function handleCheck(payload: { task: string, model: string, options?: Record<string, unknown> }, id: string) {
   const { task, model } = payload;
   let isLoaded = false;
   let isCached = false;
@@ -1355,17 +1375,9 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   // Check cache if not loaded
   if (!isLoaded) {
     try {
-      const cache = await caches.open(model === PIPER_MODEL_ID ? TTS_ASSET_CACHE_NAME : 'transformers-cache');
-      // We check for the existence of the model config file in the cache
-      // The URL pattern is usually: https://huggingface.co/{model}/resolve/main/config.json
-      // But it might vary.
-      const modelPath = model === PIPER_MODEL_ID
-        ? PIPER_CONFIG_URL
-        : model.startsWith('http') ? model : `https://huggingface.co/${model}/resolve/main/config.json`;
-      const match = await cache.match(modelPath);
-      if (match) {
-        isCached = true;
-      }
+      isCached = model === PIPER_MODEL_ID
+        ? await isPiperCached()
+        : await isTransformersModelCached(task, model, payload.options);
     } catch (e) {
       console.warn('Cache check failed', e);
     }
@@ -1376,4 +1388,22 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
     id,
     payload: { loaded: isLoaded, cached: isCached }
   });
+}
+
+async function isPiperCached(): Promise<boolean> {
+  const cache = await caches.open(TTS_ASSET_CACHE_NAME);
+  const match = await cache.match(PIPER_CONFIG_URL);
+  return !!match;
+}
+
+async function isTransformersModelCached(
+  task: string,
+  model: string,
+  options?: Record<string, unknown>,
+): Promise<boolean> {
+  if (supportsPipelineRegistry(task)) {
+    return ModelRegistry.is_pipeline_cached(normalizeRegistryTask(task), model, options);
+  }
+
+  return ModelRegistry.is_cached(model, options);
 }
