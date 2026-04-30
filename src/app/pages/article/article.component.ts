@@ -52,6 +52,11 @@ interface ArticleSpeechBlock {
   paragraphs: string[];
 }
 
+interface ArticleTextPosition {
+  node: Text;
+  offset: number;
+}
+
 @Component({
   selector: 'app-article-page',
   imports: [
@@ -454,9 +459,9 @@ export class ArticleComponent implements OnDestroy {
       });
     });
 
-    return items.map((item, index) => ({
+    return items.map(item => ({
       ...item,
-      label: items.length > 1 ? `Section ${index + 1} of ${items.length}` : item.label,
+      label: item.text.length > 80 ? `${item.text.slice(0, 77)}...` : item.text,
     }));
   }
 
@@ -490,45 +495,25 @@ export class ArticleComponent implements OnDestroy {
         continue;
       }
 
-      if (trimmed.length <= maxChunkLength) {
-        chunks.push(trimmed);
-        continue;
-      }
-
-      chunks.push(...this.splitLongArticleParagraph(trimmed, maxChunkLength));
+      chunks.push(...this.splitArticleSentencesForTts(trimmed, maxChunkLength));
     }
 
     return chunks.filter(Boolean);
   }
 
-  private splitLongArticleParagraph(paragraph: string, maxChunkLength: number): string[] {
+  private splitArticleSentencesForTts(paragraph: string, maxChunkLength: number): string[] {
     const sentences = paragraph.match(/[^.!?]+[.!?]+(?:["')\]]+)?|[^.!?]+$/g)
       ?.map(sentence => sentence.trim())
       .filter(Boolean) ?? [paragraph];
     const chunks: string[] = [];
-    let current = '';
 
     for (const sentence of sentences) {
       if (sentence.length > maxChunkLength) {
-        if (current) {
-          chunks.push(current);
-          current = '';
-        }
         chunks.push(...this.splitTextByWords(sentence, maxChunkLength));
         continue;
       }
 
-      const candidate = current ? `${current} ${sentence}` : sentence;
-      if (candidate.length > maxChunkLength && current) {
-        chunks.push(current);
-        current = sentence;
-      } else {
-        current = candidate;
-      }
-    }
-
-    if (current) {
-      chunks.push(current);
+      chunks.push(sentence);
     }
 
     return chunks;
@@ -654,14 +639,14 @@ export class ArticleComponent implements OnDestroy {
   private getArticleHighlightKey(requestId: number, currentIndex: number, item: TtsSequenceItem): string {
     if (item.articleTarget === 'body' && item.articleBlockIndex !== undefined) {
       if (item.articleParagraphIndex !== undefined) {
-        return `${requestId}:body:${item.articleBlockIndex}:${item.articleParagraphIndex}`;
+        return `${requestId}:body:${item.articleBlockIndex}:${item.articleParagraphIndex}:${currentIndex}`;
       }
 
-      return `${requestId}:body:${item.articleBlockIndex}`;
+      return `${requestId}:body:${item.articleBlockIndex}:${currentIndex}`;
     }
 
     if (item.articleTarget === 'title' || item.articleTarget === 'summary') {
-      return `${requestId}:${item.articleTarget}`;
+      return `${requestId}:${item.articleTarget}:${currentIndex}`;
     }
 
     return `${requestId}:${currentIndex}:${item.articleTarget ?? 'match'}`;
@@ -715,10 +700,12 @@ export class ArticleComponent implements OnDestroy {
       return;
     }
 
-    target.classList.add('article-tts-active-section');
+    const sentenceHighlight = this.highlightArticleSpeechText(target, speechText);
+    const highlightedTarget = sentenceHighlight ?? target;
+    highlightedTarget.classList.add('article-tts-active-section');
 
     if (this.lastHighlightedSpeechText !== normalizedSpeechText) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      highlightedTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     this.lastHighlightedSpeechText = normalizedSpeechText;
@@ -727,6 +714,21 @@ export class ArticleComponent implements OnDestroy {
 
   private clearArticleTtsHighlight(): void {
     const root = this.host.nativeElement as HTMLElement;
+    root.querySelectorAll('.article-tts-active-sentence')
+      .forEach((element: Element) => {
+        const parent = element.parentNode;
+        if (!parent) {
+          return;
+        }
+
+        while (element.firstChild) {
+          parent.insertBefore(element.firstChild, element);
+        }
+
+        parent.removeChild(element);
+        parent.normalize();
+      });
+
     root.querySelectorAll('.article-tts-active-section')
       .forEach((element: Element) => element.classList.remove('article-tts-active-section'));
     this.lastArticleTtsHighlightKey = '';
@@ -734,7 +736,117 @@ export class ArticleComponent implements OnDestroy {
 
   private hasArticleTtsHighlight(): boolean {
     const root = this.host.nativeElement as HTMLElement;
-    return !!root.querySelector('.article-tts-active-section');
+    return !!root.querySelector('.article-tts-active-section, .article-tts-active-sentence');
+  }
+
+  private highlightArticleSpeechText(container: HTMLElement, speechText: string): HTMLElement | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const range = this.findArticleSpeechRange(container, speechText);
+    if (!range) {
+      return null;
+    }
+
+    const highlight = document.createElement('span');
+    highlight.className = 'article-tts-active-sentence';
+
+    try {
+      range.surroundContents(highlight);
+      return highlight;
+    } catch {
+      return null;
+    }
+  }
+
+  private findArticleSpeechRange(container: HTMLElement, speechText: string): Range | null {
+    const needle = this.buildNormalizedTextIndex(speechText);
+    if (needle.text.length < 4) {
+      return null;
+    }
+
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+      acceptNode: node => {
+        const parent = node.parentElement;
+        if (parent?.closest('.article-tts-active-sentence')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return node.nodeValue?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+    });
+
+    while (walker.nextNode()) {
+      if (walker.currentNode instanceof Text) {
+        textNodes.push(walker.currentNode);
+      }
+    }
+
+    if (textNodes.length === 0) {
+      return null;
+    }
+
+    let rawText = '';
+    const rawPositions: ArticleTextPosition[] = [];
+    for (const node of textNodes) {
+      const value = node.nodeValue ?? '';
+      for (let offset = 0; offset < value.length; offset++) {
+        rawText += value[offset];
+        rawPositions.push({ node, offset });
+      }
+    }
+
+    const haystack = this.buildNormalizedTextIndex(rawText);
+    const matchIndex = haystack.text.indexOf(needle.text);
+    if (matchIndex < 0) {
+      return null;
+    }
+
+    const rawStart = haystack.map[matchIndex];
+    const rawEnd = haystack.map[matchIndex + needle.text.length - 1];
+    const start = rawPositions[rawStart];
+    const end = rawPositions[rawEnd];
+    if (!start || !end) {
+      return null;
+    }
+
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset + 1);
+    return range;
+  }
+
+  private buildNormalizedTextIndex(text: string): { text: string; map: number[] } {
+    let normalized = '';
+    const map: number[] = [];
+
+    for (let index = 0; index < text.length; index++) {
+      const character = text[index];
+      if (/\s/.test(character)) {
+        if (normalized.length > 0 && !normalized.endsWith(' ')) {
+          normalized += ' ';
+          map.push(index);
+        }
+        continue;
+      }
+
+      normalized += character.toLowerCase();
+      map.push(index);
+    }
+
+    while (normalized.startsWith(' ')) {
+      normalized = normalized.slice(1);
+      map.shift();
+    }
+
+    while (normalized.endsWith(' ')) {
+      normalized = normalized.slice(0, -1);
+      map.pop();
+    }
+
+    return { text: normalized, map };
   }
 
   private findArticleSpeechElement(

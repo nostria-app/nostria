@@ -14,6 +14,12 @@
   background-color: color-mix(in srgb, var(--mat-sys-primary-container) 58%, transparent);
   animation: article-tts-highlight-in 420ms ease-out;
   transition: background-color 180ms ease;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+:host ::ng-deep .article-tts-active-sentence {
+  padding: 0.08em 0.14em;
 }
 
 @keyframes article-tts-highlight-in {

@@ -371,8 +371,7 @@ export class TtsSequencePlayerService {
 
       if (!this.isCurrent(requestId)) return;
 
-      const unitLabel = state.source === 'article' ? 'section' : 'post';
-      this.patchState({ status: 'generating', message: `Generating ${unitLabel} ${state.currentIndex + 1} of ${state.items.length}...` });
+      this.patchState({ status: 'generating', message: 'Generating speech...' });
       const src = await this.getAudioUrlForIndex(state.currentIndex, item, model);
 
       if (!this.isCurrent(requestId)) {
