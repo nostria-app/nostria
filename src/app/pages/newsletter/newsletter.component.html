@@ -227,20 +227,27 @@
 
   <!-- Send Button -->
   <div class="send-actions">
+    @if (isSending()) {
     <button
       mat-flat-button
       class="send-button"
       [disabled]="!canSend()"
       (click)="sendNewsletter()"
     >
-      @if (isSending()) {
       <mat-spinner diameter="20"></mat-spinner>
       Sending...
-      } @else {
+    </button>
+    } @else {
+    <button
+      mat-flat-button
+      class="send-button"
+      [disabled]="!canSend()"
+      (click)="sendNewsletter()"
+    >
       <mat-icon>send</mat-icon>
       Send to {{ recipientCount() }} People
-      }
     </button>
+    }
   </div>
   } @else {
   <div class="no-event">

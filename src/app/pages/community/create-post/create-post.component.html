@@ -152,17 +152,21 @@
     <!-- Submit row -->
     <div class="submit-row">
       <button mat-button (click)="goBack()">Cancel</button>
+      @if (submitting()) {
       <button mat-flat-button [disabled]="!canSubmit()" (click)="submitPost()">
-        @if (submitting()) {
         <mat-spinner diameter="20"></mat-spinner>
-        } @else if (isEditMode()) {
+      </button>
+      } @else if (isEditMode()) {
+      <button mat-flat-button [disabled]="!canSubmit()" (click)="submitPost()">
         <mat-icon>save</mat-icon>
         Save
-        } @else {
+      </button>
+      } @else {
+      <button mat-flat-button [disabled]="!canSubmit()" (click)="submitPost()">
         <mat-icon>send</mat-icon>
         Post
-        }
       </button>
+      }
     </div>
   </div>
 
