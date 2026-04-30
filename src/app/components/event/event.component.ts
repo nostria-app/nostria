@@ -1943,6 +1943,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     EventComponent.processInteractionPreloadQueue();
   }
 
+  private static hasPendingInteractionPreload(component: EventComponent): boolean {
+    return EventComponent.queuedInteractionPreloads.has(component)
+      || EventComponent.activeInteractionPreloads.has(component);
+  }
+
   private static cancelQueuedInteractionPreload(component: EventComponent): void {
     EventComponent.queuedInteractionPreloads.delete(component);
   }
@@ -2200,7 +2205,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const currentEventId = currentRecord.event.id;
       this.observedEventId = currentEventId;
       const priority = this.getInteractionPreloadPriority(observerRoot);
-      this.logger.debug('[Lazy Load] Retrying visible preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
+
+      if (EventComponent.hasPendingInteractionPreload(this)) {
+        this.scheduleVisibleInteractionRetry();
+        return;
+      }
+
       EventComponent.enqueueInteractionPreload(this, priority);
 
       if (!this.hasLoadedInteractions()) {
