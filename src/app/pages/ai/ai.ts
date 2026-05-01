@@ -187,7 +187,7 @@ export class AiComponent {
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly chatSurfaceRef = viewChild<ElementRef<HTMLDivElement>>('chatSurface');
+  private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
   private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
   private readonly attachmentInputRef = viewChild<ElementRef<HTMLInputElement>>('attachmentInput');
   private readonly composerInputRef = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
@@ -3393,9 +3393,9 @@ export class AiComponent {
 
   private scrollConversationToEnd(behavior: ScrollBehavior): void {
     requestAnimationFrame(() => {
-      const surface = this.chatSurfaceRef()?.nativeElement;
-      if (surface) {
-        surface.scrollTo({ top: surface.scrollHeight, behavior });
+      const panel = this.conversationPanelRef()?.nativeElement;
+      if (panel) {
+        panel.scrollTo({ top: panel.scrollHeight, behavior });
         return;
       }
 

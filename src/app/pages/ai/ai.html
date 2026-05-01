@@ -70,7 +70,8 @@
     }
 
     @if (showChatPanel()) {
-    <section class="chat-surface" #chatSurface (scroll)="onConversationScroll($event)">
+    <section class="chat-surface">
+      <div class="chat-scroll-area" #conversationPanel (scroll)="onConversationScroll($event)">
       <header class="chat-header">
         @if (hasComposerModePicker()) {
         <section class="initial-chat-type-picker" aria-label="Choose chat type">
@@ -469,6 +470,7 @@
 
       <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
     </div>
+      </div>
 
     <div class="composer-panel" [class.composer-panel-settings-open]="voiceSettingsPanelOpen()">
       @if (showProcessingStatus()) {

@@ -55,34 +55,33 @@
 }
 
 .chat-surface {
+  --ai-composer-reserve: 152px;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 22px 14px;
+  gap: 0;
+  padding: 0;
   border-radius: 30px;
   background: var(--ai-chat-surface-background);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-padding-bottom: 132px;
+  overflow: hidden;
 }
 
-.chat-surface::-webkit-scrollbar {
+.chat-scroll-area::-webkit-scrollbar {
   width: 10px;
 }
 
-.chat-surface::-webkit-scrollbar-track {
+.chat-scroll-area::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.chat-surface::-webkit-scrollbar-thumb {
+.chat-scroll-area::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-.chat-surface::-webkit-scrollbar-thumb:hover {
+.chat-scroll-area::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
   border-radius: 999px;
   border: 2px solid transparent;
@@ -331,6 +330,18 @@
 
 .chat-header > .initial-chat-type-picker .initial-chat-type-actions {
   gap: 8px;
+}
+
+.chat-scroll-area {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 22px 22px var(--ai-composer-reserve);
+  scroll-padding-bottom: calc(var(--ai-composer-reserve) + 24px);
 }
 
 .workspace-switch {
@@ -1014,7 +1025,7 @@
 .chat-workspace {
   position: relative;
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   flex-direction: column;
   min-height: 0;
   gap: 10px;
@@ -1044,14 +1055,13 @@
 }
 
 .conversation-panel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 4px 6px 14px 0;
-  scroll-padding-bottom: 112px;
+  padding: 4px 6px 18px 0;
   background: transparent;
 }
 
@@ -1503,13 +1513,13 @@
 }
 
 .composer-panel {
-  position: sticky;
-  bottom: 0;
+  position: absolute;
+  inset: auto 22px 14px 22px;
   z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: auto;
+  margin-top: 0;
   padding: 0;
   border-radius: 22px;
   border: none;
@@ -1522,9 +1532,7 @@
 }
 
 .composer-panel-settings-open {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
+  position: absolute;
 }
 
 .composer-processing-status {
@@ -2025,6 +2033,7 @@
   }
 
   .chat-surface {
+    --ai-composer-reserve: 146px;
     gap: 14px;
     padding: 0;
     border: none;
@@ -2033,9 +2042,12 @@
     background: transparent;
   }
 
+  .chat-scroll-area {
+    padding: 18px 18px var(--ai-composer-reserve);
+  }
+
   .prompt-suggestions,
-  .initial-chat-type-picker,
-  .composer-panel {
+  .initial-chat-type-picker {
     flex: 0 0 auto;
   }
 
@@ -2119,9 +2131,9 @@
   .composer-panel {
     border-radius: 22px;
     padding: 0;
-    left: 0;
-    right: 6px;
-    bottom: 2px;
+    left: 10px;
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom));
   }
 
   .composer-shell {
