@@ -11,7 +11,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 
 import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.service';
-import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import {
@@ -31,6 +30,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { XDualPostService } from '../../../services/x-dual-post.service';
 import { SUPPORTED_LOCALE_LABELS } from '../../../utils/supported-locales';
+import { SettingDarkModeComponent } from '../sections/dark-mode.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +48,7 @@ import { SUPPORTED_LOCALE_LABELS } from '../../../utils/supported-locales';
     MatSliderModule,
     MatInputModule,
     MatTooltipModule,
+    SettingDarkModeComponent,
   ],
   templateUrl: './general.component.html',
   styleUrl: './general.component.scss',
@@ -55,7 +56,6 @@ import { SUPPORTED_LOCALE_LABELS } from '../../../utils/supported-locales';
 })
 export class GeneralSettingsComponent implements OnInit, OnDestroy {
   logger = inject(LoggerService);
-  themeService = inject(ThemeService);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
   localSettings = inject(LocalSettingsService);
@@ -117,10 +117,6 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   setLogLevel(level: LogLevel): void {
     this.logger.setLogLevel(level);
-  }
-
-  toggleDarkMode(): void {
-    this.themeService.toggleDarkMode();
   }
 
   setLanguage(languageCode: string): void {

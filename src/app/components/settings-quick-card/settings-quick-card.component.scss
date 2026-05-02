@@ -82,22 +82,59 @@
 
 .theme-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .theme-option {
-  justify-content: flex-start;
-  gap: 10px;
-  min-height: 52px;
+  min-height: 84px;
+  padding: 14px 10px;
   border-radius: 18px;
+  border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-option:hover {
+  border-color: var(--mat-sys-primary);
+  background: var(--mat-sys-surface-container-high);
+  transform: translateY(-1px);
+  box-shadow: var(--mat-sys-level1);
 }
 
 .theme-option.active {
-  background: var(--mat-sys-primary-container);
+  border-color: var(--mat-sys-primary);
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 82%, var(--mat-sys-surface) 18%);
   color: var(--mat-sys-on-primary-container);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mat-sys-primary) 45%, transparent);
+}
+
+.theme-option-icon-shell {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.theme-option mat-icon {
+  width: 17px;
+  height: 17px;
+  font-size: 17px;
+}
+
+.theme-option-label {
+  font-size: 0.92rem;
+  line-height: 1.15;
 }
 
 .language-field {
@@ -210,6 +247,10 @@
 
   .quick-card-section {
     padding: 12px;
+  }
+
+  .theme-options {
+    grid-template-columns: 1fr;
   }
 
   .quick-toggle-row {

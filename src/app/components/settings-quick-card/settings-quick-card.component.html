@@ -17,17 +17,18 @@
 
   <div class="quick-card-grid">
     <section class="quick-card-section">
+      <div class="section-label" i18n="@@settings.dark-mode">Theme</div>
       <div class="theme-options" role="group" aria-label="Theme" i18n-aria-label="@@settings.quick-card.theme">
-        <button mat-button type="button" class="theme-option" [class.active]="!themeService.darkMode()"
-          (click)="setTheme(false)">
-          <mat-icon>light_mode</mat-icon>
-          <span i18n="@@settings.quick-card.theme.light">Light</span>
+        @for (option of themeOptions; track option.value) {
+        <button mat-button type="button" class="theme-option"
+          [class.active]="themeService.themePreference() === option.value"
+          [attr.aria-pressed]="themeService.themePreference() === option.value" (click)="setTheme(option.value)">
+          <span class="theme-option-icon-shell">
+            <mat-icon>{{ option.icon }}</mat-icon>
+          </span>
+          <span class="theme-option-label">{{ option.label }}</span>
         </button>
-        <button mat-button type="button" class="theme-option" [class.active]="themeService.darkMode()"
-          (click)="setTheme(true)">
-          <mat-icon>dark_mode</mat-icon>
-          <span i18n="@@settings.quick-card.theme.dark">Dark</span>
-        </button>
+        }
       </div>
     </section>
 

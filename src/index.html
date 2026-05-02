@@ -152,9 +152,11 @@
     // Apply saved theme and text scale immediately to prevent flash
     (function () {
       var theme = localStorage.getItem('nostria-theme');
-      var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var isAutoTheme = theme === 'auto' || !theme;
+      var isDark = theme === 'dark' || (isAutoTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.body.style.backgroundColor = isDark ? '#0a0a0a' : '#efefef';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
 
       var themeColorMeta = document.getElementById('theme-color-meta');
       if (themeColorMeta) {

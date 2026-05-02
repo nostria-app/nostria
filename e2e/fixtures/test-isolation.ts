@@ -150,7 +150,7 @@ export async function setupCleanEnvironment(
     /** Clear all state before setting up */
     clearAll?: boolean;
     /** Set theme preference */
-    theme?: 'light' | 'dark';
+    theme?: 'auto' | 'light' | 'dark';
     /** Additional localStorage entries to set */
     localStorage?: Record<string, string>;
   } = {}

@@ -7,11 +7,7 @@
 </div>
 
 <div class="content-medium">
-  <div class="setting-item">
-    <span i18n="@@settings.dark-mode">Dark Mode</span>
-    <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
-    </mat-slide-toggle>
-  </div>
+  <app-setting-dark-mode></app-setting-dark-mode>
 
   <div>
     <h2 i18n="@@settings.language">Language</h2>

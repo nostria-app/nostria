@@ -107,9 +107,9 @@ export class SettingsRegistryService {
     },
     {
       id: 'dark-mode',
-      title: $localize`:@@settings.dark-mode:Dark Mode`,
-      description: $localize`:@@settings.dark-mode.description:Toggle dark or light theme`,
-      keywords: ['dark', 'light', 'theme', 'mode', 'appearance', 'color'],
+      title: $localize`:@@settings.dark-mode:Theme`,
+      description: $localize`:@@settings.dark-mode.description:Choose Auto, Dark, or Light theme`,
+      keywords: ['dark', 'light', 'auto', 'theme', 'mode', 'appearance', 'color', 'system', 'device'],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
       icon: 'dark_mode',

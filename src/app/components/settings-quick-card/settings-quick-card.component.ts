@@ -8,7 +8,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { TextScaleService, DEFAULT_TEXT_SCALE, TEXT_SCALE_OPTIONS } from '../../services/text-scale.service';
-import { ThemeService } from '../../services/theme.service';
+import { ThemePreference, ThemeService } from '../../services/theme.service';
 import { SUPPORTED_LOCALE_LABELS } from '../../utils/supported-locales';
 
 @Component({
@@ -46,13 +46,26 @@ export class SettingsQuickCardComponent {
   readonly isMaxScale = computed(() => this.textScaleService.textScale() >= this.maxScale);
 
   readonly languageOptions = SUPPORTED_LOCALE_LABELS;
+  readonly themeOptions = [
+    {
+      value: 'auto' as ThemePreference,
+      icon: 'brightness_auto',
+      label: $localize`:@@settings.theme.auto:Auto`,
+    },
+    {
+      value: 'dark' as ThemePreference,
+      icon: 'dark_mode',
+      label: $localize`:@@settings.theme.dark:Dark`,
+    },
+    {
+      value: 'light' as ThemePreference,
+      icon: 'light_mode',
+      label: $localize`:@@settings.theme.light:Light`,
+    },
+  ];
 
-  setTheme(darkMode: boolean): void {
-    if (this.themeService.darkMode() === darkMode) {
-      return;
-    }
-
-    this.themeService.toggleDarkMode();
+  setTheme(themePreference: ThemePreference): void {
+    this.themeService.setThemePreference(themePreference);
   }
 
   setLanguage(languageCode: string): void {

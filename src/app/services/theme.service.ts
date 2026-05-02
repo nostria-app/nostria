@@ -1,7 +1,9 @@
-import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT } from '@angular/core';
+import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT, computed } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
+
+export type ThemePreference = 'auto' | 'dark' | 'light';
 
 @Injectable({
   providedIn: 'root',
@@ -23,7 +25,12 @@ export class ThemeService {
   /** When non-null, overrides the default theme-color meta tag value. */
   private themeColorOverride = signal<string | null>(null);
 
-  darkMode = signal<boolean>(this.getInitialThemePreference());
+  private systemPrefersDark = signal(this.getInitialSystemPreference());
+
+  readonly themePreference = signal<ThemePreference>(this.getInitialThemePreference());
+  readonly darkMode = computed(() => this.resolveDarkMode(this.themePreference(), this.systemPrefersDark()));
+  readonly resolvedTheme = computed(() => this.darkMode() ? 'dark' as const : 'light' as const);
+  readonly followsSystemTheme = computed(() => this.themePreference() === 'auto');
 
   constructor() {
     // Set up effect to apply theme changes
@@ -57,20 +64,25 @@ export class ThemeService {
     try {
       // Initialize media query
       this.darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-      // Set initial theme based on saved preference or system preference
-      this.darkMode.set(await this.getInitialThemePreference());
+      this.systemPrefersDark.set(this.darkThemeMediaQuery.matches);
 
       // Listen for system preference changes
       this.darkThemeMediaQuery.addEventListener('change', e => {
-        // Only update if user hasn't explicitly set a preference
-        if (!this.localStorage.getItem(this.THEME_KEY)) {
-          this.darkMode.set(e.matches);
-        }
+        this.systemPrefersDark.set(e.matches);
       });
     } catch (error) {
       this.logger.error('Error initializing browser features:', error);
     }
+  }
+
+  setThemePreference(preference: ThemePreference): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.logger.warn('Attempted to set theme preference in SSR context');
+      return;
+    }
+
+    this.themePreference.set(preference);
+    this.localStorage.setItem(this.THEME_KEY, preference);
   }
 
   toggleDarkMode() {
@@ -80,24 +92,39 @@ export class ThemeService {
       return;
     }
 
-    const newValue = !this.darkMode();
-    this.darkMode.set(newValue);
-    this.localStorage.setItem(this.THEME_KEY, newValue ? 'dark' : 'light');
+    this.setThemePreference(this.darkMode() ? 'light' : 'dark');
   }
 
-  private getInitialThemePreference() {
+  private getInitialSystemPreference(): boolean {
     if (!isPlatformBrowser(this.platformId)) {
-      return false; // Default to light theme in SSR
+      return false;
     }
 
-    // Check for saved preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  private getInitialThemePreference(): ThemePreference {
+    if (!isPlatformBrowser(this.platformId)) {
+      return 'auto';
+    }
+
     const savedPreference = this.localStorage.getItem(this.THEME_KEY);
-    if (savedPreference) {
-      return savedPreference === 'dark';
+    if (savedPreference === 'auto' || savedPreference === 'dark' || savedPreference === 'light') {
+      return savedPreference;
     }
 
-    // Fall back to system preference
-    const systemPrefersDark = this.darkThemeMediaQuery?.matches || false;
+    return 'auto';
+  }
+
+  private resolveDarkMode(preference: ThemePreference, systemPrefersDark: boolean): boolean {
+    if (preference === 'dark') {
+      return true;
+    }
+
+    if (preference === 'light') {
+      return false;
+    }
+
     return systemPrefersDark;
   }
 
@@ -141,11 +168,16 @@ export class ThemeService {
       return; // Don't try to modify DOM during SSR
     }
 
+    this.document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+
     if (isDark) {
       this.document.documentElement.classList.add('dark');
     } else {
       this.document.documentElement.classList.remove('dark');
     }
+
+    this.document.body.style.backgroundColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
+    this.document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
     // Only update meta tags here if there's no active override
     // (the override effect handles it when an override is set)
