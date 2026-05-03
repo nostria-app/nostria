@@ -77,6 +77,7 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly visibleArticleCount = signal(12);
   readonly discoveringMore = signal(false);
   readonly publicDiscoveryExhausted = signal(false);
+  readonly showAllTags = signal(false);
   readonly reviewPubkey = signal('');
   readonly reviewOwnerName = signal('');
   readonly profileNames = signal(new Map<string, string>());
@@ -125,6 +126,8 @@ export class WebBookmarksComponent implements OnDestroy {
     : this.webBookmarks.personalBookmarks()));
   readonly socialTags = computed(() => this.uniqueTags(this.reviewPubkey() ? [] : this.webBookmarks.socialBookmarks()));
   readonly allTags = computed(() => this.uniqueTags(this.sourceBookmarks()));
+  readonly visibleNavTags = computed(() => this.showAllTags() ? this.allTags() : this.allTags().slice(0, 8));
+  readonly hasMoreNavTags = computed(() => this.allTags().length > 8);
 
   readonly personalBookmarks = computed(() => this.applyFilters(
     this.reviewPubkey() ? this.reviewBookmarks() : this.webBookmarks.personalBookmarks(),
@@ -292,6 +295,8 @@ export class WebBookmarksComponent implements OnDestroy {
       this.searchQuery();
       this.sortMode();
       this.socialScope();
+      this.reviewPubkey();
+      this.showAllTags.set(false);
       this.visibleArticleCount.set(12);
       this.publicDiscoveryExhausted.set(false);
     });
@@ -469,6 +474,10 @@ export class WebBookmarksComponent implements OnDestroy {
 
   setActiveTag(tag: string): void {
     this.activeTag.set(this.activeTag() === tag ? '' : tag);
+  }
+
+  toggleAllTags(): void {
+    this.showAllTags.update(value => !value);
   }
 
   async showMoreBookmarks(): Promise<void> {
@@ -781,9 +790,21 @@ export class WebBookmarksComponent implements OnDestroy {
   }
 
   private uniqueTags(items: WebBookmark[]): string[] {
-    return [...new Set(items.flatMap(item => item.tags))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+    const tagCounts = new Map<string, number>();
+
+    for (const item of items) {
+      for (const tag of item.tags) {
+        if (!tag) {
+          continue;
+        }
+
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+    }
+
+    return [...tagCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([tag]) => tag);
   }
 
 }

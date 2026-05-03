@@ -151,8 +151,13 @@
 
     <nav class="paper-nav" aria-label="Bookmark newspaper sections">
       <button type="button" [class.selected]="!activeTag()" (click)="activeTag.set('')">Front Page</button>
-      @for (tag of allTags().slice(0, 8); track tag) {
+      @for (tag of visibleNavTags(); track tag) {
       <button type="button" [class.selected]="activeTag() === tag" (click)="setActiveTag(tag)">#{{ tag }}</button>
+      }
+      @if (hasMoreNavTags()) {
+      <button type="button" class="paper-nav-expander" (click)="toggleAllTags()">
+        {{ showAllTags() ? 'Less' : 'More' }}
+      </button>
       }
     </nav>
 

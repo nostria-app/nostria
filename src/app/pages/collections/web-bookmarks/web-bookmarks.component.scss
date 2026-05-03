@@ -1010,6 +1010,7 @@
 
 .paper-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   overflow-x: auto;
   padding: 10px 0;
@@ -1034,6 +1035,10 @@
       background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
     }
   }
+}
+
+.paper-nav-expander {
+  color: var(--mat-sys-primary) !important;
 }
 
 .front-grid {
