@@ -772,6 +772,19 @@
   }
 }
 
+.tile-col-web-bookmarks {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
+  border: 1px solid rgba(76, 175, 80, 0.15);
+
+  .tile-icon {
+    color: #4CAF50;
+  }
+
+  &:hover {
+    border-color: rgba(76, 175, 80, 0.4);
+  }
+}
+
 .tile-col-relays {
   background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(0, 188, 212, 0.15);
@@ -1956,6 +1969,19 @@
 
     &:hover {
       border-color: rgba(255, 193, 7, 0.6);
+    }
+  }
+
+  .tile-col-web-bookmarks {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    .tile-icon {
+      color: #81C784;
+    }
+
+    &:hover {
+      border-color: rgba(76, 175, 80, 0.6);
     }
   }
 
