@@ -165,6 +165,7 @@ export class WebBookmarkService {
         this.logger.warn('[WebBookmarkService] Failed to sync social web bookmarks from author relays', error);
       }
 
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
       this.socialBookmarks.set(this.toLatestBookmarks(events));
     } catch (error) {
       this.logger.error('[WebBookmarkService] Failed to load social web bookmarks', error);
@@ -177,16 +178,46 @@ export class WebBookmarkService {
   async loadPublic(limit = 200): Promise<void> {
     this.loadingSocial.set(true);
     try {
-      const events = await this.relayPool.query(
+      await this.database.init();
+      let events = await this.database.getEventsByKind(WEB_BOOKMARK_KIND);
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
+      this.socialBookmarks.set(this.toLatestBookmarks(events));
+
+      const relayEvents = await this.relayPool.query(
         this.utilities.preferredRelays,
         { kinds: [WEB_BOOKMARK_KIND], limit },
         4500
       );
-      await this.saveReplaceableEvents(events);
+      await this.saveReplaceableEvents(relayEvents);
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase([...events, ...relayEvents]);
       this.socialBookmarks.set(this.toLatestBookmarks(events));
     } catch (error) {
       this.logger.error('[WebBookmarkService] Failed to load public social bookmarks', error);
       this.socialBookmarks.set([]);
+    } finally {
+      this.loadingSocial.set(false);
+    }
+  }
+
+  async loadMorePublic(until: number, limit = 200): Promise<number> {
+    this.loadingSocial.set(true);
+    try {
+      const beforeCount = this.socialBookmarks().length;
+      const relayEvents = await this.relayPool.query(
+        this.utilities.preferredRelays,
+        { kinds: [WEB_BOOKMARK_KIND], limit, until },
+        4500
+      );
+      await this.saveReplaceableEvents(relayEvents);
+
+      const currentEvents = this.socialBookmarks().map(item => item.event);
+      const events = await this.deletionFilter.filterDeletedEventsFromDatabase([...currentEvents, ...relayEvents]);
+      this.socialBookmarks.set(this.toLatestBookmarks(events));
+
+      return Math.max(0, this.socialBookmarks().length - beforeCount);
+    } catch (error) {
+      this.logger.error('[WebBookmarkService] Failed to load more public social bookmarks', error);
+      return 0;
     } finally {
       this.loadingSocial.set(false);
     }

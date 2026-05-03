@@ -1,11 +1,8 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, PLATFORM_ID, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSliderModule } from '@angular/material/slider';
@@ -16,8 +13,6 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { TrustService } from '../../../services/trust.service';
 import { WebBookmark, WebBookmarkService } from '../../../services/web-bookmark.service';
-import { SocialPreviewComponent } from '../../../components/social-preview/social-preview.component';
-import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { SaveWebBookmarkDialogComponent, SaveWebBookmarkDialogData } from './save-web-bookmark-dialog.component';
 
@@ -33,25 +28,20 @@ interface BookmarkNewsSection {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-web-bookmarks',
   imports: [
-    FormsModule,
     MatButtonModule,
     MatDividerModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatMenuModule,
     MatProgressSpinnerModule,
     MatSliderModule,
     MatSnackBarModule,
     MatTooltipModule,
-    SocialPreviewComponent,
-    UserProfileComponent,
     AgoPipe,
   ],
   templateUrl: './web-bookmarks.component.html',
   styleUrl: './web-bookmarks.component.scss',
 })
-export class WebBookmarksComponent {
+export class WebBookmarksComponent implements OnDestroy {
   readonly webBookmarks = inject(WebBookmarkService);
   private readonly accountState = inject(AccountStateService);
   private readonly customDialog = inject(CustomDialogService);
@@ -61,12 +51,25 @@ export class WebBookmarksComponent {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly searchQuery = signal('');
+  readonly showSearch = signal(false);
   readonly activeTag = signal('');
   readonly sortMode = signal<BookmarkSort>('newest');
   readonly socialScope = signal<SocialScope>('following');
   readonly wotMinRank = signal(1);
-  readonly requireWot = signal(true);
+  readonly requireWot = signal(false);
   readonly saving = signal(false);
+  readonly visibleArticleCount = signal(12);
+  readonly discoveringMore = signal(false);
+  readonly publicDiscoveryExhausted = signal(false);
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('feedSentinel') set feedSentinel(element: ElementRef<HTMLElement> | undefined) {
+    this.feedSentinelElement = element;
+    this.observeFeedSentinel();
+  }
+
+  private feedObserver?: IntersectionObserver;
+  private feedSentinelElement?: ElementRef<HTMLElement>;
 
   readonly trustEnabled = computed(() => this.trust.isEnabled());
   readonly followSetOptions = computed(() => [...this.followSets.followSets()].sort((a, b) => a.title.localeCompare(b.title)));
@@ -104,15 +107,30 @@ export class WebBookmarksComponent {
       ...this.socialBookmarks(),
       ...this.personalBookmarks(),
     ];
+    const tags = this.activeTag() ? [this.activeTag()] : this.allTags().slice(0, 4);
 
-    return this.allTags()
-      .slice(0, 4)
+    return tags
       .map(tag => ({
         tag,
         items: pool.filter(bookmark => bookmark.tags.includes(tag)).slice(0, 4),
       }))
       .filter(section => section.items.length > 0);
   });
+  readonly feedBookmarks = computed(() => {
+    const frontPageIds = new Set([
+      this.leadBookmark()?.id,
+      ...this.secondaryBookmarks().map(bookmark => bookmark.id),
+      ...this.personalBookmarks().slice(0, 3).map(bookmark => bookmark.id),
+    ].filter((id): id is string => !!id));
+
+    return this.sortBookmarks([
+      ...this.socialBookmarks(),
+      ...this.personalBookmarks(),
+    ].filter(bookmark => !frontPageIds.has(bookmark.id)));
+  });
+  readonly visibleFeedBookmarks = computed(() => this.feedBookmarks().slice(0, this.visibleArticleCount()));
+  readonly hasMoreFeedBookmarks = computed(() => this.visibleArticleCount() < this.feedBookmarks().length);
+  readonly canDiscoverMoreBookmarks = computed(() => this.socialScope() === 'public' && !this.publicDiscoveryExhausted());
 
   readonly socialScopeTitle = computed(() => {
     const scope = this.socialScope();
@@ -134,7 +152,7 @@ export class WebBookmarksComponent {
       || this.sortMode() !== 'newest'
       || this.socialScope() !== 'following'
       || this.wotMinRank() !== 1
-      || !this.requireWot();
+      || this.requireWot();
   });
 
   constructor() {
@@ -147,6 +165,7 @@ export class WebBookmarksComponent {
       this.wotMinRank();
       this.requireWot();
       this.followSetOptions();
+      this.accountState.followingList();
       void this.reloadSocial();
     });
 
@@ -156,6 +175,19 @@ export class WebBookmarksComponent {
         void this.trust.fetchMetricsBatch(pubkeys);
       }
     });
+
+    effect(() => {
+      this.activeTag();
+      this.searchQuery();
+      this.sortMode();
+      this.socialScope();
+      this.visibleArticleCount.set(12);
+      this.publicDiscoveryExhausted.set(false);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.feedObserver?.disconnect();
   }
 
   async reload(): Promise<void> {
@@ -233,17 +265,52 @@ export class WebBookmarksComponent {
     return bookmark.authorPubkey === this.accountState.pubkey() ? 'Personal' : this.socialScopeTitle();
   }
 
+  isOwnBookmark(bookmark: WebBookmark): boolean {
+    return bookmark.authorPubkey === this.accountState.pubkey();
+  }
+
   setActiveTag(tag: string): void {
     this.activeTag.set(this.activeTag() === tag ? '' : tag);
   }
 
+  async showMoreBookmarks(): Promise<void> {
+    if (this.visibleArticleCount() < this.feedBookmarks().length) {
+      this.visibleArticleCount.update(count => Math.min(count + 12, this.feedBookmarks().length));
+      return;
+    }
+
+    await this.discoverMoreBookmarks();
+  }
+
+  toggleSearch(): void {
+    const shouldShow = !this.showSearch();
+    this.showSearch.set(shouldShow);
+
+    if (shouldShow) {
+      setTimeout(() => this.searchInput?.nativeElement.focus(), 50);
+    } else {
+      this.searchQuery.set('');
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+    this.searchInput?.nativeElement.focus();
+  }
+
+  onSearchInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    this.searchQuery.set(input?.value ?? '');
+  }
+
   resetFilters(): void {
     this.searchQuery.set('');
+    this.showSearch.set(false);
     this.activeTag.set('');
     this.sortMode.set('newest');
     this.socialScope.set('following');
     this.wotMinRank.set(1);
-    this.requireWot.set(true);
+    this.requireWot.set(false);
   }
 
   getTrustRank(pubkey: string): number | undefined {
@@ -319,7 +386,11 @@ export class WebBookmarksComponent {
         || item.tags.some(itemTag => itemTag.includes(query));
     });
 
-    return [...filtered].sort((left, right) => {
+    return this.sortBookmarks(filtered);
+  }
+
+  private sortBookmarks(items: WebBookmark[]): WebBookmark[] {
+    return [...items].sort((left, right) => {
       switch (this.sortMode()) {
         case 'oldest':
           return left.publishedAt - right.publishedAt;
@@ -331,6 +402,45 @@ export class WebBookmarksComponent {
           return right.publishedAt - left.publishedAt;
       }
     });
+  }
+
+  private observeFeedSentinel(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.feedObserver?.disconnect();
+    if (!this.feedSentinelElement) {
+      return;
+    }
+
+    this.feedObserver = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        void this.showMoreBookmarks();
+      }
+    }, { rootMargin: '600px 0px' });
+    this.feedObserver.observe(this.feedSentinelElement.nativeElement);
+  }
+
+  private async discoverMoreBookmarks(): Promise<void> {
+    if (this.socialScope() !== 'public' || this.discoveringMore() || this.publicDiscoveryExhausted()) {
+      return;
+    }
+
+    const oldestCreatedAt = Math.min(...this.webBookmarks.socialBookmarks().map(bookmark => bookmark.createdAt));
+    if (!Number.isFinite(oldestCreatedAt)) {
+      this.publicDiscoveryExhausted.set(true);
+      return;
+    }
+
+    this.discoveringMore.set(true);
+    try {
+      const addedCount = await this.webBookmarks.loadMorePublic(oldestCreatedAt - 1);
+      this.publicDiscoveryExhausted.set(addedCount === 0);
+      this.visibleArticleCount.update(count => Math.min(count + 12, this.feedBookmarks().length));
+    } finally {
+      this.discoveringMore.set(false);
+    }
   }
 
   private uniqueTags(items: WebBookmark[]): string[] {
