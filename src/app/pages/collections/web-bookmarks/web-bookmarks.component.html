@@ -1,0 +1,376 @@
+<div class="panel-header web-bookmark-header">
+  <div class="header-title">
+    <mat-icon>travel_explore</mat-icon>
+    <div>
+      <h2 class="panel-title title-font">Social Bookmarks</h2>
+      <span>{{ personalBookmarks().length }} personal · {{ socialBookmarks().length }} social</span>
+    </div>
+  </div>
+
+  <span class="panel-header-spacer"></span>
+
+  <button mat-icon-button type="button" (click)="composerExpanded.set(!composerExpanded())"
+    [matTooltip]="composerExpanded() ? 'Hide composer' : 'Add URL'">
+    <mat-icon>{{ composerExpanded() ? 'keyboard_arrow_up' : 'add_link' }}</mat-icon>
+  </button>
+
+  <button mat-icon-button type="button" [matMenuTriggerFor]="filterMenu" [class.filter-active]="hasActiveFilters()"
+    matTooltip="Filters">
+    <mat-icon>tune</mat-icon>
+  </button>
+
+  <button mat-icon-button type="button" (click)="reload()" matTooltip="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
+
+<mat-menu #filterMenu="matMenu" class="web-bookmarks-filter-menu">
+  <div class="filter-menu-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
+    <div class="filter-section">
+      <span class="filter-label">Social source</span>
+      <div class="scope-grid">
+        <button type="button" class="scope-option" [class.selected]="socialScope() === 'following'"
+          (click)="socialScope.set('following')">
+          <mat-icon>people</mat-icon>
+          <span>Following</span>
+        </button>
+        <button type="button" class="scope-option" [class.selected]="socialScope() === 'wot'"
+          (click)="socialScope.set('wot')" [disabled]="!trustEnabled()">
+          <mat-icon>verified_user</mat-icon>
+          <span>Web of Trust</span>
+        </button>
+      </div>
+    </div>
+
+    @if (followSetOptions().length > 0) {
+    <mat-divider></mat-divider>
+    <div class="filter-section">
+      <span class="filter-label">People lists</span>
+      <div class="list-options">
+        @for (set of followSetOptions(); track set.dTag) {
+        <button type="button" class="list-option" [class.selected]="socialScope() === set.dTag"
+          (click)="socialScope.set(set.dTag)">
+          <mat-icon>{{ set.isPrivate ? 'lock' : set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
+          <span>{{ set.title }}</span>
+        </button>
+        }
+      </div>
+    </div>
+    }
+
+    <mat-divider></mat-divider>
+
+    <div class="filter-section">
+      <span class="filter-label">Sort</span>
+      <div class="scope-grid">
+        <button type="button" class="scope-option" [class.selected]="sortMode() === 'newest'"
+          (click)="sortMode.set('newest')">
+          <mat-icon>south</mat-icon>
+          <span>Newest</span>
+        </button>
+        <button type="button" class="scope-option" [class.selected]="sortMode() === 'oldest'"
+          (click)="sortMode.set('oldest')">
+          <mat-icon>north</mat-icon>
+          <span>Oldest</span>
+        </button>
+        <button type="button" class="scope-option" [class.selected]="sortMode() === 'title'"
+          (click)="sortMode.set('title')">
+          <mat-icon>sort_by_alpha</mat-icon>
+          <span>Title</span>
+        </button>
+        <button type="button" class="scope-option" [class.selected]="sortMode() === 'domain'"
+          (click)="sortMode.set('domain')">
+          <mat-icon>language</mat-icon>
+          <span>Domain</span>
+        </button>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="filter-section">
+      <button type="button" class="toggle-row" [class.selected]="requireWot()"
+        (click)="requireWot.set(!requireWot())" [disabled]="!trustEnabled()">
+        <mat-icon>{{ requireWot() ? 'shield' : 'shield_outlined' }}</mat-icon>
+        <span>Require WoT for social</span>
+      </button>
+      <div class="slider-row">
+        <span>Min rank</span>
+        <mat-slider min="1" max="100" step="1" discrete>
+          <input matSliderThumb [value]="wotMinRank()" (valueChange)="wotMinRank.set($event)"
+            aria-label="Minimum Web of Trust rank">
+        </mat-slider>
+        <span class="slider-value">{{ wotMinRank() }}+</span>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button mat-stroked-button type="button" (click)="resetFilters()">Reset</button>
+    </div>
+  </div>
+</mat-menu>
+
+<div class="web-bookmarks-page">
+  @if (composerExpanded()) {
+  <section class="bookmark-composer">
+    <div class="composer-main">
+      <div class="composer-badge">
+        <mat-icon>add_link</mat-icon>
+      </div>
+      <div class="composer-copy">
+        <h1 class="title-font">Save a URL to Nostr</h1>
+        <p>Publish an editable social bookmark with title, notes, and topics.</p>
+      </div>
+    </div>
+
+    <div class="composer-fields">
+      <mat-form-field appearance="outline" class="url-field">
+        <mat-label>URL</mat-label>
+        <mat-icon matPrefix>link</mat-icon>
+        <input matInput [ngModel]="urlInput()" (ngModelChange)="onUrlInputChange($event)"
+          placeholder="https://example.com/article">
+      </mat-form-field>
+
+      @if (previewLoading() || previewHint()) {
+      <div class="preview-status" [class.loaded]="previewHint()">
+        @if (previewLoading()) {
+        <mat-spinner diameter="16"></mat-spinner>
+        <span>Fetching link details...</span>
+        } @else {
+        <mat-icon>auto_awesome</mat-icon>
+        <span>{{ previewHint() }}</span>
+        }
+      </div>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput [ngModel]="titleInput()" (ngModelChange)="titleInput.set($event)">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="description-field">
+        <mat-label>Description</mat-label>
+        <textarea matInput rows="2" [ngModel]="descriptionInput()" (ngModelChange)="descriptionInput.set($event)">
+        </textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Topics</mat-label>
+        <mat-icon matPrefix>tag</mat-icon>
+        <input matInput [ngModel]="tagsInput()" (ngModelChange)="tagsInput.set($event)"
+          placeholder="nostr, design, research">
+      </mat-form-field>
+    </div>
+
+    <div class="composer-actions">
+      <button mat-flat-button type="button" (click)="saveBookmark()" [disabled]="saving()">
+        @if (saving()) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <mat-icon>publish</mat-icon>
+        }
+        <span>Publish bookmark</span>
+      </button>
+    </div>
+  </section>
+  }
+
+  <section class="search-band">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search bookmarks</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+      @if (searchQuery()) {
+      <button matSuffix mat-icon-button type="button" (click)="searchQuery.set('')" matTooltip="Clear search">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+    </mat-form-field>
+
+    <div class="active-filter-summary">
+      <mat-icon>filter_alt</mat-icon>
+      <span>{{ socialScopeTitle() }} · {{ getSortLabel() }}</span>
+      @if (activeTag()) {
+      <button type="button" class="tag-pill selected" (click)="activeTag.set('')">#{{ activeTag() }}</button>
+      }
+    </div>
+  </section>
+
+  @if (allTags().length > 0) {
+  <section class="tag-strip" aria-label="Bookmark topic filters">
+    @for (tag of allTags(); track tag) {
+    <button type="button" class="tag-pill" [class.selected]="activeTag() === tag" (click)="setActiveTag(tag)">
+      #{{ tag }}
+    </button>
+    }
+  </section>
+  }
+
+  <div class="bookmark-sections">
+    <section class="bookmark-section personal-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Personal</span>
+          <h2 class="title-font">Your Web Library</h2>
+        </div>
+        @if (webBookmarks.loadingPersonal()) {
+        <mat-spinner diameter="22"></mat-spinner>
+        }
+      </div>
+
+      @if (featuredPersonal(); as featured) {
+      <article class="featured-bookmark" (click)="openBookmark(featured)" tabindex="0" role="button"
+        (keydown.enter)="openBookmark(featured)" (keydown.space)="openBookmark(featured)">
+        <div class="featured-glow"></div>
+        <div class="featured-content">
+          <span class="domain">{{ featured.domain }}</span>
+          <h3>{{ featured.title }}</h3>
+          <p>{{ featured.description || featured.url }}</p>
+          <div class="bookmark-tags">
+            @for (tag of featured.tags.slice(0, 4); track tag) {
+            <span>#{{ tag }}</span>
+            }
+          </div>
+        </div>
+      </article>
+      }
+
+      <div class="bookmark-list">
+        @if (!webBookmarks.loadingPersonal() && personalBookmarks().length === 0) {
+        <div class="empty-state">
+          <mat-icon>bookmark_add</mat-icon>
+          <h3>No personal social bookmarks yet</h3>
+          <p>Paste a URL above and publish your first social bookmark.</p>
+        </div>
+        } @else {
+        @for (bookmark of personalBookmarks(); track bookmark.id) {
+        <article class="bookmark-card">
+          <app-social-preview [url]="bookmark.url" [compact]="true"></app-social-preview>
+          <div class="bookmark-card-body">
+            <button type="button" class="bookmark-title" (click)="openBookmark(bookmark)">
+              {{ bookmark.title }}
+            </button>
+            <p>{{ bookmark.description || bookmark.url }}</p>
+            <div class="bookmark-meta">
+              <span>{{ bookmark.domain }}</span>
+              <span>{{ bookmark.publishedAt | ago }}</span>
+            </div>
+            <div class="bookmark-tags">
+              @for (tag of bookmark.tags; track tag) {
+              <button type="button" (click)="setActiveTag(tag)">#{{ tag }}</button>
+              }
+            </div>
+          </div>
+          <button mat-icon-button [matMenuTriggerFor]="personalMenu" matTooltip="Bookmark actions">
+            <mat-icon>more_horiz</mat-icon>
+          </button>
+          <mat-menu #personalMenu="matMenu">
+            <button mat-menu-item (click)="openBookmark(bookmark)">
+              <mat-icon>open_in_new</mat-icon>
+              <span>Open</span>
+            </button>
+            <button mat-menu-item (click)="copyUrl(bookmark)">
+              <mat-icon>content_copy</mat-icon>
+              <span>Copy URL</span>
+            </button>
+            <button mat-menu-item (click)="editBookmark(bookmark)">
+              <mat-icon>edit</mat-icon>
+              <span>Edit</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="deleteBookmark(bookmark)">
+              <mat-icon>delete</mat-icon>
+              <span>Delete</span>
+            </button>
+          </mat-menu>
+        </article>
+        }
+        }
+      </div>
+    </section>
+
+    <section class="bookmark-section social-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Social</span>
+          <h2 class="title-font">Trusted Finds</h2>
+        </div>
+        @if (webBookmarks.loadingSocial()) {
+        <mat-spinner diameter="22"></mat-spinner>
+        }
+      </div>
+
+      @if (featuredSocial(); as featured) {
+      <article class="featured-bookmark social-featured" (click)="openBookmark(featured)" tabindex="0" role="button"
+        (keydown.enter)="openBookmark(featured)" (keydown.space)="openBookmark(featured)">
+        <div class="featured-glow"></div>
+        <div class="featured-content">
+          <div class="author-row">
+            <app-user-profile [pubkey]="featured.authorPubkey" view="compact" [showRank]="true"></app-user-profile>
+            @if (getTrustRank(featured.authorPubkey); as rank) {
+            <span class="rank-pill">WoT {{ rank }}</span>
+            }
+          </div>
+          <span class="domain">{{ featured.domain }}</span>
+          <h3>{{ featured.title }}</h3>
+          <p>{{ featured.description || featured.url }}</p>
+        </div>
+      </article>
+      }
+
+      <div class="bookmark-list">
+        @if (!webBookmarks.loadingSocial() && socialBookmarks().length === 0) {
+        <div class="empty-state">
+          <mat-icon>travel_explore</mat-icon>
+          <h3>No trusted social bookmarks found</h3>
+          <p>Try another people list, lower the WoT rank, or refresh after more profiles are cached.</p>
+        </div>
+        } @else {
+        @for (bookmark of socialBookmarks(); track bookmark.id) {
+        <article class="bookmark-card social-card">
+          <div class="social-author">
+            <app-user-profile [pubkey]="bookmark.authorPubkey" view="compact" [showRank]="true"></app-user-profile>
+            @if (getTrustRank(bookmark.authorPubkey); as rank) {
+            <span class="rank-pill">WoT {{ rank }}</span>
+            }
+          </div>
+          <app-social-preview [url]="bookmark.url" [compact]="true"></app-social-preview>
+          <div class="bookmark-card-body">
+            <button type="button" class="bookmark-title" (click)="openBookmark(bookmark)">
+              {{ bookmark.title }}
+            </button>
+            <p>{{ bookmark.description || bookmark.url }}</p>
+            <div class="bookmark-meta">
+              <span>{{ bookmark.domain }}</span>
+              <span>{{ bookmark.publishedAt | ago }}</span>
+            </div>
+            <div class="bookmark-tags">
+              @for (tag of bookmark.tags; track tag) {
+              <button type="button" (click)="setActiveTag(tag)">#{{ tag }}</button>
+              }
+            </div>
+          </div>
+          <button mat-icon-button [matMenuTriggerFor]="socialMenu" matTooltip="Bookmark actions">
+            <mat-icon>more_horiz</mat-icon>
+          </button>
+          <mat-menu #socialMenu="matMenu">
+            <button mat-menu-item (click)="openBookmark(bookmark)">
+              <mat-icon>open_in_new</mat-icon>
+              <span>Open</span>
+            </button>
+            <button mat-menu-item (click)="saveSocialBookmark(bookmark)">
+              <mat-icon>bookmark_add</mat-icon>
+              <span>Save to mine</span>
+            </button>
+            <button mat-menu-item (click)="copyUrl(bookmark)">
+              <mat-icon>content_copy</mat-icon>
+              <span>Copy URL</span>
+            </button>
+          </mat-menu>
+        </article>
+        }
+        }
+      </div>
+    </section>
+  </div>
+</div>

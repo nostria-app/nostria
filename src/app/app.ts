@@ -623,6 +623,12 @@ export class App implements OnInit, OnDestroy {
             icon: 'bookmark',
             authenticated: false,
           },
+          {
+            path: '/collections/web-bookmarks',
+            label: $localize`:@@app.nav.collections.web-bookmarks:Social Bookmarks`,
+            icon: 'travel_explore',
+            authenticated: false,
+          },
           // {
           //   path: '/lists?tab=sets&kind=30005',
           //   label: $localize`:@@app.nav.collections.curated-videos:Videos`,

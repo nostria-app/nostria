@@ -533,6 +533,13 @@ export const routes: Routes = [
     title: 'Bookmarks',
   },
   {
+    path: 'collections/web-bookmarks',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/collections/web-bookmarks/web-bookmarks.component').then(m => m.WebBookmarksComponent),
+    title: 'Social Bookmarks',
+  },
+  {
     path: 'memos',
     loadComponent: () =>
       import('./pages/memos/memos.component').then(m => m.MemosComponent),

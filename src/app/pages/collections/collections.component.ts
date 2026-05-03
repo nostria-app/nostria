@@ -43,6 +43,13 @@ export class CollectionsComponent {
       color: '#2196f3',
     },
     {
+      title: $localize`:@@collections.web-bookmarks.title:Social Bookmarks`,
+      description: $localize`:@@collections.web-bookmarks.description:Save URLs and discover trusted social bookmarks`,
+      icon: 'travel_explore',
+      route: '/collections/web-bookmarks',
+      color: '#673ab7',
+    },
+    {
       title: $localize`:@@collections.relays.title:Relays`,
       description: $localize`:@@collections.relays.description:Manage your relay connections`,
       icon: 'dns',
