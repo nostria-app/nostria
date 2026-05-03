@@ -82,6 +82,7 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly profileNames = signal(new Map<string, string>());
   readonly profileImages = signal(new Map<string, string>());
   readonly bookmarkPreviews = signal(new Map<string, OpenGraphData>());
+  readonly failedBookmarkPreviews = signal(new Set<string>());
   private readonly previewRequests = new Set<string>();
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
@@ -439,7 +440,23 @@ export class WebBookmarksComponent implements OnDestroy {
   }
 
   bookmarkPreviewImage(bookmark: WebBookmark): string {
+    if (this.failedBookmarkPreviews().has(bookmark.id)) {
+      return '';
+    }
+
     return this.bookmarkPreviews().get(bookmark.id)?.image || '';
+  }
+
+  hideBookmarkPreview(bookmarkId: string): void {
+    this.failedBookmarkPreviews.update(current => {
+      if (current.has(bookmarkId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.add(bookmarkId);
+      return next;
+    });
   }
 
   getSectionLabel(bookmark: WebBookmark): string {

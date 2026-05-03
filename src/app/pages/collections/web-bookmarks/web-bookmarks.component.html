@@ -180,7 +180,7 @@
           </button>
           @if (bookmarkPreviewImage(bookmark); as image) {
           <div class="story-preview-image compact-preview-image" aria-hidden="true">
-            <img [src]="image" [alt]="bookmark.title">
+            <img [src]="image" [alt]="bookmark.title" (error)="hideBookmarkPreview(bookmark.id)">
           </div>
           }
           <span class="domain">{{ bookmark.domain }}</span>
@@ -234,7 +234,7 @@
         </button>
         @if (bookmarkPreviewImage(lead); as image) {
         <div class="lead-preview-image" aria-hidden="true">
-          <img [src]="image" [alt]="lead.title">
+          <img [src]="image" [alt]="lead.title" (error)="hideBookmarkPreview(lead.id)">
         </div>
         }
         <div class="story-label-row">
@@ -319,7 +319,7 @@
           <span class="story-number">{{ $index + 1 }}</span>
           @if (bookmarkPreviewImage(bookmark); as image) {
           <div class="story-preview-image rail-preview-image" aria-hidden="true">
-            <img [src]="image" [alt]="bookmark.title">
+            <img [src]="image" [alt]="bookmark.title" (error)="hideBookmarkPreview(bookmark.id)">
           </div>
           }
           <span class="domain">{{ bookmark.domain }}</span>
@@ -455,7 +455,7 @@
         <span class="domain">{{ bookmark.domain }}</span>
         @if (bookmarkPreviewImage(bookmark); as image) {
         <div class="feed-preview-image" aria-hidden="true">
-          <img [src]="image" [alt]="bookmark.title">
+          <img [src]="image" [alt]="bookmark.title" (error)="hideBookmarkPreview(bookmark.id)">
         </div>
         }
         <h3>{{ bookmark.title }}</h3>
