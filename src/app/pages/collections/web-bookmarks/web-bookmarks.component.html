@@ -9,6 +9,13 @@
 
   <span class="panel-header-spacer"></span>
 
+  @if (isPersonalizedReview()) {
+  <button mat-stroked-button type="button" class="all-reviews-button" (click)="openMainReview()">
+    <mat-icon>newspaper</mat-icon>
+    <span>Full Review</span>
+  </button>
+  }
+
   <button mat-icon-button type="button" (click)="toggleSearch()"
     [matTooltip]="showSearch() ? 'Close search' : 'Search bookmarks'">
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
@@ -131,27 +138,17 @@
 </div>
 
 <div class="web-bookmarks-page">
+  @if (!isSearching()) {
   <section class="news-front">
     <div class="front-masthead">
-      <div class="edition-meta">
-        <span>Social Bookmarking</span>
-        <span>{{ headerSubtitle() }}</span>
-      </div>
       <div class="masthead-title">
         <h1 class="title-font">{{ mastheadTitle() }}</h1>
         <p>{{ mastheadDescription() }}</p>
-      </div>
-      <div class="edition-meta edition-meta-right">
-        <span>{{ socialScopeTitle() }}</span>
-        <span>{{ getSortLabel() }}</span>
       </div>
     </div>
 
     <nav class="paper-nav" aria-label="Bookmark newspaper sections">
       <button type="button" [class.selected]="!activeTag()" (click)="activeTag.set('')">Front Page</button>
-      @if (isPersonalizedReview()) {
-      <button type="button" (click)="openMainReview()">All Reviews</button>
-      }
       @for (tag of allTags().slice(0, 8); track tag) {
       <button type="button" [class.selected]="activeTag() === tag" (click)="setActiveTag(tag)">#{{ tag }}</button>
       }
@@ -178,6 +175,11 @@
             (click)="$event.stopPropagation()" matTooltip="Bookmark actions">
             <mat-icon>more_horiz</mat-icon>
           </button>
+          @if (bookmarkPreviewImage(bookmark); as image) {
+          <div class="story-preview-image compact-preview-image" aria-hidden="true">
+            <img [src]="image" [alt]="bookmark.title">
+          </div>
+          }
           <span class="domain">{{ bookmark.domain }}</span>
           <h3>{{ bookmark.title }}</h3>
           <p>{{ bookmark.description || bookmark.url }}</p>
@@ -218,6 +220,11 @@
           (click)="$event.stopPropagation()" matTooltip="Bookmark actions">
           <mat-icon>more_horiz</mat-icon>
         </button>
+        @if (bookmarkPreviewImage(lead); as image) {
+        <div class="lead-preview-image" aria-hidden="true">
+          <img [src]="image" [alt]="lead.title">
+        </div>
+        }
         <div class="story-label-row">
           <span class="story-label">{{ getSectionLabel(lead) }}</span>
           <span class="domain">{{ lead.domain }}</span>
@@ -288,6 +295,11 @@
             <mat-icon>more_horiz</mat-icon>
           </button>
           <span class="story-number">{{ $index + 1 }}</span>
+          @if (bookmarkPreviewImage(bookmark); as image) {
+          <div class="story-preview-image rail-preview-image" aria-hidden="true">
+            <img [src]="image" [alt]="bookmark.title">
+          </div>
+          }
           <span class="domain">{{ bookmark.domain }}</span>
           <h3>{{ bookmark.title }}</h3>
           <p>{{ getSectionLabel(bookmark) }} · {{ bookmark.publishedAt | ago }}</p>
@@ -324,8 +336,9 @@
       </aside>
     </div>
   </section>
+  }
 
-  @if (newsSections().length > 0) {
+  @if (!isSearching() && newsSections().length > 0) {
   <section class="topic-sections" aria-label="Bookmark topic sections">
     @for (section of newsSections(); track section.tag) {
     <section class="topic-section">
@@ -385,7 +398,7 @@
     <div class="latest-feed-heading">
       <button type="button" class="section-kicker topic-heading-link" [class.active]="!!activeTag()"
         (click)="activeTag.set('')">
-        {{ activeTag() ? '#' + activeTag() : 'Latest Bookmarks' }}
+        {{ isSearching() ? 'Search Results' : activeTag() ? '#' + activeTag() : 'Latest Bookmarks' }}
       </button>
     </div>
 
@@ -398,6 +411,11 @@
           <mat-icon>more_horiz</mat-icon>
         </button>
         <span class="domain">{{ bookmark.domain }}</span>
+        @if (bookmarkPreviewImage(bookmark); as image) {
+        <div class="feed-preview-image" aria-hidden="true">
+          <img [src]="image" [alt]="bookmark.title">
+        </div>
+        }
         <h3>{{ bookmark.title }}</h3>
         <p>{{ bookmark.description || bookmark.url }}</p>
         <button type="button" class="review-link" (click)="$event.stopPropagation(); openUserReview(bookmark)">

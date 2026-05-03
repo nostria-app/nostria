@@ -13,6 +13,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { DataService } from '../../../services/data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
+import { OpenGraphData, OpenGraphService } from '../../../services/opengraph.service';
 import { TrustService } from '../../../services/trust.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { WebBookmark, WebBookmarkService } from '../../../services/web-bookmark.service';
@@ -52,6 +53,7 @@ export class WebBookmarksComponent implements OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   private readonly data = inject(DataService);
   private readonly followSets = inject(FollowSetsService);
+  private readonly openGraph = inject(OpenGraphService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly trust = inject(TrustService);
@@ -74,6 +76,8 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly reviewOwnerName = signal('');
   readonly profileNames = signal(new Map<string, string>());
   readonly profileImages = signal(new Map<string, string>());
+  readonly bookmarkPreviews = signal(new Map<string, OpenGraphData>());
+  private readonly previewRequests = new Set<string>();
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild('feedSentinel') set feedSentinel(element: ElementRef<HTMLElement> | undefined) {
@@ -88,6 +92,7 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly trustEnabled = computed(() => this.trust.isEnabled());
   readonly followSetOptions = computed(() => [...this.followSets.followSets()].sort((a, b) => a.title.localeCompare(b.title)));
   readonly isPersonalizedReview = computed(() => !!this.reviewPubkey());
+  readonly isSearching = computed(() => !!this.searchQuery().trim());
 
   readonly reviewBookmarks = computed(() => {
     const pubkey = this.reviewPubkey();
@@ -158,6 +163,13 @@ export class WebBookmarksComponent implements OnDestroy {
       .filter(section => section.items.length > 0);
   });
   readonly feedBookmarks = computed(() => {
+    if (this.isSearching()) {
+      return this.sortBookmarks([
+        ...this.socialBookmarks(),
+        ...this.personalBookmarks(),
+      ]);
+    }
+
     const frontPageIds = new Set([
       this.leadBookmark()?.id,
       ...this.secondaryBookmarks().map(bookmark => bookmark.id),
@@ -251,6 +263,18 @@ export class WebBookmarksComponent implements OnDestroy {
       const pubkeys = [...new Set(this.sourceBookmarks().map(item => item.authorPubkey))].slice(0, 80);
       if (pubkeys.length > 0) {
         void this.loadProfileNames(pubkeys);
+      }
+    });
+
+    effect(() => {
+      const bookmarks = [
+        this.leadBookmark(),
+        ...this.secondaryBookmarks(),
+        ...this.visibleFeedBookmarks(),
+      ].filter((bookmark): bookmark is WebBookmark => !!bookmark);
+
+      if (bookmarks.length > 0) {
+        void this.loadBookmarkPreviews(bookmarks);
       }
     });
 
@@ -360,6 +384,10 @@ export class WebBookmarksComponent implements OnDestroy {
 
   bookmarkReviewImage(bookmark: WebBookmark): string {
     return this.profileImages().get(bookmark.authorPubkey) || '';
+  }
+
+  bookmarkPreviewImage(bookmark: WebBookmark): string {
+    return this.bookmarkPreviews().get(bookmark.id)?.image || '';
   }
 
   getSectionLabel(bookmark: WebBookmark): string {
@@ -554,6 +582,30 @@ export class WebBookmarksComponent implements OnDestroy {
 
   private async loadProfileNames(pubkeys: string[]): Promise<void> {
     await Promise.all(pubkeys.map(pubkey => this.loadProfileName(pubkey, false)));
+  }
+
+  private async loadBookmarkPreviews(bookmarks: WebBookmark[]): Promise<void> {
+    await Promise.all(bookmarks.map(bookmark => this.loadBookmarkPreview(bookmark)));
+  }
+
+  private async loadBookmarkPreview(bookmark: WebBookmark): Promise<void> {
+    if (this.bookmarkPreviews().has(bookmark.id) || this.previewRequests.has(bookmark.id)) {
+      return;
+    }
+
+    this.previewRequests.add(bookmark.id);
+    try {
+      const preview = await this.openGraph.getOpenGraphData(bookmark.url);
+      if (!preview.error) {
+        this.bookmarkPreviews.update(current => {
+          const next = new Map(current);
+          next.set(bookmark.id, preview);
+          return next;
+        });
+      }
+    } finally {
+      this.previewRequests.delete(bookmark.id);
+    }
   }
 
   private async loadProfileName(pubkey: string, updateReviewOwner: boolean): Promise<void> {
