@@ -31,6 +31,7 @@ export interface WebBookmark {
   providedIn: 'root',
 })
 export class WebBookmarkService {
+  private readonly socialAuthorBatchSize = 100;
   private readonly accountState = inject(AccountStateService);
   private readonly database = inject(DatabaseService);
   private readonly deletionFilter = inject(DeletionFilterService);
@@ -89,7 +90,7 @@ export class WebBookmarkService {
     }
 
     const title = event.tags.find(tag => tag[0] === 'title')?.[1]?.trim() || this.titleFromDTag(dTag);
-    const publishedAt = Number.parseInt(event.tags.find(tag => tag[0] === 'published_at')?.[1] || '', 10);
+    const publishedAt = this.normalizeTimestampSeconds(event.tags.find(tag => tag[0] === 'published_at')?.[1]);
     const tags = event.tags
       .filter(tag => tag[0] === 't' && tag[1]?.trim())
       .map(tag => tag[1].trim().toLowerCase());
@@ -103,11 +104,25 @@ export class WebBookmarkService {
       title,
       description: event.content || '',
       tags,
-      publishedAt: Number.isFinite(publishedAt) ? publishedAt : event.created_at,
+      publishedAt: publishedAt ?? event.created_at,
       createdAt: event.created_at,
       authorPubkey: event.pubkey,
       domain: this.domainFromUrl(url),
     };
+  }
+
+  private normalizeTimestampSeconds(value: string | undefined): number | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) {
+      return undefined;
+    }
+
+    // Some clients incorrectly emit milliseconds instead of Nostr's required seconds.
+    return parsed > 9999999999 ? Math.floor(parsed / 1000) : parsed;
   }
 
   async loadPersonal(): Promise<void> {
@@ -148,7 +163,7 @@ export class WebBookmarkService {
   }
 
   async loadSocial(pubkeys: string[]): Promise<void> {
-    const authors = [...new Set(pubkeys.filter(Boolean))].slice(0, 160);
+    const authors = [...new Set(pubkeys.filter(Boolean))];
     if (authors.length === 0) {
       this.socialBookmarks.set([]);
       return;
@@ -157,12 +172,20 @@ export class WebBookmarkService {
     this.loadingSocial.set(true);
     try {
       await this.database.init();
-      let events = await this.database.getEventsByPubkeyAndKind(authors, WEB_BOOKMARK_KIND);
+      const authorBatches = this.chunkAuthors(authors);
+
+      const databaseBatches = await Promise.all(
+        authorBatches.map(batch => this.database.getEventsByPubkeyAndKind(batch, WEB_BOOKMARK_KIND))
+      );
+      let events = databaseBatches.flat();
       events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
       this.socialBookmarks.set(this.toLatestBookmarks(events));
 
       try {
-        const relayEvents = await this.userRelay.getEventsByPubkeyAndKind(authors, WEB_BOOKMARK_KIND);
+        const relayEventBatches = await Promise.all(
+          authorBatches.map(batch => this.userRelay.getEventsByPubkeyAndKind(batch, WEB_BOOKMARK_KIND))
+        );
+        const relayEvents = relayEventBatches.flat();
         events = [...events, ...relayEvents];
         await this.saveReplaceableEvents(relayEvents);
       } catch (error) {
@@ -177,6 +200,16 @@ export class WebBookmarkService {
     } finally {
       this.loadingSocial.set(false);
     }
+  }
+
+  private chunkAuthors(authors: string[]): string[][] {
+    const batches: string[][] = [];
+
+    for (let index = 0; index < authors.length; index += this.socialAuthorBatchSize) {
+      batches.push(authors.slice(index, index + this.socialAuthorBatchSize));
+    }
+
+    return batches;
   }
 
   async loadPublic(limit = 200): Promise<void> {
