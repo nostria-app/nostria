@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnDestroy, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
@@ -12,16 +12,22 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountStateService } from '../../../services/account-state.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
-import { OpenGraphService } from '../../../services/opengraph.service';
 import { TrustService } from '../../../services/trust.service';
 import { WebBookmark, WebBookmarkService } from '../../../services/web-bookmark.service';
 import { SocialPreviewComponent } from '../../../components/social-preview/social-preview.component';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
+import { SaveWebBookmarkDialogComponent, SaveWebBookmarkDialogData } from './save-web-bookmark-dialog.component';
 
 type BookmarkSort = 'newest' | 'oldest' | 'title' | 'domain';
 type SocialScope = 'following' | 'wot' | string;
+
+interface BookmarkNewsSection {
+  tag: string;
+  items: WebBookmark[];
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,31 +51,22 @@ type SocialScope = 'following' | 'wot' | string;
   templateUrl: './web-bookmarks.component.html',
   styleUrl: './web-bookmarks.component.scss',
 })
-export class WebBookmarksComponent implements OnDestroy {
+export class WebBookmarksComponent {
   readonly webBookmarks = inject(WebBookmarkService);
   private readonly accountState = inject(AccountStateService);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly followSets = inject(FollowSetsService);
-  private readonly openGraph = inject(OpenGraphService);
   private readonly trust = inject(TrustService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private previewLookupTimer: ReturnType<typeof setTimeout> | null = null;
-  private previewLookupToken = 0;
 
-  readonly urlInput = signal('');
-  readonly titleInput = signal('');
-  readonly descriptionInput = signal('');
-  readonly tagsInput = signal('');
   readonly searchQuery = signal('');
   readonly activeTag = signal('');
   readonly sortMode = signal<BookmarkSort>('newest');
   readonly socialScope = signal<SocialScope>('following');
   readonly wotMinRank = signal(1);
   readonly requireWot = signal(true);
-  readonly composerExpanded = signal(true);
   readonly saving = signal(false);
-  readonly previewLoading = signal(false);
-  readonly previewHint = signal('');
 
   readonly trustEnabled = computed(() => this.trust.isEnabled());
   readonly followSetOptions = computed(() => [...this.followSets.followSets()].sort((a, b) => a.title.localeCompare(b.title)));
@@ -92,6 +89,30 @@ export class WebBookmarksComponent implements OnDestroy {
 
   readonly featuredPersonal = computed(() => this.personalBookmarks()[0] ?? null);
   readonly featuredSocial = computed(() => this.socialBookmarks()[0] ?? null);
+  readonly leadBookmark = computed(() => this.featuredSocial() ?? this.featuredPersonal());
+  readonly secondaryBookmarks = computed(() => {
+    const leadId = this.leadBookmark()?.id;
+    return [
+      ...this.socialBookmarks(),
+      ...this.personalBookmarks(),
+    ]
+      .filter(bookmark => bookmark.id !== leadId)
+      .slice(0, 4);
+  });
+  readonly newsSections = computed<BookmarkNewsSection[]>(() => {
+    const pool = [
+      ...this.socialBookmarks(),
+      ...this.personalBookmarks(),
+    ];
+
+    return this.allTags()
+      .slice(0, 4)
+      .map(tag => ({
+        tag,
+        items: pool.filter(bookmark => bookmark.tags.includes(tag)).slice(0, 4),
+      }))
+      .filter(section => section.items.length > 0);
+  });
 
   readonly socialScopeTitle = computed(() => {
     const scope = this.socialScope();
@@ -100,6 +121,9 @@ export class WebBookmarksComponent implements OnDestroy {
     }
     if (scope === 'wot') {
       return 'Web of Trust';
+    }
+    if (scope === 'public') {
+      return 'Public relays';
     }
     return this.followSetOptions().find(set => set.dTag === scope)?.title || 'People list';
   });
@@ -134,15 +158,6 @@ export class WebBookmarksComponent implements OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    this.cancelPreviewLookup();
-  }
-
-  onUrlInputChange(value: string): void {
-    this.urlInput.set(value);
-    this.schedulePreviewLookup(value);
-  }
-
   async reload(): Promise<void> {
     await Promise.all([
       this.webBookmarks.loadPersonal(),
@@ -150,45 +165,28 @@ export class WebBookmarksComponent implements OnDestroy {
     ]);
   }
 
-  async saveBookmark(): Promise<void> {
-    if (this.saving()) {
-      return;
-    }
-
-    const url = this.urlInput().trim();
-    if (!url) {
-      this.snackBar.open('Add a URL first', 'Close', { duration: 2500 });
-      return;
-    }
-
-    this.saving.set(true);
-    try {
-      const success = await this.webBookmarks.saveBookmark({
-        url,
-        title: this.titleInput(),
-        description: this.descriptionInput(),
-        tags: this.parseTags(this.tagsInput()),
-      });
-
-      if (!success) {
-        this.snackBar.open('Could not publish bookmark', 'Close', { duration: 3500 });
-        return;
+  openSaveDialog(bookmark?: WebBookmark): void {
+    const dialogRef = this.customDialog.open<SaveWebBookmarkDialogComponent, boolean>(
+      SaveWebBookmarkDialogComponent,
+      {
+        title: bookmark ? 'Edit Social Bookmark' : 'Save a URL',
+        headerIcon: bookmark ? 'edit' : 'add_link',
+        width: '920px',
+        maxWidth: 'calc(100vw - 32px)',
+        data: { bookmark } satisfies SaveWebBookmarkDialogData,
+        panelClass: 'save-web-bookmark-dialog',
       }
+    );
 
-      this.clearComposer();
-      this.snackBar.open('Social bookmark published', 'Close', { duration: 2500 });
-    } finally {
-      this.saving.set(false);
-    }
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        void this.reload();
+      }
+    });
   }
 
   editBookmark(bookmark: WebBookmark): void {
-    this.cancelPreviewLookup();
-    this.urlInput.set(bookmark.url);
-    this.titleInput.set(bookmark.title);
-    this.descriptionInput.set(bookmark.description);
-    this.tagsInput.set(bookmark.tags.join(', '));
-    this.composerExpanded.set(true);
+    this.openSaveDialog(bookmark);
   }
 
   async deleteBookmark(bookmark: WebBookmark): Promise<void> {
@@ -231,6 +229,10 @@ export class WebBookmarksComponent implements OnDestroy {
     });
   }
 
+  getSectionLabel(bookmark: WebBookmark): string {
+    return bookmark.authorPubkey === this.accountState.pubkey() ? 'Personal' : this.socialScopeTitle();
+  }
+
   setActiveTag(tag: string): void {
     this.activeTag.set(this.activeTag() === tag ? '' : tag);
   }
@@ -262,81 +264,13 @@ export class WebBookmarksComponent implements OnDestroy {
   }
 
   private async reloadSocial(): Promise<void> {
-    const authors = await this.resolveSocialAuthors();
-    await this.webBookmarks.loadSocial(authors);
-  }
-
-  private schedulePreviewLookup(value: string): void {
-    const token = ++this.previewLookupToken;
-    this.previewHint.set('');
-
-    if (this.previewLookupTimer) {
-      clearTimeout(this.previewLookupTimer);
-      this.previewLookupTimer = null;
-    }
-
-    const normalized = this.webBookmarks.normalizeUrl(value);
-    if (!normalized) {
-      this.previewLoading.set(false);
+    if (this.socialScope() === 'public') {
+      await this.webBookmarks.loadPublic();
       return;
     }
 
-    this.previewLookupTimer = setTimeout(() => {
-      void this.loadPreviewMetadata(normalized.url, token);
-    }, 550);
-  }
-
-  private async loadPreviewMetadata(url: string, token: number): Promise<void> {
-    this.previewLoading.set(true);
-
-    try {
-      const preview = await this.openGraph.getOpenGraphData(url);
-      const currentUrl = this.webBookmarks.normalizeUrl(this.urlInput())?.url;
-      if (token !== this.previewLookupToken || currentUrl !== url || preview.error) {
-        return;
-      }
-
-      const title = preview.title?.trim();
-      const description = preview.description?.trim();
-      let hydrated = false;
-
-      if (title && !this.titleInput().trim()) {
-        this.titleInput.set(title);
-        hydrated = true;
-      }
-
-      if (description && !this.descriptionInput().trim()) {
-        this.descriptionInput.set(description);
-        hydrated = true;
-      }
-
-      if (hydrated) {
-        this.previewHint.set('Link details added');
-      }
-    } finally {
-      if (token === this.previewLookupToken) {
-        this.previewLoading.set(false);
-      }
-    }
-  }
-
-  private cancelPreviewLookup(): void {
-    this.previewLookupToken++;
-    this.previewLoading.set(false);
-    this.previewHint.set('');
-
-    if (this.previewLookupTimer) {
-      clearTimeout(this.previewLookupTimer);
-      this.previewLookupTimer = null;
-    }
-  }
-
-  private clearComposer(): void {
-    this.cancelPreviewLookup();
-    this.urlInput.set('');
-    this.titleInput.set('');
-    this.descriptionInput.set('');
-    this.tagsInput.set('');
+    const authors = await this.resolveSocialAuthors();
+    await this.webBookmarks.loadSocial(authors);
   }
 
   private async resolveSocialAuthors(): Promise<string[]> {
@@ -360,7 +294,7 @@ export class WebBookmarksComponent implements OnDestroy {
   private applyFilters(items: WebBookmark[], applyTrustFilter: boolean): WebBookmark[] {
     const query = this.searchQuery().trim().toLowerCase();
     const tag = this.activeTag();
-    const requireWot = applyTrustFilter && this.requireWot() && this.trustEnabled();
+    const requireWot = applyTrustFilter && this.socialScope() !== 'public' && this.requireWot() && this.trustEnabled();
     const minRank = this.wotMinRank();
 
     const filtered = items.filter(item => {
@@ -405,12 +339,4 @@ export class WebBookmarksComponent implements OnDestroy {
       .sort((a, b) => a.localeCompare(b));
   }
 
-  private parseTags(value: string): string[] {
-    return [...new Set(
-      value
-        .split(/[,#\s]+/)
-        .map(tag => tag.trim().toLowerCase())
-        .filter(Boolean)
-    )];
-  }
 }

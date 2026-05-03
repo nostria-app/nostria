@@ -1,0 +1,88 @@
+.save-bookmark-dialog {
+  width: 100%;
+}
+
+.dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.dialog-preview {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 42px;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.dialog-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+
+  textarea {
+    field-sizing: content;
+    min-height: 92px;
+    resize: vertical;
+  }
+}
+
+.preview-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    color: var(--mat-sys-primary);
+  }
+
+  &.loaded {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.topics-field {
+  width: 100%;
+}
+
+[dialog-actions] {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  button[mat-flat-button] {
+    min-width: 172px;
+  }
+}
+
+@media (max-width: 760px) {
+  .dialog-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,9 +9,9 @@
 
   <span class="panel-header-spacer"></span>
 
-  <button mat-icon-button type="button" (click)="composerExpanded.set(!composerExpanded())"
-    [matTooltip]="composerExpanded() ? 'Hide composer' : 'Add URL'">
-    <mat-icon>{{ composerExpanded() ? 'keyboard_arrow_up' : 'add_link' }}</mat-icon>
+  <button mat-flat-button type="button" (click)="openSaveDialog()">
+    <mat-icon>add_link</mat-icon>
+    <span>Save a URL</span>
   </button>
 
   <button mat-icon-button type="button" [matMenuTriggerFor]="filterMenu" [class.filter-active]="hasActiveFilters()"
@@ -38,6 +38,11 @@
           (click)="socialScope.set('wot')" [disabled]="!trustEnabled()">
           <mat-icon>verified_user</mat-icon>
           <span>Web of Trust</span>
+        </button>
+        <button type="button" class="scope-option" [class.selected]="socialScope() === 'public'"
+          (click)="socialScope.set('public')">
+          <mat-icon>public</mat-icon>
+          <span>Public relays</span>
         </button>
       </div>
     </div>
@@ -90,7 +95,7 @@
 
     <div class="filter-section">
       <button type="button" class="toggle-row" [class.selected]="requireWot()"
-        (click)="requireWot.set(!requireWot())" [disabled]="!trustEnabled()">
+        (click)="requireWot.set(!requireWot())" [disabled]="!trustEnabled() || socialScope() === 'public'">
         <mat-icon>{{ requireWot() ? 'shield' : 'shield_outlined' }}</mat-icon>
         <span>Require WoT for social</span>
       </button>
@@ -111,67 +116,96 @@
 </mat-menu>
 
 <div class="web-bookmarks-page">
-  @if (composerExpanded()) {
-  <section class="bookmark-composer">
-    <div class="composer-main">
-      <div class="composer-badge">
-        <mat-icon>add_link</mat-icon>
+  <section class="news-front">
+    <div class="front-masthead">
+      <div>
+        <span class="section-kicker">Social Bookmarking</span>
+        <h1 class="title-font">The Bookmark Review</h1>
       </div>
-      <div class="composer-copy">
-        <h1 class="title-font">Save a URL to Nostr</h1>
-        <p>Publish an editable social bookmark with title, notes, and topics.</p>
+      <p>Personal links, trusted recommendations, and public web finds organized like a front page.</p>
+      <div class="front-actions">
+        <button mat-flat-button type="button" (click)="openSaveDialog()">
+          <mat-icon>add_link</mat-icon>
+          <span>Save a URL</span>
+        </button>
+        <button mat-stroked-button type="button" [matMenuTriggerFor]="filterMenu">
+          <mat-icon>tune</mat-icon>
+          <span>Filter</span>
+        </button>
       </div>
     </div>
 
-    <div class="composer-fields">
-      <mat-form-field appearance="outline" class="url-field">
-        <mat-label>URL</mat-label>
-        <mat-icon matPrefix>link</mat-icon>
-        <input matInput [ngModel]="urlInput()" (ngModelChange)="onUrlInputChange($event)"
-          placeholder="https://example.com/article">
-      </mat-form-field>
-
-      @if (previewLoading() || previewHint()) {
-      <div class="preview-status" [class.loaded]="previewHint()">
-        @if (previewLoading()) {
-        <mat-spinner diameter="16"></mat-spinner>
-        <span>Fetching link details...</span>
-        } @else {
-        <mat-icon>auto_awesome</mat-icon>
-        <span>{{ previewHint() }}</span>
-        }
-      </div>
+    <div class="front-grid">
+      @if (leadBookmark(); as lead) {
+      <article class="lead-story" (click)="openBookmark(lead)" tabindex="0" role="button"
+        (keydown.enter)="openBookmark(lead)" (keydown.space)="openBookmark(lead)">
+        <div class="story-label-row">
+          <span class="story-label">{{ getSectionLabel(lead) }}</span>
+          <span class="domain">{{ lead.domain }}</span>
+        </div>
+        <h2>{{ lead.title }}</h2>
+        <p>{{ lead.description || lead.url }}</p>
+        <div class="bookmark-tags">
+          @for (tag of lead.tags.slice(0, 5); track tag) {
+          <span>#{{ tag }}</span>
+          }
+        </div>
+      </article>
+      } @else {
+      <article class="lead-story empty-lead">
+        <div class="story-label-row">
+          <span class="story-label">Personal</span>
+          <span class="domain">Ready when you are</span>
+        </div>
+        <h2>Build your first front page from saved links.</h2>
+        <p>Save a URL and it will appear here with its link preview, title, notes, and topics.</p>
+      </article>
       }
 
-      <mat-form-field appearance="outline">
-        <mat-label>Title</mat-label>
-        <input matInput [ngModel]="titleInput()" (ngModelChange)="titleInput.set($event)">
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="description-field">
-        <mat-label>Description</mat-label>
-        <textarea matInput rows="2" [ngModel]="descriptionInput()" (ngModelChange)="descriptionInput.set($event)">
-        </textarea>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Topics</mat-label>
-        <mat-icon matPrefix>tag</mat-icon>
-        <input matInput [ngModel]="tagsInput()" (ngModelChange)="tagsInput.set($event)"
-          placeholder="nostr, design, research">
-      </mat-form-field>
-    </div>
-
-    <div class="composer-actions">
-      <button mat-flat-button type="button" (click)="saveBookmark()" [disabled]="saving()">
-        @if (saving()) {
-        <mat-spinner diameter="18"></mat-spinner>
+      <aside class="top-stories">
+        <div class="rail-heading">
+          <span class="section-kicker">Top Stories</span>
+          <span>{{ socialScopeTitle() }}</span>
+        </div>
+        @if (secondaryBookmarks().length === 0) {
+        <div class="rail-empty">
+          <mat-icon>newspaper</mat-icon>
+          <span>More stories will appear as bookmarks arrive.</span>
+        </div>
         } @else {
-        <mat-icon>publish</mat-icon>
+        @for (bookmark of secondaryBookmarks(); track bookmark.id) {
+        <article class="rail-story" (click)="openBookmark(bookmark)" tabindex="0" role="button"
+          (keydown.enter)="openBookmark(bookmark)" (keydown.space)="openBookmark(bookmark)">
+          <span class="story-label">{{ bookmark.tags[0] || getSectionLabel(bookmark) }}</span>
+          <h3>{{ bookmark.title }}</h3>
+          <p>{{ bookmark.domain }} · {{ bookmark.publishedAt | ago }}</p>
+        </article>
         }
-        <span>Publish bookmark</span>
-      </button>
+        }
+      </aside>
     </div>
+  </section>
+
+  @if (newsSections().length > 0) {
+  <section class="topic-sections" aria-label="Bookmark topic sections">
+    @for (section of newsSections(); track section.tag) {
+    <section class="topic-section">
+      <div class="topic-heading">
+        <span class="section-kicker">#{{ section.tag }}</span>
+        <button type="button" class="topic-filter" (click)="setActiveTag(section.tag)">View topic</button>
+      </div>
+      <div class="topic-story-grid">
+        @for (bookmark of section.items; track bookmark.id) {
+        <article class="topic-story" (click)="openBookmark(bookmark)" tabindex="0" role="button"
+          (keydown.enter)="openBookmark(bookmark)" (keydown.space)="openBookmark(bookmark)">
+          <span class="domain">{{ bookmark.domain }}</span>
+          <h3>{{ bookmark.title }}</h3>
+          <p>{{ bookmark.description || bookmark.url }}</p>
+        </article>
+        }
+      </div>
+    </section>
+    }
   </section>
   }
 
@@ -240,7 +274,7 @@
         <div class="empty-state">
           <mat-icon>bookmark_add</mat-icon>
           <h3>No personal social bookmarks yet</h3>
-          <p>Paste a URL above and publish your first social bookmark.</p>
+          <p>Use Save a URL to publish your first social bookmark.</p>
         </div>
         } @else {
         @for (bookmark of personalBookmarks(); track bookmark.id) {

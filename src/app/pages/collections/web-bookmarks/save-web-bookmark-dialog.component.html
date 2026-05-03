@@ -1,0 +1,74 @@
+<div dialog-content class="save-bookmark-dialog">
+  <div class="dialog-layout">
+    <div class="dialog-preview">
+      @if (normalizedUrl()) {
+      <app-social-preview [url]="normalizedUrl()"></app-social-preview>
+      } @else {
+      <div class="preview-placeholder">
+        <mat-icon>link</mat-icon>
+        <span>Paste a URL to preview it</span>
+      </div>
+      }
+    </div>
+
+    <div class="dialog-fields">
+      <mat-form-field appearance="outline" class="url-field">
+        <mat-label>URL</mat-label>
+        <mat-icon matPrefix>link</mat-icon>
+        <input matInput [ngModel]="urlInput()" (ngModelChange)="onUrlInputChange($event)"
+          placeholder="example.com/article">
+      </mat-form-field>
+
+      @if (previewLoading() || previewHint()) {
+      <div class="preview-status" [class.loaded]="previewHint()">
+        @if (previewLoading()) {
+        <mat-spinner diameter="16"></mat-spinner>
+        <span>Fetching link details...</span>
+        } @else {
+        <mat-icon>auto_awesome</mat-icon>
+        <span>{{ previewHint() }}</span>
+        }
+      </div>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput [ngModel]="titleInput()" (ngModelChange)="titleInput.set($event)">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="description-field">
+        <mat-label>Description</mat-label>
+        <textarea matInput rows="4" [ngModel]="descriptionInput()" (ngModelChange)="descriptionInput.set($event)">
+        </textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="topics-field">
+        <mat-label>Topics</mat-label>
+        <mat-chip-grid #topicGrid aria-label="Bookmark topics">
+          @for (topic of topics(); track topic) {
+          <mat-chip-row [removable]="true" (removed)="removeTopic(topic)">
+            #{{ topic }}
+            <mat-icon matChipRemove>cancel</mat-icon>
+          </mat-chip-row>
+          }
+        </mat-chip-grid>
+        <input matInput [ngModel]="topicInput()" (ngModelChange)="topicInput.set($event)"
+          [matChipInputFor]="topicGrid" [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+          [matChipInputAddOnBlur]="true" (matChipInputTokenEnd)="addTopic($event)"
+          placeholder="Type a topic and press Enter">
+      </mat-form-field>
+    </div>
+  </div>
+</div>
+
+<div dialog-actions>
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="save()" [disabled]="saving() || !urlInput().trim()">
+    @if (saving()) {
+    <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+    <mat-icon>publish</mat-icon>
+    }
+    <span>Publish bookmark</span>
+  </button>
+</div>

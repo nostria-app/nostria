@@ -41,6 +41,8 @@ export class WebBookmarkService {
   private readonly userRelay = inject(UserRelayService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly utilities = inject(UtilitiesService);
+  private personalSubscription: { close: () => void } | null = null;
+  private personalSubscriptionPubkey = '';
 
   readonly personalBookmarks = signal<WebBookmark[]>([]);
   readonly socialBookmarks = signal<WebBookmark[]>([]);
@@ -111,6 +113,7 @@ export class WebBookmarkService {
   async loadPersonal(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
+      this.closePersonalSubscription();
       this.personalBookmarks.set([]);
       return;
     }
@@ -133,6 +136,7 @@ export class WebBookmarkService {
 
       events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
       this.personalBookmarks.set(this.toLatestBookmarks(events));
+      await this.ensurePersonalSubscription(pubkey);
     } catch (error) {
       this.logger.error('[WebBookmarkService] Failed to load personal web bookmarks', error);
       this.personalBookmarks.set([]);
@@ -164,6 +168,24 @@ export class WebBookmarkService {
       this.socialBookmarks.set(this.toLatestBookmarks(events));
     } catch (error) {
       this.logger.error('[WebBookmarkService] Failed to load social web bookmarks', error);
+      this.socialBookmarks.set([]);
+    } finally {
+      this.loadingSocial.set(false);
+    }
+  }
+
+  async loadPublic(limit = 200): Promise<void> {
+    this.loadingSocial.set(true);
+    try {
+      const events = await this.relayPool.query(
+        this.utilities.preferredRelays,
+        { kinds: [WEB_BOOKMARK_KIND], limit },
+        4500
+      );
+      await this.saveReplaceableEvents(events);
+      this.socialBookmarks.set(this.toLatestBookmarks(events));
+    } catch (error) {
+      this.logger.error('[WebBookmarkService] Failed to load public social bookmarks', error);
       this.socialBookmarks.set([]);
     } finally {
       this.loadingSocial.set(false);
@@ -269,6 +291,50 @@ export class WebBookmarkService {
     }
 
     return publishResult.success;
+  }
+
+  closePersonalSubscription(): void {
+    this.personalSubscription?.close();
+    this.personalSubscription = null;
+    this.personalSubscriptionPubkey = '';
+  }
+
+  private async ensurePersonalSubscription(pubkey: string): Promise<void> {
+    if (this.personalSubscription && this.personalSubscriptionPubkey === pubkey) {
+      return;
+    }
+
+    this.closePersonalSubscription();
+    const subscription = await this.userRelay.subscribe(
+      pubkey,
+      { authors: [pubkey], kinds: [WEB_BOOKMARK_KIND, 5], limit: 200 },
+      event => {
+        void this.handlePersonalSubscriptionEvent(event);
+      }
+    );
+
+    if (subscription && typeof subscription === 'object' && 'close' in subscription) {
+      this.personalSubscription = subscription as { close: () => void };
+      this.personalSubscriptionPubkey = pubkey;
+    }
+  }
+
+  private async handlePersonalSubscriptionEvent(event: Event): Promise<void> {
+    if (event.kind === 5) {
+      await this.database.saveEvent(event);
+      const filtered = await this.deletionFilter.filterDeletedEventsFromDatabase(
+        this.personalBookmarks().map(item => item.event)
+      );
+      this.personalBookmarks.set(this.toLatestBookmarks(filtered));
+      return;
+    }
+
+    if (event.kind !== WEB_BOOKMARK_KIND) {
+      return;
+    }
+
+    await this.database.saveReplaceableEvent(event);
+    this.personalBookmarks.update(current => this.toLatestBookmarks([event, ...current.map(item => item.event)]));
   }
 
   private async saveReplaceableEvents(events: Event[]): Promise<void> {

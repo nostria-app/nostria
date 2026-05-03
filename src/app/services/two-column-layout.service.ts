@@ -5,7 +5,7 @@ import { PanelNavigationService } from './panel-navigation.service';
 import { PanelActionsService } from './panel-actions.service';
 import { RightPanelService } from './right-panel.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Event, nip19 } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 
 /**
  * View mode for the two-column layout
@@ -223,6 +223,7 @@ export class TwoColumnLayoutService {
     // Collections pages
     'collections/relays': { type: 'list', preserveOnNavigation: true },
     'collections/bookmarks': { type: 'list', preserveOnNavigation: true },
+    'collections/web-bookmarks': { type: 'list', preserveOnNavigation: true },
     'delete-event': { type: 'list', preserveOnNavigation: true },
     'delete-account': { type: 'list', preserveOnNavigation: true },
     'search': { type: 'list', preserveOnNavigation: true },
@@ -332,7 +333,7 @@ export class TwoColumnLayoutService {
     // - Home, music, streams, messages, bookmarks, articles, discover, people, calendar, and AI get wide mode (1400px)
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
-    const wideRoutes = ['streams', 'clips', 'music', 'messages', 'chats', 'collections/bookmarks', 'collections/media', 'articles', 'discover', 'people', 'calendar', 'ai'];
+    const wideRoutes = ['streams', 'clips', 'music', 'messages', 'chats', 'collections/bookmarks', 'collections/web-bookmarks', 'collections/media', 'articles', 'discover', 'people', 'calendar', 'ai'];
     const narrowRouteOverrides = new Set(['music/offline', 'music/playlists']);
     const isWideRoute = !narrowRouteOverrides.has(cleanUrl)
       && (isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/')));
