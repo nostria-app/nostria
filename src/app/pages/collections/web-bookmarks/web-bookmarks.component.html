@@ -46,15 +46,10 @@
           <mat-icon>people</mat-icon>
           <span>Following</span>
         </button>
-        <button type="button" class="scope-option" [class.selected]="socialScope() === 'wot'"
-          (click)="socialScope.set('wot')" [disabled]="!trustEnabled()">
-          <mat-icon>verified_user</mat-icon>
-          <span>Web of Trust</span>
-        </button>
         <button type="button" class="scope-option" [class.selected]="socialScope() === 'public'"
           (click)="socialScope.set('public')">
           <mat-icon>public</mat-icon>
-          <span>Public relays</span>
+          <span>Public</span>
         </button>
       </div>
     </div>
@@ -106,8 +101,8 @@
     <mat-divider></mat-divider>
 
     <div class="filter-section">
-      <button type="button" class="toggle-row" [class.selected]="requireWot()"
-        (click)="requireWot.set(!requireWot())" [disabled]="!trustEnabled() || socialScope() === 'public'">
+      <button type="button" class="toggle-row" [class.selected]="requireWot()" (click)="requireWot.set(!requireWot())"
+        [disabled]="!trustEnabled()">
         <mat-icon>{{ requireWot() ? 'shield' : 'shield_outlined' }}</mat-icon>
         <span>Apply WoT to social results</span>
       </button>
@@ -129,8 +124,8 @@
 
 <div class="bookmark-search-bar" [class.hidden]="!showSearch()">
   <mat-icon class="search-icon">search</mat-icon>
-  <input #searchInput class="search-input" type="search" placeholder="Search social bookmarks"
-    [value]="searchQuery()" (input)="onSearchInput($event)" aria-label="Search social bookmarks">
+  <input #searchInput class="search-input" type="search" placeholder="Search social bookmarks" [value]="searchQuery()"
+    (input)="onSearchInput($event)" aria-label="Search social bookmarks">
   <button mat-icon-button type="button" class="clear-search-btn" [class.invisible]="!searchQuery()"
     (click)="clearSearch()" matTooltip="Clear search" aria-label="Clear search">
     <mat-icon>close</mat-icon>
@@ -206,6 +201,14 @@
               <mat-icon>content_copy</mat-icon>
               <span>Copy URL</span>
             </button>
+            <button mat-menu-item (click)="copyBookmarkData(bookmark)">
+              <mat-icon>data_object</mat-icon>
+              <span>Copy Data</span>
+            </button>
+            <button mat-menu-item (click)="shareBookmark(bookmark)">
+              <mat-icon>share</mat-icon>
+              <span>Share</span>
+            </button>
             <button mat-menu-item (click)="editBookmark(bookmark)">
               <mat-icon>edit</mat-icon>
               <span>Edit</span>
@@ -262,6 +265,14 @@
           <button mat-menu-item (click)="copyUrl(lead)">
             <mat-icon>content_copy</mat-icon>
             <span>Copy URL</span>
+          </button>
+          <button mat-menu-item (click)="copyBookmarkData(lead)">
+            <mat-icon>data_object</mat-icon>
+            <span>Copy Data</span>
+          </button>
+          <button mat-menu-item (click)="shareBookmark(lead)">
+            <mat-icon>share</mat-icon>
+            <span>Share</span>
           </button>
           @if (isOwnBookmark(lead)) {
           <button mat-menu-item (click)="editBookmark(lead)">
@@ -331,6 +342,14 @@
               <mat-icon>content_copy</mat-icon>
               <span>Copy URL</span>
             </button>
+            <button mat-menu-item (click)="copyBookmarkData(bookmark)">
+              <mat-icon>data_object</mat-icon>
+              <span>Copy Data</span>
+            </button>
+            <button mat-menu-item (click)="shareBookmark(bookmark)">
+              <mat-icon>share</mat-icon>
+              <span>Share</span>
+            </button>
             @if (isOwnBookmark(bookmark)) {
             <button mat-menu-item (click)="editBookmark(bookmark)">
               <mat-icon>edit</mat-icon>
@@ -387,6 +406,14 @@
             <button mat-menu-item (click)="copyUrl(bookmark)">
               <mat-icon>content_copy</mat-icon>
               <span>Copy URL</span>
+            </button>
+            <button mat-menu-item (click)="copyBookmarkData(bookmark)">
+              <mat-icon>data_object</mat-icon>
+              <span>Copy Data</span>
+            </button>
+            <button mat-menu-item (click)="shareBookmark(bookmark)">
+              <mat-icon>share</mat-icon>
+              <span>Share</span>
             </button>
             @if (isOwnBookmark(bookmark)) {
             <button mat-menu-item (click)="editBookmark(bookmark)">
@@ -455,6 +482,14 @@
             <mat-icon>content_copy</mat-icon>
             <span>Copy URL</span>
           </button>
+          <button mat-menu-item (click)="copyBookmarkData(bookmark)">
+            <mat-icon>data_object</mat-icon>
+            <span>Copy Data</span>
+          </button>
+          <button mat-menu-item (click)="shareBookmark(bookmark)">
+            <mat-icon>share</mat-icon>
+            <span>Share</span>
+          </button>
           @if (isOwnBookmark(bookmark)) {
           <button mat-menu-item (click)="editBookmark(bookmark)">
             <mat-icon>edit</mat-icon>
@@ -474,7 +509,8 @@
     @if (hasMoreFeedBookmarks() || canDiscoverMoreBookmarks()) {
     <div #feedSentinel class="feed-sentinel">
       <mat-spinner diameter="22"></mat-spinner>
-      <span>{{ discoveringMore() || webBookmarks.loadingSocial() ? 'Loading more stories' : 'More stories below' }}</span>
+      <span>{{ discoveringMore() || webBookmarks.loadingSocial() ? 'Loading more stories' : 'More stories below'
+        }}</span>
     </div>
     }
   </section>

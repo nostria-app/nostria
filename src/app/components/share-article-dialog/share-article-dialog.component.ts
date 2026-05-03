@@ -1111,8 +1111,8 @@ export class ShareArticleDialogComponent {
 
   /** Generate clean canonical URL for sharing (uses data.url if provided, otherwise generates from event) */
   private getShareUrl(): string {
-    // If a URL is explicitly provided and it's a nostria.app URL, use it directly
-    if (this.data.url && this.data.url.includes('nostria.app')) {
+    // If a URL is explicitly provided, prefer it directly.
+    if (this.data.url) {
       return this.data.url;
     }
 

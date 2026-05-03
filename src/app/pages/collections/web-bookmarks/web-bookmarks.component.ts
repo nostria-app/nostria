@@ -9,21 +9,24 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { nip19 } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { DataService } from '../../../services/data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { OpenGraphData, OpenGraphService } from '../../../services/opengraph.service';
+import { UserRelayService } from '../../../services/relays/user-relay';
 import { TrustService } from '../../../services/trust.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { WebBookmark, WebBookmarkService } from '../../../services/web-bookmark.service';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { SaveWebBookmarkDialogComponent, SaveWebBookmarkDialogData } from './save-web-bookmark-dialog.component';
 import { Subscription } from 'rxjs';
 
 type BookmarkSort = 'newest' | 'oldest' | 'title' | 'domain';
-type SocialScope = 'following' | 'wot' | string;
+type SocialScope = 'following' | 'public' | string;
 
 interface BookmarkNewsSection {
   tag: string;
@@ -58,6 +61,7 @@ export class WebBookmarksComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly trust = inject(TrustService);
+  private readonly userRelay = inject(UserRelayService);
   private readonly utilities = inject(UtilitiesService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -219,11 +223,8 @@ export class WebBookmarksComponent implements OnDestroy {
     if (scope === 'following') {
       return 'Following';
     }
-    if (scope === 'wot') {
-      return 'Web of Trust';
-    }
     if (scope === 'public') {
-      return 'Public relays';
+      return 'Public';
     }
     return this.followSetOptions().find(set => set.dTag === scope)?.title || 'People list';
   });
@@ -253,8 +254,6 @@ export class WebBookmarksComponent implements OnDestroy {
 
     effect(() => {
       this.socialScope();
-      this.wotMinRank();
-      this.requireWot();
       this.followSetOptions();
       this.accountState.followingList();
       this.reviewPubkey();
@@ -373,9 +372,53 @@ export class WebBookmarksComponent implements OnDestroy {
     });
   }
 
+  copyBookmarkData(bookmark: WebBookmark): void {
+    if (!this.isBrowser || !navigator.clipboard) {
+      return;
+    }
+
+    navigator.clipboard.writeText(JSON.stringify(bookmark.event, null, 2)).then(() => {
+      this.snackBar.open('Bookmark data copied', 'Close', { duration: 1800 });
+    });
+  }
+
+  shareBookmark(bookmark: WebBookmark): void {
+    const authorRelays = this.userRelay.getRelaysForPubkey(bookmark.authorPubkey);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
+    const dialogData: ShareArticleDialogData = {
+      title: bookmark.title,
+      summary: bookmark.description || undefined,
+      image: this.bookmarkPreviewImage(bookmark) || undefined,
+      url: bookmark.url,
+      eventId: bookmark.id,
+      pubkey: bookmark.authorPubkey,
+      identifier: bookmark.dTag,
+      kind: bookmark.event.kind,
+      event: bookmark.event,
+      naddr: nip19.naddrEncode({
+        identifier: bookmark.dTag,
+        pubkey: bookmark.authorPubkey,
+        kind: bookmark.event.kind,
+        relays: relayHints,
+      }),
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: 'Share',
+      showCloseButton: true,
+      data: dialogData,
+      width: '560px',
+      maxWidth: 'min(560px, calc(100vw - 24px))',
+    });
+  }
+
   openUserReview(bookmark: WebBookmark): void {
-    const npub = this.utilities.getNpubFromPubkey(bookmark.authorPubkey);
-    void this.router.navigate(['/collections/web', npub]);
+    const relayHints = this.utilities.getShareRelayHints(this.userRelay.getRelaysForPubkey(bookmark.authorPubkey));
+    const nprofile = nip19.nprofileEncode({
+      pubkey: bookmark.authorPubkey,
+      relays: relayHints,
+    });
+    void this.router.navigate(['/collections/web', nprofile]);
   }
 
   openMainReview(): void {
@@ -489,11 +532,6 @@ export class WebBookmarksComponent implements OnDestroy {
   private async resolveSocialAuthors(): Promise<string[]> {
     const scope = this.socialScope();
 
-    if (scope === 'wot') {
-      const trusted = await this.trust.getPubkeysByTrustRank(this.wotMinRank());
-      return trusted.slice(0, 160);
-    }
-
     if (scope !== 'following') {
       const set = this.followSetOptions().find(item => item.dTag === scope);
       if (set) {
@@ -507,7 +545,7 @@ export class WebBookmarksComponent implements OnDestroy {
   private applyFilters(items: WebBookmark[], applyTrustFilter: boolean): WebBookmark[] {
     const query = this.searchQuery().trim().toLowerCase();
     const tag = this.activeTag();
-    const requireWot = applyTrustFilter && this.socialScope() !== 'public' && this.requireWot() && this.trustEnabled();
+    const requireWot = applyTrustFilter && this.requireWot() && this.trustEnabled();
     const minRank = this.wotMinRank();
 
     const filtered = items.filter(item => {
@@ -575,6 +613,11 @@ export class WebBookmarksComponent implements OnDestroy {
 
     if (this.utilities.isValidHexPubkey(value)) {
       return value;
+    }
+
+    if (value.startsWith('nprofile1')) {
+      const pubkey = this.utilities.safeGetHexPubkey(value);
+      return pubkey && this.utilities.isValidHexPubkey(pubkey) ? pubkey : '';
     }
 
     if (value.startsWith('npub1')) {

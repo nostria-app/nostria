@@ -677,6 +677,7 @@ export class TrustService {
    * Get rank signal for a specific pubkey
    */
   getRankSignal(pubkey: string): number | undefined {
+    this.loadedPubkeys();
     return this.metricsCache.get(pubkey)?.rank;
   }
 
