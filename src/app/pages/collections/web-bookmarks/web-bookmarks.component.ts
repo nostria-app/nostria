@@ -1,6 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, PLATFORM_ID, ViewChild, computed, effect, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,6 +43,7 @@ interface BookmarkNewsSection {
     MatSnackBarModule,
     MatTooltipModule,
     AgoPipe,
+    RouterLink,
   ],
   templateUrl: './web-bookmarks.component.html',
   styleUrl: './web-bookmarks.component.scss',
@@ -187,6 +188,14 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly headerSubtitle = computed(() => this.reviewPubkey()
     ? `${this.personalBookmarks().length} bookmarks`
     : `${this.personalBookmarks().length} personal · ${this.socialBookmarks().length} social`);
+  readonly reviewProfileLink = computed<readonly string[] | null>(() => {
+    const pubkey = this.reviewPubkey();
+    if (!pubkey) {
+      return null;
+    }
+
+    return ['/p', this.utilities.getNpubFromPubkey(pubkey)] as const;
+  });
   readonly mastheadTitle = computed(() => this.reviewPubkey()
     ? `${this.reviewOwnerName() || this.truncatedPubkey(this.reviewPubkey())}'s Bookmark Review`
     : 'The Bookmark Review');

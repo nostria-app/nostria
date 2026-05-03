@@ -21,9 +21,9 @@
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
 
-  <button mat-flat-button type="button" (click)="openSaveDialog()">
-    <mat-icon>add_link</mat-icon>
-    <span>Save a URL</span>
+  <button mat-icon-button type="button" class="save-url-button" (click)="openSaveDialog()" matTooltip="Save a URL"
+    aria-label="Save a URL">
+    <mat-icon>add</mat-icon>
   </button>
 
   <button mat-icon-button type="button" [matMenuTriggerFor]="filterMenu" [class.filter-active]="hasActiveFilters()"
@@ -143,7 +143,14 @@
     <div class="front-masthead">
       <div class="masthead-title">
         <h1 class="title-font">{{ mastheadTitle() }}</h1>
+        @if (reviewProfileLink(); as reviewProfileLink) {
+        <p>
+          A personalized edition of saved web bookmarks from
+          <a class="review-owner-link" [routerLink]="reviewProfileLink">{{ reviewOwnerName() || 'this user' }}</a>.
+        </p>
+        } @else {
         <p>{{ mastheadDescription() }}</p>
+        }
       </div>
     </div>
 
@@ -154,7 +161,8 @@
       }
     </nav>
 
-    <div class="front-grid">
+    <div class="front-grid" [class.personalized-review]="isPersonalizedReview()">
+      @if (!isPersonalizedReview()) {
       <aside class="briefing-column">
         <div class="rail-heading">
           <span class="section-kicker">{{ briefingTitle() }}</span>
@@ -212,6 +220,7 @@
         }
         }
       </aside>
+      }
 
       @if (leadBookmark(); as lead) {
       <article class="lead-story" (click)="openBookmark(lead)" tabindex="0" role="button"
@@ -231,6 +240,7 @@
         </div>
         <h2>{{ lead.title }}</h2>
         <p>{{ lead.description || lead.url }}</p>
+        @if (!isPersonalizedReview()) {
         <button type="button" class="review-link lead-review-link"
           (click)="$event.stopPropagation(); openUserReview(lead)">
           <span class="review-avatar" aria-hidden="true">
@@ -242,6 +252,7 @@
           </span>
           <span>{{ bookmarkReviewLabel(lead) }}</span>
         </button>
+        }
         <div class="bookmark-tags">
           @for (tag of lead.tags.slice(0, 5); track tag) {
           <button type="button" (click)="$event.stopPropagation(); setActiveTag(tag)">#{{ tag }}</button>
@@ -303,6 +314,7 @@
           <span class="domain">{{ bookmark.domain }}</span>
           <h3>{{ bookmark.title }}</h3>
           <p>{{ getSectionLabel(bookmark) }} · {{ bookmark.publishedAt | ago }}</p>
+          @if (!isPersonalizedReview()) {
           <button type="button" class="review-link" (click)="$event.stopPropagation(); openUserReview(bookmark)">
             <span class="review-avatar" aria-hidden="true">
               @if (bookmarkReviewImage(bookmark); as image) {
@@ -313,6 +325,7 @@
             </span>
             <span>{{ bookmarkReviewLabel(bookmark) }}</span>
           </button>
+          }
           <mat-menu #railMenu="matMenu">
             <button mat-menu-item (click)="copyUrl(bookmark)">
               <mat-icon>content_copy</mat-icon>
@@ -358,6 +371,7 @@
           <span class="domain">{{ bookmark.domain }}</span>
           <h3>{{ bookmark.title }}</h3>
           <p>{{ bookmark.description || bookmark.url }}</p>
+          @if (!isPersonalizedReview()) {
           <button type="button" class="review-link" (click)="$event.stopPropagation(); openUserReview(bookmark)">
             <span class="review-avatar" aria-hidden="true">
               @if (bookmarkReviewImage(bookmark); as image) {
@@ -368,6 +382,7 @@
             </span>
             <span>{{ bookmarkReviewLabel(bookmark) }}</span>
           </button>
+          }
           <mat-menu #topicMenu="matMenu">
             <button mat-menu-item (click)="copyUrl(bookmark)">
               <mat-icon>content_copy</mat-icon>
@@ -418,6 +433,7 @@
         }
         <h3>{{ bookmark.title }}</h3>
         <p>{{ bookmark.description || bookmark.url }}</p>
+        @if (!isPersonalizedReview()) {
         <button type="button" class="review-link" (click)="$event.stopPropagation(); openUserReview(bookmark)">
           <span class="review-avatar" aria-hidden="true">
             @if (bookmarkReviewImage(bookmark); as image) {
@@ -428,6 +444,7 @@
           </span>
           <span>{{ bookmarkReviewLabel(bookmark) }}</span>
         </button>
+        }
         <div class="feed-tags">
           @for (tag of bookmark.tags.slice(0, 3); track tag) {
           <button type="button" (click)="$event.stopPropagation(); setActiveTag(tag)">#{{ tag }}</button>

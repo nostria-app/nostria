@@ -275,6 +275,16 @@
   }
 }
 
+.review-owner-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+  }
+}
+
 .front-actions {
   display: flex;
   flex-wrap: wrap;
@@ -287,6 +297,10 @@
   grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
   gap: 18px;
   align-items: stretch;
+}
+
+.front-grid.personalized-review {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.7fr);
 }
 
 .lead-story {
@@ -1016,6 +1030,18 @@
   grid-template-columns: minmax(210px, 0.55fr) minmax(0, 1.35fr) minmax(280px, 0.7fr);
   gap: 0;
   align-items: stretch;
+}
+
+.front-grid.personalized-review {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.7fr);
+
+  > .lead-story {
+    grid-column: 1;
+  }
+
+  > .top-stories {
+    grid-column: 2;
+  }
 }
 
 .briefing-column,
