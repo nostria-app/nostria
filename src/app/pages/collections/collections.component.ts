@@ -46,7 +46,7 @@ export class CollectionsComponent {
       title: $localize`:@@collections.web-bookmarks.title:Social Bookmarks`,
       description: $localize`:@@collections.web-bookmarks.description:Save URLs and discover trusted social bookmarks`,
       icon: 'travel_explore',
-      route: '/collections/web-bookmarks',
+      route: '/collections/web',
       color: '#673ab7',
     },
     {

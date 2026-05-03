@@ -1,5 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, PLATFORM_ID, ViewChild, computed, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,11 +11,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { DataService } from '../../../services/data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { TrustService } from '../../../services/trust.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 import { WebBookmark, WebBookmarkService } from '../../../services/web-bookmark.service';
+import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { SaveWebBookmarkDialogComponent, SaveWebBookmarkDialogData } from './save-web-bookmark-dialog.component';
+import { Subscription } from 'rxjs';
 
 type BookmarkSort = 'newest' | 'oldest' | 'title' | 'domain';
 type SocialScope = 'following' | 'wot' | string;
@@ -45,8 +50,12 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly webBookmarks = inject(WebBookmarkService);
   private readonly accountState = inject(AccountStateService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly data = inject(DataService);
   private readonly followSets = inject(FollowSetsService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly trust = inject(TrustService);
+  private readonly utilities = inject(UtilitiesService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -61,6 +70,10 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly visibleArticleCount = signal(12);
   readonly discoveringMore = signal(false);
   readonly publicDiscoveryExhausted = signal(false);
+  readonly reviewPubkey = signal('');
+  readonly reviewOwnerName = signal('');
+  readonly profileNames = signal(new Map<string, string>());
+  readonly profileImages = signal(new Map<string, string>());
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild('feedSentinel') set feedSentinel(element: ElementRef<HTMLElement> | undefined) {
@@ -70,19 +83,47 @@ export class WebBookmarksComponent implements OnDestroy {
 
   private feedObserver?: IntersectionObserver;
   private feedSentinelElement?: ElementRef<HTMLElement>;
+  private routeSubscription?: Subscription;
 
   readonly trustEnabled = computed(() => this.trust.isEnabled());
   readonly followSetOptions = computed(() => [...this.followSets.followSets()].sort((a, b) => a.title.localeCompare(b.title)));
+  readonly isPersonalizedReview = computed(() => !!this.reviewPubkey());
 
-  readonly personalTags = computed(() => this.uniqueTags(this.webBookmarks.personalBookmarks()));
-  readonly socialTags = computed(() => this.uniqueTags(this.webBookmarks.socialBookmarks()));
-  readonly allTags = computed(() => this.uniqueTags([
-    ...this.webBookmarks.personalBookmarks(),
-    ...this.webBookmarks.socialBookmarks(),
-  ]));
+  readonly reviewBookmarks = computed(() => {
+    const pubkey = this.reviewPubkey();
+    if (!pubkey) {
+      return [];
+    }
 
-  readonly personalBookmarks = computed(() => this.applyFilters(this.webBookmarks.personalBookmarks(), false));
+    if (pubkey === this.accountState.pubkey()) {
+      return this.webBookmarks.personalBookmarks();
+    }
+
+    return this.webBookmarks.socialBookmarks().filter(bookmark => bookmark.authorPubkey === pubkey);
+  });
+
+  readonly sourceBookmarks = computed(() => this.reviewPubkey()
+    ? this.reviewBookmarks()
+    : [
+      ...this.webBookmarks.personalBookmarks(),
+      ...this.webBookmarks.socialBookmarks(),
+    ]);
+
+  readonly personalTags = computed(() => this.uniqueTags(this.reviewPubkey()
+    ? this.reviewBookmarks()
+    : this.webBookmarks.personalBookmarks()));
+  readonly socialTags = computed(() => this.uniqueTags(this.reviewPubkey() ? [] : this.webBookmarks.socialBookmarks()));
+  readonly allTags = computed(() => this.uniqueTags(this.sourceBookmarks()));
+
+  readonly personalBookmarks = computed(() => this.applyFilters(
+    this.reviewPubkey() ? this.reviewBookmarks() : this.webBookmarks.personalBookmarks(),
+    false
+  ));
   readonly socialBookmarks = computed(() => {
+    if (this.reviewPubkey()) {
+      return [];
+    }
+
     const currentPubkey = this.accountState.pubkey();
     return this.applyFilters(
       this.webBookmarks.socialBookmarks().filter(bookmark => bookmark.authorPubkey !== currentPubkey),
@@ -131,8 +172,28 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly visibleFeedBookmarks = computed(() => this.feedBookmarks().slice(0, this.visibleArticleCount()));
   readonly hasMoreFeedBookmarks = computed(() => this.visibleArticleCount() < this.feedBookmarks().length);
   readonly canDiscoverMoreBookmarks = computed(() => this.socialScope() === 'public' && !this.publicDiscoveryExhausted());
+  readonly headerSubtitle = computed(() => this.reviewPubkey()
+    ? `${this.personalBookmarks().length} bookmarks`
+    : `${this.personalBookmarks().length} personal · ${this.socialBookmarks().length} social`);
+  readonly mastheadTitle = computed(() => this.reviewPubkey()
+    ? `${this.reviewOwnerName() || this.truncatedPubkey(this.reviewPubkey())}'s Bookmark Review`
+    : 'The Bookmark Review');
+  readonly mastheadDescription = computed(() => this.reviewPubkey()
+    ? `A personalized edition of saved web bookmarks from ${this.reviewOwnerName() || 'this user'}.`
+    : 'Personal links, trusted recommendations, and public web finds.');
+  readonly briefingTitle = computed(() => this.reviewPubkey() ? 'Bookmark Desk' : 'Personal Desk');
+  readonly emptyDeskMessage = computed(() => this.reviewPubkey()
+    ? 'No bookmarks found for this review yet.'
+    : 'Your saved links will appear here.');
+  readonly loadingDesk = computed(() => this.reviewPubkey() && this.reviewPubkey() !== this.accountState.pubkey()
+    ? this.webBookmarks.loadingSocial()
+    : this.webBookmarks.loadingPersonal());
 
   readonly socialScopeTitle = computed(() => {
+    if (this.reviewPubkey()) {
+      return this.reviewOwnerName() || 'Personalized';
+    }
+
     const scope = this.socialScope();
     if (scope === 'following') {
       return 'Following';
@@ -156,6 +217,15 @@ export class WebBookmarksComponent implements OnDestroy {
   });
 
   constructor() {
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
+      const pubkey = this.normalizeRoutePubkey(params.get('pubkey'));
+      this.reviewPubkey.set(pubkey);
+      this.reviewOwnerName.set(pubkey ? this.profileNames().get(pubkey) || this.truncatedPubkey(pubkey) : '');
+      if (pubkey) {
+        void this.loadProfileName(pubkey, true);
+      }
+    });
+
     effect(() => {
       void this.webBookmarks.loadPersonal();
     });
@@ -166,6 +236,7 @@ export class WebBookmarksComponent implements OnDestroy {
       this.requireWot();
       this.followSetOptions();
       this.accountState.followingList();
+      this.reviewPubkey();
       void this.reloadSocial();
     });
 
@@ -173,6 +244,13 @@ export class WebBookmarksComponent implements OnDestroy {
       const pubkeys = [...new Set(this.webBookmarks.socialBookmarks().map(item => item.authorPubkey))];
       if (pubkeys.length > 0 && this.trustEnabled()) {
         void this.trust.fetchMetricsBatch(pubkeys);
+      }
+    });
+
+    effect(() => {
+      const pubkeys = [...new Set(this.sourceBookmarks().map(item => item.authorPubkey))].slice(0, 80);
+      if (pubkeys.length > 0) {
+        void this.loadProfileNames(pubkeys);
       }
     });
 
@@ -188,6 +266,7 @@ export class WebBookmarksComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.feedObserver?.disconnect();
+    this.routeSubscription?.unsubscribe();
   }
 
   async reload(): Promise<void> {
@@ -261,6 +340,28 @@ export class WebBookmarksComponent implements OnDestroy {
     });
   }
 
+  openUserReview(bookmark: WebBookmark): void {
+    const npub = this.utilities.getNpubFromPubkey(bookmark.authorPubkey);
+    void this.router.navigate(['/collections/web', npub]);
+  }
+
+  openMainReview(): void {
+    void this.router.navigate(['/collections/web']);
+  }
+
+  bookmarkReviewLabel(bookmark: WebBookmark): string {
+    const name = this.bookmarkAuthorName(bookmark);
+    return name === 'You' ? 'Your Bookmark Review' : `${name}'s Bookmark Review`;
+  }
+
+  bookmarkAuthorName(bookmark: WebBookmark): string {
+    return this.bookmarkAuthorNameFromPubkey(bookmark.authorPubkey);
+  }
+
+  bookmarkReviewImage(bookmark: WebBookmark): string {
+    return this.profileImages().get(bookmark.authorPubkey) || '';
+  }
+
   getSectionLabel(bookmark: WebBookmark): string {
     return bookmark.authorPubkey === this.accountState.pubkey() ? 'Personal' : this.socialScopeTitle();
   }
@@ -331,6 +432,14 @@ export class WebBookmarksComponent implements OnDestroy {
   }
 
   private async reloadSocial(): Promise<void> {
+    const reviewPubkey = this.reviewPubkey();
+    if (reviewPubkey) {
+      if (reviewPubkey !== this.accountState.pubkey()) {
+        await this.webBookmarks.loadSocial([reviewPubkey]);
+      }
+      return;
+    }
+
     if (this.socialScope() === 'public') {
       await this.webBookmarks.loadPublic();
       return;
@@ -420,6 +529,113 @@ export class WebBookmarksComponent implements OnDestroy {
       }
     }, { rootMargin: '600px 0px' });
     this.feedObserver.observe(this.feedSentinelElement.nativeElement);
+  }
+
+  private normalizeRoutePubkey(value: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    if (this.utilities.isValidHexPubkey(value)) {
+      return value;
+    }
+
+    if (value.startsWith('npub1')) {
+      try {
+        const pubkey = this.utilities.getPubkeyFromNpub(value);
+        return this.utilities.isValidHexPubkey(pubkey) ? pubkey : '';
+      } catch {
+        return '';
+      }
+    }
+
+    return '';
+  }
+
+  private async loadProfileNames(pubkeys: string[]): Promise<void> {
+    await Promise.all(pubkeys.map(pubkey => this.loadProfileName(pubkey, false)));
+  }
+
+  private async loadProfileName(pubkey: string, updateReviewOwner: boolean): Promise<void> {
+    const cached = this.data.getCachedProfile(pubkey);
+    if (cached) {
+      this.setProfileName(pubkey, cached, updateReviewOwner);
+      return;
+    }
+
+    try {
+      const profile = await this.data.getProfile(pubkey);
+      if (profile) {
+        this.setProfileName(pubkey, profile, updateReviewOwner);
+      }
+    } catch {
+      // Profile names are decorative; fall back to npub if loading fails.
+    }
+  }
+
+  private setProfileName(pubkey: string, profile: NostrRecord, updateReviewOwner: boolean): void {
+    const name = this.displayNameFromProfile(profile) || this.truncatedPubkey(pubkey);
+    const image = this.profileImageFromProfile(profile);
+    this.profileNames.update(current => {
+      const next = new Map(current);
+      next.set(pubkey, name);
+      return next;
+    });
+    this.profileImages.update(current => {
+      const next = new Map(current);
+      if (image) {
+        next.set(pubkey, image);
+      } else {
+        next.delete(pubkey);
+      }
+      return next;
+    });
+
+    if (updateReviewOwner && this.reviewPubkey() === pubkey) {
+      this.reviewOwnerName.set(name);
+    }
+  }
+
+  private displayNameFromProfile(profile: NostrRecord | undefined): string {
+    const data = profile?.data;
+    if (!data || typeof data !== 'object') {
+      return '';
+    }
+
+    const displayName = typeof data.display_name === 'string' ? data.display_name.trim() : '';
+    const name = typeof data.name === 'string' ? data.name.trim() : '';
+    return displayName || name;
+  }
+
+  private profileImageFromProfile(profile: NostrRecord | undefined): string {
+    const data = profile?.data;
+    if (!data || typeof data !== 'object') {
+      return '';
+    }
+
+    const picture = typeof data.picture === 'string' ? data.picture.trim() : '';
+    const image = typeof data.image === 'string' ? data.image.trim() : '';
+    return picture || image;
+  }
+
+  private bookmarkAuthorNameFromPubkey(pubkey: string): string {
+    if (pubkey === this.accountState.pubkey()) {
+      return 'You';
+    }
+
+    return this.profileNames().get(pubkey) || this.truncatedPubkey(pubkey);
+  }
+
+  private truncatedPubkey(pubkey: string): string {
+    if (!pubkey) {
+      return 'Someone';
+    }
+
+    try {
+      return this.utilities.getTruncatedNpub(pubkey);
+    } catch {
+      return `${pubkey.slice(0, 8)}...`;
+    }
   }
 
   private async discoverMoreBookmarks(): Promise<void> {

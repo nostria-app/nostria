@@ -624,7 +624,7 @@ export class App implements OnInit, OnDestroy {
             authenticated: false,
           },
           {
-            path: '/collections/web-bookmarks',
+            path: '/collections/web',
             label: $localize`:@@app.nav.collections.web-bookmarks:Social Bookmarks`,
             icon: 'travel_explore',
             authenticated: false,

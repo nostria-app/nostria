@@ -242,6 +242,7 @@ export class PanelNavigationService {
     'collections/interests': { type: 'list', title: 'Interests' },
     'collections/emojis': { type: 'list', title: 'Emojis' },
     'collections/bookmarks': { type: 'list', title: 'Bookmarks' },
+    'collections/web': { type: 'list', title: 'Social Bookmarks' },
 
     // Full-width routes (right panel, expanded)
     'streams': { type: 'full-width', title: 'Live Streams' },

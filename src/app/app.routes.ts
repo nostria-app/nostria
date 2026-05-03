@@ -533,7 +533,14 @@ export const routes: Routes = [
     title: 'Bookmarks',
   },
   {
-    path: 'collections/web-bookmarks',
+    path: 'collections/web',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/collections/web-bookmarks/web-bookmarks.component').then(m => m.WebBookmarksComponent),
+    title: 'Social Bookmarks',
+  },
+  {
+    path: 'collections/web/:pubkey',
     data: { isRoot: true },
     loadComponent: () =>
       import('./pages/collections/web-bookmarks/web-bookmarks.component').then(m => m.WebBookmarksComponent),

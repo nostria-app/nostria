@@ -184,7 +184,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-web-bookmarks',
       label: 'Open Social Bookmarks',
       icon: 'travel_explore',
-      action: () => this.router.navigate(['/collections/web-bookmarks']),
+      action: () => this.router.navigate(['/collections/web']),
       keywords: ['social bookmarks', 'web bookmarks', 'urls', 'links', 'social bookmarking']
     },
     {

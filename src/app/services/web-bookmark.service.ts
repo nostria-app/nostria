@@ -122,6 +122,8 @@ export class WebBookmarkService {
     try {
       await this.database.init();
       let events = await this.database.getEventsByPubkeyAndKind(pubkey, WEB_BOOKMARK_KIND);
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
+      this.personalBookmarks.set(this.toLatestBookmarks(events));
 
       try {
         const relayEvents = await this.userRelay.getEventsByPubkeyAndKind(pubkey, WEB_BOOKMARK_KIND, {
@@ -156,6 +158,8 @@ export class WebBookmarkService {
     try {
       await this.database.init();
       let events = await this.database.getEventsByPubkeyAndKind(authors, WEB_BOOKMARK_KIND);
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
+      this.socialBookmarks.set(this.toLatestBookmarks(events));
 
       try {
         const relayEvents = await this.userRelay.getEventsByPubkeyAndKind(authors, WEB_BOOKMARK_KIND);
