@@ -535,6 +535,36 @@ describe('NoteEditorDialogComponent', () => {
         },
       ]);
     });
+
+    it('should refresh the inline editor chip when adding an existing PDF from the media library', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const privateComponent = component as unknown as {
+        setupContentEditorBridge: () => void;
+        addExistingMediaToEditor(item: { sha256: string; type: string; url: string; size: number }): Promise<void>;
+      };
+
+      privateComponent.setupContentEditorBridge();
+
+      await privateComponent.addExistingMediaToEditor({
+        sha256: 'pdf-sha',
+        type: 'application/pdf',
+        url: 'https://cdn.example.com/document.pdf',
+        size: 1024,
+      });
+      fixture.detectChanges();
+
+      const editor = fixture.nativeElement.querySelector('.content-editor-surface') as HTMLElement;
+      const chip = editor.querySelector('.composer-inline-media-chip') as HTMLElement;
+
+      expect(component.content()).toContain('https://cdn.example.com/document.pdf');
+      expect(chip).toBeTruthy();
+      expect(chip.dataset['mediaToken']).toBe('https://cdn.example.com/document.pdf');
+      expect(chip.textContent).toContain('document.pdf');
+    });
   });
 
   describe('deferred media uploads', () => {

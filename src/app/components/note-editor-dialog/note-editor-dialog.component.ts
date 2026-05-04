@@ -5302,6 +5302,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const separator = currentContent.trim() ? '\n\n' : '';
     const newContent = currentContent + separator + urlToAdd;
     this.content.set(newContent);
+    this.refreshEditorContent();
 
     const newPos = newContent.length;
     this.lastCursorPosition = newPos;
