@@ -48,7 +48,7 @@
 .pull-indicator {
   position: relative;
   z-index: 100;
-  padding: 8px 16px 4px;
+  padding: calc(var(--safe-area-top, 0px) + 8px) 16px 4px;
   background: transparent;
   border: none;
   cursor: pointer;
