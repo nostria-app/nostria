@@ -29,6 +29,7 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapService } from '../../../services/zap.service';
+import { parseMusicReleasedTag } from '../music-release-date.util';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
@@ -397,17 +398,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   private getTrackReleaseSortValue(track: Event): number | null {
-    const released = track.tags.find(t => t[0] === 'released')?.[1]?.trim();
-    if (!released) {
-      return null;
-    }
-
-    if (/^\d{4}$/.test(released)) {
-      return Date.UTC(parseInt(released, 10), 0, 1);
-    }
-
-    const parsed = Date.parse(released);
-    return Number.isNaN(parsed) ? null : parsed;
+    return parseMusicReleasedTag(track.tags.find(t => t[0] === 'released')?.[1]);
   }
 
   private getTrackNumberSortValue(track: Event): number | null {
@@ -574,8 +565,8 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       return released;
     }
 
-    const parsed = Date.parse(released);
-    if (Number.isNaN(parsed)) {
+    const parsed = parseMusicReleasedTag(released);
+    if (parsed === null) {
       return released;
     }
 

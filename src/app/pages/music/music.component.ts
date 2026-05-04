@@ -42,6 +42,7 @@ import { MusicListFilterComponent } from '../../components/music-list-filter/mus
 import { LoggerService } from '../../services/logger.service';
 import { MusicLikedSongsService } from '../../services/music-liked-songs.service';
 import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
+import { parseMusicReleasedTag } from './music-release-date.util';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PLAYLIST_KIND = 34139;
@@ -1409,17 +1410,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   private getTrackReleaseSortValue(track: Event): number | null {
-    const released = track.tags.find(tag => tag[0] === 'released')?.[1]?.trim();
-    if (!released) {
-      return null;
-    }
-
-    if (/^\d{4}$/.test(released)) {
-      return Date.UTC(Number.parseInt(released, 10), 0, 1);
-    }
-
-    const parsed = Date.parse(released);
-    return Number.isNaN(parsed) ? null : parsed;
+    return parseMusicReleasedTag(track.tags.find(tag => tag[0] === 'released')?.[1]);
   }
 
   /**

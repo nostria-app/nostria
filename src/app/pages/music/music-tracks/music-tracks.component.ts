@@ -20,6 +20,7 @@ import { ListFilterValue, MusicTrackSortValue } from '../../../components/list-f
 import { MusicListFilterComponent } from '../../../components/music-list-filter/music-list-filter.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
+import { parseMusicReleasedTag } from '../music-release-date.util';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
@@ -1249,17 +1250,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private getTrackReleaseSortValue(track: Event): number | null {
-    const released = track.tags.find(tag => tag[0] === 'released')?.[1]?.trim();
-    if (!released) {
-      return null;
-    }
-
-    if (/^\d{4}$/.test(released)) {
-      return Date.UTC(Number.parseInt(released, 10), 0, 1);
-    }
-
-    const parsed = Date.parse(released);
-    return Number.isNaN(parsed) ? null : parsed;
+    return parseMusicReleasedTag(track.tags.find(tag => tag[0] === 'released')?.[1]);
   }
 
   loadMore(): void {
