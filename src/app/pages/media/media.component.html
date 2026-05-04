@@ -225,7 +225,8 @@
     <span class="item-count">{{ filteredMedia().length }} items</span>
     @if (filteredMedia().length > 0) {
     <div class="page-controls">
-      <button mat-icon-button (click)="goToPreviousPage()" [disabled]="!canGoToPreviousPage()" aria-label="Previous page">
+      <button mat-icon-button (click)="goToPreviousPage()" [disabled]="!canGoToPreviousPage()"
+        aria-label="Previous page">
         <mat-icon>chevron_left</mat-icon>
       </button>
       <span class="page-range">{{ pageRangeLabel() }}</span>
@@ -410,10 +411,15 @@
             </div>
           </div>
           } @else if (item.type.startsWith('image') && hasRenderablePreview(item)) {
-          <img [src]="getItemSourceUrl(item)" [alt]="getFileName(item.url)" loading="lazy" />
+          <img [src]="getItemSourceUrl(item)" [alt]="getFileName(item.url)" title="{{ getFileName(item.url) }}"
+            loading="lazy" />
           } @else if (item.type.startsWith('audio')) {
           <div class="audio-preview">
             <mat-icon>audiotrack</mat-icon>
+          </div>
+          } @else if (isPdfFile(item)) {
+          <div class="file-preview pdf-preview">
+            <mat-icon>picture_as_pdf</mat-icon>
           </div>
           } @else {
           <div class="file-preview">

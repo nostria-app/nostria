@@ -30,6 +30,7 @@ export interface ContentToken {
   | 'image'
   | 'audio'
   | 'video'
+  | 'pdf'
   | 'linebreak'
   | 'nostr-mention'
   | 'emoji'
@@ -405,6 +406,7 @@ export class ParsingService implements OnDestroy {
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
+    const pdfRegex = /(https?:\/\/[^\s##]+\.pdf(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
     const blobImageRegex = /(blob:[^\s##]+#nostria-image)(?=\s|##LINEBREAK##|$)/g;
     const blobAudioRegex = /(blob:[^\s##]+#nostria-audio)(?=\s|##LINEBREAK##|$)/g;
     const blobVideoRegex = /(blob:[^\s##]+#nostria-video)(?=\s|##LINEBREAK##|$)/g;
@@ -975,6 +977,17 @@ export class ParsingService implements OnDestroy {
       });
     }
 
+    // Find PDF URLs
+    pdfRegex.lastIndex = 0;
+    while ((match = pdfRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'pdf',
+      });
+    }
+
     // Find preview-only blob audio
     blobAudioRegex.lastIndex = 0;
     while ((match = blobAudioRegex.exec(processedContent)) !== null) {
@@ -1064,11 +1077,13 @@ export class ParsingService implements OnDestroy {
         (start <= m.start && start + rawUrl.length >= m.end)
       );
       if (!overlapsWithExisting) {
+        const imeta = tags?.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === rawUrl));
+        const mimeType = imeta?.find(v => v.startsWith('m '))?.substring(2).toLowerCase();
         matches.push({
           start,
           end: start + rawUrl.length,
           content: rawUrl,
-          type: 'url',
+          type: mimeType === 'application/pdf' ? 'pdf' : 'url',
         });
       }
     }

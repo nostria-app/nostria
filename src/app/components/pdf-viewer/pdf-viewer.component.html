@@ -1,0 +1,39 @@
+<div class="pdf-viewer" [class.compact]="compact()">
+  <div class="pdf-toolbar">
+    <div class="pdf-title">
+      <mat-icon>picture_as_pdf</mat-icon>
+      <span>{{ fileName() }}</span>
+    </div>
+
+    <div class="pdf-actions">
+      <button mat-icon-button type="button" (click)="openInNewTab()" aria-label="Open PDF in a new tab">
+        <mat-icon>open_in_new</mat-icon>
+      </button>
+      <a mat-icon-button [href]="src()" download target="_blank" rel="noopener noreferrer" aria-label="Download PDF">
+        <mat-icon>download</mat-icon>
+      </a>
+    </div>
+  </div>
+
+  @if (safeSrc(); as pdfSrc) {
+  <object class="pdf-frame" [data]="pdfSrc" type="application/pdf" [attr.aria-label]="fileName()">
+    <div class="pdf-fallback">
+      <mat-icon>picture_as_pdf</mat-icon>
+      <p>This PDF cannot be displayed inline.</p>
+      <button mat-flat-button type="button" (click)="openInNewTab()">
+        <mat-icon>open_in_new</mat-icon>
+        Open PDF
+      </button>
+    </div>
+  </object>
+  } @else {
+  <div class="pdf-fallback">
+    <mat-icon>picture_as_pdf</mat-icon>
+    <p>This PDF URL cannot be displayed inline.</p>
+    <button mat-flat-button type="button" (click)="openInNewTab()">
+      <mat-icon>open_in_new</mat-icon>
+      Open PDF
+    </button>
+  </div>
+  }
+</div>

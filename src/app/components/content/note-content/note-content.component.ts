@@ -45,6 +45,7 @@ import { RelayListEventComponent } from '../../event-types/relay-list-event.comp
 import { ChannelEmbedComponent } from '../../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { LazyIframeComponent } from '../../lazy-iframe/lazy-iframe.component';
+import { PdfViewerComponent } from '../../pdf-viewer/pdf-viewer.component';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
@@ -100,6 +101,7 @@ export interface DisplayItem {
     AgoPipe,
     TimestampPipe,
     LazyIframeComponent,
+    PdfViewerComponent,
   ],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
@@ -229,6 +231,7 @@ export class NoteContentComponent implements OnDestroy {
     'base64-audio',
     'video',
     'base64-video',
+    'pdf',
     'youtube',
     'tidal',
     'spotify',

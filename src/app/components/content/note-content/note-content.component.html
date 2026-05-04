@@ -229,6 +229,27 @@
   </div>
   }
 </div>
+} @else if (token.type === 'pdf') {
+<div class="media-container pdf-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
+  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
+  @if (!shouldBlurImages() || isImageRevealed(token.content)) {
+  <app-pdf-viewer [src]="token.content" title="PDF document" [compact]="true"></app-pdf-viewer>
+  }
+  @if (shouldBlurImages() && !isImageRevealed(token.content)) {
+  <div class="reveal-overlay">
+    <div class="reveal-actions">
+      <button class="reveal-btn" (click)="revealImage(token.content); $event.stopPropagation()">
+        <mat-icon>visibility</mat-icon>
+        <span>Reveal once</span>
+      </button>
+      <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+        <mat-icon>verified_user</mat-icon>
+        <span>Always reveal this user</span>
+      </button>
+    </div>
+  </div>
+  }
+</div>
 } @else if (token.type === 'youtube') {
 <!-- YouTube Video Embed -->
 <div class="media-container youtube-container" [class.youtube-short]="token.isYouTubeShort">

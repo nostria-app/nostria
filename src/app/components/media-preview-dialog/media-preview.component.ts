@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { PdfViewerComponent } from '../pdf-viewer/pdf-viewer.component';
 
 interface MediaItem {
   url: string;
@@ -26,7 +27,7 @@ interface MediaPreviewData {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media-preview-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent, PdfViewerComponent],
   templateUrl: './media-preview.component.html',
   styleUrls: ['./media-preview.component.scss'],
   host: {
@@ -593,6 +594,10 @@ export class MediaPreviewDialogComponent implements OnDestroy {
       return 'wav';
     }
 
+    if (mimeType === 'application/pdf' || mediaType === 'application/pdf' || mediaType === 'pdf') {
+      return 'pdf';
+    }
+
     return mediaType.startsWith('video') ? 'mp4' : mediaType.startsWith('audio') ? 'mp3' : 'png';
   }
 
@@ -658,6 +663,18 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     }
 
     return false;
+  }
+
+  isPdf(): boolean {
+    const media = this.currentMedia();
+    if (!media) return false;
+
+    if (media.type === 'application/pdf' || media.type === 'pdf') {
+      return true;
+    }
+
+    const url = media.url.toLowerCase().split('?')[0].split('#')[0];
+    return url.endsWith('.pdf');
   }
 
   isImage(): boolean {

@@ -403,6 +403,11 @@
   }
 }
 
+.pdf-preview mat-icon {
+  color: var(--mat-sys-primary);
+  opacity: 0.85;
+}
+
 // Media actions (menu button)
 .media-actions {
   position: absolute;

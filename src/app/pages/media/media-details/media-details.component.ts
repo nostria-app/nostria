@@ -25,6 +25,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { toggleFullscreen } from '../../../utils/fullscreen';
 import { ProfileDisplayNameComponent } from '../../../components/user-profile/display-name/profile-display-name.component';
+import { PdfViewerComponent } from '../../../components/pdf-viewer/pdf-viewer.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,7 @@ import { ProfileDisplayNameComponent } from '../../../components/user-profile/di
     AudioPlayerComponent,
     VideoControlsComponent,
     ProfileDisplayNameComponent,
+    PdfViewerComponent,
   ],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss'],
@@ -327,6 +329,16 @@ export class MediaDetailsComponent {
     }
 
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  isPdfFile(mimeType: string | null | undefined): boolean {
+    if (mimeType === 'application/pdf' || mimeType === 'pdf') {
+      return true;
+    }
+
+    const item = this.mediaItem();
+    const url = (this.mediaUrl() || item?.url || '').toLowerCase().split('?')[0].split('#')[0];
+    return url.endsWith('.pdf');
   }
 
   async deleteMedia(): Promise<void> {

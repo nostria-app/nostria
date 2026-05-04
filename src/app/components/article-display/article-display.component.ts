@@ -59,6 +59,7 @@ import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 import { EventComponent as NostrEventComponent } from '../event/event.component';
 import { ReferencedEventService } from '../../services/referenced-event.service';
 import { SatDisplayService } from '../../services/sat-display.service';
+import { PdfViewerComponent } from '../pdf-viewer/pdf-viewer.component';
 
 type ArticleEmbedState = 'loading' | 'loaded' | 'failed';
 
@@ -251,6 +252,7 @@ export class ArticleDisplayComponent implements OnDestroy {
   @ViewChild('markdownContentHost') private markdownContentHost?: ElementRef<HTMLElement>;
   private musicEmbedRefs: ComponentRef<MusicEmbedComponent>[] = [];
   private eventEmbedRefs: ComponentRef<NostrEventComponent>[] = [];
+  private pdfEmbedRefs: ComponentRef<PdfViewerComponent>[] = [];
   private eventEmbedStates = new Map<string, ArticleEmbedState>();
   private markdownObserver: MutationObserver | null = null;
   private observedMarkdownContainer: HTMLElement | null = null;
@@ -430,6 +432,7 @@ export class ArticleDisplayComponent implements OnDestroy {
         this.ensureMarkdownObserver();
         this.scheduleEnhanceMusicEmbeds(true);
         this.enhanceEventEmbeds(true);
+        this.enhancePdfEmbeds(true);
       });
     });
   }
@@ -438,6 +441,7 @@ export class ArticleDisplayComponent implements OnDestroy {
     this.disconnectMarkdownObserver();
     this.destroyMusicEmbeds();
     this.destroyEventEmbeds();
+    this.destroyPdfEmbeds();
     this.onBookmarkLongPressEnd();
   }
 
@@ -484,6 +488,7 @@ export class ArticleDisplayComponent implements OnDestroy {
       this.pendingForceEnhance = false;
       this.enhanceMusicEmbeds(shouldForceEnhance);
       this.enhanceEventEmbeds(shouldForceEnhance);
+      this.enhancePdfEmbeds(shouldForceEnhance);
     }, 0);
   }
 
@@ -536,6 +541,76 @@ export class ArticleDisplayComponent implements OnDestroy {
       ref.destroy();
     }
     this.eventEmbedRefs = [];
+  }
+
+  private destroyPdfEmbeds(): void {
+    for (const ref of this.pdfEmbedRefs) {
+      this.appRef.detachView(ref.hostView);
+      ref.destroy();
+    }
+    this.pdfEmbedRefs = [];
+  }
+
+  private pruneDisconnectedPdfEmbeds(): void {
+    this.pdfEmbedRefs = this.pdfEmbedRefs.filter(ref => {
+      const hostElement = ref.location.nativeElement as HTMLElement;
+      if (hostElement.isConnected) {
+        return true;
+      }
+
+      this.appRef.detachView(ref.hostView);
+      ref.destroy();
+      return false;
+    });
+  }
+
+  private enhancePdfEmbeds(force = false): void {
+    const container = this.markdownContentHost?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    if (force) {
+      this.destroyPdfEmbeds();
+    } else {
+      this.pruneDisconnectedPdfEmbeds();
+    }
+
+    const pdfLinks = Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
+      .filter(link => this.isPdfUrl(link.href) && !link.closest('.article-pdf-embed'));
+
+    if (pdfLinks.length === 0) {
+      return;
+    }
+
+    for (const link of pdfLinks) {
+      const href = link.href;
+      const title = link.textContent?.trim() || 'PDF document';
+      const host = document.createElement('div');
+      host.className = 'article-pdf-embed';
+      link.replaceWith(host);
+
+      const componentRef = createComponent(PdfViewerComponent, {
+        environmentInjector: this.environmentInjector,
+        hostElement: host,
+      });
+
+      this.appRef.attachView(componentRef.hostView);
+      componentRef.setInput('src', href);
+      componentRef.setInput('title', title);
+      componentRef.changeDetectorRef.detectChanges();
+
+      this.pdfEmbedRefs.push(componentRef);
+    }
+  }
+
+  private isPdfUrl(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url, globalThis.location?.origin);
+      return parsedUrl.pathname.toLowerCase().endsWith('.pdf');
+    } catch {
+      return url.toLowerCase().split('?')[0].split('#')[0].endsWith('.pdf');
+    }
   }
 
   private enhanceMusicEmbeds(force = false): void {
@@ -659,14 +734,14 @@ export class ArticleDisplayComponent implements OnDestroy {
       hostElement: host,
     });
 
-      this.appRef.attachView(componentRef.hostView);
-      componentRef.setInput('event', event);
-      componentRef.setInput('appearance', 'plain');
-      componentRef.setInput('compact', false);
-      componentRef.setInput('hideComments', true);
-      componentRef.setInput('hideFooter', true);
-      componentRef.setInput('disableEngagementLoading', true);
-      componentRef.changeDetectorRef.detectChanges();
+    this.appRef.attachView(componentRef.hostView);
+    componentRef.setInput('event', event);
+    componentRef.setInput('appearance', 'plain');
+    componentRef.setInput('compact', false);
+    componentRef.setInput('hideComments', true);
+    componentRef.setInput('hideFooter', true);
+    componentRef.setInput('disableEngagementLoading', true);
+    componentRef.changeDetectorRef.detectChanges();
 
     this.eventEmbedRefs.push(componentRef);
   }

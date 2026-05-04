@@ -43,25 +43,18 @@
   } @else {
   <!-- Media Preview -->
   <div class="media-preview-card">
-    <div class="media-preview">
+    <div class="media-preview" [class.pdf-media-preview]="isPdfFile(mediaItem()?.type)">
       @if (mediaItem()?.type?.startsWith('image')) {
-      <img [src]="mediaUrl() || mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
+      <img [src]="mediaUrl() || mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'"
+        title="{{ mediaItem()!.url || 'Image' }}" (click)="openFullScreen()" />
       } @else if (mediaItem()?.type?.startsWith('video')) {
-      <div class="video-wrapper" 
-        (mouseenter)="onVideoMouseEnter()" 
-        (mouseleave)="onVideoMouseLeave()"
+      <div class="video-wrapper" (mouseenter)="onVideoMouseEnter()" (mouseleave)="onVideoMouseLeave()"
         (mousemove)="onVideoMouseMove()">
         <video #videoElement [src]="mediaUrl() || mediaItem()!.url" (click)="onVideoPlayPause()"></video>
-        <app-video-controls
-          [videoElement]="videoElement"
-          [config]="{ showQuality: false, showCast: false }"
-          (playPause)="onVideoPlayPause()"
-          (seek)="onVideoSeek($event)"
-          (volumeChange)="onVideoVolumeChange($event)"
-          (muteToggle)="onVideoMuteToggle()"
-          (playbackRateChange)="onVideoPlaybackRateChange($event)"
-          (fullscreenToggle)="onVideoFullscreenToggle()"
-          (pipToggle)="onVideoPipToggle()" />
+        <app-video-controls [videoElement]="videoElement" [config]="{ showQuality: false, showCast: false }"
+          (playPause)="onVideoPlayPause()" (seek)="onVideoSeek($event)" (volumeChange)="onVideoVolumeChange($event)"
+          (muteToggle)="onVideoMuteToggle()" (playbackRateChange)="onVideoPlaybackRateChange($event)"
+          (fullscreenToggle)="onVideoFullscreenToggle()" (pipToggle)="onVideoPipToggle()" />
       </div>
       } @else if (mediaItem()?.type && isAudioFile(mediaItem()!.type)) {
       <div class="audio-preview-container">
@@ -79,11 +72,8 @@
       } @else {
       <pre class="text-preview">{{ textContent() }}</pre>
       }
-      } @else if (mediaItem()?.type === 'application/pdf') {
-      <div class="generic-preview pdf-preview">
-        <mat-icon>picture_as_pdf</mat-icon>
-        <button mat-flat-button type="button" (click)="openPdfInNewTab()">Open PDF</button>
-      </div>
+      } @else if (isPdfFile(mediaItem()?.type)) {
+      <app-pdf-viewer [src]="mediaUrl() || mediaItem()!.url" [title]="getFileName(mediaItem()!)"></app-pdf-viewer>
       } @else {
       <div class="generic-preview">
         <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
@@ -103,7 +93,8 @@
       <div class="metadata-list">
         <div class="metadata-item">
           <span class="label">URL</span>
-          <a class="value url-link" [href]="mediaItem()!.url" target="_blank" rel="noopener noreferrer">{{ mediaItem()!.url }}</a>
+          <a class="value url-link" [href]="mediaItem()!.url" target="_blank" rel="noopener noreferrer">{{
+            mediaItem()!.url }}</a>
         </div>
 
         @if (isEncrypted()) {
@@ -154,7 +145,8 @@
           <div class="mirror-servers-list">
             @for (mirror of mediaItem()!.mirrors; track $index) {
             <div class="mirror-server">
-              <a class="url-link" [href]="getFullMirrorUrl(mirror, mediaItem()!.url)" target="_blank" rel="noopener noreferrer">{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</a>
+              <a class="url-link" [href]="getFullMirrorUrl(mirror, mediaItem()!.url)" target="_blank"
+                rel="noopener noreferrer">{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</a>
             </div>
             }
           </div>

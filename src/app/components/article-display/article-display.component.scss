@@ -530,6 +530,11 @@
   cursor: default !important;
 }
 
+:host ::ng-deep .markdown-content .article-pdf-embed {
+  display: block;
+  margin: 1rem 0;
+}
+
 // Footer section with reaction actions
 .article-footer {
   display: flex;

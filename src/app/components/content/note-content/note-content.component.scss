@@ -183,6 +183,13 @@
   max-width: 100%;
 }
 
+.pdf-container {
+  position: relative;
+  display: block;
+  margin: 8px 0;
+  min-height: 360px;
+}
+
 // Dark theme support
 .dark-theme {
   .unsupported-video {

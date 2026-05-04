@@ -333,6 +333,15 @@ export class MediaComponent {
     }
   }
 
+  isPdfFile(item: MediaItem): boolean {
+    if (item.type === 'application/pdf' || item.type === 'pdf') {
+      return true;
+    }
+
+    const url = item.url.toLowerCase().split('?')[0].split('#')[0];
+    return url.endsWith('.pdf');
+  }
+
   // Selection methods
   onItemPointerDown(event: PointerEvent, sha256: string): void {
     // Only handle primary button (left click / touch)
