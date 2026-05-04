@@ -611,6 +611,8 @@ export class RichTextEditorComponent implements AfterViewInit {
       return;
     }
 
+    this.captureInsertionPoint();
+
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
@@ -1094,34 +1096,47 @@ export class RichTextEditorComponent implements AfterViewInit {
     // Convert markdown to HTML for rich text display
     const html = this.convertMarkdownToHtml(markdown);
 
+    const range = this.getRichTextInsertionRange();
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html + '<br><br>';
+
+    range.deleteContents();
+    let node: Node | null;
+    while ((node = tempDiv.firstChild)) {
+      range.insertNode(node);
+      range.setStartAfter(node);
+    }
+
+    range.collapse(true);
+    this.richTextInsertionRange = range.cloneRange();
+
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-
-      // Create a temporary container to hold the HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html + '<br><br>';
-
-      // Insert all nodes from the temp div
-      range.deleteContents();
-      let node: Node | null;
-      while ((node = tempDiv.firstChild)) {
-        range.insertNode(node);
-        range.setStartAfter(node);
-      }
-
-      // Collapse the range and update selection
-      range.collapse(true);
+    if (selection) {
       selection.removeAllRanges();
       selection.addRange(range);
-
-      this.onRichTextContentChange();
-    } else {
-      // No selection, append to end
-      const content = this.editorContent.nativeElement;
-      content.innerHTML += html + '<br><br>';
-      this.onRichTextContentChange();
     }
+
+    this.onRichTextContentChange();
+  }
+
+  private getRichTextInsertionRange(): Range {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const selectedRange = selection.getRangeAt(0);
+      if (this.isRangeInsideEditor(selectedRange)) {
+        return selectedRange.cloneRange();
+      }
+    }
+
+    if (this.richTextInsertionRange && this.isRangeInsideEditor(this.richTextInsertionRange)) {
+      return this.richTextInsertionRange.cloneRange();
+    }
+
+    const editor = this.editorContent.nativeElement as HTMLElement;
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    return range;
   }
 
   private convertMarkdownToHtml(markdown: string): string {

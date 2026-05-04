@@ -139,7 +139,7 @@
         <mat-divider [vertical]="true"></mat-divider>
 
         <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading() || actionsDisabled()"
-          matTooltip="Insert Media">
+          (mousedown)="preserveInsertionPoint($event)" matTooltip="Insert Media">
           @if (isUploading()) {
           <mat-icon>hourglass_empty</mat-icon>
           } @else {
@@ -152,7 +152,7 @@
             <mat-icon>upload</mat-icon>
             <span>Upload media</span>
           </button>
-          <button mat-menu-item (click)="openMediaChooser()">
+          <button mat-menu-item (mousedown)="preserveInsertionPoint($event)" (click)="openMediaChooser()">
             <mat-icon>photo_library</mat-icon>
             <span>Choose from library</span>
           </button>
