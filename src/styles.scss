@@ -1324,7 +1324,7 @@ iframe {
 
   .fullscreen-minimize-button {
     position: absolute;
-    top: 16px;
+    top: calc(var(--safe-area-top, 0px) + 16px);
     right: 16px;
     z-index: 100000;
     background: rgba(0, 0, 0, 0.7);

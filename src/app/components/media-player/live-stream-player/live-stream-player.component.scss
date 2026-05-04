@@ -177,7 +177,7 @@
 // Stream controls overlay - positioned at top right of video
 .stream-controls-overlay {
   position: absolute;
-  top: 0;
+  top: var(--safe-area-top, 0px);
   right: 0;
   padding: 12px;
   z-index: 20;
