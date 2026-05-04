@@ -88,10 +88,6 @@ interface MusicGenreOption {
           <mat-icon>{{ sortBy() === 'alphabetical' ? 'check' : '' }}</mat-icon>
           <span>Alphabetical</span>
         </button>
-        <button mat-menu-item (click)="setSort('artist')">
-          <mat-icon>{{ sortBy() === 'artist' ? 'check' : '' }}</mat-icon>
-          <span>Artist</span>
-        </button>
       </mat-menu>
     </div>
 
@@ -575,7 +571,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   loading = signal(true);
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
-  sortBy = signal<'released' | 'published' | 'alphabetical' | 'artist'>('released');
+  sortBy = signal<'released' | 'published' | 'alphabetical'>('released');
 
   // Search functionality
   searchQuery = signal('');
@@ -785,9 +781,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'alphabetical':
         return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'alphabetical', albumSortValues));
 
-      case 'artist':
-        return [...filtered].sort((a, b) => this.compareTracksByArtist(a, b));
-
       default:
         return filtered;
     }
@@ -988,7 +981,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  setSort(sort: 'released' | 'published' | 'alphabetical' | 'artist'): void {
+  setSort(sort: 'released' | 'published' | 'alphabetical'): void {
     this.sortBy.set(sort);
     this.displayLimit.set(PAGE_SIZE);
 
@@ -1035,7 +1028,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private compareTracksForDisplay(
     a: Event,
     b: Event,
-    mode: 'released' | 'published' | 'alphabetical' | 'artist',
+    mode: 'released' | 'published' | 'alphabetical',
     albumSortValues: Map<string, number>
   ): number {
     const groupKeyA = this.getTrackAlbumGroupKey(a);
@@ -1052,14 +1045,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         const sortB = albumSortValues.get(groupKeyB) ?? this.getTrackSortValue(b, mode);
         if (sortA !== sortB) {
           return sortB - sortA;
-        }
-        break;
-      }
-
-      case 'artist': {
-        const artistCompare = this.getTrackArtistSortValue(a).localeCompare(this.getTrackArtistSortValue(b));
-        if (artistCompare !== 0) {
-          return artistCompare;
         }
         break;
       }
@@ -1089,7 +1074,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private compareTracksWithinGroup(
     a: Event,
     b: Event,
-    mode: 'released' | 'published' | 'alphabetical' | 'artist'
+    mode: 'released' | 'published' | 'alphabetical'
   ): number {
     const trackNumberA = this.getTrackNumberSortValue(a);
     const trackNumberB = this.getTrackNumberSortValue(b);
@@ -1122,42 +1107,9 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     return b.created_at - a.created_at;
   }
 
-  private compareTracksByArtist(a: Event, b: Event): number {
-    const artistCompare = this.getTrackArtistSortValue(a).localeCompare(this.getTrackArtistSortValue(b));
-    if (artistCompare !== 0) {
-      return artistCompare;
-    }
-
-    const albumCompare = this.getTrackAlbumSortValue(a).localeCompare(this.getTrackAlbumSortValue(b));
-    if (albumCompare !== 0) {
-      return albumCompare;
-    }
-
-    const trackNumberA = this.getTrackNumberSortValue(a);
-    const trackNumberB = this.getTrackNumberSortValue(b);
-    if (trackNumberA !== null && trackNumberB !== null && trackNumberA !== trackNumberB) {
-      return trackNumberA - trackNumberB;
-    }
-
-    if (trackNumberA !== null && trackNumberB === null) {
-      return -1;
-    }
-
-    if (trackNumberA === null && trackNumberB !== null) {
-      return 1;
-    }
-
-    const titleCompare = this.getTrackTitleSortValue(a).localeCompare(this.getTrackTitleSortValue(b));
-    if (titleCompare !== 0) {
-      return titleCompare;
-    }
-
-    return b.created_at - a.created_at;
-  }
-
   private buildAlbumSortValues(
     tracks: Event[],
-    mode: 'released' | 'published' | 'alphabetical' | 'artist'
+    mode: 'released' | 'published' | 'alphabetical'
   ): Map<string, number> {
     const albumSortValues = new Map<string, number>();
 

@@ -1428,9 +1428,9 @@ export class MusicComponent implements OnDestroy {
       source = 'following';
     } else {
       // For follow set, pass the d-tag as list parameter
-        void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { list: filter } });
-        return;
-      }
+      void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { list: filter } });
+      return;
+    }
     void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { source } });
   }
 

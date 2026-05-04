@@ -7,8 +7,8 @@ import { ListFilterMenuComponent, ListFilterValue } from '../list-filter-menu/li
   template: `
     <app-list-filter-menu
       storageKey="music"
-      [showPublicOption]="true"
-      defaultFilter="all"
+      [showPublicOption]="showPublicOption()"
+      [defaultFilter]="defaultFilter()"
       [compact]="true"
       [initialFilter]="initialFilter()"
       (filterChanged)="filterChanged.emit($event)" />
@@ -17,6 +17,8 @@ import { ListFilterMenuComponent, ListFilterValue } from '../list-filter-menu/li
 })
 export class MusicListFilterComponent {
   initialFilter = input<ListFilterValue | undefined>(undefined);
+  showPublicOption = input(true);
+  defaultFilter = input<ListFilterValue>('all');
 
   filterChanged = output<ListFilterValue>();
 }
