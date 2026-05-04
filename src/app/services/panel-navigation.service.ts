@@ -440,11 +440,12 @@ export class PanelNavigationService {
       // isSameSection is true if sections match (including when both are empty/home)
       // OR if left path hasn't actually changed (e.g., navigating to right outlet only)
       const isSameSection = currentSection === newSection;
+      const hasExistingLeftHistory = leftStack.length > 0;
       const isSearchNavigation = newSection === 'search'; // Search preserves history
       const shouldPreserveRightPanel = this._preserveRightPanelOnNextNavigation;
 
       // Logic for clearing history vs pushing
-      if (!this._isBackNavigation && !isSameSection && !shouldPreserveRightPanel && !isSearchNavigation) {
+      if (!this._isBackNavigation && hasExistingLeftHistory && !isSameSection && !shouldPreserveRightPanel && !isSearchNavigation) {
         // Switching sections (e.g. Music -> Notifications)
 
         // Special seeding for Collections
