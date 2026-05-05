@@ -123,6 +123,25 @@ describe('SocialPreviewComponent', () => {
     expect(icon?.textContent).toContain('link_off');
   });
 
+  it('should render an explicit Open on X link for embedded X posts', async () => {
+    fixture.componentRef.setInput('previewData', {
+      url: 'https://x.com/nostria/status/1234567890',
+      previewType: 'x-post',
+      embedHtml: '<blockquote class="twitter-tweet"><a href="https://x.com/nostria/status/1234567890">May 5, 2026</a></blockquote>',
+      loading: false,
+      error: false,
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const openLink = fixture.nativeElement.querySelector('.x-open-link') as HTMLAnchorElement | null;
+    expect(openLink).toBeTruthy();
+    expect(openLink?.getAttribute('href')).toBe('https://x.com/nostria/status/1234567890');
+    expect(openLink?.textContent).toContain('Open on X');
+  });
+
   it('should not apply compact-preview class when compact is false and preview has title and image', async () => {
     fixture.componentRef.setInput('compact', false);
     fixture.componentRef.setInput('url', 'https://example.com');

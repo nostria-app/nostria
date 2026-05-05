@@ -3,6 +3,12 @@
 <div class="social-preview-card x-preview-card" [attr.data-url]="preview.url">
   <mat-card class="x-preview-shell">
     <div class="x-embed-host" #xEmbedHost [innerHTML]="safeEmbedHtml()"></div>
+    <div class="x-preview-actions">
+      <a class="x-open-link" [href]="preview.url" target="_blank" rel="noopener noreferrer" aria-label="Open post on X">
+        <mat-icon>open_in_new</mat-icon>
+        <span>Open on X</span>
+      </a>
+    </div>
   </mat-card>
 </div>
 } @else {
