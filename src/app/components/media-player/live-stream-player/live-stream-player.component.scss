@@ -24,6 +24,7 @@
 }
 
 .live-stream-container {
+  --live-stream-chat-width: min(360px, 42vw);
   width: 100%;
   height: 100%;
   background: transparent;
@@ -62,18 +63,21 @@
   &.fullscreen {
     background: #000;
     display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) var(--live-stream-chat-width);
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
       "video chat"
       "info chat";
+    min-height: 0;
 
-    // Mobile layout - use flex to stack elements naturally
-    @media (max-width: 968px) {
+    // Portrait handset layout - stack content below the status area.
+    @media (max-width: 968px) and (orientation: portrait) {
       display: flex;
       flex-direction: column;
       min-height: 0;
       overflow-y: auto;
+      padding-top: var(--safe-area-top, 0px);
+      box-sizing: border-box;
     }
   }
 
@@ -92,7 +96,7 @@
       // When chat is open, leave space on the right for chat
       &.chat-open {
         app-video-controls {
-          right: 370px; // Chat width + some padding
+          right: calc(var(--live-stream-chat-width) + 10px);
         }
       }
     }
@@ -102,7 +106,7 @@
       top: 0;
       right: 0;
       bottom: 0;
-      width: 360px;
+      width: var(--live-stream-chat-width);
       z-index: 50;
     }
   }
@@ -145,7 +149,7 @@
     order: 1;
     overflow: hidden;
 
-    @media (max-width: 968px) {
+    @media (max-width: 968px) and (orientation: portrait) {
       height: auto;
       flex-shrink: 0;
     }
@@ -216,7 +220,7 @@
 
   // In native fullscreen with chat open, position to the left of chat
   :fullscreen .chat-open & {
-    right: 372px; // Chat width + padding
+    right: calc(var(--live-stream-chat-width) + 12px);
   }
 }
 
@@ -389,14 +393,14 @@ app-stream-info-bar {
   overflow-y: auto;
   order: 2;
 
-  @media (max-width: 968px) {
+  @media (max-width: 968px) and (orientation: portrait) {
     flex: 1;
     min-height: 0;
     display: flex;
   }
 
   // Hide on mobile when chat is visible
-  @media (max-width: 968px) {
+  @media (max-width: 968px) and (orientation: portrait) {
     .live-stream-container.fullscreen:has(.chat-sidebar) & {
       display: none;
     }
@@ -405,7 +409,7 @@ app-stream-info-bar {
 
 .chat-sidebar {
   grid-area: chat;
-  width: 360px;
+  width: var(--live-stream-chat-width);
   background: var(--mat-sys-surface-container);
   border-left: 1px solid var(--mat-sys-outline-variant);
   display: flex;
@@ -413,7 +417,7 @@ app-stream-info-bar {
   overflow: hidden;
   order: 3;
 
-  @media (max-width: 968px) {
+  @media (max-width: 968px) and (orientation: portrait) {
     width: 100%;
     flex: 1;
     min-height: 350px;
@@ -535,7 +539,7 @@ app-stream-info-bar {
     align-self: start;
     order: 1;
 
-    @media (max-width: 968px) {
+    @media (max-width: 968px) and (orientation: portrait) {
       height: 300px;
       flex-shrink: 0;
     }

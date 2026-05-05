@@ -1238,15 +1238,21 @@ export class MediaPlayerService implements OnInitialized {
 
   setVideoElement(videoElement: HTMLVideoElement | undefined) {
     console.log('setVideoElement called with:', videoElement);
+    const previousVideoElement = this.videoElement;
+    const elementChanged = previousVideoElement !== videoElement;
+
+    if (!elementChanged) {
+      return;
+    }
 
     // Remove event listeners from previous video element
-    if (this.videoElement) {
-      this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('play', this.handleVideoPlay);
-      this.videoElement.removeEventListener('pause', this.handleVideoPause);
-      this.videoElement.removeEventListener('timeupdate', this.handleVideoTimeUpdate);
-      this.videoElement.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
-      this.videoElement.removeEventListener('volumechange', this.handleVolumeChange);
+    if (previousVideoElement) {
+      previousVideoElement.removeEventListener('ended', this.handleMediaEnded);
+      previousVideoElement.removeEventListener('play', this.handleVideoPlay);
+      previousVideoElement.removeEventListener('pause', this.handleVideoPause);
+      previousVideoElement.removeEventListener('timeupdate', this.handleVideoTimeUpdate);
+      previousVideoElement.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
+      previousVideoElement.removeEventListener('volumechange', this.handleVolumeChange);
     }
 
     this.videoElement = videoElement;
@@ -1270,6 +1276,7 @@ export class MediaPlayerService implements OnInitialized {
       // If we have a current video/HLS item that's waiting for the video element, set it up now
       const currentItem = this.current();
       if (currentItem && (currentItem.type === 'Video' || currentItem.type === 'HLS')) {
+        this.videoPlaybackInitialized = false;
         console.log('Setting up deferred video/HLS playback');
         this.setupVideoPlayback(currentItem);
       }

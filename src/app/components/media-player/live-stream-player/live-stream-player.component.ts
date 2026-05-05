@@ -95,6 +95,12 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   videoControlsRef?: VideoControlsComponent;
 
   private fullscreenCleanup: (() => void) | null = null;
+  private readonly handleViewportChange = () => {
+    requestAnimationFrame(() => {
+      this.registerVideoElement();
+      this.setupFullscreenListener();
+    });
+  };
 
   private eventSubscription: { close: () => void } | null = null;
   private currentStreamId: string | null = null;
@@ -179,9 +185,11 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     }
 
     afterNextRender(() => {
-      this.registerVideoElement();
-      this.setupFullscreenListener();
+      this.handleViewportChange();
     });
+
+    window.addEventListener('resize', this.handleViewportChange);
+    window.addEventListener('orientationchange', this.handleViewportChange);
 
     // Subscribe to event updates
     effect(() => {
@@ -235,6 +243,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if (this.eventSubscription) {
       this.eventSubscription.close();
     }
+    window.removeEventListener('resize', this.handleViewportChange);
+    window.removeEventListener('orientationchange', this.handleViewportChange);
     if (this.fullscreenCleanup) {
       this.fullscreenCleanup();
       this.fullscreenCleanup = null;
@@ -242,6 +252,11 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   private setupFullscreenListener(): void {
+    if (this.fullscreenCleanup) {
+      this.fullscreenCleanup();
+      this.fullscreenCleanup = null;
+    }
+
     this.fullscreenCleanup = addFullscreenChangeListener(
       this.videoElement?.nativeElement,
       this.onFullscreenChange
