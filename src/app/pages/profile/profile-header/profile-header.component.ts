@@ -58,6 +58,7 @@ import { CreateListDialogComponent, CreateListDialogResult } from '../../../comp
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { MediaService } from '../../../services/media.service';
 import { Profile } from '../../../services/profile';
+import { PublicUrlService } from '../../../services/public-url.service';
 import { TrustMetrics } from '../../../services/database.service';
 
 interface MutualFollowProfile {
@@ -126,6 +127,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   private userStatusService = inject(UserStatusService);
   private mediaService = inject(MediaService);
   private profileService = inject(Profile);
+  private publicUrl = inject(PublicUrlService);
 
   // User status (NIP-38)
   generalStatus = signal<UserStatus | null>(null);
@@ -1177,7 +1179,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
 
       // Generate the invite URL
-      const inviteUrl = `${window.location.origin}/invite/${nprofile}`;
+      const inviteUrl = this.publicUrl.build(`/invite/${nprofile}`);
 
       // Use Web Share API if available
       if (navigator.share) {
@@ -1234,7 +1236,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
 
       // Generate the invite URL
-      const inviteUrl = `${window.location.origin}/invite/${nprofile}`;
+      const inviteUrl = this.publicUrl.build(`/invite/${nprofile}`);
 
       navigator.clipboard.writeText(inviteUrl).then(
         () => {

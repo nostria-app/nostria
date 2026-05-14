@@ -84,6 +84,7 @@ import { getRuntimeResourceProfile } from '../../utils/runtime-resource-profile'
 import { DatabaseService } from '../../services/database.service';
 import { EventTtsPlaybackService } from '../../services/event-tts-playback.service';
 import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
+import { PublicUrlService } from '../../services/public-url.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -294,6 +295,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly haptics = inject(HapticsService);
   private readonly satDisplay = inject(SatDisplayService);
+  private readonly publicUrl = inject(PublicUrlService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
@@ -3364,7 +3366,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const dialogData: ShareArticleDialogData = {
       title: ev.kind === kinds.LongFormArticle ? 'Article' : this.getEventPreviewTitle(ev.content),
       summary: ev.content || undefined,
-      url: window.location.href,
+      url: this.publicUrl.toCanonicalUrl(window.location.href),
       eventId: ev.id,
       pubkey: ev.pubkey,
       identifier: ev.tags.find(tag => tag[0] === 'd')?.[1],

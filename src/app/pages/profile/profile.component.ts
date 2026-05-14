@@ -84,6 +84,7 @@ import { stripImageProxy } from '../../utils/strip-image-proxy';
 import { BadgeService } from '../../services/badge.service';
 import { SettingsService } from '../../services/settings.service';
 import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
+import { PublicUrlService } from '../../services/public-url.service';
 
 interface GiftCelebrationPayload {
   recipientName?: string;
@@ -182,6 +183,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly badgeService = inject(BadgeService);
+  private readonly publicUrl = inject(PublicUrlService);
   protected readonly settings = inject(SettingsService);
   protected readonly ttsSequence = inject(TtsSequencePlayerService);
 
@@ -1239,7 +1241,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       });
 
       // Generate the invite URL
-      const inviteUrl = `${this.getWindow()?.location?.origin}/invite/${nprofile}`;
+      const inviteUrl = this.publicUrl.build(`/invite/${nprofile}`);
 
       // Use Web Share API if available
       const window = this.getWindow();
@@ -1497,7 +1499,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private getCurrentUrl(): string {
     if (isPlatformBrowser(this.platformId)) {
       const window = this.getWindow();
-      return window?.location?.href || this.getServerSideUrl();
+      return window?.location?.href ? this.publicUrl.toCanonicalUrl(window.location.href) : this.getServerSideUrl();
     }
     return this.getServerSideUrl();
   }
@@ -1506,12 +1508,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
    * Creates a URL from router state for server-side rendering
    */
   private getServerSideUrl(): string {
-    const url = this.router.url;
-    // Use configured app URL or fallback
-    const baseUrl = isPlatformBrowser(this.platformId)
-      ? this.document.location?.origin
-      : 'https://nostria.app/';
-    return `${baseUrl}${url}`;
+    return this.publicUrl.build(this.router.url);
   }
 
   private startGiftCelebration(payload: GiftCelebrationPayload): void {

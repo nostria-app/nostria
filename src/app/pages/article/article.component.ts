@@ -46,6 +46,7 @@ import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 import { SettingsService } from '../../services/settings.service';
 import { TtsSequencePlayerService, type TtsSequenceItem } from '../../services/tts-sequence-player.service';
 import { extractTextForTts, splitTtsParagraphs } from '../../utils/tts-text';
+import { PublicUrlService } from '../../services/public-url.service';
 
 interface ArticleSpeechBlock {
   text: string;
@@ -90,6 +91,7 @@ export class ArticleComponent implements OnDestroy {
   private readonly rightPanel = inject(RightPanelService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly userRelaysService = inject(UserRelaysService);
+  private readonly publicUrl = inject(PublicUrlService);
   protected readonly settings = inject(SettingsService);
   protected readonly ttsSequence = inject(TtsSequencePlayerService);
   private readonly sanitizer = inject(DomSanitizer);
@@ -367,7 +369,7 @@ export class ArticleComponent implements OnDestroy {
       title: title || 'Nostr Event',
       summary,
       image,
-      url: window.location.href,
+      url: this.publicUrl.toCanonicalUrl(window.location.href),
       eventId: event.id,
       pubkey: event.pubkey,
       identifier,
