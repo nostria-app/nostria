@@ -56,10 +56,11 @@
     }
   </div>
 
-  <div class="footer">
-    <button mat-button class="voice-button" (click)="toggleRecording()" [disabled]="isTranscribing()">
-      <mat-icon>{{ isListening() ? 'mic_off' : 'keyboard_voice' }}</mat-icon>
-      <span>{{ isListening() ? 'Stop' : 'Voice command' }}</span>
-    </button>
-  </div>
+</div>
+
+<div dialog-actions class="command-palette-actions">
+  <button mat-button class="voice-button" (click)="toggleRecording()" [disabled]="isTranscribing()">
+    <mat-icon>{{ isListening() ? 'mic_off' : 'keyboard_voice' }}</mat-icon>
+    <span>{{ isListening() ? 'Stop' : 'Voice command' }}</span>
+  </button>
 </div>

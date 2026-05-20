@@ -140,7 +140,7 @@
   }
 }
 
-.footer {
+[dialog-actions].command-palette-actions {
   padding: 8px 16px;
   background-color: var(--mat-sys-surface-container);
   border-top: 1px solid var(--mat-sys-outline-variant);
@@ -238,7 +238,7 @@
     min-height: 0;
   }
 
-  .footer {
+[dialog-actions].command-palette-actions {
     padding: 6px 12px;
 
     .voice-button {
@@ -278,7 +278,7 @@
     padding: 4px 0;
   }
 
-  .footer {
+[dialog-actions].command-palette-actions {
     padding: 4px 10px;
   }
 }
