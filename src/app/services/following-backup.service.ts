@@ -375,7 +375,7 @@ export class FollowingBackupService {
 
     if (result.success && result.event) {
       this.logger.info('[FollowingBackupService] Published following list event', {
-        count: pubkeys.length,
+        count: validPubkeys.length,
         eventId: result.event.id
       });
       return result.event;
