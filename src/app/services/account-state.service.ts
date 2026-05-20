@@ -80,7 +80,11 @@ export class AccountStateService implements OnDestroy {
     }
 
     try {
-      await this.publishService.signAndPublishAuto(event, this.signFunction, newlyFollowedPubkeys);
+      const result = await this.publishService.signAndPublishAuto(event, this.signFunction, newlyFollowedPubkeys);
+
+      if (!result.success) {
+        throw new Error('[AccountStateService] Sign or publish failed');
+      }
     } catch (error) {
       console.error('[AccountStateService] Error publishing event:', error);
       throw error;
@@ -376,6 +380,9 @@ export class AccountStateService implements OnDestroy {
       account.pubkey
     );
 
+    const previousFollowingList = [...this.followingList()];
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
     // Remove from following list
     this.followingList.update(list => list.filter(p => p !== pubkey));
     this.followingMetadata.update((metadata) => {
@@ -389,6 +396,9 @@ export class AccountStateService implements OnDestroy {
       await this.publishEvent(newFollowingEvent);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
+      this.followingList.set(previousFollowingList);
+      this.followingMetadata.set(previousFollowingMetadata);
+      throw error;
     }
   }
 
@@ -538,6 +548,9 @@ export class AccountStateService implements OnDestroy {
       account.pubkey
     );
 
+    const previousFollowingList = [...this.followingList()];
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
     this.followingMetadata.update((metadata) => {
@@ -555,15 +568,9 @@ export class AccountStateService implements OnDestroy {
       await this.publishEvent(newFollowingEvent, newPubkeys);
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
-      // Rollback the local state if publish failed
-      this.followingList.update(list => list.filter(pubkey => !newPubkeys.includes(pubkey)));
-      this.followingMetadata.update((metadata) => {
-        const updated = new Map(metadata);
-        for (const pubkey of newPubkeys) {
-          updated.delete(pubkey);
-        }
-        return updated;
-      });
+      this.followingList.set(previousFollowingList);
+      this.followingMetadata.set(previousFollowingMetadata);
+      throw error;
     }
   }
 
@@ -636,6 +643,8 @@ export class AccountStateService implements OnDestroy {
       account.pubkey
     );
 
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
     this.followingMetadata.update((metadata) => {
       const updated = new Map(metadata);
       updated.set(pubkey, {
@@ -648,15 +657,7 @@ export class AccountStateService implements OnDestroy {
     try {
       await this.publishEvent(newFollowingEvent);
     } catch (error) {
-      this.followingMetadata.update((metadata) => {
-        const updated = new Map(metadata);
-        if (previousMetadata) {
-          updated.set(pubkey, previousMetadata);
-        } else {
-          updated.delete(pubkey);
-        }
-        return updated;
-      });
+      this.followingMetadata.set(previousFollowingMetadata);
       throw error;
     }
   }
