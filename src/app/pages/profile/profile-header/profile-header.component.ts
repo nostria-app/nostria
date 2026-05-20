@@ -321,6 +321,9 @@ export class ProfileHeaderComponent implements OnDestroy {
     valid: boolean;
     status: string;
   }>({ value: '', valid: false, status: '' });
+  isEditingNickname = signal(false);
+  nicknameDraft = signal('');
+  isSavingNickname = signal(false);
 
   // Computed favicon URL for verified NIP-05 identifier
   verifiedFaviconUrl = computed(() => {
@@ -340,7 +343,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   faviconTriedPng = signal<boolean>(false);
   faviconFailed = signal<boolean>(false);
 
-  name = computed(() => {
+  originalName = computed(() => {
     const profileData = this.profile();
     if (!profileData) {
       // Fallback to truncated pubkey when no profile exists
@@ -354,6 +357,17 @@ export class ProfileHeaderComponent implements OnDestroy {
     } else {
       return this.utilities.getTruncatedNpub(profileData.event.pubkey);
     }
+  });
+
+  nickname = computed(() => this.accountState.getFollowingPetname(this.pubkey()) || '');
+
+  name = computed(() => this.nickname() || this.originalName());
+
+  canEditNickname = computed(() => !this.isOwnProfile() && this.isFollowing());
+
+  hasCustomNickname = computed(() => {
+    const nickname = this.nickname();
+    return !!nickname && nickname !== this.originalName();
   });
 
   isOwnProfile = computed(() => {
@@ -1068,6 +1082,48 @@ export class ProfileHeaderComponent implements OnDestroy {
   async unfollowUser() {
     this.logger.debug('Unfollow requested for:', this.pubkey());
     await this.accountState.unfollow(this.pubkey());
+  }
+
+  startNicknameEdit(): void {
+    if (!this.canEditNickname()) {
+      return;
+    }
+
+    this.nicknameDraft.set(this.nickname() || this.originalName());
+    this.isEditingNickname.set(true);
+  }
+
+  cancelNicknameEdit(): void {
+    this.isEditingNickname.set(false);
+    this.nicknameDraft.set('');
+  }
+
+  async saveNickname(): Promise<void> {
+    const pubkey = this.pubkey();
+    if (!pubkey || !this.canEditNickname() || this.isSavingNickname()) {
+      return;
+    }
+
+    const trimmedDraft = this.nicknameDraft().trim();
+    const nextPetname = trimmedDraft === this.originalName() ? '' : trimmedDraft;
+
+    this.isSavingNickname.set(true);
+
+    try {
+      await this.accountState.setFollowingPetname(pubkey, nextPetname);
+      this.isEditingNickname.set(false);
+      this.nicknameDraft.set('');
+      this.snackBar.open(nextPetname ? 'Nickname updated' : 'Nickname removed', 'Dismiss', {
+        duration: 2500,
+      });
+    } catch (error) {
+      this.logger.error('Failed to update nickname', error);
+      this.snackBar.open('Failed to update nickname', 'Dismiss', {
+        duration: 3000,
+      });
+    } finally {
+      this.isSavingNickname.set(false);
+    }
   }
 
   /**

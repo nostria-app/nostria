@@ -1,41 +1,9 @@
 @if (disableLink()) {
 <span class="profile-link disabled">
-  @if (isLoading() || profile() === null) {
-  @if (showFallbackWhileLoading()) {
-  {{ truncatedNpubValue() }}
-  } @else {
-  ...
-  }
-  } @else if (profile() && !profile().isEmpty && profile().data) {
-  @if (profile().data.display_name) {
-  {{ profile().data.display_name }}
-  } @else if (profile().data.name) {
-  {{ profile().data.name }}
-  } @else {
-  {{ truncatedNpubValue() }}
-  }
-  } @else {
-  {{ truncatedNpubValue() }}
-  }
+  {{ displayText() }}
 </span>
 } @else {
 <a [attr.href]="profileUrl()" class="profile-link" (click)="onProfileClick($event)">
-  @if (isLoading() || profile() === null) {
-  @if (showFallbackWhileLoading()) {
-  {{ truncatedNpubValue() }}
-  } @else {
-  ...
-  }
-  } @else if (profile() && !profile().isEmpty && profile().data) {
-  @if (profile().data.display_name) {
-  {{ profile().data.display_name }}
-  } @else if (profile().data.name) {
-  {{ profile().data.name }}
-  } @else {
-  {{ truncatedNpubValue() }}
-  }
-  } @else {
-  {{ truncatedNpubValue() }}
-  }
+  {{ displayText() }}
 </a>
 }
