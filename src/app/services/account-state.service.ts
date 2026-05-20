@@ -360,8 +360,20 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    // Get existing tags and remove the pubkey
-    const updatedTags = existingFollowingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+    // Get existing tags: remove the target pubkey, filter invalid p-tags, and deduplicate
+    const seenPubkeys = new Set<string>();
+    const updatedTags = existingFollowingEvent.tags.filter(tag => {
+      if (tag[0] === 'p') {
+        // Skip the pubkey being unfollowed
+        if (tag[1] === pubkey) return false;
+        // Skip invalid p-tags (non-hex, wrong length)
+        if (!tag[1] || !this.utilities.isValidHexPubkey(tag[1])) return false;
+        // Skip duplicates
+        if (seenPubkeys.has(tag[1])) return false;
+        seenPubkeys.add(tag[1]);
+      }
+      return true;
+    });
 
     // CRITICAL: Create a NEW unsigned event with CURRENT timestamp
     // This ensures we don't reuse old timestamps from previously signed events
@@ -460,9 +472,18 @@ export class AccountStateService implements OnDestroy {
     // Normalize input to always be an array
     const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
 
+    // Validate all pubkeys are valid hex before proceeding
+    const validPubkeys = pubkeyArray.filter(pubkey => {
+      if (!this.utilities.isValidHexPubkey(pubkey)) {
+        console.warn('[AccountStateService] Rejecting invalid pubkey in follow():', pubkey);
+        return false;
+      }
+      return true;
+    });
+
     // Filter out pubkeys that are already being followed
     const currentFollowing = this.followingList();
-    const newPubkeys = pubkeyArray.filter(pubkey => !currentFollowing.includes(pubkey));
+    const newPubkeys = validPubkeys.filter(pubkey => !currentFollowing.includes(pubkey));
 
     if (newPubkeys.length === 0) {
       return;
@@ -499,12 +520,23 @@ export class AccountStateService implements OnDestroy {
       existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
-    // Get existing tags (p-tags for followed users)
-    let existingTags: string[][] = [];
+    // Get existing tags, filtering out invalid p-tags and deduplicating
+    const existingTags: string[][] = [];
 
     if (existingFollowingEvent) {
-      // Extract all existing tags
-      existingTags = existingFollowingEvent.tags;
+      const seenPubkeys = new Set<string>();
+      for (const tag of existingFollowingEvent.tags) {
+        if (tag[0] === 'p') {
+          // Only keep p-tags with valid 64-char hex pubkeys, and deduplicate
+          if (tag[1] && this.utilities.isValidHexPubkey(tag[1]) && !seenPubkeys.has(tag[1])) {
+            seenPubkeys.add(tag[1]);
+            existingTags.push(tag);
+          }
+        } else {
+          // Keep all non-p tags as-is
+          existingTags.push(tag);
+        }
+      }
     }
 
     // Add new pubkeys to the tags

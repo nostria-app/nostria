@@ -3,6 +3,7 @@ import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
+import { UtilitiesService } from './utilities.service';
 import { Event, kinds } from 'nostr-tools';
 import { DatabaseService } from './database.service';
 
@@ -29,6 +30,7 @@ export class FollowingBackupService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly database = inject(DatabaseService);
+  private readonly utilities = inject(UtilitiesService);
 
   private readonly BACKUP_KEY = 'nostria-following-history';
   private readonly MAX_BACKUPS = 10;
@@ -348,8 +350,18 @@ export class FollowingBackupService {
       return null;
     }
 
-    // Create tags for all followed pubkeys
-    const tags: string[][] = pubkeys.map(pubkey => ['p', pubkey]);
+    // Create tags for all followed pubkeys, filtering invalid entries and deduplicating
+    const seenPubkeys = new Set<string>();
+    const validPubkeys = pubkeys.filter(pubkey => {
+      if (!this.utilities.isValidHexPubkey(pubkey)) {
+        this.logger.warn('[FollowingBackupService] Skipping invalid pubkey:', pubkey);
+        return false;
+      }
+      if (seenPubkeys.has(pubkey)) return false;
+      seenPubkeys.add(pubkey);
+      return true;
+    });
+    const tags: string[][] = validPubkeys.map(pubkey => ['p', pubkey]);
 
     // Create the event
     const event = this.nostrService.createEvent(
