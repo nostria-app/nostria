@@ -203,7 +203,8 @@
 }
 
 // Responsive styles for smaller screens
-@media (max-width: 600px), (max-height: 700px) {
+@media (max-width: 600px),
+(max-height: 700px) {
   .command-palette-container {
     max-height: none;
     height: 100%;
@@ -238,11 +239,12 @@
     min-height: 0;
   }
 
-[dialog-actions].command-palette-actions {
+  [dialog-actions].command-palette-actions {
     padding: 6px 12px;
 
     .voice-button {
       span {
+
         // Hide text label on very small screens, keep icon
         @media (max-width: 360px) {
           display: none;
@@ -278,7 +280,7 @@
     padding: 4px 0;
   }
 
-[dialog-actions].command-palette-actions {
+  [dialog-actions].command-palette-actions {
     padding: 4px 10px;
   }
 }

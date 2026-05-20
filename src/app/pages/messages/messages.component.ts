@@ -4679,6 +4679,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         title: 'New Conversation',
         width: 'min(500px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
+        panelClass: 'new-conversation-dialog',
       }
     );
 

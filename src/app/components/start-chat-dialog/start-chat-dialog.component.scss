@@ -1,11 +1,11 @@
 .start-chat-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   min-width: 0;
 
   .mode-tabs {
-    margin-bottom: -8px;
+    margin: 0 -24px;
     min-width: 0;
   }
 
@@ -283,7 +283,7 @@
   }
 }
 
-.dialog-actions {
+[dialog-actions] {
   display: flex;
   justify-content: flex-end;
   gap: 12px;

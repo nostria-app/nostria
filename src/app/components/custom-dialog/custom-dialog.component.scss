@@ -497,6 +497,12 @@
   }
 }
 
+.dialog-container.new-conversation-dialog {
+  .dialog-content {
+    padding-top: 0;
+  }
+}
+
 .dialog-backdrop:has(.dialog-container.android-wipe-restart-dialog) {
   padding: 0;
   align-items: stretch;

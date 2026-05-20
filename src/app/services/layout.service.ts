@@ -2190,6 +2190,7 @@ export class LayoutService implements OnDestroy {
         title: $localize`:@@create.message.dialog.title:Start New Chat`,
         width: 'min(500px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
+        panelClass: 'new-conversation-dialog',
       },
     );
 
@@ -2216,6 +2217,7 @@ export class LayoutService implements OnDestroy {
         title: $localize`:@@create.message.dialog.title:Start New Chat`,
         width: 'min(500px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
+        panelClass: 'new-conversation-dialog',
       },
     );
 
@@ -2485,6 +2487,7 @@ export class LayoutService implements OnDestroy {
       width: '600px',
       maxWidth: '90vw',
       panelClass: 'command-palette-dialog',
+      showHeader: false,
       showCloseButton: false,
       disableEnterSubmit: true
     });
