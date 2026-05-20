@@ -138,6 +138,19 @@
     min-width: 0;
   }
 
+  .dialog-content-padded {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 24px 24px;
+
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      padding: 16px;
+      gap: 16px;
+    }
+  }
+
   .dialog-message,
   .detail-title,
   .detail-description {
@@ -210,6 +223,17 @@
     background: var(--mat-sys-primary-container);
     color: var(--mat-sys-on-primary-container);
   }
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content {
+  padding-top: 0;
+  gap: 16px;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-content > .mode-tabs {
+  align-self: stretch;
+  width: calc(100% + 48px);
+  margin: 0 -24px;
 }
 
 .material-custom-dialog-panel.note-editor-dialog-panel {

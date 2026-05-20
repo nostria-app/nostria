@@ -99,9 +99,7 @@ interface ScrollLockStyles {
 
           <ng-content select="[dialog-header]"></ng-content>
 
-          <div dialog-content cdkFocusInitial tabindex="-1" #dialogContent>
-            <ng-content select="[dialog-content]"></ng-content>
-          </div>
+          <ng-content select="[dialog-content]"></ng-content>
 
           @if (showActions()) {
           <div dialog-actions>
@@ -147,8 +145,6 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   // Modern viewChild
   dialogContainer = viewChild<ElementRef>('dialogContainer');
-  dialogContent = viewChild<ElementRef>('dialogContent');
-
   private document = inject(DOCUMENT);
   private elementRef = inject(ElementRef);
   private platformService = inject(PlatformService);
