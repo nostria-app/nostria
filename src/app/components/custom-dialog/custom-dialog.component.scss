@@ -116,6 +116,12 @@
   }
 }
 
+.dialog-container.add-wallet-dialog-panel {
+  .dialog-actions {
+    border-top: none;
+  }
+}
+
 // Header
 .dialog-header {
   display: grid;

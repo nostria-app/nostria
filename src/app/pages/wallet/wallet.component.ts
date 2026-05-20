@@ -205,6 +205,7 @@ export class WalletComponent implements OnDestroy {
     this.customDialog.open(AddWalletDialogComponent, {
       title: $localize`:@@wallet.add.title:Add Wallet`,
       width: '500px',
+      panelClass: 'add-wallet-dialog-panel',
     });
   }
 
