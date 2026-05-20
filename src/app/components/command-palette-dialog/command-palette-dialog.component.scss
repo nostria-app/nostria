@@ -3,9 +3,10 @@
   flex-direction: column;
   height: 100%;
   max-height: 500px;
+  margin: -20px -24px -24px;
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -208,6 +209,7 @@
   .command-palette-container {
     max-height: none;
     height: 100%;
+    margin: -16px;
     border-radius: 0;
   }
 

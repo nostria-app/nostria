@@ -5,7 +5,7 @@
   min-width: 0;
 
   .mode-tabs {
-    margin: 0 -24px;
+    margin: -20px -24px 0;
     min-width: 0;
   }
 
@@ -285,12 +285,15 @@
 
 [dialog-actions] {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 12px;
 
   button {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
   }
 }
