@@ -191,6 +191,9 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
   // Computed signal for profile display name (for toolbar title)
   profileDisplayName = computed(() => {
+    const petname = this.accountState.getFollowingPetname(this.pubkey());
+    if (petname) return petname;
+
     const metadata = this.userMetadata();
     if (!metadata) return 'Profile';
 
