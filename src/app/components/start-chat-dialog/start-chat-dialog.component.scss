@@ -1,13 +1,21 @@
-.start-chat-content {
+.start-chat-dialog {
   display: flex;
   flex-direction: column;
-  gap: 16px;
   min-width: 0;
+  min-height: 0;
 
   .mode-tabs {
-    margin: -24px -24px 0;
-    width: calc(100% + 48px);
+    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
+  }
+
+  .start-chat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    min-height: 0;
   }
 
   .selected-profile {

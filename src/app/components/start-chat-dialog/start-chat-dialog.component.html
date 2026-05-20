@@ -1,9 +1,12 @@
-<div dialog-content class="start-chat-content">
+<div dialog-content class="start-chat-dialog">
   <!-- Mode tabs: Direct Message vs Group -->
-  <mat-tab-group [selectedIndex]="mode()" (selectedIndexChange)="onModeChange($event)" class="mode-tabs">
+  <mat-tab-group [selectedIndex]="mode()" (selectedIndexChange)="onModeChange($event)"
+    class="mode-tabs">
     <mat-tab label="Direct Message"></mat-tab>
     <mat-tab label="Group"></mat-tab>
   </mat-tab-group>
+
+  <div class="start-chat-body dialog-content-padded">
 
   @if (mode() === 0) {
   <!-- DIRECT MESSAGE MODE -->
@@ -152,7 +155,8 @@
 
     <!-- Show npub validation + add button -->
     @if (isNpubInput() && hasValidNpub()) {
-    <div class="npub-valid-indicator clickable" (click)="addGroupMemberFromNpub()">
+    <div class="npub-valid-indicator clickable" tabindex="0" (click)="addGroupMemberFromNpub()"
+      (keydown.enter)="addGroupMemberFromNpub()" (keydown.space)="addGroupMemberFromNpub()">
       <mat-icon>check_circle</mat-icon>
       <span>Valid npub detected - click to add</span>
     </div>
@@ -195,13 +199,16 @@
       <span>Groups use end-to-end encryption (NIP-44). Each member receives messages individually. You cannot add more
         members after creation.</span>
     </div>
-    @if (selectedGroupMembers().length > 0 && selectedGroupMembers().length < 2) { <div class="group-min-info">
+    @if (selectedGroupMembers().length > 0 && selectedGroupMembers().length < 2) {
+    <div class="group-min-info">
       <mat-icon>info</mat-icon>
       <span>Add at least 2 members to create a group.</span>
+    </div>
+    }
   </div>
   }
+
 </div>
-}
 </div>
 
 <div dialog-actions>

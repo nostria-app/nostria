@@ -225,15 +225,53 @@
   }
 }
 
-.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content {
-  padding-top: 0;
-  gap: 16px;
+.dialog-container.command-palette-dialog app-material-custom-dialog .dialog-content {
+  padding: 0;
+  gap: 0;
 }
 
-.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-content>.mode-tabs {
-  align-self: stretch;
-  width: calc(100% + 48px);
-  margin: 0 -24px;
+.dialog-container.command-palette-dialog app-material-custom-dialog .dialog-content > .command-palette-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content {
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs {
+  width: 100%;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-header,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-label-container,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-list,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-labels {
+  width: 100%;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-header-pagination {
+  display: none;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-label-container,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-list,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-labels {
+  overflow: visible;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab-labels {
+  display: flex;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mdc-tab,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content > .start-chat-dialog > .mode-tabs .mat-mdc-tab {
+  flex: 1 1 0;
+  max-width: none;
+  min-width: 0;
+  justify-content: center;
 }
 
 .material-custom-dialog-panel.note-editor-dialog-panel {
