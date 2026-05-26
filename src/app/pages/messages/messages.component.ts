@@ -73,7 +73,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { EncryptionPermissionService } from '../../services/encryption-permission.service';
 import { DataService } from '../../services/data.service';
-import { MessagingService, computeGroupChatId } from '../../services/messaging.service';
+import { MessagingService, computeDirectChatId, computeGroupChatId } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -469,7 +469,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         return otherParticipants.length > 0 && otherParticipants.every(p => pTagPubkeys.has(p));
       }
 
-      return pTags.some(tag => tag[1] === chat.pubkey);
+      const messageProtocol = m.encryptionType === 'nip04' ? 'nip04' : 'nip44';
+      const chatProtocol = chat.encryptionType === 'nip04' ? 'nip04' : 'nip44';
+
+      return messageProtocol === chatProtocol && pTags.some(tag => tag[1] === chat.pubkey);
     });
 
     // Merge, filter hidden, and sort by timestamp
@@ -513,6 +516,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
+  isFollowingListLoading = computed(() => {
+    return !!this.accountState.account() && !this.accountState.followingListLoaded();
+  });
 
   // Check if the selected chat is a "Note to Self" chat
   isNoteToSelf = computed(() => {
@@ -740,6 +746,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Filtered chats based on selected tab and search query (excluding Note to Self)
   // Optimized with Set for O(1) following list lookups
   followingChats = computed(() => {
+    if (this.isFollowingListLoading()) {
+      return [];
+    }
+
     const followingList = this.accountState.followingList();
     const followingSet = new Set(followingList);
     const myPubkey = this.accountState.pubkey();
@@ -765,6 +775,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   otherChats = computed(() => {
+    if (this.isFollowingListLoading()) {
+      return [];
+    }
+
     const followingList = this.accountState.followingList();
     const followingSet = new Set(followingList);
     const myPubkey = this.accountState.pubkey();
@@ -2374,6 +2388,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    if (!isGroup && !this.supportsModernEncryption(selectedChat)) {
+      this.snackBar.open('Encrypted files require a NIP-17 chat', 'Close', { duration: 3000 });
+      return;
+    }
+
     try {
       this.isSending.set(true);
       const uploadSettings = options?.uploadSettings ?? this.getDmUploadSettings();
@@ -2404,11 +2423,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.userRelayService.ensureDmRelaysForPubkey(p),
           ])
         );
-      } else {
+      } else if (this.supportsModernEncryption(selectedChat)) {
         await Promise.all([
           this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
           this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
         ]);
+      } else {
+        await this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey);
       }
 
       const encryption = await this.encryptFileForMessage(preparedFile.file);
@@ -3603,7 +3624,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Send a direct message using both NIP-04 and NIP-44.
+   * Send a direct message using the selected chat protocol.
    * Uses optimistic UI: the message appears as pending immediately while
    * relay publishing happens in the background. The message transitions
    * to received/failed based on actual relay delivery results.
@@ -3629,8 +3650,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         throw new Error('You need to be logged in to send messages');
       }
 
-      // Ensure DM relays (kind 10050) are discovered for all recipients.
-      // This is critical for first-time conversations where relays haven't been cached yet.
+      // Discover the relay set needed by the selected protocol before building the event.
       if (isGroup && selectedChat.participants) {
         const otherParticipants = selectedChat.participants.filter(p => p !== myPubkey);
         await Promise.all(
@@ -3639,11 +3659,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.userRelayService.ensureDmRelaysForPubkey(p),
           ])
         );
-      } else {
+      } else if (this.supportsModernEncryption(selectedChat)) {
         await Promise.all([
           this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
           this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
         ]);
+      } else {
+        await this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey);
       }
 
       // Scroll to bottom for new outgoing messages
@@ -3716,7 +3738,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           subjectUpdatedAt: selectedChat.subjectUpdatedAt,
         });
       } else {
-        this.messaging.addMessageToChat(selectedChat.pubkey, pendingMessage);
+        this.messaging.addMessageToChat(chatId, pendingMessage);
       }
 
       // Also add to local pending signal for immediate UI feedback
@@ -4110,6 +4132,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const chatId = selectedChat.id;
     const isGroup = !!selectedChat.isGroup;
+
+    if (!isGroup && !this.supportsModernEncryption(selectedChat)) {
+      this.snackBar.open('Reactions require a NIP-17 chat', 'Close', { duration: 3000 });
+      return;
+    }
 
     try {
       const extraRumorTags: string[][] = [
@@ -4968,6 +4995,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    if (!chatId.startsWith('group:') && !chatId.endsWith('-nip04') && !chatId.endsWith('-nip44')) {
+      const modernChat = this.messaging.getChat(computeDirectChatId(chatId, 'nip44'));
+      if (modernChat) {
+        void this.selectChat(modernChat);
+        return;
+      }
+
+      const legacyChat = this.messaging.getChat(computeDirectChatId(chatId, 'nip04'));
+      if (legacyChat) {
+        void this.selectChat(legacyChat);
+        return;
+      }
+    }
+
     this.logger.debug('Chat not available yet, waiting for refresh', { chatId });
   }
 
@@ -5448,27 +5489,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Check if a chat supports modern encryption (NIP-44)
-   * For merged chats, we always use modern encryption for new messages
+   * Check if a chat should send new messages as NIP-17 gift wraps.
    */
   private supportsModernEncryption(chat: Chat): boolean {
-    // For merged chats, always prefer modern encryption for new messages
-    // The chat may contain legacy messages, but new messages will use NIP-44
-    return true;
+    if (chat.isGroup) {
+      return true;
+    }
+
+    return chat.encryptionType !== 'nip04';
   }
 
   /**
    * Check if we should show encryption warning for a chat
    */
   shouldShowEncryptionWarning(chat: Chat): boolean {
-    // Show warning if chat contains any legacy NIP-04 messages
-    return chat.hasLegacyMessages === true;
+    // Show warning if chat is explicitly legacy or contains any legacy NIP-04 messages
+    return chat.encryptionType === 'nip04' || chat.hasLegacyMessages === true;
   }
 
   /**
    * Get encryption status message for a chat
    */
   getEncryptionStatusMessage(chat: Chat): string {
+    if (chat.encryptionType === 'nip04') {
+      return 'This chat is set to legacy encryption (NIP-04) for compatibility with older clients.';
+    }
+
     if (chat.hasLegacyMessages === true) {
       return 'This chat contains some messages using legacy encryption (NIP-04). New messages will use modern encryption (NIP-17).';
     }
@@ -5488,12 +5534,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
-      const receiverRelayHint = await this.getDmRelayHint(receiverPubkey);
 
       // Build tags
-      const tags: string[][] = [['p', receiverPubkey, receiverRelayHint || '']];
+      const tags: string[][] = [['p', receiverPubkey]];
 
-      // Add 'e' tag if this is a reply (NIP-17 - also supported in NIP-04 for compatibility)
+      // Add 'e' tag if this is a reply.
       if (replyToId) {
         tags.push(['e', replyToId]);
       }
@@ -5637,21 +5682,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
 
+        const selfEphemeralKey = generateSecretKey();
+        const selfEphemeralPubkey = getPublicKey(selfEphemeralKey);
+
         const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
           JSON.stringify(signedSealedMessage2),
-          bytesToHex(ephemeralKey),
+          bytesToHex(selfEphemeralKey),
           myPubkey
         );
 
         const giftWrap2 = {
           kind: kinds.GiftWrap,
-          pubkey: ephemeralPubkey,
+          pubkey: selfEphemeralPubkey,
           created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
           tags: [['p', myPubkey, myRelayHint || '']],
           content: giftWrapContent2,
         };
 
-        signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
+        signedGiftWrap2 = finalizeEvent(giftWrap2, selfEphemeralKey);
       }
 
       // Return the message for immediate UI display
@@ -5867,7 +5915,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Returns true if at least one relay accepted the event.
    */
   private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
-    return this.publishToUserDmRelays(event, pubkey);
+    try {
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+      const relayUrls = this.userRelayService.getRelaysForPubkey(pubkey);
+
+      if (relayUrls.length === 0) {
+        this.logger.warn('No regular relays available for NIP-04 publish', {
+          pubkey: pubkey.substring(0, 8),
+        });
+        return false;
+      }
+
+      const publishResults = this.relayPool.publishWithTracking(relayUrls, event);
+      const settledResults = await Promise.allSettled(publishResults);
+
+      return settledResults.some(result => result.status === 'fulfilled');
+    } catch (error) {
+      this.logger.error('Failed to publish NIP-04 message to regular relays', error);
+      return false;
+    }
   }
 
   private async getDmRelayHint(pubkey: string): Promise<string | undefined> {
@@ -5891,29 +5957,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Start a chat with a specific user
-   * Note: isLegacy parameter is kept for backward compatibility but ignored
-   * since all chats are now merged by pubkey
+   * Start a chat with a specific user.
+   * The legacy flag controls the protocol for a newly-created temporary chat.
    */
   private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
-      const myPubkey = this.accountState.pubkey();
-      const isNoteToSelf = pubkey === myPubkey;
-
-      // Use pubkey directly as chatId - chats are now merged regardless of encryption type
-      const chatId = pubkey;
+      const encryptionType = isLegacy ? 'nip04' : 'nip44';
+      const chatId = computeDirectChatId(pubkey, encryptionType);
       this.logger.debug('startChatWithUser - chatId:', chatId);
 
       // Check if chat already exists
-      let existingChat = this.messaging.getChat(chatId);
-
-      // Also check for legacy chatIds (for backward compatibility with old stored chats)
-      if (!existingChat) {
-        existingChat = this.messaging.getChat(`${pubkey}-nip44`) || this.messaging.getChat(`${pubkey}-nip04`);
-        if (existingChat) {
-          this.logger.debug('Found existing chat with legacy chatId format');
-        }
-      }
+      const existingChat = this.messaging.getChat(chatId);
 
       if (existingChat) {
         this.logger.debug('Chat already exists, selecting it');
@@ -5926,22 +5980,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // For now, just switch to the chat view and let the user send the first message
       // The chat will be created when the first message is sent
 
-      // Pre-discover DM relays (kind 10050) for this new contact so sending is fast.
+      // Pre-discover relays for this new contact so sending is fast.
       // This runs in the background — don't block the UI.
-      this.userRelayService.ensureDmRelaysForPubkey(pubkey).catch(err => {
-        this.logger.warn('Failed to pre-discover DM relays for new chat:', err);
+      const relayDiscovery = isLegacy
+        ? this.userRelayService.ensureRelaysForPubkey(pubkey)
+        : this.userRelayService.ensureDmRelaysForPubkey(pubkey);
+
+      relayDiscovery.catch(err => {
+        this.logger.warn('Failed to pre-discover relays for new chat:', err);
       });
 
       // Create a temporary chat object for UI purposes
-      // New messages always use modern encryption (NIP-44)
+      // New messages use the protocol selected in the start-chat dialog.
       const tempChat: Chat = {
         id: chatId,
         pubkey: pubkey,
         unreadCount: 0,
         lastMessage: null,
         relays: [], // TODO: Use discovered relays from dialog
-        encryptionType: 'nip44',
-        hasLegacyMessages: false,
+        encryptionType,
+        hasLegacyMessages: isLegacy,
         messages: new Map(),
       };
 

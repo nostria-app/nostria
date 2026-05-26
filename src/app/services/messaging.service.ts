@@ -43,6 +43,59 @@ interface Chat {
   subjectUpdatedAt?: number;
 }
 
+type DirectMessageProtocol = 'nip04' | 'nip44';
+
+export function computeDirectChatId(pubkey: string, protocol: DirectMessageProtocol): string {
+  return `${pubkey}-${protocol}`;
+}
+
+function parseDirectChatId(chatId: string): { pubkey: string; protocol: DirectMessageProtocol } | null {
+  if (chatId.endsWith('-nip04')) {
+    return { pubkey: chatId.slice(0, -'-nip04'.length), protocol: 'nip04' };
+  }
+
+  if (chatId.endsWith('-nip44')) {
+    return { pubkey: chatId.slice(0, -'-nip44'.length), protocol: 'nip44' };
+  }
+
+  return null;
+}
+
+function isGroupChatId(chatId: string): boolean {
+  return chatId.startsWith('group:');
+}
+
+function getDirectChatProtocol(message: DirectMessage): DirectMessageProtocol {
+  return message.encryptionType === 'nip04' ? 'nip04' : 'nip44';
+}
+
+function resolveDirectChatId(chatIdOrPubkey: string, message: DirectMessage): string {
+  if (isGroupChatId(chatIdOrPubkey)) {
+    return chatIdOrPubkey;
+  }
+
+  const parsed = parseDirectChatId(chatIdOrPubkey);
+  const pubkey = parsed?.pubkey ?? chatIdOrPubkey;
+
+  return computeDirectChatId(pubkey, getDirectChatProtocol(message));
+}
+
+function getDirectChatPubkey(chatId: string): string {
+  return parseDirectChatId(chatId)?.pubkey ?? chatId;
+}
+
+function getStoredDirectChatId(chatId: string, message: StoredDirectMessage): string {
+  if (isGroupChatId(chatId)) {
+    return chatId;
+  }
+
+  const parsed = parseDirectChatId(chatId);
+  const pubkey = parsed?.pubkey ?? chatId;
+  const protocol = message.encryptionType === 'nip04' ? 'nip04' : 'nip44';
+
+  return computeDirectChatId(pubkey, protocol);
+}
+
 /**
  * Compute a deterministic chat ID for a group conversation.
  * The room identity is defined by the sorted set of all participant pubkeys.
@@ -55,7 +108,7 @@ export function computeGroupChatId(participantPubkeys: string[]): string {
 
 /**
  * Determine the chat ID and metadata from an unwrapped NIP-44 message.
- * For 1-on-1 messages (single p-tag), returns the counterparty pubkey as chatId.
+ * For 1-on-1 messages (single p-tag), returns a protocol-specific chatId.
  * For group messages (multiple p-tags), computes a deterministic group chat ID.
  */
 function resolveChatTarget(
@@ -77,7 +130,7 @@ function resolveChatTarget(
       ? pTags[0]
       : unwrappedMessage.pubkey;
     if (!counterparty) return null;
-    return { chatId: counterparty, isGroup: false, participants: allParticipants };
+    return { chatId: computeDirectChatId(counterparty, 'nip44'), isGroup: false, participants: allParticipants };
   }
 
   // Group chat: 3+ unique participants
@@ -614,21 +667,21 @@ export class MessagingService implements NostriaService {
   }
 
   private async addResolvedMessageToChat(
-    pubkey: string,
+    chatIdOrPubkey: string,
     message: DirectMessage,
     groupInfo?: { isGroup: boolean; participants: string[]; subject?: string; subjectUpdatedAt?: number }
   ): Promise<void> {
-    const resolvedMessage = await this.hydrateStoredMessageState(pubkey, message);
-    this.addMessageToChat(pubkey, resolvedMessage, groupInfo);
+    const chatId = resolveDirectChatId(chatIdOrPubkey, message);
+    const resolvedMessage = await this.hydrateStoredMessageState(chatId, message);
+    this.addMessageToChat(chatId, resolvedMessage, groupInfo);
   }
 
   /**
    * Update an existing message in a chat (e.g., to change pending/failed/received status).
    * Returns true if the message was found and updated, false otherwise.
    */
-  updateMessageInChat(pubkey: string, messageId: string, updates: Partial<DirectMessage>): boolean {
+  updateMessageInChat(chatId: string, messageId: string, updates: Partial<DirectMessage>): boolean {
     const currentMap = this.chatsMap();
-    const chatId = pubkey;
     const chat = currentMap.get(chatId);
     if (!chat) return false;
 
@@ -655,9 +708,8 @@ export class MessagingService implements NostriaService {
   /**
    * Remove a message from a chat (e.g., when retrying a failed message).
    */
-  removeMessageFromChat(pubkey: string, messageId: string): void {
+  removeMessageFromChat(chatId: string, messageId: string): void {
     const currentMap = this.chatsMap();
-    const chatId = pubkey;
     const chat = currentMap.get(chatId);
     if (!chat || !chat.messages.has(messageId)) return;
 
@@ -676,20 +728,21 @@ export class MessagingService implements NostriaService {
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   // For group chats, pass groupInfo with isGroup, participants, and optional subject.
   addMessageToChat(
-    pubkey: string,
+    chatIdOrPubkey: string,
     message: DirectMessage,
     groupInfo?: { isGroup: boolean; participants: string[]; subject?: string; subjectUpdatedAt?: number }
   ): void {
     // Validate pubkey/chatId to prevent creating invalid chats
-    if (!pubkey || pubkey === 'undefined') {
-      this.logger.warn('Cannot add message to chat: invalid pubkey', { pubkey, messageId: message.id });
+    if (!chatIdOrPubkey || chatIdOrPubkey === 'undefined') {
+      this.logger.warn('Cannot add message to chat: invalid pubkey', { pubkey: chatIdOrPubkey, messageId: message.id });
       return;
     }
 
     const normalizedMessage = this.normalizeMessage(message);
     const currentMap = this.chatsMap();
-    // Use pubkey directly as chatId - messages are merged regardless of encryption type
-    const chatId = pubkey;
+    const chatId = resolveDirectChatId(chatIdOrPubkey, normalizedMessage);
+    const chatPubkey = groupInfo?.isGroup ? '' : getDirectChatPubkey(chatId);
+    const protocol = getDirectChatProtocol(normalizedMessage);
 
     // Check if this message already exists in the specific chat to prevent duplicates
     const existingChat = currentMap.get(chatId);
@@ -757,12 +810,12 @@ export class MessagingService implements NostriaService {
       // Create new chat if it doesn't exist
       const newChat: Chat = {
         id: chatId,
-        pubkey: groupInfo?.isGroup ? '' : pubkey,
+        pubkey: chatPubkey,
         unreadCount: this.getUnreadDelta(normalizedMessage),
         lastMessage: normalizedMessage,
         relays: [],
-        encryptionType: 'nip44', // Default to modern encryption for new messages
-        hasLegacyMessages: normalizedMessage.encryptionType === 'nip04',
+        encryptionType: protocol,
+        hasLegacyMessages: protocol === 'nip04',
         messages: new Map([[normalizedMessage.id, normalizedMessage]]),
         isGroup: groupInfo?.isGroup || false,
         participants: groupInfo?.participants,
@@ -1198,8 +1251,9 @@ export class MessagingService implements NostriaService {
       // Track the oldest message timestamp from stored messages
       let oldestStoredTimestamp: number | null = null;
 
-      // Build chat map from stored messages - group by pubkey to merge NIP-04 and NIP-44 chats
-      // For group chats (chatId starts with 'group:'), use chatId directly without merging
+      // Build chat map from stored messages. One-to-one chats are separated by protocol:
+      // <pubkey>-nip04 and <pubkey>-nip44. Older unified chat IDs are split by each
+      // stored message's encryption type as they are loaded.
       const chatsByKey = new Map<string, { messages: StoredDirectMessage[], unreadCount: number }>();
 
       for (const chatSummary of storedChats) {
@@ -1207,35 +1261,27 @@ export class MessagingService implements NostriaService {
 
         if (messages.length === 0) continue;
 
-        // Group chats use their chatId directly (starts with 'group:')
-        let chatKey: string;
-        if (chatSummary.chatId.startsWith('group:')) {
-          chatKey = chatSummary.chatId;
-        } else if (chatSummary.chatId.endsWith('-nip04') || chatSummary.chatId.endsWith('-nip44')) {
-          // Extract pubkey from legacy chatId format (pubkey-nip04 or pubkey-nip44)
-          const parts = chatSummary.chatId.split('-');
-          chatKey = parts.slice(0, -1).join('-');
-        } else {
-          chatKey = chatSummary.chatId;
-        }
+        for (const message of messages) {
+          const chatKey = getStoredDirectChatId(chatSummary.chatId, message);
 
-        // Validate chatKey - skip invalid chats
-        if (!chatKey || chatKey === 'undefined' || (chatKey.length < 10 && !chatKey.startsWith('group:'))) {
-          this.logger.warn('Skipping chat with invalid key', { chatId: chatSummary.chatId, chatKey });
-          continue;
-        }
+          // Validate chatKey - skip invalid chats
+          if (!chatKey || chatKey === 'undefined' || (chatKey.length < 10 && !isGroupChatId(chatKey))) {
+            this.logger.warn('Skipping chat with invalid key', { chatId: chatSummary.chatId, chatKey });
+            continue;
+          }
 
-        // Merge messages for the same key
-        const existing = chatsByKey.get(chatKey);
-        if (existing) {
-          existing.messages.push(...messages);
-          existing.unreadCount += chatSummary.unreadCount;
-        } else {
-          chatsByKey.set(chatKey, { messages: [...messages], unreadCount: chatSummary.unreadCount });
+          const existing = chatsByKey.get(chatKey);
+          const unreadDelta = !message.isOutgoing && !message.read ? 1 : 0;
+          if (existing) {
+            existing.messages.push(message);
+            existing.unreadCount += unreadDelta;
+          } else {
+            chatsByKey.set(chatKey, { messages: [message], unreadCount: unreadDelta });
+          }
         }
       }
 
-      // Now create chat objects from merged data
+      // Now create chat objects from the grouped message data
       for (const [chatKey, data] of chatsByKey.entries()) {
         const messagesMap = new Map<string, DirectMessage>();
         let lastMessage: DirectMessage | null = null;
@@ -1285,9 +1331,10 @@ export class MessagingService implements NostriaService {
         }
 
         // Detect if this is a group chat and extract participants
-        const isGroup = chatKey.startsWith('group:');
+        const isGroup = isGroupChatId(chatKey);
         let participants: string[] | undefined;
         let chatPubkey: string;
+        const parsedDirectChat = parseDirectChatId(chatKey);
 
         if (isGroup) {
           // Extract participant pubkeys from group chatId format: group:pk1,pk2,pk3
@@ -1295,7 +1342,7 @@ export class MessagingService implements NostriaService {
           // For groups, pubkey is empty string (use participants instead)
           chatPubkey = '';
         } else {
-          chatPubkey = chatKey;
+          chatPubkey = parsedDirectChat?.pubkey ?? chatKey;
         }
 
         // Check for subject from the most recent message's tags
@@ -1317,7 +1364,7 @@ export class MessagingService implements NostriaService {
           pubkey: chatPubkey,
           unreadCount: data.unreadCount,
           lastMessage: lastMessage,
-          encryptionType: 'nip44', // Default to modern encryption
+          encryptionType: isGroup ? 'nip44' : (parsedDirectChat?.protocol ?? 'nip44'),
           hasLegacyMessages: hasLegacyMessages,
           messages: messagesMap,
           isGroup,
@@ -1500,7 +1547,8 @@ export class MessagingService implements NostriaService {
           }
         }
 
-        if (this.hasMessage(targetPubkey, event.id)) return;
+        const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+        if (this.hasMessage(targetChatId, event.id)) return;
 
         const unwrappedMessage = await this.unwrapNip04Message(event);
         if (!unwrappedMessage) return;
@@ -1521,7 +1569,7 @@ export class MessagingService implements NostriaService {
           replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
         };
 
-        await this.addResolvedMessageToChat(targetPubkey, directMessage);
+        await this.addResolvedMessageToChat(targetChatId, directMessage);
       }
     } catch (err) {
       this.logger.error('Error processing incoming event:', err);
@@ -1672,7 +1720,8 @@ export class MessagingService implements NostriaService {
               }
             }
 
-            if (this.hasMessage(targetPubkey, event.id)) {
+            const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+            if (this.hasMessage(targetChatId, event.id)) {
               continue;
             }
 
@@ -1700,7 +1749,7 @@ export class MessagingService implements NostriaService {
                   replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
                 };
 
-                await this.addResolvedMessageToChat(targetPubkey, directMessage);
+                await this.addResolvedMessageToChat(targetChatId, directMessage);
               } catch (err) {
                 this.logger.error('Error processing NIP-04 event:', err);
               }
@@ -1883,7 +1932,8 @@ export class MessagingService implements NostriaService {
               }
             }
 
-            if (this.hasMessage(targetPubkey, event.id)) continue;
+            const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+            if (this.hasMessage(targetChatId, event.id)) continue;
 
             const unwrappedMessage = await this.unwrapNip04Message(event);
             if (!unwrappedMessage) continue;
@@ -1903,7 +1953,7 @@ export class MessagingService implements NostriaService {
               replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
             };
 
-            await this.addResolvedMessageToChat(targetPubkey, directMessage);
+            await this.addResolvedMessageToChat(targetChatId, directMessage);
           }
         } catch (err) {
           this.logger.error('Error processing event from additional relay:', err);
@@ -2172,7 +2222,7 @@ export class MessagingService implements NostriaService {
             replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
           };
 
-          this.addMessageToChat(targetPubkey, directMessage);
+          this.addMessageToChat(computeDirectChatId(targetPubkey, 'nip04'), directMessage);
         }
       } catch (err) {
         this.logger.error('Error processing real-time DM event:', err);
@@ -2478,15 +2528,17 @@ export class MessagingService implements NostriaService {
       oldestInnerTimestamp = Math.min(...currentMessages.map(m => m.created_at));
     }
 
+    const isLegacyChat = !chat.isGroup && chat.encryptionType === 'nip04';
+
     // NIP-17 gift wraps use randomized outer timestamps up to 2 days (172800s) in the past.
     // The inner (decrypted) message timestamp is the real one, but relays index by the
     // outer timestamp. To find older messages we need to look further back.
     const NIP17_TIMESTAMP_BUFFER = 172800; // 2 days in seconds
-    const until = oldestInnerTimestamp + NIP17_TIMESTAMP_BUFFER; // outer timestamp could be up to 2 days after inner
-    const since = oldestInnerTimestamp - NIP17_TIMESTAMP_BUFFER; // also look 2 days before the oldest inner
+    const timestampBuffer = isLegacyChat ? 0 : NIP17_TIMESTAMP_BUFFER;
+    const until = oldestInnerTimestamp + timestampBuffer; // outer timestamp could be up to 2 days after inner
+    const since = oldestInnerTimestamp - timestampBuffer; // also look 2 days before the oldest inner
 
-    // Query both NIP-04 and NIP-44 messages for merged chats
-    const messageKinds = [kinds.EncryptedDirectMessage, kinds.GiftWrap];
+    const messageKinds = isLegacyChat ? [kinds.EncryptedDirectMessage] : [kinds.GiftWrap];
 
     this.logger.debug(
       `Loading more messages for chat ${chatId}, oldest inner: ${oldestInnerTimestamp} (${new Date(oldestInnerTimestamp * 1000).toISOString()}), ` +
@@ -2593,13 +2645,15 @@ export class MessagingService implements NostriaService {
             }
           }
 
+          const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+
           // Only process messages belonging to THIS chat (NIP-04 is always 1-on-1)
-          if (targetPubkey !== chatId) {
+          if (targetChatId !== chatId) {
             return;
           }
 
           // Check if we already have this event in the chat
-          if (this.hasMessage(targetPubkey, event.id)) {
+          if (this.hasMessage(targetChatId, event.id)) {
             return;
           }
 
@@ -2622,7 +2676,7 @@ export class MessagingService implements NostriaService {
           };
 
           loadedMessages.push(directMessage);
-          await this.addResolvedMessageToChat(targetPubkey, directMessage);
+          await this.addResolvedMessageToChat(targetChatId, directMessage);
         }
       } catch (error) {
         this.logger.error('Failed to process older message:', error);
@@ -2806,7 +2860,8 @@ export class MessagingService implements NostriaService {
                 }
               }
 
-              if (this.hasMessage(targetPubkey, event.id)) {
+              const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+              if (this.hasMessage(targetChatId, event.id)) {
                 completedDecryptions++;
                 checkCompletion();
                 return; // Skip if we already have this message
@@ -2844,7 +2899,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              await this.addResolvedMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetChatId, directMessage);
             }
           } catch (error) {
             this.logger.error('Error processing message during loadMoreChats:', error);
@@ -2949,7 +3004,8 @@ export class MessagingService implements NostriaService {
                 }
               }
 
-              if (this.hasMessage(targetPubkey, event.id)) {
+              const targetChatId = computeDirectChatId(targetPubkey, 'nip04');
+              if (this.hasMessage(targetChatId, event.id)) {
                 completedDecryptions++;
                 checkCompletion();
                 return; // Skip if we already have this message
@@ -2987,7 +3043,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              await this.addResolvedMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetChatId, directMessage);
             }
           } catch (error) {
             this.logger.error('Error processing message during loadMoreChats:', error);
@@ -3489,21 +3545,24 @@ export class MessagingService implements NostriaService {
 
         const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
 
+        const selfEphemeralKey = generateSecretKey();
+        const selfEphemeralPubkey = getPublicKey(selfEphemeralKey);
+
         const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
           JSON.stringify(signedSealedMessage2),
-          bytesToHex(ephemeralKey),
+          bytesToHex(selfEphemeralKey),
           myPubkey
         );
 
         const giftWrap2 = {
           kind: kinds.GiftWrap,
-          pubkey: ephemeralPubkey,
+          pubkey: selfEphemeralPubkey,
           created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
           tags: [['p', myPubkey]],
           content: giftWrapContent2,
         };
 
-        const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
+        const signedGiftWrap2 = finalizeEvent(giftWrap2, selfEphemeralKey);
 
         // Publish both gift wraps to recipient's and sender's DM relays (NIP-17)
         const publishPromises: Promise<unknown>[] = [];

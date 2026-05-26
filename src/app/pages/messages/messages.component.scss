@@ -514,8 +514,17 @@
   min-width: 0;
 }
 
+.private-chat-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .private-chat-header-name {
   display: block;
+  flex: 0 1 auto;
   min-width: 0;
   font-size: 1rem;
   line-height: 1.2;
@@ -527,6 +536,29 @@
 
 .private-chat-header-name app-profile-display-name {
   display: inline;
+}
+
+.legacy-protocol-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  height: 20px;
+  padding: 0 6px 0 4px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-error) 42%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--mat-sys-error) 10%, transparent);
+  color: var(--mat-sys-error);
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
 }
 
 .chat-header-actions {

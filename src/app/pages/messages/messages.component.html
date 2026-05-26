@@ -262,6 +262,11 @@
             </div>
             }
           </div>
+          } @else if (isFollowingListLoading()) {
+          <div class="empty-tab-content">
+            <mat-spinner diameter="28"></mat-spinner>
+            <p>Loading contacts...</p>
+          </div>
           } @else {
           <div class="empty-tab-content">
             <mat-icon>people</mat-icon>
@@ -399,6 +404,11 @@
             </div>
             }
           </div>
+          } @else if (isFollowingListLoading()) {
+          <div class="empty-tab-content">
+            <mat-spinner diameter="28"></mat-spinner>
+            <p>Loading contacts...</p>
+          </div>
           } @else {
           <div class="empty-tab-content">
             <mat-icon>forum</mat-icon>
@@ -468,7 +478,16 @@
               <app-user-profile [pubkey]="selectedChat()!.pubkey" view="avatar"></app-user-profile>
             </div>
             <div class="private-chat-header-info">
-              <span class="private-chat-header-name">{{ selectedChatDisplayName() }}</span>
+              <div class="private-chat-header-title-row">
+                <span class="private-chat-header-name">{{ selectedChatDisplayName() }}</span>
+                @if (selectedChat()?.encryptionType === 'nip04') {
+                <span class="legacy-protocol-indicator" matTooltip="Legacy chat protocol (NIP-04)"
+                  aria-label="Legacy chat protocol NIP-04">
+                  <mat-icon>lock_open</mat-icon>
+                  <span>NIP-04</span>
+                </span>
+                }
+              </div>
               @if (selectedChatLastActiveLabel()) {
               <span class="chat-header-activity">{{ selectedChatLastActiveLabel() }}</span>
               }

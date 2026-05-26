@@ -25,6 +25,7 @@ import { ChatChannelsService } from './chat-channels.service';
 import { UserStatusService } from './user-status.service';
 import { PollService } from './poll.service';
 import { MessagingService } from './messaging.service';
+import { DeleteEventService } from './delete-event.service';
 
 // Load schemas via createRequire to bypass ESM JSON import attribute issue (Node 22+).
 // The schemata bundle uses ESM imports for JSON without { type: "json" }, which breaks.
@@ -266,6 +267,7 @@ function createNostrService(): NostrService {
       saveEvent: vi.fn().mockResolvedValue(undefined),
       saveEvents: vi.fn().mockResolvedValue(undefined),
     },
+    deleteEventService: Object.create(DeleteEventService.prototype),
     publishService: { publish: vi.fn().mockResolvedValue({ success: true, relayResults: new Map() }) },
   });
 
@@ -330,6 +332,9 @@ function createUtilitiesService() {
     getEventExpiration(event: Event): number | null {
       const tag = event.tags.find((t) => t[0] === 'expiration');
       return tag ? parseInt(tag[1], 10) : null;
+    },
+    getUniqueNormalizedRelayUrls(relayUrls: string[]): string[] {
+      return [...new Set(relayUrls)];
     },
   };
 }
@@ -656,6 +661,10 @@ describe('Schemata Schema Validation', () => {
           getUserEmojiSets: vi.fn().mockResolvedValue(new Map()),
         },
         accountState: { pubkey: () => FAKE_PUBKEY },
+        accountRelay: { getRelayUrls: vi.fn().mockReturnValue(['wss://account.relay']) },
+        userRelaysService: { getUserRelaysForPublishing: vi.fn().mockResolvedValue([]) },
+        accountLocalState: { markReactionDeleted: vi.fn() },
+        database: { deleteEvent: vi.fn().mockResolvedValue(undefined) },
       });
     });
 
@@ -1187,6 +1196,7 @@ describe('Schemata Schema Validation', () => {
   describe('MessagingService (NIP-17 DMs)', () => {
     let messagingService: MessagingService;
     let encryptionMock: { encryptNip44: ReturnType<typeof vi.fn>; encryptNip44WithKey: ReturnType<typeof vi.fn> };
+    let userRelayServiceMock: { publishToDmRelays: ReturnType<typeof vi.fn> };
 
     beforeAll(() => {
       nostrService = createNostrService();
@@ -1195,6 +1205,9 @@ describe('Schemata Schema Validation', () => {
       encryptionMock = {
         encryptNip44: vi.fn().mockResolvedValue('encrypted-content-placeholder'),
         encryptNip44WithKey: vi.fn().mockResolvedValue('giftwrap-encrypted-placeholder'),
+      };
+      userRelayServiceMock = {
+        publishToDmRelays: vi.fn().mockResolvedValue(true),
       };
 
       messagingService = Object.create(
@@ -1219,9 +1232,10 @@ describe('Schemata Schema Validation', () => {
         },
         accountLocalState: { get: vi.fn(), set: vi.fn() },
         injector: { get: vi.fn() },
-        userRelayService: null,
-        getUserRelayService: vi.fn().mockResolvedValue(null),
+        userRelayService: userRelayServiceMock,
+        getUserRelayService: vi.fn().mockResolvedValue(userRelayServiceMock),
         awaitDirectMessagePublishes: vi.fn().mockResolvedValue(undefined),
+        addMessageToChat: vi.fn(),
         conversations: Object.assign(() => new Map(), { update: vi.fn(), set: vi.fn() }),
       });
     });
@@ -1287,13 +1301,9 @@ describe('Schemata Schema Validation', () => {
       signEventSpy.mockClear();
       encryptionMock.encryptNip44.mockClear();
       encryptionMock.encryptNip44WithKey.mockClear();
+      userRelayServiceMock.publishToDmRelays.mockClear();
 
-      try {
-        await messagingService.sendDirectMessage('Gift wrap test', FAKE_PUBKEY_2);
-      } catch {
-        // finalizeEvent with real ephemeral key may work or may fail
-        // depending on nostr-tools availability in test env
-      }
+      await messagingService.sendDirectMessage('Gift wrap test', FAKE_PUBKEY_2);
 
       // encryptNip44WithKey is called for the gift wrap encryption
       // The gift wrap event is constructed AFTER this call, then passed to finalizeEvent
@@ -1308,6 +1318,25 @@ describe('Schemata Schema Validation', () => {
         expect(seal.id).toBeTruthy();
         expect(seal.sig).toBeTruthy();
       }
+
+      expect(userRelayServiceMock.publishToDmRelays).toHaveBeenCalledTimes(2);
+      const [recipientTarget, recipientGiftWrap] = userRelayServiceMock.publishToDmRelays.mock.calls[0];
+      const [selfTarget, selfGiftWrap] = userRelayServiceMock.publishToDmRelays.mock.calls[1];
+
+      expect(recipientTarget).toBe(FAKE_PUBKEY_2);
+      expect(recipientGiftWrap.kind).toBe(kinds.GiftWrap);
+      expect(recipientGiftWrap.tags).toEqual([['p', FAKE_PUBKEY_2]]);
+      expect(validateRawEvent(recipientGiftWrap, schemaRegistry).valid).toBe(true);
+
+      expect(selfTarget).toBe(FAKE_PUBKEY);
+      expect(selfGiftWrap.kind).toBe(kinds.GiftWrap);
+      expect(selfGiftWrap.tags).toEqual([['p', FAKE_PUBKEY]]);
+      expect(validateRawEvent(selfGiftWrap, schemaRegistry).valid).toBe(true);
+
+      expect(recipientGiftWrap.pubkey).not.toBe(selfGiftWrap.pubkey);
+      expect(encryptionMock.encryptNip44WithKey.mock.calls[0][1]).not.toBe(
+        encryptionMock.encryptNip44WithKey.mock.calls[1][1],
+      );
     });
   });
 

@@ -66,7 +66,7 @@ interface ScrollLockStyles {
       [attr.role]="disableClose() ? 'presentation' : 'button'"
       [attr.aria-label]="disableClose() ? null : 'Close dialog'"
       [attr.tabindex]="disableClose() ? -1 : 0">
-      
+
       <div
         class="dialog-container"
         [ngClass]="panelClass()"
@@ -78,6 +78,10 @@ interface ScrollLockStyles {
         [cdkTrapFocusAutoCapture]="true"
         tabindex="-1"
         #dialogContainer>
+        <ng-template #dialogContentTemplate>
+          <ng-content select="[dialog-content]"></ng-content>
+        </ng-template>
+
         <app-material-custom-dialog
           class="legacy-custom-dialog-shell"
           [style.--material-custom-dialog-width]="width()"
@@ -90,6 +94,7 @@ interface ScrollLockStyles {
           [showCloseButton]="getShowCloseButton()"
           [showActions]="showActions()"
           [closeResult]="false"
+          [contentTemplate]="dialogContentTemplate"
           (closed)="onCloseClick()">
           @if (getShowBackButton()) {
           <button dialog-header-leading class="back-button" (click)="onBackClick()" aria-label="Back" type="button">
@@ -98,8 +103,6 @@ interface ScrollLockStyles {
           }
 
           <ng-content select="[dialog-header]"></ng-content>
-
-          <ng-content select="[dialog-content]"></ng-content>
 
           @if (showActions()) {
           <div dialog-actions>
