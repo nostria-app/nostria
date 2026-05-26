@@ -117,12 +117,13 @@
         <mat-tab label="Following">
           @if (hasFollowingChats()) {
           <div class="tab-content">
-            <mat-nav-list class="chat-list">
+            <mat-nav-list class="chat-list" (keydown)="onChatListKeydown($event)">
               <!-- Note to Self - always shown at top if it exists -->
               @if (noteToSelfChat(); as noteToSelf) {
               @let chat = noteToSelf.chat;
               <a mat-list-item class="chat-item note-to-self-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     <div class="note-to-self-avatar">
@@ -157,7 +158,8 @@
               @for (item of followingChats(); track item.chat.id) {
               @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     @if (chat.isGroup) {
@@ -298,11 +300,12 @@
           </div>
           @if (hasOtherChats()) {
           <div class="tab-content">
-            <mat-nav-list class="chat-list">
+            <mat-nav-list class="chat-list" (keydown)="onChatListKeydown($event)">
               @for (item of otherChats(); track item.chat.id) {
               @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     @if (chat.isGroup) {

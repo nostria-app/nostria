@@ -847,6 +847,60 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   hasFollowingChats = computed(() => this.followingChats().length > 0 || this.noteToSelfChat() !== null);
   hasOtherChats = computed(() => this.otherChats().length > 0);
 
+  private visibleChatNavigationItems(): Chat[] {
+    if (this.selectedTabIndex() === 0) {
+      const noteToSelf = this.noteToSelfChat()?.chat;
+      const following = this.followingChats().map(item => item.chat);
+      return noteToSelf ? [noteToSelf, ...following] : following;
+    }
+
+    return this.otherChats().map(item => item.chat);
+  }
+
+  onChatListKeydown(event: KeyboardEvent): void {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    const direction = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    if (direction === 0) {
+      return;
+    }
+
+    const chats = this.visibleChatNavigationItems();
+    if (chats.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const selectedChatId = this.selectedChatId();
+    const currentIndex = selectedChatId ? chats.findIndex(chat => chat.id === selectedChatId) : -1;
+    const nextIndex = currentIndex === -1
+      ? direction > 0 ? 0 : chats.length - 1
+      : Math.max(0, Math.min(chats.length - 1, currentIndex + direction));
+
+    if (nextIndex === currentIndex) {
+      return;
+    }
+
+    const nextChat = chats[nextIndex];
+    void this.selectChat(nextChat).then(() => this.focusChatListItem(nextChat.id));
+  }
+
+  private focusChatListItem(chatId: string): void {
+    setTimeout(() => {
+      if (typeof document === 'undefined') {
+        return;
+      }
+
+      const chatItems = Array.from(document.querySelectorAll<HTMLElement>('.chat-list .chat-item'));
+      const chatItem = chatItems.find(item => item.dataset['chatId'] === chatId);
+      chatItem?.focus();
+    }, 0);
+  }
+
   private groupMessagesByDate(messages: DirectMessage[]): MessageGroup[] {
     if (messages.length === 0) return [];
 

@@ -711,6 +711,84 @@ describe('MessagesComponent chat drafts', () => {
     });
 });
 
+describe('MessagesComponent chat list keyboard navigation', () => {
+    function createKeyboardComponent(): {
+        component: MessagesComponent;
+        chats: Record<string, { id: string; pubkey: string; unreadCount: number; messages: Map<string, DirectMessage> }>;
+    } {
+        const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+        const chats = {
+            note: { id: 'note-nip44', pubkey: TEST_MY_PUBKEY, unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            followingA: { id: 'following-a-nip44', pubkey: 'a'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            followingB: { id: 'following-b-nip44', pubkey: 'b'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            otherA: { id: 'other-a-nip44', pubkey: 'c'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            otherB: { id: 'other-b-nip44', pubkey: 'd'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+        };
+
+        (component as any).selectedTabIndex = signal(0);
+        (component as any).selectedChatId = signal(chats.followingA.id);
+        (component as any).noteToSelfChat = vi.fn(() => ({ chat: chats.note }));
+        (component as any).followingChats = vi.fn(() => [{ chat: chats.followingA }, { chat: chats.followingB }]);
+        (component as any).otherChats = vi.fn(() => [{ chat: chats.otherA }, { chat: chats.otherB }]);
+        (component as any).selectChat = vi.fn().mockResolvedValue(undefined);
+        (component as any).focusChatListItem = vi.fn();
+
+        return { component, chats };
+    }
+
+    function keyboardEvent(key: string): KeyboardEvent {
+        return {
+            key,
+            altKey: false,
+            ctrlKey: false,
+            metaKey: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as KeyboardEvent;
+    }
+
+    it('selects the next visible following chat with ArrowDown', () => {
+        const { component, chats } = createKeyboardComponent();
+        const event = keyboardEvent('ArrowDown');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.followingB);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('includes Note to Self when navigating upward in the Following tab', () => {
+        const { component, chats } = createKeyboardComponent();
+        const event = keyboardEvent('ArrowUp');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.note);
+    });
+
+    it('uses the visible Others tab list when that tab has focus', () => {
+        const { component, chats } = createKeyboardComponent();
+        (component as any).selectedTabIndex.set(1);
+        (component as any).selectedChatId.set(chats.otherA.id);
+        const event = keyboardEvent('ArrowDown');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.otherB);
+    });
+
+    it('ignores non-arrow keys', () => {
+        const { component } = createKeyboardComponent();
+        const event = keyboardEvent('Enter');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).not.toHaveBeenCalled();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+});
+
 describe('MessagesComponent message render batching', () => {
     function createThreadComponent(messageCount: number): MessagesComponent {
         const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
