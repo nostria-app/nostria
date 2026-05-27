@@ -20,6 +20,7 @@ import { ListFilterValue, MusicTrackSortValue } from '../../../components/list-f
 import { MusicListFilterComponent } from '../../../components/music-list-filter/music-list-filter.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
+import { CURATED_MUSIC_FILTER, MusicCuratedService } from '../../../services/music-curated.service';
 import { parseMusicReleasedTag } from '../music-release-date.util';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
@@ -562,7 +563,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private followSetsService = inject(FollowSetsService);
   private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
-  sourceInput = input<'following' | 'public' | undefined>(undefined);
+  private musicCurated = inject(MusicCuratedService);
+  sourceInput = input<'curated' | 'following' | 'public' | undefined>(undefined);
 
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
   searchInput = viewChild<ElementRef>('searchInput');
@@ -579,8 +581,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedGenres = signal<string[]>([]);
   genresExpanded = signal(false);
 
-  // List filter state - 'all', 'following', or follow set d-tag
-  selectedListFilter = signal<ListFilterValue>('all');
+  // List filter state - 'curated', 'all', 'following', or follow set d-tag
+  selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
 
   // URL query param for list filter
   urlListFilter = signal<string | undefined>(undefined);
@@ -603,7 +605,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   // Computed: get the currently selected follow set (if any)
   selectedFollowSet = computed(() => {
     const filter = this.selectedListFilter();
-    if (filter === 'all' || filter === 'following') {
+    if (filter === CURATED_MUSIC_FILTER || filter === 'all' || filter === 'following') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -612,6 +614,9 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   // Computed: get the pubkeys to filter by based on current selection
   private filterPubkeys = computed(() => {
     const filter = this.selectedListFilter();
+    if (filter === CURATED_MUSIC_FILTER) {
+      return this.musicCurated.pubkeys();
+    }
     if (filter === 'all') {
       return null; // No filtering
     }
@@ -815,6 +820,10 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   ngOnInit(): void {
+    void this.initializeFromRoute();
+  }
+
+  private async initializeFromRoute(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.sortBy.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
@@ -825,7 +834,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     if (sourceFromInput) {
       // Map legacy source to new filter
       this.selectedListFilter.set(sourceFromInput === 'public' ? 'all' : sourceFromInput);
-      this.initializeTracks();
+      await this.initializeTracks();
       return;
     }
 
@@ -842,18 +851,22 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       const sourceParam = queryParams['source'];
       if (sourceParam === 'following') {
         this.selectedListFilter.set('following');
+      } else if (sourceParam === CURATED_MUSIC_FILTER) {
+        this.selectedListFilter.set(CURATED_MUSIC_FILTER);
       } else if (sourceParam === 'public') {
         this.selectedListFilter.set('all');
       }
     }
 
-    this.initializeTracks();
+    await this.initializeTracks();
   }
 
   /**
    * Initialize tracks - use preloaded data if available, otherwise fetch from relays
    */
-  private initializeTracks(): void {
+  private async initializeTracks(): Promise<void> {
+    await this.musicCurated.ensureLoaded();
+
     // Check if we have preloaded tracks from the music page
     const preloadedTracks = this.musicData.consumePreloadedTracks();
     if (preloadedTracks && preloadedTracks.length > 0) {
@@ -914,6 +927,24 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  private getSubscriptionAuthorPubkeys(): string[] | null {
+    const pubkeys = this.filterPubkeys();
+    if (pubkeys === null) {
+      return null;
+    }
+
+    return Array.from(new Set(pubkeys));
+  }
+
+  private restartSubscription(): void {
+    this.trackMap.clear();
+    this.allTracks.set([]);
+    this.loading.set(true);
+    this.displayLimit.set(PAGE_SIZE);
+    this.trackSubscription?.close();
+    this.startSubscription();
+  }
+
   private checkSentinelProximity(): void {
     const sentinel = this.loadMoreSentinel()?.nativeElement as HTMLElement | undefined;
     if (!sentinel || !this.hasMore() || this.loadingMore() || this.loading()) {
@@ -928,6 +959,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private startSubscription(): void {
+    this.trackSubscription?.close();
+
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
@@ -947,6 +980,17 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       kinds: MUSIC_KINDS,
       limit: 500,
     };
+    const authors = this.getSubscriptionAuthorPubkeys();
+    if (authors !== null) {
+      if (authors.length === 0) {
+        clearTimeout(timeout);
+        this.loading.set(false);
+        this.tryObserveSentinel();
+        return;
+      }
+
+      filter.authors = authors;
+    }
 
     this.trackSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
       const uniqueId = this.getTrackUniqueId(event);
@@ -973,10 +1017,24 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   onFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
     this.displayLimit.set(PAGE_SIZE);
+    if (filter === CURATED_MUSIC_FILTER) {
+      void this.musicCurated.ensureLoaded().finally(() => this.restartSubscription());
+    } else {
+      this.restartSubscription();
+    }
+
     // Update URL query params
+    const queryParams = filter === CURATED_MUSIC_FILTER
+      ? { source: CURATED_MUSIC_FILTER, list: null }
+      : filter === 'all'
+        ? { source: 'public', list: null }
+        : filter === 'following'
+          ? { source: 'following', list: null }
+          : { source: null, list: filter };
+
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { list: filter },
+      queryParams,
       queryParamsHandling: 'merge',
     });
   }

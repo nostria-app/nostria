@@ -19,10 +19,11 @@ import { ListFilterValue } from '../../../components/list-filter-menu/list-filte
 import { MusicListFilterComponent } from '../../../components/music-list-filter/music-list-filter.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
+import { CURATED_MUSIC_FILTER, MusicCuratedService } from '../../../services/music-curated.service';
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
-type PlaylistSourceFilter = 'own' | 'following' | 'public';
+type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
 
 @Component({
   selector: 'app-music-playlists',
@@ -48,6 +49,7 @@ type PlaylistSourceFilter = 'own' | 'following' | 'public';
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated() && sourceFilter() === 'following') {
         <app-music-list-filter
+          [showCuratedOption]="false"
           [showPublicOption]="false"
           defaultFilter="following"
           [initialFilter]="urlListFilter()"
@@ -80,6 +82,10 @@ type PlaylistSourceFilter = 'own' | 'following' | 'public';
         <button mat-menu-item (click)="setSourceFilter('own')">
           <mat-icon>{{ sourceFilter() === 'own' ? 'check' : 'person' }}</mat-icon>
           <span>Your albums</span>
+        </button>
+        <button mat-menu-item (click)="setSourceFilter('curated')">
+          <mat-icon>{{ sourceFilter() === 'curated' ? 'check' : 'library_music' }}</mat-icon>
+          <span>Curated</span>
         </button>
         <button mat-menu-item (click)="setSourceFilter('following')">
           <mat-icon>{{ sourceFilter() === 'following' ? 'check' : 'people' }}</mat-icon>
@@ -117,6 +123,10 @@ type PlaylistSourceFilter = 'own' | 'following' | 'public';
           [attr.aria-pressed]="sourceFilter() === 'own'" (click)="setSourceFilter('own')">
           Yours
         </button>
+        <button type="button" class="source-filter-chip" [class.active]="sourceFilter() === 'curated'"
+          [attr.aria-pressed]="sourceFilter() === 'curated'" (click)="setSourceFilter('curated')">
+          Curated
+        </button>
         <button type="button" class="source-filter-chip" [class.active]="sourceFilter() === 'following'"
           [attr.aria-pressed]="sourceFilter() === 'following'" (click)="setSourceFilter('following')">
           Following
@@ -149,6 +159,8 @@ type PlaylistSourceFilter = 'own' | 'following' | 'public';
             <p>
               @if (sourceFilter() === 'own') {
                 <span>You haven't created any albums yet.</span>
+              } @else if (sourceFilter() === 'curated') {
+                <span>No albums from curated musicians yet. Switch to Public to discover albums from the wider Nostr network.</span>
               } @else if (sourceFilter() === 'following' && selectedFollowSet()) {
                 <span>No albums from "{{ selectedFollowSet()?.title || 'this list' }}" yet.</span>
               } @else if (sourceFilter() === 'following') {
@@ -403,21 +415,22 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private followSetsService = inject(FollowSetsService);
   private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
-  sourceInput = input<'following' | 'public' | undefined>(undefined);
+  private musicCurated = inject(MusicCuratedService);
+  sourceInput = input<'curated' | 'following' | 'public' | undefined>(undefined);
 
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
   sortBy = signal<'recents' | 'alphabetical'>('recents');
-  sourceFilter = signal<PlaylistSourceFilter>('public');
+  sourceFilter = signal<PlaylistSourceFilter>(CURATED_MUSIC_FILTER);
 
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
 
-  // List filter state - 'all', 'following', or follow set d-tag
-  selectedListFilter = signal<ListFilterValue>('all');
+  // List filter state - 'curated', 'all', 'following', or follow set d-tag
+  selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
 
   // URL query param for list filter
   urlListFilter = signal<string | undefined>(undefined);
@@ -442,7 +455,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   // Computed: get the currently selected follow set (if any)
   selectedFollowSet = computed(() => {
     const filter = this.selectedListFilter();
-    if (filter === 'all' || filter === 'following') {
+    if (filter === CURATED_MUSIC_FILTER || filter === 'all' || filter === 'following') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -450,6 +463,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
   // Computed: get the pubkeys to filter by based on current selection
   private filterPubkeys = computed(() => {
+    if (this.sourceFilter() === CURATED_MUSIC_FILTER) {
+      return this.musicCurated.pubkeys();
+    }
+
     if (this.sourceFilter() !== 'following') {
       return null;
     }
@@ -467,6 +484,8 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     switch (this.sourceFilter()) {
       case 'own':
         return 'Yours';
+      case 'curated':
+        return 'Curated';
       case 'following':
         return 'Following';
       case 'public':
@@ -518,6 +537,16 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
         break;
       }
 
+      case 'curated': {
+        const allowedPubkeys = new Set(pubkeys || []);
+        if (allowedPubkeys.size === 0) {
+          return [];
+        }
+
+        filtered = filtered.filter(playlist => allowedPubkeys.has(playlist.pubkey));
+        break;
+      }
+
       case 'public': {
         const followingPubkeys = new Set(this.followingPubkeys());
         filtered = filtered.filter(playlist => !followingPubkeys.has(playlist.pubkey) && playlist.pubkey !== myPubkey);
@@ -559,6 +588,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private intersectionObserver: IntersectionObserver | null = null;
 
   ngOnInit(): void {
+    void this.initializeFromRoute();
+  }
+
+  private async initializeFromRoute(): Promise<void> {
     // Get filter from query params - check for list (follow set) or source (own/following/public)
     const queryParams = this.route.snapshot.queryParams;
 
@@ -569,13 +602,20 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
       this.selectedListFilter.set(queryParams['list']);
     } else if (queryParams['source']) {
       const sourceParam = queryParams['source'];
-      if (sourceParam === 'own' || sourceParam === 'following' || sourceParam === 'public') {
+      if (
+        sourceParam === 'own' ||
+        sourceParam === CURATED_MUSIC_FILTER ||
+        sourceParam === 'following' ||
+        sourceParam === 'public'
+      ) {
         this.sourceFilter.set(sourceParam);
       }
 
       if (sourceParam === 'following') {
         this.urlListFilter.set('following');
         this.selectedListFilter.set('following');
+      } else if (sourceParam === CURATED_MUSIC_FILTER) {
+        this.selectedListFilter.set(CURATED_MUSIC_FILTER);
       }
     }
 
@@ -585,12 +625,14 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
       this.sourceFilter.set(sourceFromInput);
       if (sourceFromInput === 'following') {
         this.selectedListFilter.set('following');
+      } else if (sourceFromInput === CURATED_MUSIC_FILTER) {
+        this.selectedListFilter.set(CURATED_MUSIC_FILTER);
       } else {
         this.selectedListFilter.set('all');
       }
     }
 
-    this.initializePlaylists();
+    await this.initializePlaylists();
   }
 
   /**
@@ -601,6 +643,8 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     if (this.sourceFilter() !== 'following') {
       return;
     }
+
+    this.restartSubscription();
 
     this.router.navigate([], {
       relativeTo: this.route,
@@ -617,13 +661,22 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     this.displayLimit.set(PAGE_SIZE);
 
     if (source === 'following') {
-      if (this.selectedListFilter() === 'all') {
+      if (this.selectedListFilter() === 'all' || this.selectedListFilter() === CURATED_MUSIC_FILTER) {
         this.selectedListFilter.set('following');
       }
       this.urlListFilter.set(this.selectedListFilter());
+    } else if (source === CURATED_MUSIC_FILTER) {
+      this.selectedListFilter.set(CURATED_MUSIC_FILTER);
+      this.urlListFilter.set(undefined);
     } else {
       this.selectedListFilter.set('all');
       this.urlListFilter.set(undefined);
+    }
+
+    if (source === CURATED_MUSIC_FILTER) {
+      void this.musicCurated.ensureLoaded().finally(() => this.restartSubscription());
+    } else {
+      this.restartSubscription();
     }
 
     this.router.navigate([], {
@@ -641,7 +694,9 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   /**
    * Initialize playlists - use preloaded data if available, otherwise fetch from relays
    */
-  private initializePlaylists(): void {
+  private async initializePlaylists(): Promise<void> {
+    await this.musicCurated.ensureLoaded();
+
     // Check if we have preloaded playlists from the music page
     const preloadedPlaylists = this.musicData.consumePreloadedPlaylists();
     if (preloadedPlaylists && preloadedPlaylists.length > 0) {
@@ -699,7 +754,37 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     }
   }
 
+  private getSubscriptionAuthorPubkeys(): string[] | null {
+    const source = this.sourceFilter();
+    if (source === CURATED_MUSIC_FILTER) {
+      return Array.from(new Set(this.musicCurated.pubkeys()));
+    }
+
+    if (source === 'own') {
+      const pubkey = this.currentPubkey();
+      return pubkey ? [pubkey] : [];
+    }
+
+    if (source === 'following') {
+      const pubkeys = this.filterPubkeys();
+      return Array.from(new Set(pubkeys || []));
+    }
+
+    return null;
+  }
+
+  private restartSubscription(): void {
+    this.playlistMap.clear();
+    this.allPlaylists.set([]);
+    this.loading.set(true);
+    this.displayLimit.set(PAGE_SIZE);
+    this.playlistSubscription?.close();
+    this.startSubscription();
+  }
+
   private startSubscription(): void {
+    this.playlistSubscription?.close();
+
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
@@ -719,6 +804,17 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
       kinds: [PLAYLIST_KIND],
       limit: 500,
     };
+    const authors = this.getSubscriptionAuthorPubkeys();
+    if (authors !== null) {
+      if (authors.length === 0) {
+        clearTimeout(timeout);
+        this.loading.set(false);
+        this.tryObserveSentinel();
+        return;
+      }
+
+      filter.authors = authors;
+    }
 
     this.playlistSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';

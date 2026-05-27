@@ -7,6 +7,7 @@ import { ListFilterMenuComponent, ListFilterValue } from '../list-filter-menu/li
   template: `
     <app-list-filter-menu
       storageKey="music"
+      [showCuratedOption]="showCuratedOption()"
       [showPublicOption]="showPublicOption()"
       [defaultFilter]="defaultFilter()"
       [compact]="true"
@@ -18,7 +19,8 @@ import { ListFilterMenuComponent, ListFilterValue } from '../list-filter-menu/li
 export class MusicListFilterComponent {
   initialFilter = input<ListFilterValue | undefined>(undefined);
   showPublicOption = input(true);
-  defaultFilter = input<ListFilterValue>('all');
+  showCuratedOption = input(true);
+  defaultFilter = input<ListFilterValue>('curated');
 
   filterChanged = output<ListFilterValue>();
 }

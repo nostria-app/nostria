@@ -18,7 +18,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FilterButtonComponent } from '../filter-button/filter-button.component';
 
-export type ListFilterValue = 'all' | 'following' | string;
+export type ListFilterValue = 'all' | 'following' | 'curated' | string;
 export type MusicTrackSortValue = 'released' | 'published';
 
 @Component({
@@ -36,7 +36,20 @@ export type MusicTrackSortValue = 'released' | 'published';
         <div class="filter-panel-left">
           <div class="section-title">List filter</div>
 
-          @if (showPublicOption()) {
+          @if (showCuratedOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'curated'"
+            (click)="selectFilter('curated')">
+            <mat-icon class="chip-icon">library_music</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Curated</span>
+              <span class="chip-description">Selected musicians</span>
+            </div>
+          </button>
+          }
+
+          @if (!showCuratedOption() && showPublicOption()) {
           <button
             class="filter-option-chip"
             [class.selected]="selectedFilter() === 'all'"
@@ -59,6 +72,19 @@ export type MusicTrackSortValue = 'released' | 'published';
               <span class="chip-description">People you follow</span>
             </div>
           </button>
+
+          @if (showCuratedOption() && showPublicOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'all'"
+            (click)="selectFilter('all')">
+            <mat-icon class="chip-icon">public</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Public</span>
+              <span class="chip-description">All public content</span>
+            </div>
+          </button>
+          }
 
           @if (showWotOption()) {
           <button
@@ -236,6 +262,7 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Inputs
   showPublicOption = input<boolean>(false);
+  showCuratedOption = input<boolean>(false);
   showWotOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
@@ -262,10 +289,10 @@ export class ListFilterMenuComponent implements OnInit {
       .sort((a, b) => a.title.localeCompare(b.title))
   );
 
-  // Computed: selected follow set (null for 'all', 'following', or 'wot')
+  // Computed: selected follow set (null for built-in filters)
   selectedFollowSet = computed(() => {
     const filter = this.selectedFilter();
-    if (filter === 'all' || filter === 'following' || filter === 'wot') {
+    if (filter === 'all' || filter === 'following' || filter === 'curated' || filter === 'wot') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -285,6 +312,8 @@ export class ListFilterMenuComponent implements OnInit {
       title = 'Public';
     } else if (filter === 'following') {
       title = 'Following';
+    } else if (filter === 'curated') {
+      title = 'Curated';
     } else if (filter === 'wot') {
       title = 'Web of Trust';
     } else {
