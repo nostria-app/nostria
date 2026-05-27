@@ -16,6 +16,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { DeleteEventService } from '../../services/delete-event.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { ClipboardService } from '../../services/clipboard.service';
 
 export interface EditPeopleListDialogData {
   followSet: FollowSet;
@@ -102,6 +103,10 @@ export interface EditPeopleListDialogResult {
     </div>
 
     <div dialog-actions class="edit-people-list-actions">
+        <button mat-button type="button" (click)="copyData()" [disabled]="!hasEventData()">
+          <mat-icon>content_copy</mat-icon>
+          Copy Data
+        </button>
         <button mat-button type="button" class="delete-button" (click)="deleteList()">
           <mat-icon>delete</mat-icon>
           Delete List
@@ -273,6 +278,7 @@ export class EditPeopleListDialogComponent {
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly dialogRef = inject(CustomDialogRef<EditPeopleListDialogComponent, EditPeopleListDialogResult | undefined>);
   private readonly deleteEventService = inject(DeleteEventService);
+  private readonly clipboard = inject(ClipboardService);
 
   set data(value: EditPeopleListDialogData) {
     this.followSetData.set(value.followSet);
@@ -295,6 +301,7 @@ export class EditPeopleListDialogComponent {
       this.listName().trim() !== this.followSetData()!.title.trim()
     )
   );
+  hasEventData = computed(() => !!this.followSetData()?.event);
 
   private async loadProfiles(): Promise<void> {
     try {
@@ -403,6 +410,16 @@ export class EditPeopleListDialogComponent {
         this.notificationService.notify('Failed to delete list');
       }
     }
+  }
+
+  async copyData(): Promise<void> {
+    const event = this.followSetData()?.event;
+    if (!event) {
+      this.notificationService.notify('No event data available');
+      return;
+    }
+
+    await this.clipboard.copyJson(event, 'List event data copied to clipboard');
   }
 
   cancel(): void {
