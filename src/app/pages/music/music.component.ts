@@ -50,6 +50,8 @@ const PLAYLIST_KIND = 34139;
 const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
 const LIKE_QUERY_TIMEOUT_MS = 3000;
+const MUSIC_BACKFILL_PAGE_LIMIT = 500;
+const MUSIC_BACKFILL_TIMEOUT_MS = 7000;
 type MusicTrackSortValue = 'released' | 'published';
 
 interface ListeningEntry {
@@ -162,6 +164,7 @@ export class MusicComponent implements OnDestroy {
   private requestedProfilePubkeys = new Set<string>();
   private musicSubscriptionsStarted = false;
   private lastSubscriptionAuthorKey = '';
+  private musicBackfillRunId = 0;
 
   // Like/zap state for home page tracks
   private likedReactionByTargetKey = signal(new Map<string, Event>());
@@ -814,6 +817,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.musicBackfillRunId++;
     this.listeningPartyPubkey.set(null);
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
@@ -923,6 +927,7 @@ export class MusicComponent implements OnDestroy {
   private startSubscriptions(): void {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
+    const backfillRunId = ++this.musicBackfillRunId;
 
     // Get the user's account relays directly (no fallback)
     const accountRelays = this.accountRelay.getRelayUrls();
@@ -981,21 +986,7 @@ export class MusicComponent implements OnDestroy {
     }
 
     this.trackSubscription = this.pool.subscribe(allRelayUrls, trackFilter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = this.getTrackUniqueId(event);
-
-      const existing = this.trackMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.trackMap.set(uniqueId, event);
-      this.allTracks.set(Array.from(this.trackMap.values()));
-
-      // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err =>
-        this.logger.warn('[Music] Failed to save track to database:', err)
-      );
+      this.addTrackEvent(event);
 
       if (!tracksLoaded) {
         clearTimeout(trackTimeout);
@@ -1014,21 +1005,7 @@ export class MusicComponent implements OnDestroy {
     }
 
     this.playlistSubscription = this.pool.subscribe(allRelayUrls, playlistFilter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
-
-      const existing = this.playlistMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.playlistMap.set(uniqueId, event);
-      this.allPlaylists.set(Array.from(this.playlistMap.values()));
-
-      // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err =>
-        this.logger.warn('[Music] Failed to save playlist to database:', err)
-      );
+      this.addPlaylistEvent(event);
 
       if (!playlistsLoaded) {
         clearTimeout(playlistTimeout);
@@ -1036,6 +1013,99 @@ export class MusicComponent implements OnDestroy {
         checkLoaded();
       }
     });
+
+    void this.backfillMusicEvents(allRelayUrls, authors, backfillRunId);
+  }
+
+  private addTrackEvent(event: Event): boolean {
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const uniqueId = this.getTrackUniqueId(event);
+
+    const existing = this.trackMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.trackMap.set(uniqueId, event);
+    this.allTracks.set(Array.from(this.trackMap.values()));
+
+    this.database.saveEvent({ ...event, dTag }).catch(err =>
+      this.logger.warn('[Music] Failed to save track to database:', err)
+    );
+
+    return true;
+  }
+
+  private addPlaylistEvent(event: Event): boolean {
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const uniqueId = `${event.pubkey}:${dTag}`;
+
+    const existing = this.playlistMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.playlistMap.set(uniqueId, event);
+    this.allPlaylists.set(Array.from(this.playlistMap.values()));
+
+    this.database.saveEvent({ ...event, dTag }).catch(err =>
+      this.logger.warn('[Music] Failed to save playlist to database:', err)
+    );
+
+    return true;
+  }
+
+  private async backfillMusicEvents(
+    relayUrls: string[],
+    authors: string[] | null,
+    runId: number
+  ): Promise<void> {
+    await Promise.all([
+      this.backfillEventPages(relayUrls, MUSIC_KINDS, authors, runId, event => this.addTrackEvent(event)),
+      this.backfillEventPages(relayUrls, [PLAYLIST_KIND], authors, runId, event => this.addPlaylistEvent(event)),
+    ]);
+  }
+
+  private async backfillEventPages(
+    relayUrls: string[],
+    kindsToBackfill: number[],
+    authors: string[] | null,
+    runId: number,
+    addEvent: (event: Event) => boolean
+  ): Promise<void> {
+    let until: number | undefined;
+
+    while (runId === this.musicBackfillRunId) {
+      const filter: Filter = {
+        kinds: kindsToBackfill,
+        limit: MUSIC_BACKFILL_PAGE_LIMIT,
+      };
+
+      if (authors !== null) {
+        filter.authors = authors;
+      }
+
+      if (until !== undefined) {
+        filter.until = until;
+      }
+
+      const events = await this.pool.query(relayUrls, filter, MUSIC_BACKFILL_TIMEOUT_MS);
+      if (runId !== this.musicBackfillRunId || events.length === 0) {
+        return;
+      }
+
+      let oldestTimestamp = Number.MAX_SAFE_INTEGER;
+      for (const event of events) {
+        addEvent(event);
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+      }
+
+      if (oldestTimestamp === Number.MAX_SAFE_INTEGER || oldestTimestamp <= 0) {
+        return;
+      }
+
+      until = oldestTimestamp - 1;
+    }
   }
 
   refresh(): void {

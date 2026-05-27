@@ -26,6 +26,8 @@ import { parseMusicReleasedTag } from '../music-release-date.util';
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
 const COLLAPSED_GENRE_LIMIT = 16;
+const MUSIC_BACKFILL_PAGE_LIMIT = 500;
+const MUSIC_BACKFILL_TIMEOUT_MS = 7000;
 
 interface MusicGenreOption {
   key: string;
@@ -592,6 +594,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private trackSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private intersectionObserver: IntersectionObserver | null = null;
+  private trackBackfillRunId = 0;
 
   private followingPubkeys = computed(() => {
     return this.accountState.followingList() || [];
@@ -900,6 +903,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.trackBackfillRunId++;
     this.trackSubscription?.close();
     this.intersectionObserver?.disconnect();
   }
@@ -967,6 +971,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private startSubscription(): void {
     this.trackSubscription?.close();
+    const backfillRunId = ++this.trackBackfillRunId;
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
@@ -1000,17 +1005,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.trackSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-      const uniqueId = this.getTrackUniqueId(event);
-
-      const existing = this.trackMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.trackMap.set(uniqueId, event);
-      this.allTracks.set(
-        Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
-      );
+      this.addTrackEvent(event);
 
       if (!loaded) {
         clearTimeout(timeout);
@@ -1019,6 +1014,64 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tryObserveSentinel();
       }
     });
+
+    void this.backfillTrackEvents(relayUrls, authors, backfillRunId);
+  }
+
+  private addTrackEvent(event: Event): boolean {
+    const uniqueId = this.getTrackUniqueId(event);
+
+    const existing = this.trackMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.trackMap.set(uniqueId, event);
+    this.allTracks.set(
+      Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
+    );
+
+    return true;
+  }
+
+  private async backfillTrackEvents(
+    relayUrls: string[],
+    authors: string[] | null,
+    runId: number
+  ): Promise<void> {
+    let until: number | undefined;
+
+    while (runId === this.trackBackfillRunId) {
+      const filter: Filter = {
+        kinds: MUSIC_KINDS,
+        limit: MUSIC_BACKFILL_PAGE_LIMIT,
+      };
+
+      if (authors !== null) {
+        filter.authors = authors;
+      }
+
+      if (until !== undefined) {
+        filter.until = until;
+      }
+
+      const events = await this.pool.query(relayUrls, filter, MUSIC_BACKFILL_TIMEOUT_MS);
+      if (runId !== this.trackBackfillRunId || events.length === 0) {
+        return;
+      }
+
+      let oldestTimestamp = Number.MAX_SAFE_INTEGER;
+      for (const event of events) {
+        this.addTrackEvent(event);
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+      }
+
+      if (oldestTimestamp === Number.MAX_SAFE_INTEGER || oldestTimestamp <= 0) {
+        return;
+      }
+
+      until = oldestTimestamp - 1;
+    }
   }
 
   onFilterChanged(filter: ListFilterValue): void {

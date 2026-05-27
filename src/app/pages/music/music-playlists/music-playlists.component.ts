@@ -24,6 +24,8 @@ import { CURATED_MUSIC_FILTER, MusicCuratedService } from '../../../services/mus
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
+const MUSIC_BACKFILL_PAGE_LIMIT = 500;
+const MUSIC_BACKFILL_TIMEOUT_MS = 7000;
 type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
 
 @Component({
@@ -441,6 +443,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
   private playlistSubscription: { close: () => void } | null = null;
   private playlistMap = new Map<string, Event>();
+  private playlistBackfillRunId = 0;
 
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
   searchInput = viewChild<ElementRef>('searchInput');
@@ -745,6 +748,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   ngOnDestroy(): void {
+    this.playlistBackfillRunId++;
     this.playlistSubscription?.close();
     this.intersectionObserver?.disconnect();
   }
@@ -805,6 +809,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
   private startSubscription(): void {
     this.playlistSubscription?.close();
+    const backfillRunId = ++this.playlistBackfillRunId;
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
@@ -838,18 +843,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     }
 
     this.playlistSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
-
-      const existing = this.playlistMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.playlistMap.set(uniqueId, event);
-      this.allPlaylists.set(
-        Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
-      );
+      this.addPlaylistEvent(event);
 
       if (!loaded) {
         clearTimeout(timeout);
@@ -858,6 +852,65 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
         this.tryObserveSentinel();
       }
     });
+
+    void this.backfillPlaylistEvents(relayUrls, authors, backfillRunId);
+  }
+
+  private addPlaylistEvent(event: Event): boolean {
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const uniqueId = `${event.pubkey}:${dTag}`;
+
+    const existing = this.playlistMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.playlistMap.set(uniqueId, event);
+    this.allPlaylists.set(
+      Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
+    );
+
+    return true;
+  }
+
+  private async backfillPlaylistEvents(
+    relayUrls: string[],
+    authors: string[] | null,
+    runId: number
+  ): Promise<void> {
+    let until: number | undefined;
+
+    while (runId === this.playlistBackfillRunId) {
+      const filter: Filter = {
+        kinds: [PLAYLIST_KIND],
+        limit: MUSIC_BACKFILL_PAGE_LIMIT,
+      };
+
+      if (authors !== null) {
+        filter.authors = authors;
+      }
+
+      if (until !== undefined) {
+        filter.until = until;
+      }
+
+      const events = await this.pool.query(relayUrls, filter, MUSIC_BACKFILL_TIMEOUT_MS);
+      if (runId !== this.playlistBackfillRunId || events.length === 0) {
+        return;
+      }
+
+      let oldestTimestamp = Number.MAX_SAFE_INTEGER;
+      for (const event of events) {
+        this.addPlaylistEvent(event);
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+      }
+
+      if (oldestTimestamp === Number.MAX_SAFE_INTEGER || oldestTimestamp <= 0) {
+        return;
+      }
+
+      until = oldestTimestamp - 1;
+    }
   }
 
   loadMore(): void {
