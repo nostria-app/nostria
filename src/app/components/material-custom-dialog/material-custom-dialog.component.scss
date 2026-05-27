@@ -339,6 +339,29 @@
   }
 }
 
+.material-custom-dialog-panel.publish-dialog-panel {
+  --material-custom-dialog-width: min(700px, calc(100vw - 32px));
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: min(760px, calc(100dvh - var(--safe-area-top, 0px) - 32px));
+
+  app-material-custom-dialog {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .material-custom-dialog {
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 .material-custom-dialog-panel.emoji-picker-dialog-panel {
   --material-custom-dialog-width: min(420px, calc(100vw - 32px));
   --material-custom-dialog-min-height: 0;

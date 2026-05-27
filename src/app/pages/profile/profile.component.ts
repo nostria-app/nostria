@@ -72,7 +72,11 @@ import { ZapDialogComponent, ZapDialogData } from '../../components/zap-dialog/z
 import { FavoritesService } from '../../services/favorites.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../components/create-list-dialog/create-list-dialog.component';
-import { PublishDialogComponent, PublishDialogData } from '../../components/publish-dialog/publish-dialog.component';
+import {
+  PUBLISH_DIALOG_PANEL_CLASS,
+  PublishDialogComponent,
+  PublishDialogData,
+} from '../../components/publish-dialog/publish-dialog.component';
 import { DatabaseService } from '../../services/database.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { AccountService } from '../../api/services';
@@ -1348,6 +1352,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
@@ -1380,6 +1385,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       this.dialog.open(PublishDialogComponent, {
         data: dialogData,
         width: '600px',
+        panelClass: PUBLISH_DIALOG_PANEL_CLASS,
         disableClose: false,
       });
     } catch (error) {
@@ -1418,6 +1424,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       this.dialog.open(PublishDialogComponent, {
         data: dialogData,
         width: '600px',
+        panelClass: PUBLISH_DIALOG_PANEL_CLASS,
         disableClose: false,
       });
     } catch (error) {

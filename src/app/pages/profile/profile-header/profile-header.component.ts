@@ -25,6 +25,7 @@ import { AccountService } from '../../../api/services';
 import { PublicAccount } from '../../../api/models';
 import { firstValueFrom } from 'rxjs';
 import {
+  PUBLISH_DIALOG_PANEL_CLASS,
   PublishDialogComponent,
   PublishDialogData,
 } from '../../../components/publish-dialog/publish-dialog.component';
@@ -1487,6 +1488,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
@@ -1519,6 +1521,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       this.dialog.open(PublishDialogComponent, {
         data: dialogData,
         width: '600px',
+        panelClass: PUBLISH_DIALOG_PANEL_CLASS,
         disableClose: false,
       });
     } catch (error) {
@@ -1557,6 +1560,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       this.dialog.open(PublishDialogComponent, {
         data: dialogData,
         width: '600px',
+        panelClass: PUBLISH_DIALOG_PANEL_CLASS,
         disableClose: false,
       });
     } catch (error) {

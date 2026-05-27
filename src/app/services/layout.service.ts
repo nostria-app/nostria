@@ -15,6 +15,7 @@ import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
 import {
+  PUBLISH_DIALOG_PANEL_CLASS,
   PublishDialogComponent,
   PublishDialogData,
 } from '../components/publish-dialog/publish-dialog.component';
@@ -1045,7 +1046,7 @@ export class LayoutService implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
-      panelClass: 'responsive-dialog',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
@@ -1058,7 +1059,7 @@ export class LayoutService implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
-      panelClass: 'responsive-dialog',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
