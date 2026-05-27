@@ -12,7 +12,10 @@
   </button>
   }
   @if (isAuthenticated()) {
-  <app-music-list-filter [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
+  <app-music-list-filter
+    [initialFilter]="urlListFilter()"
+    (filterChanged)="onListFilterChanged($event)"
+    (hideGruuvChanged)="onHideGruuvChanged($event)" />
   }
   <!-- Refresh button - hidden on small screens -->
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh music" class="hide-small">

@@ -209,6 +209,7 @@ export class MusicComponent implements OnDestroy {
   // List filter state - 'curated', 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
   selectedTrackSort = signal<MusicTrackSortValue>('released');
+  hideGruuv = signal(false);
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
 
@@ -305,14 +306,26 @@ export class MusicComponent implements OnDestroy {
   // Filtered tracks and playlists based on search
   private filteredTracks = computed(() => {
     const query = this.searchQuery().trim();
-    if (!query) return this.allTracks();
-    return this.allTracks().filter(track => this.trackMatchesSearch(track, query));
+    let tracks = this.allTracks();
+
+    if (this.hideGruuv()) {
+      tracks = tracks.filter(track => !this.hasGruuvTag(track));
+    }
+
+    if (!query) return tracks;
+    return tracks.filter(track => this.trackMatchesSearch(track, query));
   });
 
   private filteredPlaylists = computed(() => {
     const query = this.searchQuery().trim();
-    if (!query) return this.allPlaylists();
-    return this.allPlaylists().filter(playlist => this.playlistMatchesSearch(playlist, query));
+    let playlists = this.allPlaylists();
+
+    if (this.hideGruuv()) {
+      playlists = playlists.filter(playlist => !this.hasGruuvTag(playlist));
+    }
+
+    if (!query) return playlists;
+    return playlists.filter(playlist => this.playlistMatchesSearch(playlist, query));
   });
 
   // === YOUR SECTION ===
@@ -501,6 +514,7 @@ export class MusicComponent implements OnDestroy {
       const pubkey = this.currentPubkey();
       if (pubkey) {
         this.selectedTrackSort.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
+        this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
       }
     });
 
@@ -1451,6 +1465,14 @@ export class MusicComponent implements OnDestroy {
     }
 
     this.restartMusicSubscriptions();
+  }
+
+  onHideGruuvChanged(value: boolean): void {
+    this.hideGruuv.set(value);
+  }
+
+  private hasGruuvTag(event: Event): boolean {
+    return event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'gruuv');
   }
 
   private sortTracks(tracks: Event[]): Event[] {

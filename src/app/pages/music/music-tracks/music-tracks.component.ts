@@ -58,7 +58,8 @@ interface MusicGenreOption {
       @if (isAuthenticated()) {
         <app-music-list-filter
           [initialFilter]="urlListFilter()"
-          (filterChanged)="onFilterChanged($event)" />
+          (filterChanged)="onFilterChanged($event)"
+          (hideGruuvChanged)="onHideGruuvChanged($event)" />
       }
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
         <mat-icon>sort</mat-icon>
@@ -583,6 +584,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // List filter state - 'curated', 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
+  hideGruuv = signal(false);
 
   // URL query param for list filter
   urlListFilter = signal<string | undefined>(undefined);
@@ -762,6 +764,10 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
     let filtered = [...tracks];
 
+    if (this.hideGruuv()) {
+      filtered = filtered.filter(track => !this.hasGruuvTag(track));
+    }
+
     // Apply pubkey filter
     if (pubkeys !== null) {
       const allowedPubkeys = new Set(pubkeys);
@@ -827,6 +833,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.sortBy.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
+      this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
     }
 
     // Check for input first (when opened via RightPanelService)
@@ -1037,6 +1044,14 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       queryParams,
       queryParamsHandling: 'merge',
     });
+  }
+
+  onHideGruuvChanged(value: boolean): void {
+    this.hideGruuv.set(value);
+  }
+
+  private hasGruuvTag(event: Event): boolean {
+    return event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'gruuv');
   }
 
   setSort(sort: 'released' | 'published' | 'alphabetical'): void {

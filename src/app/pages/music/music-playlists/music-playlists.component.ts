@@ -12,6 +12,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { MusicDataService } from '../../../services/music-data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
@@ -53,7 +54,8 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
           [showPublicOption]="false"
           defaultFilter="following"
           [initialFilter]="urlListFilter()"
-          (filterChanged)="onFilterChanged($event)" />
+          (filterChanged)="onFilterChanged($event)"
+          (hideGruuvChanged)="onHideGruuvChanged($event)" />
       }
       <button mat-icon-button [matMenuTriggerFor]="sourceMenu" [matTooltip]="'Playlist source: ' + sourceFilterLabel()">
         <mat-icon>filter_alt</mat-icon>
@@ -409,6 +411,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private accountLocalState = inject(AccountLocalStateService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
@@ -431,6 +434,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
   // List filter state - 'curated', 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
+  hideGruuv = signal(false);
 
   // URL query param for list filter
   urlListFilter = signal<string | undefined>(undefined);
@@ -513,6 +517,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     return playlist.tags.some(tag => tag[0] === 'private' && tag[1] === 'true');
   }
 
+  private hasGruuvTag(event: Event): boolean {
+    return event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'gruuv');
+  }
+
   filteredPlaylists = computed(() => {
     const playlists = this.allPlaylists();
     const myPubkey = this.currentPubkey();
@@ -521,6 +529,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const sourceFilter = this.sourceFilter();
 
     let filtered = playlists.filter(playlist => sourceFilter === 'own' || !this.isPrivatePlaylist(playlist));
+
+    if (this.hideGruuv()) {
+      filtered = filtered.filter(playlist => !this.hasGruuvTag(playlist));
+    }
 
     switch (sourceFilter) {
       case 'own':
@@ -592,6 +604,11 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private async initializeFromRoute(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
+    }
+
     // Get filter from query params - check for list (follow set) or source (own/following/public)
     const queryParams = this.route.snapshot.queryParams;
 
@@ -654,6 +671,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
       },
       queryParamsHandling: 'merge',
     });
+  }
+
+  onHideGruuvChanged(value: boolean): void {
+    this.hideGruuv.set(value);
   }
 
   setSourceFilter(source: PlaylistSourceFilter): void {
