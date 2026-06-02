@@ -7,7 +7,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
-import { DatabaseService, NotificationType } from './database.service';
+import { DatabaseService } from './database.service';
 import { LocalSettingsService } from './local-settings.service';
 import { kinds } from 'nostr-tools';
 
@@ -179,8 +179,8 @@ describe('ContentNotificationService', () => {
       await service.checkForNewNotifications();
 
       // Verify that getMany was called with a `since` value less than the last check timestamp
-      // The overlap buffer is 60 seconds, so since should be lastCheckTimestamp - 60
-      const expectedSince = lastCheckTimestamp - 60;
+      // The overlap buffer is 1 hour, so since should be lastCheckTimestamp - 3600
+      const expectedSince = lastCheckTimestamp - 3600;
       const firstCall = vi.mocked(mockAccountRelay.getMany).mock.calls[0];
       expect(firstCall).toBeDefined();
       const [filter] = firstCall!;

@@ -181,8 +181,34 @@
         }
       </div>
 
+      @if (isEditingNickname()) {
+      <div class="profile-name-editor">
+        <mat-form-field class="profile-name-field" appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Nickname</mat-label>
+          <input matInput [value]="nicknameDraft()" (input)="nicknameDraft.set($any($event.target).value)"
+            (keydown.enter)="saveNickname()" (keydown.escape)="cancelNicknameEdit()" maxlength="100"
+            placeholder="Set local nickname" />
+        </mat-form-field>
+        <button mat-icon-button class="profile-name-editor-action" (click)="saveNickname()"
+          [disabled]="isSavingNickname()" matTooltip="Save nickname" aria-label="Save nickname">
+          <mat-icon>check</mat-icon>
+        </button>
+        <button mat-icon-button class="profile-name-editor-action" (click)="cancelNicknameEdit()"
+          [disabled]="isSavingNickname()" matTooltip="Cancel nickname edit" aria-label="Cancel nickname edit">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      } @else {
       <h1 class="profile-name">
-        {{ name() }}
+        @if (canEditNickname()) {
+        <button type="button" class="profile-name-trigger" (click)="startNicknameEdit()"
+          [matTooltip]="hasCustomNickname() ? originalName() : 'Edit nickname'"
+          [attr.aria-label]="'Edit nickname for ' + originalName()">
+          {{ name() }}
+        </button>
+        } @else {
+        <span [matTooltip]="hasCustomNickname() ? originalName() : null">{{ name() }}</span>
+        }
         @if (isPremium()) {
         <img class="premium-indicator" [class.premium-plus]="isPremiumPlus()" src="/icons/nostria.png"
           [matTooltip]="isPremiumPlus() ? 'This user is a Nostria Premium+ subscriber' : 'This user is a Nostria Premium subscriber'"
@@ -198,6 +224,7 @@
         </span>
         }
       </h1>
+      }
 
       <div class="profile-item pointer" title="{{ npub() }}">
         <mat-icon>key</mat-icon>

@@ -1,9 +1,9 @@
 name: E2E Nightly Tests
 
 on:
-  schedule:
+  # schedule:
     # Run at 2:00 AM UTC every day
-    - cron: "0 2 * * *"
+    # - cron: "0 2 * * *"
   workflow_dispatch:
 
 env:

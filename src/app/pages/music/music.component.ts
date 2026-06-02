@@ -41,6 +41,7 @@ import { ListFilterValue } from '../../components/list-filter-menu/list-filter-m
 import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
 import { MusicLikedSongsService } from '../../services/music-liked-songs.service';
+import { CURATED_MUSIC_FILTER, MusicCuratedService } from '../../services/music-curated.service';
 import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
 import { parseMusicReleasedTag } from './music-release-date.util';
 
@@ -49,6 +50,8 @@ const PLAYLIST_KIND = 34139;
 const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
 const LIKE_QUERY_TIMEOUT_MS = 3000;
+const MUSIC_BACKFILL_PAGE_LIMIT = 500;
+const MUSIC_BACKFILL_TIMEOUT_MS = 7000;
 type MusicTrackSortValue = 'released' | 'published';
 
 interface ListeningEntry {
@@ -111,6 +114,7 @@ export class MusicComponent implements OnDestroy {
   private musicData = inject(MusicDataService);
   private bookmarkPlaylistService = inject(MusicBookmarkPlaylistService);
   private likedSongsService = inject(MusicLikedSongsService);
+  private musicCurated = inject(MusicCuratedService);
   followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
   private zapService = inject(ZapService);
@@ -158,6 +162,9 @@ export class MusicComponent implements OnDestroy {
   private syncingOwnMusicCache = false;
   private lastSyncedOwnMusicPubkey: string | null = null;
   private requestedProfilePubkeys = new Set<string>();
+  private musicSubscriptionsStarted = false;
+  private lastSubscriptionAuthorKey = '';
+  private musicBackfillRunId = 0;
 
   // Like/zap state for home page tracks
   private likedReactionByTargetKey = signal(new Map<string, Event>());
@@ -202,16 +209,17 @@ export class MusicComponent implements OnDestroy {
   // URL query param for list filter (for passing to ListFilterMenuComponent)
   urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
 
-  // List filter state - 'all', 'following', or follow set d-tag
-  selectedListFilter = signal<ListFilterValue>('all');
+  // List filter state - 'curated', 'all', 'following', or follow set d-tag
+  selectedListFilter = signal<ListFilterValue>(CURATED_MUSIC_FILTER);
   selectedTrackSort = signal<MusicTrackSortValue>('released');
+  hideGruuv = signal(false);
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
 
   // Computed: get the currently selected follow set (if any)
   selectedFollowSet = computed(() => {
     const filter = this.selectedListFilter();
-    if (filter === 'all' || filter === 'following') {
+    if (filter === CURATED_MUSIC_FILTER || filter === 'all' || filter === 'following') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -220,6 +228,9 @@ export class MusicComponent implements OnDestroy {
   // Computed: get the pubkeys to filter by based on current selection
   private filterPubkeys = computed(() => {
     const filter = this.selectedListFilter();
+    if (filter === CURATED_MUSIC_FILTER) {
+      return this.musicCurated.pubkeys();
+    }
     if (filter === 'all') {
       return null; // No filtering
     }
@@ -234,6 +245,7 @@ export class MusicComponent implements OnDestroy {
   // Computed: get the display title for the current filter
   filterTitle = computed(() => {
     const filter = this.selectedListFilter();
+    if (filter === CURATED_MUSIC_FILTER) return 'Curated';
     if (filter === 'all') return 'All Music';
     if (filter === 'following') return 'Following';
     const followSet = this.selectedFollowSet();
@@ -297,14 +309,26 @@ export class MusicComponent implements OnDestroy {
   // Filtered tracks and playlists based on search
   private filteredTracks = computed(() => {
     const query = this.searchQuery().trim();
-    if (!query) return this.allTracks();
-    return this.allTracks().filter(track => this.trackMatchesSearch(track, query));
+    let tracks = this.allTracks();
+
+    if (this.hideGruuv()) {
+      tracks = tracks.filter(track => !this.hasGruuvTag(track));
+    }
+
+    if (!query) return tracks;
+    return tracks.filter(track => this.trackMatchesSearch(track, query));
   });
 
   private filteredPlaylists = computed(() => {
     const query = this.searchQuery().trim();
-    if (!query) return this.allPlaylists();
-    return this.allPlaylists().filter(playlist => this.playlistMatchesSearch(playlist, query));
+    let playlists = this.allPlaylists();
+
+    if (this.hideGruuv()) {
+      playlists = playlists.filter(playlist => !this.hasGruuvTag(playlist));
+    }
+
+    if (!query) return playlists;
+    return playlists.filter(playlist => this.playlistMatchesSearch(playlist, query));
   });
 
   // === YOUR SECTION ===
@@ -493,6 +517,7 @@ export class MusicComponent implements OnDestroy {
       const pubkey = this.currentPubkey();
       if (pubkey) {
         this.selectedTrackSort.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
+        this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
       }
     });
 
@@ -500,6 +525,21 @@ export class MusicComponent implements OnDestroy {
       const artistPubkeys = this.allArtists().map(artist => artist.pubkey);
       const listeningPubkeys = this.recentListeningEntries().map(entry => entry.pubkey);
       void this.prefetchProfiles([...artistPubkeys, ...listeningPubkeys]);
+    });
+
+    effect(() => {
+      const filter = this.selectedListFilter();
+      const curatedAuthorKey = this.musicCurated.pubkeys().slice().sort().join(',');
+
+      if (filter !== CURATED_MUSIC_FILTER || !this.musicSubscriptionsStarted) {
+        return;
+      }
+
+      untracked(() => {
+        if (curatedAuthorKey && this.lastSubscriptionAuthorKey !== curatedAuthorKey) {
+          this.restartMusicSubscriptions();
+        }
+      });
     });
 
     // Stop listening party when media player is closed
@@ -597,6 +637,8 @@ export class MusicComponent implements OnDestroy {
    * Initialize music by first loading from database, then relay set, then start subscriptions
    */
   private async initializeMusic(): Promise<void> {
+    await this.musicCurated.ensureLoaded();
+
     // First, load cached tracks and playlists from database for instant display
     await this.loadFromDatabase();
 
@@ -775,6 +817,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.musicBackfillRunId++;
     this.listeningPartyPubkey.set(null);
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
@@ -857,7 +900,35 @@ export class MusicComponent implements OnDestroy {
     }
   }
 
+  private getSubscriptionAuthorPubkeys(): string[] | null {
+    const pubkeys = this.filterPubkeys();
+    if (pubkeys === null) {
+      return null;
+    }
+
+    return Array.from(new Set(pubkeys));
+  }
+
+  private getSubscriptionAuthorKey(authors: string[] | null): string {
+    return authors === null ? 'public' : authors.slice().sort().join(',');
+  }
+
+  private restartMusicSubscriptions(): void {
+    if (!this.musicSubscriptionsStarted) {
+      return;
+    }
+
+    this.trackSubscription?.close();
+    this.playlistSubscription?.close();
+    this.loading.set(true);
+    this.startSubscriptions();
+  }
+
   private startSubscriptions(): void {
+    this.trackSubscription?.close();
+    this.playlistSubscription?.close();
+    const backfillRunId = ++this.musicBackfillRunId;
+
     // Get the user's account relays directly (no fallback)
     const accountRelays = this.accountRelay.getRelayUrls();
 
@@ -872,6 +943,15 @@ export class MusicComponent implements OnDestroy {
 
     if (allRelayUrls.length === 0) {
       this.logger.warn('No relays available for loading music');
+      this.loading.set(false);
+      return;
+    }
+
+    const authors = this.getSubscriptionAuthorPubkeys();
+    this.lastSubscriptionAuthorKey = this.getSubscriptionAuthorKey(authors);
+    this.musicSubscriptionsStarted = true;
+
+    if (authors !== null && authors.length === 0) {
       this.loading.set(false);
       return;
     }
@@ -901,23 +981,12 @@ export class MusicComponent implements OnDestroy {
       kinds: MUSIC_KINDS,
       limit: 500,
     };
+    if (authors !== null) {
+      trackFilter.authors = authors;
+    }
 
     this.trackSubscription = this.pool.subscribe(allRelayUrls, trackFilter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = this.getTrackUniqueId(event);
-
-      const existing = this.trackMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.trackMap.set(uniqueId, event);
-      this.allTracks.set(Array.from(this.trackMap.values()));
-
-      // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err =>
-        this.logger.warn('[Music] Failed to save track to database:', err)
-      );
+      this.addTrackEvent(event);
 
       if (!tracksLoaded) {
         clearTimeout(trackTimeout);
@@ -931,23 +1000,12 @@ export class MusicComponent implements OnDestroy {
       kinds: [PLAYLIST_KIND],
       limit: 200,
     };
+    if (authors !== null) {
+      playlistFilter.authors = authors;
+    }
 
     this.playlistSubscription = this.pool.subscribe(allRelayUrls, playlistFilter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
-
-      const existing = this.playlistMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
-      if (this.reporting.isUserBlocked(event.pubkey)) return;
-      if (this.reporting.isContentBlocked(event)) return;
-
-      this.playlistMap.set(uniqueId, event);
-      this.allPlaylists.set(Array.from(this.playlistMap.values()));
-
-      // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err =>
-        this.logger.warn('[Music] Failed to save playlist to database:', err)
-      );
+      this.addPlaylistEvent(event);
 
       if (!playlistsLoaded) {
         clearTimeout(playlistTimeout);
@@ -955,6 +1013,99 @@ export class MusicComponent implements OnDestroy {
         checkLoaded();
       }
     });
+
+    void this.backfillMusicEvents(allRelayUrls, authors, backfillRunId);
+  }
+
+  private addTrackEvent(event: Event): boolean {
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const uniqueId = this.getTrackUniqueId(event);
+
+    const existing = this.trackMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.trackMap.set(uniqueId, event);
+    this.allTracks.set(Array.from(this.trackMap.values()));
+
+    this.database.saveEvent({ ...event, dTag }).catch(err =>
+      this.logger.warn('[Music] Failed to save track to database:', err)
+    );
+
+    return true;
+  }
+
+  private addPlaylistEvent(event: Event): boolean {
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const uniqueId = `${event.pubkey}:${dTag}`;
+
+    const existing = this.playlistMap.get(uniqueId);
+    if (existing && existing.created_at >= event.created_at) return false;
+    if (this.reporting.isUserBlocked(event.pubkey)) return false;
+    if (this.reporting.isContentBlocked(event)) return false;
+
+    this.playlistMap.set(uniqueId, event);
+    this.allPlaylists.set(Array.from(this.playlistMap.values()));
+
+    this.database.saveEvent({ ...event, dTag }).catch(err =>
+      this.logger.warn('[Music] Failed to save playlist to database:', err)
+    );
+
+    return true;
+  }
+
+  private async backfillMusicEvents(
+    relayUrls: string[],
+    authors: string[] | null,
+    runId: number
+  ): Promise<void> {
+    await Promise.all([
+      this.backfillEventPages(relayUrls, MUSIC_KINDS, authors, runId, event => this.addTrackEvent(event)),
+      this.backfillEventPages(relayUrls, [PLAYLIST_KIND], authors, runId, event => this.addPlaylistEvent(event)),
+    ]);
+  }
+
+  private async backfillEventPages(
+    relayUrls: string[],
+    kindsToBackfill: number[],
+    authors: string[] | null,
+    runId: number,
+    addEvent: (event: Event) => boolean
+  ): Promise<void> {
+    let until: number | undefined;
+
+    while (runId === this.musicBackfillRunId) {
+      const filter: Filter = {
+        kinds: kindsToBackfill,
+        limit: MUSIC_BACKFILL_PAGE_LIMIT,
+      };
+
+      if (authors !== null) {
+        filter.authors = authors;
+      }
+
+      if (until !== undefined) {
+        filter.until = until;
+      }
+
+      const events = await this.pool.query(relayUrls, filter, MUSIC_BACKFILL_TIMEOUT_MS);
+      if (runId !== this.musicBackfillRunId || events.length === 0) {
+        return;
+      }
+
+      let oldestTimestamp = Number.MAX_SAFE_INTEGER;
+      for (const event of events) {
+        addEvent(event);
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+      }
+
+      if (oldestTimestamp === Number.MAX_SAFE_INTEGER || oldestTimestamp <= 0) {
+        return;
+      }
+
+      until = oldestTimestamp - 1;
+    }
   }
 
   refresh(): void {
@@ -1377,6 +1528,21 @@ export class MusicComponent implements OnDestroy {
    */
   onListFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
+
+    if (filter === CURATED_MUSIC_FILTER) {
+      void this.musicCurated.ensureLoaded().finally(() => this.restartMusicSubscriptions());
+      return;
+    }
+
+    this.restartMusicSubscriptions();
+  }
+
+  onHideGruuvChanged(value: boolean): void {
+    this.hideGruuv.set(value);
+  }
+
+  private hasGruuvTag(event: Event): boolean {
+    return event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'gruuv');
   }
 
   private sortTracks(tracks: Event[]): Event[] {
@@ -1422,7 +1588,9 @@ export class MusicComponent implements OnDestroy {
 
     // Map filter to source parameter for sub-component
     let source: string;
-    if (filter === 'all') {
+    if (filter === CURATED_MUSIC_FILTER) {
+      source = CURATED_MUSIC_FILTER;
+    } else if (filter === 'all') {
       source = 'public';
     } else if (filter === 'following') {
       source = 'following';
@@ -1443,7 +1611,9 @@ export class MusicComponent implements OnDestroy {
 
     // Map filter to source parameter for sub-component
     let source: string;
-    if (filter === 'all') {
+    if (filter === CURATED_MUSIC_FILTER) {
+      source = CURATED_MUSIC_FILTER;
+    } else if (filter === 'all') {
       source = 'public';
     } else if (filter === 'following') {
       source = 'following';

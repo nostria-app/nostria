@@ -131,6 +131,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private routerNavigationSubscription?: Subscription;
   private viewportRefreshRafId: number | null = null;
   private viewportRefreshTimeouts: number[] = [];
+  private readonly PRELOAD_NOTIFICATION_LIMIT = 80;
+  private readonly TRUST_PRELOAD_NOTIFICATION_LIMIT = 300;
+  private readonly PRELOAD_SCROLL_STEP = 20;
+  private preloadStartIndex = signal(0);
+  private lastProfilePreloadKey = '';
 
   notifications = this.notificationService.notifications;
 
@@ -241,11 +246,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       );
     });
 
-    // Batch preload profiles when notifications change
-    // This ensures profiles are loaded efficiently in a single request
-    // instead of individual requests per notification
+    // Batch preload profiles near the rendered virtual-scroll window.
+    // This keeps large notification histories from kicking off huge profile fetches on open.
     effect(() => {
-      const notifications = this.contentNotifications();
+      const notifications = this.notificationsForPreload();
 
       // Use untracked to avoid circular dependency with prefetchedProfiles
       untracked(() => {
@@ -255,7 +259,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     effect(() => {
       const level = this.wotFilterLevel();
-      const notifications = this.notifications();
+      const notifications = this.notificationsForTrustPreload();
 
       if (level === 'off' || !this.trustService.isEnabled()) {
         return;
@@ -300,9 +304,55 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     });
   }
 
+  private notificationsForPreload = computed(() => {
+    const notifications = this.contentNotifications();
+    const start = Math.min(this.preloadStartIndex(), Math.max(0, notifications.length - 1));
+    return notifications.slice(start, start + this.PRELOAD_NOTIFICATION_LIMIT);
+  });
+
+  private notificationsForTrustPreload = computed(() => {
+    const filters = this.notificationFilters();
+    const mutedAccountsSet = new Set(this.accountState.mutedAccounts());
+    const query = this.searchQuery().toLowerCase().trim();
+    const unreadOnly = this.showUnreadOnly();
+    const end = Math.max(
+      this.TRUST_PRELOAD_NOTIFICATION_LIMIT,
+      this.preloadStartIndex() + this.PRELOAD_NOTIFICATION_LIMIT,
+    );
+
+    return this.notifications()
+      .filter((notification) => {
+        const filterType =
+          notification.type === NotificationType.FOLLOWER_SUMMARY
+            ? NotificationType.NEW_FOLLOWER
+            : notification.type;
+
+        if (!this.isContentNotification(notification.type) || !filters[filterType]) {
+          return false;
+        }
+
+        if (unreadOnly && notification.read) {
+          return false;
+        }
+
+        const contentNotification = notification as ContentNotification;
+        if (
+          contentNotification.type !== NotificationType.FOLLOWER_SUMMARY &&
+          contentNotification.type !== NotificationType.WALLET &&
+          contentNotification.authorPubkey &&
+          mutedAccountsSet.has(contentNotification.authorPubkey)
+        ) {
+          return false;
+        }
+
+        return !query || this.matchesSearchQuery(contentNotification, query);
+      })
+      .sort((left, right) => right.timestamp - left.timestamp)
+      .slice(0, end);
+  });
+
   /**
-   * Batch preload profiles for all notification authors
-   * This triggers a single batched relay request instead of individual requests
+   * Batch preload profiles for notification authors near the current viewport.
    */
   private async batchPreloadProfiles(notifications: ContentNotification[]): Promise<void> {
     if (notifications.length === 0) {
@@ -322,11 +372,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const preloadKey = pubkeys.join('|');
+    if (preloadKey === this.lastProfilePreloadKey) {
+      return;
+    }
+    this.lastProfilePreloadKey = preloadKey;
+
     // Batch load profiles - this checks cache first, then storage, then relays
     const profiles = await this.dataService.batchLoadProfiles(pubkeys);
 
     // Update the prefetched profiles signal to trigger UI updates
-    this.prefetchedProfiles.set(profiles);
+    this.prefetchedProfiles.update((current) => new Map([...current, ...profiles]));
   }
 
   private async batchPreloadTrustRanks(pubkeys: string[]): Promise<void> {
@@ -1287,6 +1343,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Handle virtual scroll viewport reaching end - load more notifications
    */
   onScrolledIndexChange(index: number): void {
+    const preloadStartIndex =
+      Math.floor(Math.max(0, index) / this.PRELOAD_SCROLL_STEP) * this.PRELOAD_SCROLL_STEP;
+    if (preloadStartIndex !== this.preloadStartIndex()) {
+      this.preloadStartIndex.set(preloadStartIndex);
+    }
+
     this.onViewportScrolled();
 
     const notifications = this.contentNotifications();

@@ -138,6 +138,19 @@
     min-width: 0;
   }
 
+  .dialog-content-padded {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 24px 24px;
+
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      padding: 16px;
+      gap: 16px;
+    }
+  }
+
   .dialog-message,
   .detail-title,
   .detail-description {
@@ -212,6 +225,55 @@
   }
 }
 
+.dialog-container.command-palette-dialog app-material-custom-dialog .dialog-content {
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-container.command-palette-dialog app-material-custom-dialog .dialog-content>.command-palette-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content {
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs {
+  width: 100%;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-header,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-label-container,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-list,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-labels {
+  width: 100%;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-header-pagination {
+  display: none;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-label-container,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-list,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-labels {
+  overflow: visible;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab-labels {
+  display: flex;
+}
+
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mdc-tab,
+.dialog-container.new-conversation-dialog app-material-custom-dialog .dialog-content>.start-chat-dialog>.mode-tabs .mat-mdc-tab {
+  flex: 1 1 0;
+  max-width: none;
+  min-width: 0;
+  justify-content: center;
+}
+
 .material-custom-dialog-panel.note-editor-dialog-panel {
   --material-custom-dialog-width: min(680px, 95vw);
   --material-custom-dialog-min-height: 0;
@@ -274,6 +336,29 @@
     min-height: 0;
     overflow: hidden;
     padding-bottom: 0;
+  }
+}
+
+.material-custom-dialog-panel.publish-dialog-panel {
+  --material-custom-dialog-width: min(700px, calc(100vw - 32px));
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: min(760px, calc(100dvh - var(--safe-area-top, 0px) - 32px));
+
+  app-material-custom-dialog {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .material-custom-dialog {
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

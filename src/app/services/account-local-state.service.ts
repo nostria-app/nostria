@@ -153,7 +153,8 @@ interface AccountLocalState {
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
-  musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
+  musicListFilter?: string; // Filter for music: 'curated', 'all', 'following', or follow set d-tag
+  musicHideGruuv?: boolean; // Whether to hide music tagged with #gruuv
   communitiesListFilter?: string; // Filter for communities: 'all', 'following', or follow set d-tag
   musicTrackSort?: string; // Track sort for music: 'released' or 'published'
   calendarListFilter?: string; // Filter for calendar: 'all', 'following', or follow set d-tag
@@ -1964,21 +1965,37 @@ export class AccountLocalStateService {
 
   /**
    * Get music list filter for an account
-   * Returns 'all' if not set (shows all music)
+   * Returns 'curated' if not set
    */
   getMusicListFilter(pubkey: string): string {
     const state = this.getAccountState(pubkey);
-    return state.musicListFilter || 'all';
+    return state.musicListFilter || 'curated';
   }
 
   /**
    * Set music list filter for an account
-   * @param filter - 'all', 'following', or a follow set d-tag
+   * @param filter - 'curated', 'all', 'following', or a follow set d-tag
    */
   setMusicListFilter(pubkey: string, filter: string): void {
     // Only store non-default values
-    const value = filter === 'all' ? undefined : filter;
+    const value = filter === 'curated' ? undefined : filter;
     this.updateAccountState(pubkey, { musicListFilter: value });
+  }
+
+  /**
+   * Get whether music tagged with #gruuv should be hidden for an account
+   */
+  getMusicHideGruuv(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.musicHideGruuv || false;
+  }
+
+  /**
+   * Set whether music tagged with #gruuv should be hidden for an account
+   */
+  setMusicHideGruuv(pubkey: string, hideGruuv: boolean): void {
+    const value = hideGruuv ? true : undefined;
+    this.updateAccountState(pubkey, { musicHideGruuv: value });
   }
 
   /**

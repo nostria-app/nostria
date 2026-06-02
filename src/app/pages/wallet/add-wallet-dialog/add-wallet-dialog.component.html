@@ -1,4 +1,4 @@
-<div class="add-wallet-dialog">
+<div dialog-content class="add-wallet-dialog">
   <p class="dialog-description" i18n="@@wallet.add.description">
     Connect your wallet using Nostr Wallet Connect (NWC). Paste your connection string below.
   </p>
@@ -20,17 +20,18 @@
     }
   </mat-form-field>
 
-  <div class="dialog-actions">
-    <button mat-button type="button" (click)="cancel()" i18n="@@common.cancel">
-      Cancel
-    </button>
-    <button mat-flat-button type="button" (click)="addWallet()"
-      [disabled]="connectionStringControl.invalid || isAddingWallet()">
-      @if (isAddingWallet()) {
-      <span i18n="@@wallet.adding">Adding...</span>
-      } @else {
-      <span i18n="@@wallet.add-button">Add Wallet</span>
-      }
-    </button>
-  </div>
+</div>
+
+<div dialog-actions>
+  <button mat-button type="button" (click)="cancel()" i18n="@@common.cancel">
+    Cancel
+  </button>
+  <button mat-flat-button type="button" (click)="addWallet()"
+    [disabled]="connectionStringControl.invalid || isAddingWallet()">
+    @if (isAddingWallet()) {
+    <span i18n="@@wallet.adding">Adding...</span>
+    } @else {
+    <span i18n="@@wallet.add-button">Add Wallet</span>
+    }
+  </button>
 </div>

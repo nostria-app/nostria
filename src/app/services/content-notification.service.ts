@@ -54,7 +54,7 @@ export class ContentNotificationService implements OnDestroy {
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MIN_TIME_BETWEEN_CHECKS_MS = 30 * 1000; // 30 seconds minimum between checks
-  private readonly OVERLAP_BUFFER_SECONDS = 60; // 1 minute overlap to catch events missed due to relay delays
+  private readonly OVERLAP_BUFFER_SECONDS = 60 * 60; // 1 hour overlap to catch events missed due to relay delays
   private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
   private lastCheckTime = 0;
   private visibilityChangeHandler: (() => void) | null = null;
@@ -1305,12 +1305,10 @@ export class ContentNotificationService implements OnDestroy {
 
   /**
    * Refresh recent notifications by re-fetching from relays
-   * Uses the persisted lastCheckTimestamp (with overlap buffer) when available,
-   * so repeated refreshes only fetch events since the last successful check.
-   * Falls back to the `days` lookback window when no stored timestamp exists
-   * (e.g. first time or after clearing notifications).
-   * Updates the lastCheckTimestamp on success.
-   * @param days Number of days to look back as fallback (default: 7 days)
+   * This intentionally ignores lastCheckTimestamp so manual refresh can backfill
+   * notifications missed by an earlier relay timeout or partial response.
+   * It does not update lastCheckTimestamp; regular polling owns that cursor.
+   * @param days Number of days to look back (default: 7 days)
    */
   async refreshRecentNotifications(days = 7): Promise<void> {
     if (this.isChecking()) {
@@ -1327,22 +1325,9 @@ export class ContentNotificationService implements OnDestroy {
     this.isChecking.set(true);
 
     try {
+      this.logger.info(`Refreshing notifications for the last ${days} days`);
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      const fallbackSince = now - (days * 24 * 60 * 60);
-
-      // Use the persisted lastCheckTimestamp when available, so manual refreshes
-      // only fetch events since the last successful check instead of always
-      // re-fetching the full lookback window.
-      let since = await this.getLastCheckTimestamp();
-      if (since > 0) {
-        // Apply overlap buffer to catch events missed due to relay delays
-        since = since - this.OVERLAP_BUFFER_SECONDS;
-        this.logger.info(`Refreshing notifications since last check: ${new Date(since * 1000).toISOString()}`);
-      } else {
-        // No stored timestamp (first time or after clear) — fall back to days lookback
-        since = fallbackSince;
-        this.logger.info(`Refreshing notifications for the last ${days} days (no stored timestamp)`);
-      }
+      const since = now - (days * 24 * 60 * 60);
 
       this.logger.debug(`Fetching notifications from ${new Date(since * 1000).toISOString()} to now`);
 
@@ -1355,10 +1340,6 @@ export class ContentNotificationService implements OnDestroy {
         this.checkForReactions(pubkey, since),
         this.checkForZaps(pubkey, since),
       ]);
-
-      // Update the last check timestamp so the next refresh/poll starts from here
-      await this.updateLastCheckTimestamp(now);
-      this._lastCheckTimestamp.set(now);
 
       this.logger.info('Completed refreshing recent notifications');
     } catch (error) {

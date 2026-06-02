@@ -745,7 +745,9 @@ export class NostrService implements NostriaService {
       authors: [pubkey],
     };
 
-    if (lastSync > 0) {
+    const hasCachedFollowingList = this.accountState.followingListLoaded();
+
+    if (lastSync > 0 && hasCachedFollowingList) {
       // Apply a 60-second overlap buffer to catch relay-delayed events.
       // Cap at 7 days ago to avoid unbounded queries after long absence.
       const OVERLAP_BUFFER_SECONDS = 60;
@@ -753,6 +755,11 @@ export class NostrService implements NostriaService {
       filter['since'] = Math.max(lastSync - OVERLAP_BUFFER_SECONDS, SEVEN_DAYS_AGO);
       this.logger.info('Using since filter for account metadata subscription', {
         since: filter['since'],
+        lastSync,
+        ageSeconds: now - lastSync,
+      });
+    } else if (lastSync > 0) {
+      this.logger.info('Skipping since filter for account metadata because no cached following list is loaded', {
         lastSync,
         ageSeconds: now - lastSync,
       });

@@ -79,6 +79,9 @@ describe('NotificationsComponent', () => {
     const mockContentNotificationService = {
       refreshRecentNotifications: vi.fn().mockReturnValue(Promise.resolve()),
       checkForOlderNotifications: vi.fn().mockReturnValue(Promise.resolve()),
+      isCheckingNotifications: signal(false),
+      stopPolling: vi.fn(),
+      startPolling: vi.fn(),
     };
     const mockAccountState = {
       pubkey: signal('test-pubkey'),
@@ -108,7 +111,7 @@ describe('NotificationsComponent', () => {
       setSplitView: vi.fn(),
     };
     const mockTrustService = {
-      isEnabled: () => false,
+      isEnabled: vi.fn().mockReturnValue(false),
       fetchMetricsBatch: vi.fn().mockReturnValue(Promise.resolve(new Map())),
     };
 
@@ -391,6 +394,68 @@ describe('NotificationsComponent', () => {
       expect(filtered.map((n) => (n as ContentNotification).authorPubkey)).toEqual([
         followedAuthor,
       ]);
+    });
+  });
+
+  describe('profile preloading', () => {
+    function createContentNotification(authorPubkey: string, id: string): ContentNotification {
+      return {
+        ...createMockNotification({ id, type: NotificationType.MENTION }),
+        authorPubkey,
+      } as ContentNotification;
+    }
+
+    it('preloads only the initial virtual-scroll window instead of the whole history', async () => {
+      const notifications = Array.from({ length: 120 }, (_, index) =>
+        createContentNotification(`author-${index}`, `notification-${index}`),
+      ).map((notification, index) => ({
+        ...notification,
+        timestamp: Date.now() + (120 - index),
+      }) as ContentNotification);
+
+      vi.mocked(TestBed.inject(DataService).batchLoadProfiles).mockClear();
+
+      mockNotificationService.notifications.set(notifications);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const calls = vi.mocked(TestBed.inject(DataService).batchLoadProfiles).mock.calls;
+      const loadedPubkeys = calls[calls.length - 1]?.[0];
+      expect(loadedPubkeys).toBeDefined();
+      expect(loadedPubkeys!.length).toBeLessThanOrEqual(80);
+      expect(loadedPubkeys).toContain('author-0');
+      expect(loadedPubkeys).not.toContain('author-119');
+    });
+
+    it('preloads WoT ranks from a bounded raw window when WoT filtering is active', async () => {
+      const trustService = TestBed.inject(TrustService) as unknown as {
+        isEnabled: Mock;
+        fetchMetricsBatch: Mock;
+      };
+      trustService.isEnabled.mockReturnValue(true);
+      trustService.fetchMetricsBatch.mockClear();
+
+      const notifications = Array.from({ length: 400 }, (_, index) =>
+        createContentNotification(`author-${index}`, `notification-${index}`),
+      ).map(
+        (notification, index) =>
+          ({
+            ...notification,
+            timestamp: Date.now() + (400 - index),
+          }) as ContentNotification,
+      );
+
+      component.wotFilterLevel.set('low');
+      mockNotificationService.notifications.set(notifications);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const calls = trustService.fetchMetricsBatch.mock.calls;
+      const loadedPubkeys = calls[calls.length - 1]?.[0] as string[] | undefined;
+      expect(loadedPubkeys).toBeDefined();
+      expect(loadedPubkeys!.length).toBeLessThanOrEqual(300);
+      expect(loadedPubkeys).toContain('author-0');
+      expect(loadedPubkeys).not.toContain('author-399');
     });
   });
 });

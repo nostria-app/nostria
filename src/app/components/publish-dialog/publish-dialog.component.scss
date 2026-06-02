@@ -1,6 +1,8 @@
 .publish-dialog-content {
-  min-width: 500px;
-  max-width: 600px;
+  box-sizing: border-box;
+  width: min(600px, calc(100vw - 48px));
+  min-width: 0;
+  max-width: 100%;
 }
 
 .custom-event-section {

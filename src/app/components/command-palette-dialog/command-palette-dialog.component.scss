@@ -1,11 +1,13 @@
 .command-palette-container {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   height: 100%;
-  max-height: 500px;
+  min-height: 0;
+  margin: 0;
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -140,10 +142,10 @@
   }
 }
 
-.footer {
-  padding: 8px 16px;
-  background-color: var(--mat-sys-surface-container);
-  border-top: 1px solid var(--mat-sys-outline-variant);
+[dialog-actions].command-palette-actions {
+  padding: 0;
+  background: transparent;
+  border-top: none;
   font-size: 12px;
   color: var(--mat-sys-on-surface-variant);
   display: flex;
@@ -203,10 +205,14 @@
 }
 
 // Responsive styles for smaller screens
-@media (max-width: 600px), (max-height: 700px) {
+@media (max-width: 600px),
+(max-height: 700px) {
   .command-palette-container {
+    flex: 1 1 auto;
     max-height: none;
     height: 100%;
+    min-height: 0;
+    margin: 0;
     border-radius: 0;
   }
 
@@ -238,11 +244,12 @@
     min-height: 0;
   }
 
-  .footer {
+  [dialog-actions].command-palette-actions {
     padding: 6px 12px;
 
     .voice-button {
       span {
+
         // Hide text label on very small screens, keep icon
         @media (max-width: 360px) {
           display: none;
@@ -278,7 +285,7 @@
     padding: 4px 0;
   }
 
-  .footer {
+  [dialog-actions].command-palette-actions {
     padding: 4px 10px;
   }
 }

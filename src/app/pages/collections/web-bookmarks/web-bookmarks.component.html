@@ -31,9 +31,15 @@
     <mat-icon>tune</mat-icon>
   </button>
 
-  <button mat-icon-button type="button" (click)="reload()" matTooltip="Refresh">
+  @if (toolbarLoading()) {
+  <span class="toolbar-loading-indicator" matTooltip="Loading bookmarks" aria-label="Loading bookmarks">
+    <mat-spinner diameter="18"></mat-spinner>
+  </span>
+  } @else {
+  <button mat-icon-button type="button" (click)="reload()" matTooltip="Refresh" aria-label="Refresh bookmarks">
     <mat-icon>refresh</mat-icon>
   </button>
+  }
 </div>
 
 <mat-menu #filterMenu="matMenu" class="web-bookmarks-filter-menu">
@@ -166,11 +172,8 @@
       <aside class="briefing-column">
         <div class="rail-heading">
           <span class="section-kicker">{{ briefingTitle() }}</span>
-          @if (loadingDesk()) {
-          <mat-spinner diameter="18"></mat-spinner>
-          }
         </div>
-        @if (personalBookmarks().length === 0 && !loadingDesk()) {
+        @if (personalBookmarks().length === 0 && !webBookmarks.loadingPersonal()) {
         <div class="paper-empty compact-empty">
           <mat-icon>bookmark_add</mat-icon>
           <span>{{ emptyDeskMessage() }}</span>

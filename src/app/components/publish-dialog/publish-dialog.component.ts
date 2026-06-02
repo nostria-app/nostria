@@ -23,6 +23,8 @@ export interface PublishDialogData {
   customMode?: boolean;
 }
 
+export const PUBLISH_DIALOG_PANEL_CLASS = ['material-custom-dialog-panel', 'publish-dialog-panel'];
+
 interface PublishOption {
   id: 'account' | 'author' | 'mentioned' | 'custom';
   label: string;

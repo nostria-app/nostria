@@ -214,9 +214,13 @@ export class WebBookmarksComponent implements OnDestroy {
   readonly emptyDeskMessage = computed(() => this.reviewPubkey()
     ? 'No bookmarks found for this review yet.'
     : 'Your saved links will appear here.');
-  readonly loadingDesk = computed(() => this.reviewPubkey() && this.reviewPubkey() !== this.accountState.pubkey()
-    ? this.webBookmarks.loadingSocial()
-    : this.webBookmarks.loadingPersonal());
+  readonly toolbarLoading = computed(() => {
+    if (this.reviewPubkey()) {
+      return this.reviewPubkey() !== this.accountState.pubkey() && this.webBookmarks.loadingSocial();
+    }
+
+    return this.webBookmarks.loadingPersonal() || this.webBookmarks.loadingSocial();
+  });
 
   readonly socialScopeTitle = computed(() => {
     if (this.reviewPubkey()) {

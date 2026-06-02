@@ -288,6 +288,35 @@
   }
 }
 
+.profile-name-trigger {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-name-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0 8px;
+  max-width: 100%;
+}
+
+.profile-name-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name-editor-action {
+  flex-shrink: 0;
+}
+
 @keyframes pulse {
   0% {
     opacity: 1;

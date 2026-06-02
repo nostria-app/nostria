@@ -62,6 +62,15 @@
   background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
 }
 
+.toolbar-loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .bookmark-search-bar {
   position: sticky;
   top: 56px;

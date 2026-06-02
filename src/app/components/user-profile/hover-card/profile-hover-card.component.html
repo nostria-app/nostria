@@ -91,7 +91,7 @@
     <div class="profile-info">
       <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="name-link">
         <div class="display-name">
-          {{ profile()?.data?.display_name || profile()?.data?.name || 'Anonymous' }}
+          {{ displayName() }}
         </div>
       </a>
       <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="alias-link">

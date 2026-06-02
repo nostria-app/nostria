@@ -28,6 +28,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import type { NostrRecord } from '../../interfaces';
 import { EventImageService } from '../../services/event-image.service';
 import { ConfirmDialogComponent, type ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
+import { PublicUrlService } from '../../services/public-url.service';
 
 export interface ShareArticleDialogData {
   title: string;
@@ -635,6 +636,7 @@ export class ShareArticleDialogComponent {
   private favoritesService = inject(FavoritesService);
   private accountLocalState = inject(AccountLocalStateService);
   private eventImageService = inject(EventImageService);
+  private publicUrl = inject(PublicUrlService);
   private matDialog = inject(MatDialog);
   private appRef = inject(ApplicationRef);
   private environmentInjector = inject(EnvironmentInjector);
@@ -1113,13 +1115,13 @@ export class ShareArticleDialogComponent {
   private getShareUrl(): string {
     // If a URL is explicitly provided, prefer it directly.
     if (this.data.url) {
-      return this.data.url;
+      return this.publicUrl.toCanonicalUrl(this.data.url);
     }
 
     // Otherwise, generate URL from event data
     const encodedId = this.getEncodedId();
     const prefix = this.data.kind === kinds.LongFormArticle ? 'a' : 'e';
-    return `https://nostria.app/${prefix}/${encodedId}`;
+    return this.publicUrl.build(`/${prefix}/${encodedId}`);
   }
 
   getAuthorDisplay(): string {

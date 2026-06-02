@@ -22,6 +22,7 @@ import { PinnedService } from '../../../services/pinned.service';
 import { NostrRecord } from '../../../interfaces';
 import { DatabaseService } from '../../../services/database.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { PublicUrlService } from '../../../services/public-url.service';
 
 @Component({
   selector: 'app-profile-reads',
@@ -57,6 +58,7 @@ export class ProfileReadsComponent {
   private userRelaysService = inject(UserRelaysService);
   private customDialog = inject(CustomDialogService);
   private database = inject(DatabaseService);
+  private publicUrl = inject(PublicUrlService);
   pinned = inject(PinnedService);
   private ownProfileCleanupDone = signal<string | null>(null);
 
@@ -449,7 +451,7 @@ export class ProfileReadsComponent {
         relays: relayHints,
       });
       const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
-      const url = `${window.location.origin}/a/${naddr}`;
+      const url = this.publicUrl.build(`/a/${naddr}`);
 
       const dialogData: ShareArticleDialogData = {
         title: title || 'Nostr Event',

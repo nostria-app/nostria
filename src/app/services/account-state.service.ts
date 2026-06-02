@@ -18,6 +18,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { PublishService } from './publish.service';
 import { EventFocusService } from './event-focus.service';
 import { LoggerService } from './logger.service';
+import { ContactListProfileMetadata, getContactListProfileMap, normalizeContactListTags } from '../utils/contact-list';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -79,7 +80,11 @@ export class AccountStateService implements OnDestroy {
     }
 
     try {
-      await this.publishService.signAndPublishAuto(event, this.signFunction, newlyFollowedPubkeys);
+      const result = await this.publishService.signAndPublishAuto(event, this.signFunction, newlyFollowedPubkeys);
+
+      if (!result.success) {
+        throw new Error('[AccountStateService] Sign or publish failed');
+      }
     } catch (error) {
       console.error('[AccountStateService] Error publishing event:', error);
       throw error;
@@ -88,6 +93,9 @@ export class AccountStateService implements OnDestroy {
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
+
+  // Relay hints and petnames from the current account's kind 3 event
+  followingMetadata = signal<Map<string, ContactListProfileMetadata>>(new Map());
 
   // Signal to track if the following list has been loaded (even if empty)
   // This helps distinguish between "not loaded yet" vs "loaded but empty"
@@ -360,8 +368,8 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    // Get existing tags and remove the pubkey
-    const updatedTags = existingFollowingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+    const updatedTags = normalizeContactListTags(existingFollowingEvent.tags)
+      .filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
 
     // CRITICAL: Create a NEW unsigned event with CURRENT timestamp
     // This ensures we don't reuse old timestamps from previously signed events
@@ -372,14 +380,25 @@ export class AccountStateService implements OnDestroy {
       account.pubkey
     );
 
+    const previousFollowingList = [...this.followingList()];
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
     // Remove from following list
     this.followingList.update(list => list.filter(p => p !== pubkey));
+    this.followingMetadata.update((metadata) => {
+      const updated = new Map(metadata);
+      updated.delete(pubkey);
+      return updated;
+    });
 
     // Publish the event to update the following list
     try {
       await this.publishEvent(newFollowingEvent);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
+      this.followingList.set(previousFollowingList);
+      this.followingMetadata.set(previousFollowingMetadata);
+      throw error;
     }
   }
 
@@ -441,6 +460,7 @@ export class AccountStateService implements OnDestroy {
 
   clear() {
     this.followingList.set([]);
+    this.followingMetadata.set(new Map());
     this.followingListLoaded.set(false); // Reset loading state when clearing
     this.profile.set(undefined);
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
@@ -460,9 +480,18 @@ export class AccountStateService implements OnDestroy {
     // Normalize input to always be an array
     const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
 
+    // Validate all pubkeys are valid hex before proceeding
+    const validPubkeys = pubkeyArray.filter(pubkey => {
+      if (!this.utilities.isValidHexPubkey(pubkey)) {
+        console.warn('[AccountStateService] Rejecting invalid pubkey in follow():', pubkey);
+        return false;
+      }
+      return true;
+    });
+
     // Filter out pubkeys that are already being followed
     const currentFollowing = this.followingList();
-    const newPubkeys = pubkeyArray.filter(pubkey => !currentFollowing.includes(pubkey));
+    const newPubkeys = validPubkeys.filter(pubkey => !currentFollowing.includes(pubkey));
 
     if (newPubkeys.length === 0) {
       return;
@@ -499,13 +528,9 @@ export class AccountStateService implements OnDestroy {
       existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
-    // Get existing tags (p-tags for followed users)
-    let existingTags: string[][] = [];
-
-    if (existingFollowingEvent) {
-      // Extract all existing tags
-      existingTags = existingFollowingEvent.tags;
-    }
+    const existingTags = existingFollowingEvent
+      ? normalizeContactListTags(existingFollowingEvent.tags)
+      : [];
 
     // Add new pubkeys to the tags
     for (const pubkey of newPubkeys) {
@@ -523,31 +548,127 @@ export class AccountStateService implements OnDestroy {
       account.pubkey
     );
 
+    const previousFollowingList = [...this.followingList()];
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
+    this.followingMetadata.update((metadata) => {
+      const updated = new Map(metadata);
+      for (const pubkey of newPubkeys) {
+        if (!updated.has(pubkey)) {
+          updated.set(pubkey, {});
+        }
+      }
+      return updated;
+    });
 
     // Publish the event to update the following list (single operation)
     try {
       await this.publishEvent(newFollowingEvent, newPubkeys);
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
-      // Rollback the local state if publish failed
-      this.followingList.update(list => list.filter(pubkey => !newPubkeys.includes(pubkey)));
+      this.followingList.set(previousFollowingList);
+      this.followingMetadata.set(previousFollowingMetadata);
+      throw error;
+    }
+  }
+
+  getFollowingMetadata(pubkey: string): ContactListProfileMetadata | undefined {
+    return this.followingMetadata().get(pubkey);
+  }
+
+  getFollowingPetname(pubkey: string): string | undefined {
+    return this.getFollowingMetadata(pubkey)?.petname;
+  }
+
+  async setFollowingPetname(pubkey: string, petname: string): Promise<void> {
+    const account = this.account();
+    if (!account || account.source === 'preview') {
+      console.warn('No valid account is currently set to update petname:', pubkey);
+      return;
+    }
+
+    if (!this.followingList().includes(pubkey)) {
+      console.warn('Cannot update petname for a profile that is not followed:', pubkey);
+      return;
+    }
+
+    let existingFollowingEvent: Event | null = null;
+
+    try {
+      const timeoutPromise = new Promise<null>(resolve =>
+        setTimeout(() => {
+          console.warn('Timeout waiting for following list from relay (petname update)');
+          resolve(null);
+        }, 2500)
+      );
+
+      existingFollowingEvent = await Promise.race([
+        this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      console.warn('Error fetching following list from relay (petname update):', error);
+    }
+
+    if (existingFollowingEvent) {
+      await this.database.saveEvent(existingFollowingEvent);
+    } else {
+      existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
+    }
+
+    const currentTags = existingFollowingEvent
+      ? normalizeContactListTags(existingFollowingEvent.tags)
+      : this.followingList().map((followedPubkey) => ['p', followedPubkey]);
+
+    const updatedTags = currentTags.map((tag) => {
+      if (tag[0] !== 'p' || tag[1] !== pubkey) {
+        return tag;
+      }
+
+      if (!petname) {
+        return tag[2] ? ['p', pubkey, tag[2]] : ['p', pubkey];
+      }
+
+      return ['p', pubkey, tag[2] || '', petname];
+    });
+
+    const previousMetadata = this.getFollowingMetadata(pubkey);
+
+    const newFollowingEvent = this.utilities.createEvent(
+      kinds.Contacts,
+      existingFollowingEvent?.content || '',
+      updatedTags,
+      account.pubkey
+    );
+
+    const previousFollowingMetadata = new Map(this.followingMetadata());
+
+    this.followingMetadata.update((metadata) => {
+      const updated = new Map(metadata);
+      updated.set(pubkey, {
+        relayUrl: previousMetadata?.relayUrl,
+        petname: petname || undefined,
+      });
+      return updated;
+    });
+
+    try {
+      await this.publishEvent(newFollowingEvent);
+    } catch (error) {
+      this.followingMetadata.set(previousFollowingMetadata);
+      throw error;
     }
   }
 
   async parseFollowingList(event: Event) {
     if (event) {
-      const followingTags = this.utilities.getTags(event, 'p');
-
-      // Filter out invalid pubkeys - some clients incorrectly put hashtag names in p-tags
-      const validFollowingTags = followingTags.filter(pubkey => {
-        const isValid = this.utilities.isValidPubkey(pubkey);
-        if (!isValid) {
-          console.warn('[AccountStateService] Invalid pubkey in following list:', pubkey);
-        }
-        return isValid;
-      });
+      const normalizedTags = normalizeContactListTags(event.tags);
+      const validFollowingTags = normalizedTags
+        .filter(tag => tag[0] === 'p')
+        .map(tag => tag[1]);
+      const followingMetadata = getContactListProfileMap(normalizedTags);
 
       // Get current following list to compare
       const currentFollowingList = this.followingList();
@@ -558,6 +679,8 @@ export class AccountStateService implements OnDestroy {
         this.followingList.set(validFollowingTags);
         await this.database.saveEvent(event);
       }
+
+      this.followingMetadata.set(followingMetadata);
 
       // Mark as loaded since we received a valid contacts event
       this.followingListLoaded.set(true);

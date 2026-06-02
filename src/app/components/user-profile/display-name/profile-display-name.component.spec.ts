@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { describe, expect, it, vi } from 'vitest';
 import { ProfileDisplayNameComponent } from './profile-display-name.component';
 import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -8,6 +9,7 @@ import { ProfileHoverCardService } from '../../../services/profile-hover-card.se
 import { SettingsService } from '../../../services/settings.service';
 import { LayoutService } from '../../../services/layout.service';
 import { IntersectionObserverService } from '../../../services/intersection-observer.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 describe('ProfileDisplayNameComponent', () => {
     let component: ProfileDisplayNameComponent;
@@ -53,6 +55,10 @@ describe('ProfileDisplayNameComponent', () => {
             unobserve: vi.fn(),
         };
 
+        const mockAccountStateService = {
+            getFollowingPetname: vi.fn().mockReturnValue(undefined),
+        };
+
         await TestBed.configureTestingModule({
             imports: [ProfileDisplayNameComponent],
             providers: [
@@ -64,6 +70,7 @@ describe('ProfileDisplayNameComponent', () => {
                 { provide: SettingsService, useValue: mockSettingsService },
                 { provide: LayoutService, useValue: mockLayoutService },
                 { provide: IntersectionObserverService, useValue: mockIntersectionObserverService },
+                { provide: AccountStateService, useValue: mockAccountStateService },
             ],
         }).compileComponents();
 
@@ -106,6 +113,18 @@ describe('ProfileDisplayNameComponent', () => {
         const el = fixture.nativeElement as HTMLElement;
         const link = el.querySelector('.profile-link');
         expect(link!.textContent!.trim()).toBe('bob');
+    });
+
+    it('should render petname before profile metadata when available', async () => {
+        const accountState = TestBed.inject(AccountStateService);
+        vi.mocked(accountState.getFollowingPetname).mockReturnValue('Local Alice');
+        fixture.componentRef.setInput('pubkey', 'f'.repeat(64));
+        component.profile.set({ data: { display_name: 'Alice' } });
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const el = fixture.nativeElement as HTMLElement;
+        const link = el.querySelector('.profile-link');
+        expect(link!.textContent!.trim()).toBe('Local Alice');
     });
 
     it('should render truncated npub when profile is empty', async () => {

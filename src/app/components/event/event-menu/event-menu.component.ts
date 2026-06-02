@@ -55,6 +55,7 @@ import { DeleteEventService } from '../../../services/delete-event.service';
 import { EventTtsPlaybackService } from '../../../services/event-tts-playback.service';
 import { TtsSequencePlayerService } from '../../../services/tts-sequence-player.service';
 import { TtsTextService } from '../../../services/tts-text.service';
+import { PublicUrlService } from '../../../services/public-url.service';
 
 interface LocalTtsMenuOption {
   id: string;
@@ -109,6 +110,7 @@ export class EventMenuComponent {
   private eventTtsPlayback = inject(EventTtsPlaybackService);
   private ttsSequence = inject(TtsSequencePlayerService);
   private ttsText = inject(TtsTextService);
+  private publicUrl = inject(PublicUrlService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -428,7 +430,7 @@ export class EventMenuComponent {
     const dialogData: ShareArticleDialogData = {
       title: ev.kind === kinds.LongFormArticle ? 'Article' : this.getEventPreviewTitle(ev.content),
       summary: ev.content || undefined,
-      url: window.location.href,
+      url: this.publicUrl.toCanonicalUrl(window.location.href),
       eventId: ev.id,
       pubkey: ev.pubkey,
       identifier: ev.tags.find(tag => tag[0] === 'd')?.[1],

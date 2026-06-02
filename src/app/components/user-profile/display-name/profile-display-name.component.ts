@@ -19,6 +19,7 @@ import { ProfileHoverCardService } from '../../../services/profile-hover-card.se
 import { SettingsService } from '../../../services/settings.service';
 import { LayoutService } from '../../../services/layout.service';
 import { IntersectionObserverService } from '../../../services/intersection-observer.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
   selector: 'app-profile-display-name',
@@ -36,6 +37,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private settingsService = inject(SettingsService);
   private layout = inject(LayoutService);
   private readonly intersectionObserverService = inject(IntersectionObserverService);
+  private readonly accountState = inject(AccountStateService);
 
   private linkElement: HTMLElement | null = null;
 
@@ -252,6 +254,41 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
 
     // Utilities handles hex/npub/nprofile and provides a stable fallback for invalid identifiers.
     return this.utilities.getTruncatedNpub(identifier);
+  });
+
+  petname = computed(() => {
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return '';
+    }
+
+    return this.accountState.getFollowingPetname(pubkey) || '';
+  });
+
+  displayText = computed(() => {
+    const petname = this.petname();
+    if (petname) {
+      return petname;
+    }
+
+    const profile = this.profile();
+    if (profile && !profile.isEmpty && profile.data) {
+      if (profile.data.display_name) {
+        return profile.data.display_name;
+      }
+
+      if (profile.data.name) {
+        return profile.data.name;
+      }
+
+      return this.truncatedNpubValue();
+    }
+
+    if (this.isLoading() || profile === null) {
+      return this.showFallbackWhileLoading() ? this.truncatedNpubValue() : '...';
+    }
+
+    return this.truncatedNpubValue();
   });
 
   /**

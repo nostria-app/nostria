@@ -117,12 +117,13 @@
         <mat-tab label="Following">
           @if (hasFollowingChats()) {
           <div class="tab-content">
-            <mat-nav-list class="chat-list">
+            <mat-nav-list class="chat-list" (keydown)="onChatListKeydown($event)">
               <!-- Note to Self - always shown at top if it exists -->
               @if (noteToSelfChat(); as noteToSelf) {
               @let chat = noteToSelf.chat;
               <a mat-list-item class="chat-item note-to-self-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     <div class="note-to-self-avatar">
@@ -157,7 +158,8 @@
               @for (item of followingChats(); track item.chat.id) {
               @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     @if (chat.isGroup) {
@@ -262,6 +264,11 @@
             </div>
             }
           </div>
+          } @else if (isFollowingListLoading()) {
+          <div class="empty-tab-content">
+            <mat-spinner diameter="28"></mat-spinner>
+            <p>Loading contacts...</p>
+          </div>
           } @else {
           <div class="empty-tab-content">
             <mat-icon>people</mat-icon>
@@ -293,11 +300,12 @@
           </div>
           @if (hasOtherChats()) {
           <div class="tab-content">
-            <mat-nav-list class="chat-list">
+            <mat-nav-list class="chat-list" (keydown)="onChatListKeydown($event)">
               @for (item of otherChats(); track item.chat.id) {
               @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
-                (click)="selectChat(chat)">
+                [attr.data-chat-id]="chat.id" tabindex="0" (click)="selectChat(chat)" (keydown.enter)="selectChat(chat)"
+                (keydown.space)="$event.preventDefault(); selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
                     @if (chat.isGroup) {
@@ -399,6 +407,11 @@
             </div>
             }
           </div>
+          } @else if (isFollowingListLoading()) {
+          <div class="empty-tab-content">
+            <mat-spinner diameter="28"></mat-spinner>
+            <p>Loading contacts...</p>
+          </div>
           } @else {
           <div class="empty-tab-content">
             <mat-icon>forum</mat-icon>
@@ -468,7 +481,16 @@
               <app-user-profile [pubkey]="selectedChat()!.pubkey" view="avatar"></app-user-profile>
             </div>
             <div class="private-chat-header-info">
-              <span class="private-chat-header-name">{{ selectedChatDisplayName() }}</span>
+              <div class="private-chat-header-title-row">
+                <span class="private-chat-header-name">{{ selectedChatDisplayName() }}</span>
+                @if (selectedChat()?.encryptionType === 'nip04') {
+                <span class="legacy-protocol-indicator" matTooltip="Legacy chat protocol (NIP-04)"
+                  aria-label="Legacy chat protocol NIP-04">
+                  <mat-icon>lock_open</mat-icon>
+                  <span>NIP-04</span>
+                </span>
+                }
+              </div>
               @if (selectedChatLastActiveLabel()) {
               <span class="chat-header-activity">{{ selectedChatLastActiveLabel() }}</span>
               }

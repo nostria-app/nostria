@@ -49,6 +49,12 @@ export class MediaPlayerService implements OnInitialized {
   private nativeMediaSession = inject(NativeMediaSessionService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
+  private preloadedAudio?: HTMLAudioElement;
+  private preloadedAudioIndex = -1;
+  private preloadedAudioOriginalSource?: string;
+  private preloadedAudioSource?: string;
+  private preloadedBlobUrl?: string;
+  private gaplessPreloadToken = 0;
   current = signal<MediaItem | undefined>(undefined);
   // Cache podcast positions to avoid excessive localStorage reads
   private podcastPositions = signal<Record<string, PodcastProgress>>({});
@@ -149,6 +155,12 @@ export class MediaPlayerService implements OnInitialized {
 
   // Flag to track if media session handlers have been initialized
   private mediaSessionInitialized = false;
+
+  private handleAudioRateChange = () => {
+    if (this.audio) {
+      this.playbackRate.set(this.audio.playbackRate);
+    }
+  };
 
   /**
    * Check if the Media Session API is supported
@@ -256,8 +268,14 @@ export class MediaPlayerService implements OnInitialized {
 
   private async startHtmlAudioPlayback(file: MediaItem, audioSource: string, prioritizeImmediateStart: boolean): Promise<void> {
     let resolvedAudioSource = audioSource;
+    const preloadedAudio = this.consumePreloadedAudioForCurrentItem(file);
 
-    if (!prioritizeImmediateStart && (file.type === 'Podcast' || file.type === 'Music')) {
+    if (preloadedAudio) {
+      const previousAudio = this.audio;
+      this.audio = preloadedAudio.audio;
+      this.copyAudioSettings(previousAudio, this.audio);
+      resolvedAudioSource = preloadedAudio.source;
+    } else if (!prioritizeImmediateStart && (file.type === 'Podcast' || file.type === 'Music')) {
       if (this.shouldResolveAudioUrlViaFetch(resolvedAudioSource)) {
         try {
           resolvedAudioSource = await this.resolveAudioUrl(resolvedAudioSource);
@@ -270,19 +288,20 @@ export class MediaPlayerService implements OnInitialized {
     if (!this.audio) {
       this.audio = new Audio();
       this.setAudioCrossOrigin(this.audio, resolvedAudioSource);
+      this.audio.preload = 'auto';
       this.audio.src = resolvedAudioSource;
-      this.audio.addEventListener('ratechange', () => {
-        if (this.audio) {
-          this.playbackRate.set(this.audio.playbackRate);
-        }
-      });
+      this.audio.addEventListener('ratechange', this.handleAudioRateChange);
     } else {
-      this.setAudioCrossOrigin(this.audio, resolvedAudioSource);
-      this.audio.src = resolvedAudioSource;
+      if (!preloadedAudio) {
+        this.setAudioCrossOrigin(this.audio, resolvedAudioSource);
+        this.audio.preload = 'auto';
+        this.audio.src = resolvedAudioSource;
+      }
     }
 
     this.audioCorsFallbackRetriedSources.delete(this.audio.src);
     this.playbackRate.set(this.audio.playbackRate);
+    this.audio.addEventListener('ratechange', this.handleAudioRateChange);
     this.audio.addEventListener('ended', this.handleMediaEnded);
     this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
     this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
@@ -735,11 +754,13 @@ export class MediaPlayerService implements OnInitialized {
 
     // Clean up audio completely
     if (this.audio) {
+      this.audio.removeEventListener('ratechange', this.handleAudioRateChange);
       this.audio.removeEventListener('ended', this.handleMediaEnded);
       this.audio.pause();
       this.audio.src = '';
       this.audio = undefined;
     }
+    this.clearGaplessPreload();
 
     // Clean up video element
     if (this.videoElement) {
@@ -955,6 +976,7 @@ export class MediaPlayerService implements OnInitialized {
     this.media.update(files => [...files, file]);
     this.save();
     this.syncNativeMediaState();
+    this.scheduleGaplessPreload();
   }
 
   dequeue(file: MediaItem) {
@@ -967,6 +989,7 @@ export class MediaPlayerService implements OnInitialized {
     });
     this.save();
     this.syncNativeMediaState();
+    this.scheduleGaplessPreload();
   }
 
   async save() {
@@ -1017,7 +1040,12 @@ export class MediaPlayerService implements OnInitialized {
    * @param url The original audio URL
    * @returns A blob URL with proper MIME type, or the original URL if resolution fails
    */
-  private async resolveAudioUrl(url: string): Promise<string> {
+  private async resolveAudioUrl(
+    url: string,
+    trackBlobUrl: (blobUrl: string) => void = blobUrl => {
+      this.currentBlobUrl = blobUrl;
+    }
+  ): Promise<string> {
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -1033,7 +1061,7 @@ export class MediaPlayerService implements OnInitialized {
       if (contentType && (contentType.startsWith('audio/') || contentType === 'application/ogg')) {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
-        this.currentBlobUrl = blobUrl; // Track for cleanup
+        trackBlobUrl(blobUrl);
         console.log(`Created blob URL for audio with MIME type: ${blob.type}`);
         return blobUrl;
       }
@@ -1058,7 +1086,7 @@ export class MediaPlayerService implements OnInitialized {
         // Create a new blob with the correct MIME type
         const typedBlob = new Blob([blob], { type: mimeTypes[originalExt] });
         const blobUrl = URL.createObjectURL(typedBlob);
-        this.currentBlobUrl = blobUrl; // Track for cleanup
+        trackBlobUrl(blobUrl);
         console.log(`Created blob URL with inferred MIME type: ${mimeTypes[originalExt]}`);
         return blobUrl;
       }
@@ -1476,6 +1504,181 @@ export class MediaPlayerService implements OnInitialized {
     return this.app.isBrowser() && typeof document !== 'undefined' && document.hidden;
   }
 
+  private isGaplessAudioCandidate(file: MediaItem | undefined): file is MediaItem {
+    return !!file
+      && file.type === 'Music'
+      && !file.isLiveStream
+      && !file.video?.trim()
+      && !!file.source;
+  }
+
+  private getNextSequentialAudioIndex(): number | null {
+    const queue = this.media();
+    if (queue.length === 0 || this.shuffle() || this.repeat() === 'one') {
+      return null;
+    }
+
+    if (this.index < queue.length - 1) {
+      return this.index + 1;
+    }
+
+    if (this.repeat() === 'all') {
+      return 0;
+    }
+
+    return null;
+  }
+
+  private shouldPreferHtmlGaplessAudio(file: MediaItem): boolean {
+    const nextIndex = this.getNextSequentialAudioIndex();
+    if (nextIndex === null) {
+      return false;
+    }
+
+    return this.isGaplessAudioCandidate(file) && this.isGaplessAudioCandidate(this.media()[nextIndex]);
+  }
+
+  private hasPreloadedAudioForIndex(index: number, file: MediaItem): boolean {
+    return !!this.preloadedAudio
+      && this.preloadedAudioIndex === index
+      && this.preloadedAudioOriginalSource === file.source
+      && this.isGaplessAudioCandidate(file);
+  }
+
+  private consumePreloadedAudioForCurrentItem(file: MediaItem): { audio: HTMLAudioElement; source: string } | null {
+    if (!this.hasPreloadedAudioForIndex(this.index, file) || !this.preloadedAudio || !this.preloadedAudioSource) {
+      return null;
+    }
+
+    const audio = this.preloadedAudio;
+    const source = this.preloadedAudioSource;
+    if (this.preloadedBlobUrl) {
+      this.currentBlobUrl = this.preloadedBlobUrl;
+    }
+    this.preloadedAudio = undefined;
+    this.preloadedAudioIndex = -1;
+    this.preloadedAudioOriginalSource = undefined;
+    this.preloadedAudioSource = undefined;
+    this.preloadedBlobUrl = undefined;
+
+    return { audio, source };
+  }
+
+  private copyAudioSettings(from: HTMLAudioElement | undefined, to: HTMLAudioElement): void {
+    if (!from) {
+      to.playbackRate = this.playbackRate();
+      return;
+    }
+
+    to.volume = from.volume;
+    to.muted = from.muted;
+    to.playbackRate = from.playbackRate;
+  }
+
+  syncGaplessPreloadedAudioSettings(): void {
+    if (!this.audio || !this.preloadedAudio) {
+      return;
+    }
+
+    this.copyAudioSettings(this.audio, this.preloadedAudio);
+  }
+
+  private clearGaplessPreload(): void {
+    this.gaplessPreloadToken++;
+
+    if (this.preloadedAudio) {
+      this.preloadedAudio.pause();
+      this.preloadedAudio.removeAttribute('src');
+      this.preloadedAudio.load();
+    }
+
+    if (this.preloadedBlobUrl) {
+      URL.revokeObjectURL(this.preloadedBlobUrl);
+    }
+
+    this.preloadedAudio = undefined;
+    this.preloadedAudioIndex = -1;
+    this.preloadedAudioOriginalSource = undefined;
+    this.preloadedAudioSource = undefined;
+    this.preloadedBlobUrl = undefined;
+  }
+
+  private scheduleGaplessPreload(): void {
+    const currentItem = this.current();
+    const nextIndex = this.getNextSequentialAudioIndex();
+    const nextItem = nextIndex === null ? undefined : this.media()[nextIndex];
+
+    if (nextIndex === null || !this.app.isBrowser() || this.videoMode() || this.nativeAndroidAudioActive || !this.isGaplessAudioCandidate(currentItem) || !this.isGaplessAudioCandidate(nextItem)) {
+      this.clearGaplessPreload();
+      return;
+    }
+
+    const resolvedNextIndex = nextIndex;
+    if (this.hasPreloadedAudioForIndex(nextIndex, nextItem)) {
+      this.syncGaplessPreloadedAudioSettings();
+      return;
+    }
+
+    const preloadToken = ++this.gaplessPreloadToken;
+    this.clearGaplessPreload();
+    this.gaplessPreloadToken = preloadToken;
+
+    void this.prepareGaplessAudio(nextItem, resolvedNextIndex, preloadToken);
+  }
+
+  private async prepareGaplessAudio(file: MediaItem, index: number, preloadToken: number): Promise<void> {
+    let audioSource = file.source;
+    let blobUrl: string | undefined;
+
+    try {
+      if (!this.shouldPrioritizeImmediatePlaybackStart()) {
+        audioSource = await this.offlineMusicService.getCachedAudioUrl(file.source);
+        if (audioSource.startsWith('blob:')) {
+          blobUrl = audioSource;
+        }
+
+        if (this.shouldResolveAudioUrlViaFetch(audioSource)) {
+          audioSource = await this.resolveAudioUrl(audioSource, resolvedBlobUrl => {
+            blobUrl = resolvedBlobUrl;
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to prepare cached audio for gapless preload, using original source:', error);
+      audioSource = file.source;
+      blobUrl = undefined;
+    }
+
+    if (preloadToken !== this.gaplessPreloadToken || this.media()[index]?.source !== file.source) {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      return;
+    }
+
+    const preloadedAudio = new Audio();
+    preloadedAudio.preload = 'auto';
+    this.setAudioCrossOrigin(preloadedAudio, audioSource);
+    this.copyAudioSettings(this.audio, preloadedAudio);
+    preloadedAudio.src = audioSource;
+    preloadedAudio.load();
+
+    if (preloadToken !== this.gaplessPreloadToken) {
+      preloadedAudio.removeAttribute('src');
+      preloadedAudio.load();
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      return;
+    }
+
+    this.preloadedAudio = preloadedAudio;
+    this.preloadedAudioIndex = index;
+    this.preloadedAudioOriginalSource = file.source;
+    this.preloadedAudioSource = audioSource;
+    this.preloadedBlobUrl = blobUrl;
+  }
+
   private handleAudioError = async (event: Event): Promise<void> => {
     if (!this.audio) {
       return;
@@ -1642,7 +1845,12 @@ export class MediaPlayerService implements OnInitialized {
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
-    const prioritizeImmediateStart = this.shouldPrioritizeImmediatePlaybackStart();
+    const hasReadyGaplessAudio = this.hasPreloadedAudioForIndex(this.index, file);
+    const prioritizeImmediateStart = this.shouldPrioritizeImmediatePlaybackStart() || hasReadyGaplessAudio;
+    if (!hasReadyGaplessAudio) {
+      this.clearGaplessPreload();
+    }
+
     const resolvedArtwork = prioritizeImmediateStart ? file.artwork : await this.resolveArtworkUrl(file);
     const currentFile = resolvedArtwork !== file.artwork
       ? { ...file, artwork: resolvedArtwork }
@@ -1720,6 +1928,9 @@ export class MediaPlayerService implements OnInitialized {
       if (!prioritizeImmediateStart && file.type === 'Music') {
         try {
           audioSource = await this.offlineMusicService.getCachedAudioUrl(file.source);
+          if (audioSource.startsWith('blob:')) {
+            this.currentBlobUrl = audioSource;
+          }
           if (audioSource !== file.source) {
             console.log('Using cached audio for offline playback');
           }
@@ -1732,7 +1943,7 @@ export class MediaPlayerService implements OnInitialized {
         ? this.restorePodcastPosition(file.source)
         : 0;
 
-      if (this.canUseNativeAndroidAudio(audioSource, file)) {
+      if (this.canUseNativeAndroidAudio(audioSource, file) && !this.shouldPreferHtmlGaplessAudio(file)) {
         this.nativeAndroidAudioSource = audioSource;
         this.nativeAndroidAudioFallbackAttempted = false;
         await this.nativeMediaSession.playAudio({
@@ -1758,6 +1969,8 @@ export class MediaPlayerService implements OnInitialized {
         this.nativeAndroidAudioFallbackAttempted = false;
         await this.startHtmlAudioPlayback(file, audioSource, prioritizeImmediateStart);
       }
+
+      this.scheduleGaplessPreload();
     }
 
     // Initialize media session handlers lazily on first playback
@@ -1985,6 +2198,7 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.pause();
       this.audio.currentTime = 0;
       // Remove event listeners
+      this.audio.removeEventListener('ratechange', this.handleAudioRateChange);
       this.audio.removeEventListener('ended', this.handleMediaEnded);
       this.audio.removeEventListener('timeupdate', this.handleTimeUpdate);
       this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
@@ -2058,6 +2272,7 @@ export class MediaPlayerService implements OnInitialized {
     const oldRate = this.audio.playbackRate;
 
     // Remove listeners from old element and stop it
+    this.audio.removeEventListener('ratechange', this.handleAudioRateChange);
     this.audio.removeEventListener('ended', this.handleMediaEnded);
     this.audio.removeEventListener('timeupdate', this.handleTimeUpdate);
     this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
@@ -2073,11 +2288,7 @@ export class MediaPlayerService implements OnInitialized {
     this.audio.muted = oldMuted;
     this.audio.playbackRate = oldRate;
 
-    this.audio.addEventListener('ratechange', () => {
-      if (this.audio) {
-        this.playbackRate.set(this.audio.playbackRate);
-      }
-    });
+    this.audio.addEventListener('ratechange', this.handleAudioRateChange);
 
     // Wait for enough data to seek
     await new Promise<void>((resolve) => {
@@ -2361,6 +2572,7 @@ export class MediaPlayerService implements OnInitialized {
   toggleShuffle(): void {
     this.shuffle.update(v => !v);
     this.syncNativeMediaState();
+    this.scheduleGaplessPreload();
   }
 
   toggleRepeat(): void {
@@ -2370,6 +2582,7 @@ export class MediaPlayerService implements OnInitialized {
       return 'off';
     });
     this.syncNativeMediaState();
+    this.scheduleGaplessPreload();
   }
 
   get error() {
@@ -2540,9 +2753,11 @@ export class MediaPlayerService implements OnInitialized {
 
     // Stop current playback
     this.cleanupCurrentMedia();
+    this.clearGaplessPreload();
 
     // Reset audio
     if (this.audio) {
+      this.audio.removeEventListener('ratechange', this.handleAudioRateChange);
       this.audio.removeEventListener('ended', this.handleMediaEnded);
       this.audio.removeEventListener('error', this.handleAudioError);
       this.audio.pause();

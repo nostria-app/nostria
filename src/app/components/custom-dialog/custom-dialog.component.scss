@@ -116,6 +116,12 @@
   }
 }
 
+.dialog-container.add-wallet-dialog-panel {
+  .dialog-actions {
+    border-top: none;
+  }
+}
+
 // Header
 .dialog-header {
   display: grid;
@@ -488,6 +494,31 @@
 
   .dialog-content {
     padding: 0;
+  }
+
+  >app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog .dialog-content {
+    padding: 0;
+    gap: 0;
+  }
+
+  >app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog .dialog-actions {
+    padding: 0;
+  }
+}
+
+.dialog-container.new-conversation-dialog {
+  .dialog-content {
+    padding-top: 0;
+  }
+
+  >app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog .dialog-content {
+    padding-top: 0;
+  }
+
+  >app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog .dialog-actions button {
+    flex: 0 0 auto;
+    min-width: 0;
+    white-space: nowrap;
   }
 }
 

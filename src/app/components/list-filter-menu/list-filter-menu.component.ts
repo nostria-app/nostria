@@ -13,12 +13,13 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FilterButtonComponent } from '../filter-button/filter-button.component';
 
-export type ListFilterValue = 'all' | 'following' | string;
+export type ListFilterValue = 'all' | 'following' | 'curated' | string;
 export type MusicTrackSortValue = 'released' | 'published';
 
 @Component({
@@ -28,6 +29,7 @@ export type MusicTrackSortValue = 'released' | 'published';
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
+    MatSlideToggleModule,
     FilterButtonComponent,
   ],
   template: `
@@ -36,7 +38,20 @@ export type MusicTrackSortValue = 'released' | 'published';
         <div class="filter-panel-left">
           <div class="section-title">List filter</div>
 
-          @if (showPublicOption()) {
+          @if (showCuratedOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'curated'"
+            (click)="selectFilter('curated')">
+            <mat-icon class="chip-icon">library_music</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Curated</span>
+              <span class="chip-description">Selected musicians</span>
+            </div>
+          </button>
+          }
+
+          @if (!showCuratedOption() && showPublicOption()) {
           <button
             class="filter-option-chip"
             [class.selected]="selectedFilter() === 'all'"
@@ -59,6 +74,32 @@ export type MusicTrackSortValue = 'released' | 'published';
               <span class="chip-description">People you follow</span>
             </div>
           </button>
+
+          @if (showCuratedOption() && showPublicOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'all'"
+            (click)="selectFilter('all')">
+            <mat-icon class="chip-icon">public</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Public</span>
+              <span class="chip-description">All public content</span>
+            </div>
+          </button>
+          }
+
+          @if (showHideGruuvOption()) {
+          <div class="toggle-option">
+            <div class="chip-text">
+              <span class="chip-label">Hide gruuv</span>
+              <span class="chip-description">Filter out #gruuv music</span>
+            </div>
+            <mat-slide-toggle
+              [checked]="hideGruuv()"
+              (change)="setHideGruuv($event.checked)"
+              aria-label="Hide gruuv music" />
+          </div>
+          }
 
           @if (showWotOption()) {
           <button
@@ -203,6 +244,17 @@ export type MusicTrackSortValue = 'released' | 'published';
       opacity: 0.8;
     }
 
+    .toggle-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface);
+    }
+
     mat-divider {
       margin: 0.25rem 0;
     }
@@ -236,6 +288,8 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Inputs
   showPublicOption = input<boolean>(false);
+  showCuratedOption = input<boolean>(false);
+  showHideGruuvOption = input<boolean>(false);
   showWotOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
@@ -245,9 +299,11 @@ export class ListFilterMenuComponent implements OnInit {
   // Outputs
   filterChanged = output<ListFilterValue>();
   followSetChanged = output<FollowSet | null>();
+  hideGruuvChanged = output<boolean>();
 
   // Internal state
   selectedFilter = signal<ListFilterValue>('following');
+  hideGruuv = signal(false);
 
   // Computed: all follow sets
   private allFollowSets = computed(() => this.followSetsService.followSets());
@@ -262,10 +318,10 @@ export class ListFilterMenuComponent implements OnInit {
       .sort((a, b) => a.title.localeCompare(b.title))
   );
 
-  // Computed: selected follow set (null for 'all', 'following', or 'wot')
+  // Computed: selected follow set (null for built-in filters)
   selectedFollowSet = computed(() => {
     const filter = this.selectedFilter();
-    if (filter === 'all' || filter === 'following' || filter === 'wot') {
+    if (filter === 'all' || filter === 'following' || filter === 'curated' || filter === 'wot') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -273,7 +329,8 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Computed: whether filter is active (different from default)
   isFilterActive = computed(() => {
-    return this.selectedFilter() !== this.defaultFilter();
+    return this.selectedFilter() !== this.defaultFilter()
+      || (this.showHideGruuvOption() && this.hideGruuv());
   });
 
   // Computed: filter title for tooltip
@@ -285,6 +342,8 @@ export class ListFilterMenuComponent implements OnInit {
       title = 'Public';
     } else if (filter === 'following') {
       title = 'Following';
+    } else if (filter === 'curated') {
+      title = 'Curated';
     } else if (filter === 'wot') {
       title = 'Web of Trust';
     } else {
@@ -304,6 +363,13 @@ export class ListFilterMenuComponent implements OnInit {
 
   ngOnInit() {
     const pubkey = this.accountState.pubkey();
+
+    if (pubkey && this.storageKey() === 'music') {
+      this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
+      this.hideGruuvChanged.emit(this.hideGruuv());
+    } else {
+      this.hideGruuvChanged.emit(this.hideGruuv());
+    }
 
     // Check for initial filter from URL query params first (takes precedence)
     const urlFilter = this.initialFilter();
@@ -330,6 +396,8 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         case 'music':
           savedFilter = this.accountLocalState.getMusicListFilter(pubkey);
+          this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
+          this.hideGruuvChanged.emit(this.hideGruuv());
           break;
         case 'communities':
           savedFilter = this.accountLocalState.getCommunitiesListFilter(pubkey);
@@ -349,6 +417,7 @@ export class ListFilterMenuComponent implements OnInit {
       this.filterChanged.emit(savedFilter as ListFilterValue);
     } else {
       this.selectedFilter.set(this.defaultFilter());
+      this.hideGruuvChanged.emit(this.hideGruuv());
     }
   }
 
@@ -387,6 +456,19 @@ export class ListFilterMenuComponent implements OnInit {
   }
 
   resetSelections() {
+    if (this.showHideGruuvOption()) {
+      this.setHideGruuv(false);
+    }
     this.selectFilter(this.defaultFilter());
+  }
+
+  setHideGruuv(value: boolean) {
+    this.hideGruuv.set(value);
+    this.hideGruuvChanged.emit(value);
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey && this.storageKey() === 'music') {
+      this.accountLocalState.setMusicHideGruuv(pubkey, value);
+    }
   }
 }

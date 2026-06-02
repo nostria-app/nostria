@@ -15,6 +15,7 @@ import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
 import {
+  PUBLISH_DIALOG_PANEL_CLASS,
   PublishDialogComponent,
   PublishDialogData,
 } from '../components/publish-dialog/publish-dialog.component';
@@ -47,6 +48,7 @@ import { PanelNavigationService } from './panel-navigation.service';
 import { ThreadedEvent } from './event';
 import type { ArticleEditorDialogInitialDraft } from '../components/article-editor-dialog/article-editor-dialog.component';
 import { AccountLocalStateService } from './account-local-state.service';
+import { PublicUrlService } from './public-url.service';
 
 /** Options for passing pre-loaded data when opening an event */
 export interface OpenEventOptions {
@@ -75,6 +77,7 @@ export class LayoutService implements OnDestroy {
   private accountRelay = inject(AccountRelayService);
   private injector = inject(Injector);
   private utilities = inject(UtilitiesService);
+  private publicUrl = inject(PublicUrlService);
   isHandset = signal(false);
   isWideScreen = signal(false);
   rightSidebarVisible = signal(false);
@@ -1043,7 +1046,7 @@ export class LayoutService implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
-      panelClass: 'responsive-dialog',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
@@ -1056,7 +1059,7 @@ export class LayoutService implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
-      panelClass: 'responsive-dialog',
+      panelClass: PUBLISH_DIALOG_PANEL_CLASS,
       disableClose: false,
     });
   }
@@ -2188,6 +2191,7 @@ export class LayoutService implements OnDestroy {
         title: $localize`:@@create.message.dialog.title:Start New Chat`,
         width: 'min(500px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
+        panelClass: 'new-conversation-dialog',
       },
     );
 
@@ -2214,6 +2218,7 @@ export class LayoutService implements OnDestroy {
         title: $localize`:@@create.message.dialog.title:Start New Chat`,
         width: 'min(500px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
+        panelClass: 'new-conversation-dialog',
       },
     );
 
@@ -2483,6 +2488,7 @@ export class LayoutService implements OnDestroy {
       width: '600px',
       maxWidth: '90vw',
       panelClass: 'command-palette-dialog',
+      showHeader: false,
       showCloseButton: false,
       disableEnterSubmit: true
     });
@@ -3188,7 +3194,7 @@ export class LayoutService implements OnDestroy {
         .share({
           title: `${name}'s Nostr Profile`,
           text: `Check out ${npub} on Nostr`,
-          url: window.location.href,
+          url: this.publicUrl.toCanonicalUrl(window.location.href),
         })
         .then(() => {
           this.logger.debug('Profile shared successfully');
@@ -3198,7 +3204,7 @@ export class LayoutService implements OnDestroy {
         });
     } else {
       // Fallback if Web Share API is not available
-      this.copyToClipboard(window.location.href, 'profile URL');
+      this.copyToClipboard(this.publicUrl.toCanonicalUrl(window.location.href), 'profile URL');
     }
   }
 

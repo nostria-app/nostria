@@ -41,13 +41,14 @@ export class SatDisplayService {
   private readonly updatedAt = signal<number | null>(this.cachedPrice?.updatedAt ?? null);
   private readonly loading = signal(false);
   private loadPromise: Promise<number | null> | null = null;
+  private scheduledLoadHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly displaySatsInUsd = computed(() => this.settings.settings().displaySatsInUsd === true);
 
   constructor() {
     effect(() => {
       if (this.displaySatsInUsd()) {
-        void this.ensurePriceLoaded();
+        this.schedulePriceLoad();
       }
     });
   }
@@ -157,7 +158,7 @@ export class SatDisplayService {
         };
       }
 
-      void this.ensurePriceLoaded();
+      this.schedulePriceLoad();
     }
 
     return {
@@ -210,6 +211,17 @@ export class SatDisplayService {
 
   private getPriceUrl(): string {
     return this.isBrowser ? BITCOIN_PRICE_PROXY_API : BITCOIN_PRICE_API;
+  }
+
+  private schedulePriceLoad(): void {
+    if (this.loadPromise || this.scheduledLoadHandle !== null) {
+      return;
+    }
+
+    this.scheduledLoadHandle = setTimeout(() => {
+      this.scheduledLoadHandle = null;
+      void this.ensurePriceLoaded();
+    }, 0);
   }
 
   private loadCachedPrice(): CachedBitcoinUsdPrice | null {

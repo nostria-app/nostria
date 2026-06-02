@@ -173,6 +173,20 @@ export class ProfileHoverCardComponent {
     return this.truncateNpub(this.npubValue());
   });
 
+  originalDisplayName = computed(() => {
+    const profile = this.profile();
+    return profile?.data?.display_name || profile?.data?.name || 'Anonymous';
+  });
+
+  displayName = computed(() => {
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return this.originalDisplayName();
+    }
+
+    return this.accountState.getFollowingPetname(pubkey) || this.originalDisplayName();
+  });
+
   constructor() {
     effect(() => {
       const pubkey = this.normalizedPubkey();

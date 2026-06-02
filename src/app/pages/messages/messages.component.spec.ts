@@ -1,7 +1,11 @@
+// @vitest-environment jsdom
 import '@angular/compiler';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { signal } from '@angular/core';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { kinds } from 'nostr-tools';
 import { MessagesComponent } from './messages.component';
 
 /**
@@ -27,6 +31,11 @@ interface DirectMessage {
     encryptionType?: 'nip04' | 'nip44';
 }
 
+const TEST_MY_PUBKEY = '0'.repeat(64);
+const TEST_RECEIVER_PUBKEY = '1'.repeat(64);
+const TEST_NIP44_CHAT_ID = `${TEST_RECEIVER_PUBKEY}-nip44`;
+const TEST_NIP04_CHAT_ID = `${TEST_RECEIVER_PUBKEY}-nip04`;
+
 function createComponent(): MessagesComponent {
     const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
 
@@ -36,6 +45,8 @@ function createComponent(): MessagesComponent {
     (component as any).isGroupChat = signal(false);
     (component as any).uploadStatus = signal('');
     (component as any).mediaPreviews = signal([]);
+    (component as any).hasMoreMessages = signal(true);
+    (component as any).pendingTags = signal<string[][]>([]);
     (component as any).pendingMessages = signal<DirectMessage[]>([]);
     (component as any).replyingToMessage = signal(null);
     (component as any).showMobileList = signal(true);
@@ -44,18 +55,19 @@ function createComponent(): MessagesComponent {
 
     // Mock selectedChat
     const mockChat = {
-        id: 'receiver-pubkey',
-        pubkey: 'receiver-pubkey',
+        id: TEST_NIP44_CHAT_ID,
+        pubkey: TEST_RECEIVER_PUBKEY,
         unreadCount: 0,
         messages: new Map(),
+        encryptionType: 'nip44',
         hasLegacyMessages: false,
     };
-    (component as any).selectedChatId = signal('receiver-pubkey');
+    (component as any).selectedChatId = signal(TEST_NIP44_CHAT_ID);
     (component as any).selectedChat = signal(mockChat);
 
     // Mock services
     (component as any).accountState = {
-        pubkey: signal('my-pubkey'),
+        pubkey: signal(TEST_MY_PUBKEY),
     };
 
     (component as any).accountLocalState = {
@@ -66,7 +78,9 @@ function createComponent(): MessagesComponent {
     (component as any).userRelayService = {
         ensureRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
         ensureDmRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
-        publishToDmRelays: vi.fn().mockResolvedValue(undefined),
+        getRelaysForPubkey: vi.fn().mockReturnValue(['wss://regular.relay/']),
+        getUserDmRelaysForPublishing: vi.fn().mockResolvedValue(['wss://relay.example/']),
+        publishToDmRelays: vi.fn().mockResolvedValue(true),
         publish: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -89,7 +103,10 @@ function createComponent(): MessagesComponent {
     };
 
     (component as any).messaging = {
+        addChat: vi.fn(),
         addMessageToChat: vi.fn(),
+        updateMessageInChat: vi.fn(),
+        removeMessageFromChat: vi.fn(),
         getChat: vi.fn().mockReturnValue(mockChat),
         getChatMessages: vi.fn().mockReturnValue([]),
         sendDirectMessage: vi.fn().mockResolvedValue(undefined),
@@ -115,6 +132,10 @@ function createComponent(): MessagesComponent {
         encryptNip44: vi.fn().mockResolvedValue('encrypted-content'),
         encryptNip44WithKey: vi.fn().mockResolvedValue('giftwrap-content'),
         encryptNip04: vi.fn().mockResolvedValue('nip04-encrypted'),
+    };
+
+    (component as any).relayPool = {
+        publishWithTracking: vi.fn().mockReturnValue([Promise.resolve('wss://regular.relay/')]),
     };
 
     (component as any).snackBar = {
@@ -203,10 +224,10 @@ describe('MessagesComponent sendMessage', () => {
         await component.sendMessage();
 
         const messagingService = (component as any).messaging;
-        expect(messagingService.addMessageToChat).toHaveBeenCalledWith('receiver-pubkey', expect.objectContaining({
+        expect(messagingService.addMessageToChat).toHaveBeenCalledWith(TEST_NIP44_CHAT_ID, expect.objectContaining({
             content: 'Chat update test',
-            pending: false,
-            received: true,
+            pending: true,
+            received: false,
         }));
     });
 
@@ -254,7 +275,7 @@ describe('MessagesComponent sendMessage', () => {
         await component.sendMessage();
 
         expect((component as any).userRelayService.ensureRelaysForPubkey)
-            .toHaveBeenCalledWith('receiver-pubkey');
+            .toHaveBeenCalledWith(TEST_RECEIVER_PUBKEY);
     });
 
     it('should allow sending another message immediately after first completes', async () => {
@@ -318,19 +339,121 @@ describe('MessagesComponent sendMessage', () => {
         // isSending should be false (message creation succeeded)
         expect((component as any).isSending()).toBe(false);
 
-        // Message should still be in pending (it was created successfully)
+        // Failed background publishing should remove the transient pending copy
+        // and mark the persisted message as failed for retry.
         const pending = (component as any).pendingMessages() as DirectMessage[];
-        expect(pending.length).toBe(1);
+        expect(pending.length).toBe(0);
 
-        // Error should be logged
-        expect((component as any).logger.error).toHaveBeenCalledWith('Background relay publishing failed', expect.any(Error));
+        expect((component as any).messaging.updateMessageInChat).toHaveBeenCalledWith(
+            TEST_NIP44_CHAT_ID,
+            expect.any(String),
+            expect.objectContaining({
+                pending: false,
+                received: false,
+                failed: true,
+            })
+        );
+        expect((component as any).logger.error).toHaveBeenCalledWith(
+            'Message delivery failed:',
+            'Failed to deliver to recipient\'s DM relays'
+        );
+    });
+
+    it('should p-tag each NIP-17 gift wrap for its recipient and use a fresh wrapper key', async () => {
+        const myPubkey = '0'.repeat(64);
+        const receiverPubkey = '1'.repeat(64);
+        (component as any).userRelayService.getUserDmRelaysForPublishing.mockImplementation(
+            async (pubkey: string) => [pubkey === receiverPubkey ? 'wss://receiver.relay/' : 'wss://sender.relay/'],
+        );
+
+        const result = await (component as any).createNip44Message('Protocol check', receiverPubkey, myPubkey);
+        await result.publish();
+
+        const publishCalls = (component as any).userRelayService.publishToDmRelays.mock.calls;
+        expect(publishCalls).toHaveLength(2);
+
+        const [recipientTarget, recipientGiftWrap] = publishCalls[0];
+        const [selfTarget, selfGiftWrap] = publishCalls[1];
+
+        expect(recipientTarget).toBe(receiverPubkey);
+        expect(recipientGiftWrap.kind).toBe(kinds.GiftWrap);
+        expect(recipientGiftWrap.tags).toEqual([['p', receiverPubkey, 'wss://receiver.relay/']]);
+
+        expect(selfTarget).toBe(myPubkey);
+        expect(selfGiftWrap.kind).toBe(kinds.GiftWrap);
+        expect(selfGiftWrap.tags).toEqual([['p', myPubkey, 'wss://sender.relay/']]);
+
+        expect(recipientGiftWrap.pubkey).not.toBe(selfGiftWrap.pubkey);
+
+        const giftWrapEncryptionCalls = (component as any).encryption.encryptNip44WithKey.mock.calls;
+        expect(giftWrapEncryptionCalls).toHaveLength(2);
+        expect(giftWrapEncryptionCalls[0][1]).not.toBe(giftWrapEncryptionCalls[1][1]);
+    });
+
+    it('should send kind 4 when the selected chat is legacy NIP-04', async () => {
+        (component as any).selectedChat.set({
+            id: TEST_NIP04_CHAT_ID,
+            pubkey: TEST_RECEIVER_PUBKEY,
+            unreadCount: 0,
+            messages: new Map(),
+            encryptionType: 'nip04',
+            hasLegacyMessages: true,
+        });
+        (component as any).replyingToMessage.set({
+            id: 'legacy-reply-id',
+            pubkey: TEST_RECEIVER_PUBKEY,
+            created_at: 1,
+            content: 'Earlier legacy message',
+            isOutgoing: false,
+            tags: [['p', TEST_MY_PUBKEY]],
+            encryptionType: 'nip04',
+        });
+        (component as any).newMessageText.set('Legacy hello');
+
+        await component.sendMessage();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect((component as any).encryption.encryptNip04)
+            .toHaveBeenCalledWith('Legacy hello', TEST_RECEIVER_PUBKEY);
+        expect((component as any).encryption.encryptNip44WithKey).not.toHaveBeenCalled();
+        expect((component as any).userRelayService.ensureDmRelaysForPubkey)
+            .not.toHaveBeenCalledWith(TEST_RECEIVER_PUBKEY);
+        expect((component as any).nostr.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+            kind: kinds.EncryptedDirectMessage,
+            tags: [['p', TEST_RECEIVER_PUBKEY], ['e', 'legacy-reply-id']],
+            content: 'nip04-encrypted',
+        }));
+        expect((component as any).relayPool.publishWithTracking).toHaveBeenCalledWith(
+            ['wss://regular.relay/'],
+            expect.objectContaining({ kind: kinds.EncryptedDirectMessage })
+        );
+        expect((component as any).messaging.addMessageToChat).toHaveBeenCalledWith(
+            TEST_NIP04_CHAT_ID,
+            expect.objectContaining({ encryptionType: 'nip04' })
+        );
+    });
+
+    it('should keep the NIP-04 choice when starting a new legacy chat', async () => {
+        (component as any).messaging.getChat.mockReturnValue(null);
+        (component as any).selectChat = vi.fn();
+
+        await (component as any).startChatWithUser('legacy-recipient', true);
+
+        expect((component as any).userRelayService.ensureRelaysForPubkey)
+            .toHaveBeenCalledWith('legacy-recipient');
+        expect((component as any).messaging.addChat).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'legacy-recipient-nip04',
+            pubkey: 'legacy-recipient',
+            encryptionType: 'nip04',
+            hasLegacyMessages: true,
+        }));
     });
 
     it('should show encrypted file preview text for file messages', () => {
         const text = component.getChatPreviewText({
             id: 'file-msg',
             rumorKind: 15,
-            pubkey: 'receiver-pubkey',
+            pubkey: TEST_RECEIVER_PUBKEY,
             created_at: 1,
             content: 'https://example.com/file.bin',
             isOutgoing: true,
@@ -576,7 +699,7 @@ describe('MessagesComponent chat drafts', () => {
         await component.selectChat(draftChat as any);
 
         expect((component as any).newMessageText()).toBe('Saved draft');
-        expect((component as any).accountLocalState.getChatDraft).toHaveBeenCalledWith('my-pubkey', 'draft-chat');
+        expect((component as any).accountLocalState.getChatDraft).toHaveBeenCalledWith(TEST_MY_PUBKEY, 'draft-chat');
     });
 
     it('should clear composer text when restoring draft for null chat', () => {
@@ -588,13 +711,91 @@ describe('MessagesComponent chat drafts', () => {
     });
 });
 
+describe('MessagesComponent chat list keyboard navigation', () => {
+    function createKeyboardComponent(): {
+        component: MessagesComponent;
+        chats: Record<string, { id: string; pubkey: string; unreadCount: number; messages: Map<string, DirectMessage> }>;
+    } {
+        const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+        const chats = {
+            note: { id: 'note-nip44', pubkey: TEST_MY_PUBKEY, unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            followingA: { id: 'following-a-nip44', pubkey: 'a'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            followingB: { id: 'following-b-nip44', pubkey: 'b'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            otherA: { id: 'other-a-nip44', pubkey: 'c'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+            otherB: { id: 'other-b-nip44', pubkey: 'd'.repeat(64), unreadCount: 0, messages: new Map<string, DirectMessage>() },
+        };
+
+        (component as any).selectedTabIndex = signal(0);
+        (component as any).selectedChatId = signal(chats.followingA.id);
+        (component as any).noteToSelfChat = vi.fn(() => ({ chat: chats.note }));
+        (component as any).followingChats = vi.fn(() => [{ chat: chats.followingA }, { chat: chats.followingB }]);
+        (component as any).otherChats = vi.fn(() => [{ chat: chats.otherA }, { chat: chats.otherB }]);
+        (component as any).selectChat = vi.fn().mockResolvedValue(undefined);
+        (component as any).focusChatListItem = vi.fn();
+
+        return { component, chats };
+    }
+
+    function keyboardEvent(key: string): KeyboardEvent {
+        return {
+            key,
+            altKey: false,
+            ctrlKey: false,
+            metaKey: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as KeyboardEvent;
+    }
+
+    it('selects the next visible following chat with ArrowDown', () => {
+        const { component, chats } = createKeyboardComponent();
+        const event = keyboardEvent('ArrowDown');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.followingB);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('includes Note to Self when navigating upward in the Following tab', () => {
+        const { component, chats } = createKeyboardComponent();
+        const event = keyboardEvent('ArrowUp');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.note);
+    });
+
+    it('uses the visible Others tab list when that tab has focus', () => {
+        const { component, chats } = createKeyboardComponent();
+        (component as any).selectedTabIndex.set(1);
+        (component as any).selectedChatId.set(chats.otherA.id);
+        const event = keyboardEvent('ArrowDown');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats.otherB);
+    });
+
+    it('ignores non-arrow keys', () => {
+        const { component } = createKeyboardComponent();
+        const event = keyboardEvent('Enter');
+
+        component.onChatListKeydown(event);
+
+        expect((component as any).selectChat).not.toHaveBeenCalled();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+});
+
 describe('MessagesComponent message render batching', () => {
     function createThreadComponent(messageCount: number): MessagesComponent {
         const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
 
         const messages = Array.from({ length: messageCount }, (_, index) => ({
             id: `msg-${index + 1}`,
-            pubkey: 'receiver-pubkey',
+            pubkey: TEST_RECEIVER_PUBKEY,
             created_at: index + 1,
             content: `Message ${index + 1}`,
             isOutgoing: index % 2 === 0,
@@ -602,7 +803,7 @@ describe('MessagesComponent message render batching', () => {
         }));
 
         (component as any).MESSAGE_RENDER_BATCH_SIZE = 20;
-        (component as any).selectedChatId = signal('receiver-pubkey');
+        (component as any).selectedChatId = signal(TEST_NIP44_CHAT_ID);
         (component as any).messages = signal(messages);
         (component as any).renderedMessageCount = signal(20);
         (component as any).isReactionMessage = vi.fn().mockReturnValue(false);
@@ -612,9 +813,33 @@ describe('MessagesComponent message render batching', () => {
                 scrollTop: 0,
             },
         };
-        (component as any).selectedChat = vi.fn().mockReturnValue({ id: 'receiver-pubkey' });
+        (component as any).selectedChat = vi.fn().mockReturnValue({ id: TEST_NIP44_CHAT_ID });
+        const renderableMessages = () => (component as any).messages().filter((message: DirectMessage) => !(component as any).isReactionMessage(message));
+        (component as any).renderedThreadMessages = vi.fn(() => {
+            const renderable = renderableMessages();
+            const renderedCount = (component as any).renderedMessageCount();
+
+            if (renderedCount >= renderable.length) {
+                return renderable;
+            }
+
+            return renderable.slice(Math.max(0, renderable.length - renderedCount));
+        });
+        (component as any).expandRenderedMessageWindow = vi.fn(() => {
+            const renderableCount = renderableMessages().length;
+            const currentCount = (component as any).renderedMessageCount();
+
+            if (currentCount >= renderableCount) {
+                return false;
+            }
+
+            (component as any).renderedMessageCount.set(
+                Math.min(renderableCount, currentCount + (component as any).MESSAGE_RENDER_BATCH_SIZE)
+            );
+            return true;
+        });
         (component as any).hasHiddenRenderedMessages = vi.fn(() => {
-            return (component as any).renderedMessageCount() < (component as any).messages().length;
+            return (component as any).renderedThreadMessages().length < renderableMessages().length;
         });
         (component as any).isLoadingMore = signal(false);
         (component as any).isLoadingMoreMessages = signal(false);
@@ -655,13 +880,13 @@ describe('MessagesComponent message render batching', () => {
 
         await component.loadMoreMessages();
 
-        expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith('receiver-pubkey', 0);
+        expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith(TEST_NIP44_CHAT_ID, 0);
     });
 
     it('should expand the rendered window when the first message appears in a new chat', () => {
         const component = createThreadComponent(0);
 
-        (component as any).lastRenderableMessageChatId = 'receiver-pubkey';
+        (component as any).lastRenderableMessageChatId = TEST_NIP44_CHAT_ID;
         (component as any).lastRenderableMessageCount = 0;
         (component as any).renderedMessageCount.set(0);
 
@@ -678,7 +903,7 @@ describe('MessagesComponent message render batching', () => {
 
         const firstMessage = {
             id: 'msg-1',
-            pubkey: 'receiver-pubkey',
+            pubkey: TEST_RECEIVER_PUBKEY,
             created_at: 1,
             content: 'First message',
             isOutgoing: true,
@@ -701,20 +926,20 @@ describe('MessagesComponent message render batching', () => {
 });
 
 describe('MessagesComponent template structure', () => {
-    it('should not reference message-time-side class in template file', async () => {
+    it('should not reference message-time-side class in template file', () => {
         // Verify old external timestamp class is no longer used
         // The template file should use message-time inside message-inline-meta instead
-        const response = await fetch('/base/src/app/pages/messages/messages.component.html');
-        if (response.ok) {
-            const html = await response.text();
-            expect(html).not.toContain('message-time-side');
-            expect(html).toContain('message-time');
-            expect(html).toContain('message-inline-meta');
-        }
-        else {
-            // If template can't be fetched (e.g., compiled inline), verify component exists
-            const cmp = (MessagesComponent as any).ɵcmp;
-            expect(cmp).toBeDefined();
-        }
+        const html = readFileSync(join(process.cwd(), 'src/app/pages/messages/messages.component.html'), 'utf8');
+        expect(html).not.toContain('message-time-side');
+        expect(html).toContain('message-time');
+        expect(html).toContain('message-inline-meta');
+    });
+
+    it('should show a legacy protocol indicator in the selected chat header', () => {
+        const html = readFileSync(join(process.cwd(), 'src/app/pages/messages/messages.component.html'), 'utf8');
+
+        expect(html).toContain('legacy-protocol-indicator');
+        expect(html).toContain("selectedChat()?.encryptionType === 'nip04'");
+        expect(html).toContain('NIP-04');
     });
 });

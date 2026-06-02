@@ -216,6 +216,7 @@ export class AudioPlayerComponent {
   onVolumeChange(value: number): void {
     if (this.media.audio) {
       this.media.audio.volume = value / 100;
+      this.media.syncGaplessPreloadedAudioSettings();
     }
   }
 
