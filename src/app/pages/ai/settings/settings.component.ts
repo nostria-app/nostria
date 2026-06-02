@@ -15,7 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { Bolt11InvoiceComponent } from '../../../components/bolt11-invoice/bolt11-invoice.component';
 import { SettingsService } from '../../../services/settings.service';
-import { AiCloudProvider, AiManagedModelStatus, AiModelStorageReport, AiService } from '../../../services/ai.service';
+import { AiCloudProvider, AiImageCloudProvider, AiManagedModelStatus, AiModelStorageReport, AiService } from '../../../services/ai.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
@@ -80,7 +80,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   private readonly panelNav = inject(PanelNavigationService);
 
   readonly isInRightPanel = this.route.outlet === 'right';
-  readonly cloudProviders: AiCloudProvider[] = ['xai', 'openai'];
+  readonly cloudProviders: AiImageCloudProvider[] = ['xai', 'openai'];
   readonly xAiImageAspectRatioOptions: ChoiceOption[] = [
     { value: 'auto', label: 'Auto' },
     { value: '1:1', label: '1:1 Square' },
@@ -186,11 +186,16 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   readonly grokStatusLoading = this.aiService.grokStatusLoading;
   readonly grokError = this.aiService.grokError;
   readonly grokHasHostedAccess = this.aiService.hasHostedGrokAccess;
+  readonly nostriaModels = signal<string[]>([]);
+  readonly nostriaModelsLoading = signal(false);
+  readonly nostriaModelsError = signal('');
 
   openAiApiKey = '';
   xAiApiKey = '';
+  nostriaAiApiKey = '';
   showOpenAiApiKey = false;
   showXAiApiKey = false;
+  showNostriaAiApiKey = false;
   grokTopUpAmountCents = 1000;
   grokTopUpPayment = signal<GrokHostedPayment | null>(null);
   grokTopUpLoading = signal(false);
@@ -202,6 +207,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     const cloudSettings = this.aiService.cloudSettings();
     this.openAiApiKey = cloudSettings.openaiApiKey ?? '';
     this.xAiApiKey = cloudSettings.xaiApiKey ?? '';
+    this.nostriaAiApiKey = cloudSettings.nostriaApiKey ?? '';
   }
 
   ngOnInit(): void {
@@ -361,11 +367,20 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (provider === 'nostria') {
+      this.showNostriaAiApiKey = !this.showNostriaAiApiKey;
+      return;
+    }
+
     this.showXAiApiKey = !this.showXAiApiKey;
   }
 
   saveApiKey(provider: AiCloudProvider): void {
-    const value = provider === 'openai' ? this.openAiApiKey : this.xAiApiKey;
+    const value = provider === 'openai'
+      ? this.openAiApiKey
+      : provider === 'nostria'
+        ? this.nostriaAiApiKey
+        : this.xAiApiKey;
     this.aiService.setCloudApiKey(provider, value);
     this.snackBar.open(`${this.providerLabel(provider)} API key saved on this device.`, 'Dismiss', { duration: 3500 });
   }
@@ -376,6 +391,11 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     if (provider === 'openai') {
       this.openAiApiKey = '';
       this.showOpenAiApiKey = false;
+    } else if (provider === 'nostria') {
+      this.nostriaAiApiKey = '';
+      this.showNostriaAiApiKey = false;
+      this.nostriaModels.set([]);
+      this.nostriaModelsError.set('');
     } else {
       this.xAiApiKey = '';
       this.showXAiApiKey = false;
@@ -384,11 +404,11 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     this.snackBar.open(`${this.providerLabel(provider)} API key removed from this device.`, 'Dismiss', { duration: 3500 });
   }
 
-  updatePreferredImageProvider(provider: AiCloudProvider): void {
+  updatePreferredImageProvider(provider: AiImageCloudProvider): void {
     this.aiService.updateCloudSettings({ preferredImageProvider: provider });
   }
 
-  updateImageModel(provider: AiCloudProvider, model: string): void {
+  updateImageModel(provider: AiImageCloudProvider, model: string): void {
     if (provider === 'openai') {
       this.aiService.updateCloudSettings({ openaiImageModel: model });
       return;
@@ -443,7 +463,40 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (provider === 'nostria') {
+      this.aiService.updateCloudSettings({ nostriaChatModel: model });
+      return;
+    }
+
     this.aiService.updateCloudSettings({ xaiChatModel: model });
+  }
+
+  async refreshNostriaModels(): Promise<void> {
+    this.nostriaModelsLoading.set(true);
+    this.nostriaModelsError.set('');
+
+    try {
+      if (this.nostriaAiApiKey.trim()) {
+        this.aiService.setCloudApiKey('nostria', this.nostriaAiApiKey);
+      }
+
+      const models = await this.aiService.fetchCloudModels('nostria');
+      this.nostriaModels.set(models);
+
+      if (models.length === 0) {
+        this.nostriaModelsError.set('No models were returned. Keeping llama-4-scout as the default.');
+        return;
+      }
+
+      if (!models.includes(this.aiService.cloudSettings().nostriaChatModel)) {
+        this.updateChatModel('nostria', models[0]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not load Nostria AI models.';
+      this.nostriaModelsError.set(`${message} Keeping llama-4-scout as the default.`);
+    } finally {
+      this.nostriaModelsLoading.set(false);
+    }
   }
 
   async refreshModelStorage(): Promise<void> {

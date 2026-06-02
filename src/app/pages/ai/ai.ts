@@ -13,7 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress, AiVoiceGenerationProgress } from '../../services/ai.service';
+import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageCloudProvider, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress, AiVoiceGenerationProgress } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
@@ -616,12 +616,32 @@ export class AiComponent {
       });
     }
 
+    if (this.aiService.hasCloudChatAccessMode('nostria', 'api-key')) {
+      models.push({
+        id: 'cloud-chat:nostria',
+        task: 'text-generation',
+        name: this.aiService.getCloudModelDisplayName('nostria', 'api-key'),
+        description: 'Chat with Nostria AI using your own API key.',
+        size: 'Hosted API',
+        loading: false,
+        progress: 100,
+        loaded: true,
+        cached: false,
+        runtime: this.aiService.getCloudAccessLabel('nostria', 'api-key'),
+        source: 'cloud',
+        provider: 'nostria',
+        cloudAccessMode: 'api-key',
+        cloudModel: this.aiService.getChatModel('nostria', 'api-key'),
+        chatMode: 'messages',
+      });
+    }
+
     return models;
   });
   readonly imageModels = computed<ModelInfo[]>(() => {
     const localImageModels = this.models().filter(model => model.task === 'image-generation' || model.task === 'image-upscaling');
     const preferredProvider = this.aiService.getActiveImageProvider();
-    const providers: AiCloudProvider[] = ['xai', 'openai'];
+    const providers: AiImageCloudProvider[] = ['xai', 'openai'];
     const sortedProviders = providers
       .filter(provider => this.aiService.hasCloudImageAccess(provider))
       .sort((left, right) => {
@@ -3726,7 +3746,7 @@ export class AiComponent {
     if (!model) {
       this.chatError.set(
         intent.task === 'image-generation'
-        ? 'No image generation model is available. Select Create Images or configure a hosted image provider.'
+          ? 'No image generation model is available. Select Create Images or configure a hosted image provider.'
           : intent.task === 'video-generation'
             ? 'No video generation model is available. Add an xAI API key in AI Settings.'
             : 'No image upscaling model is available.',
@@ -3928,8 +3948,9 @@ export class AiComponent {
         }
       }
 
+      const cloudImageProvider = model.provider === 'openai' || model.provider === 'xai' ? model.provider : null;
       const images = model.source === 'cloud'
-        ? await this.aiService.generateImage(prompt, model.provider, imageOptions)
+        ? await this.aiService.generateImage(prompt, cloudImageProvider, imageOptions)
         : await this.aiService.generateLocalImage(prompt, model.id);
       const cachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image)));
       this.conversation.update(messages => messages.map(message => {

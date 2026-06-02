@@ -48,9 +48,10 @@ export interface AiVideoGenerationProgress {
   progress?: number;
 }
 
-export type AiCloudProvider = 'openai' | 'xai';
+export type AiCloudProvider = 'openai' | 'xai' | 'nostria';
+export type AiImageCloudProvider = 'openai' | 'xai';
 export type AiCloudAccessMode = 'api-key' | 'hosted';
-export type AiImageProvider = AiCloudProvider | 'local';
+export type AiImageProvider = AiImageCloudProvider | 'local';
 export type AiGeneratedMediaProvider = AiImageProvider;
 
 export interface AiImageGenerationOptions {
@@ -109,10 +110,12 @@ export interface AiVoiceGenerationProgress {
 export interface AiCloudSettings {
   openaiApiKey?: string;
   xaiApiKey?: string;
+  nostriaApiKey?: string;
   tauriWebGpuEnabled: boolean;
-  preferredImageProvider: AiCloudProvider;
+  preferredImageProvider: AiImageCloudProvider;
   openaiChatModel: string;
   xaiChatModel: string;
+  nostriaChatModel: string;
   openaiImageModel: string;
   openaiImageSize: string;
   openaiImageQuality: string;
@@ -207,6 +210,16 @@ interface AiCloudChatCompletionPayload {
   message?: string;
 }
 
+interface AiCloudModelListPayload {
+  data?: {
+    id?: string;
+  }[];
+  error?: {
+    message?: string;
+  } | string;
+  message?: string;
+}
+
 interface AiImageApiPayload {
   data?: {
     b64_json?: string;
@@ -276,12 +289,14 @@ export class AiService {
   private static readonly CLOUD_SETTINGS_STORAGE_KEY = 'nostria-ai-cloud-settings';
   private static readonly TRANSFORMERS_CACHE_NAME = 'transformers-cache';
   private static readonly TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
+  private static readonly NOSTRIA_AI_BASE_URL = 'https://ai.nostria.app/v1';
 
   private readonly defaultCloudSettings: AiCloudSettings = {
     tauriWebGpuEnabled: true,
     preferredImageProvider: 'xai',
     openaiChatModel: 'gpt-4.1-mini',
     xaiChatModel: 'grok-4-1-fast-reasoning',
+    nostriaChatModel: 'llama-4-scout',
     openaiImageModel: 'gpt-image-2',
     openaiImageSize: 'auto',
     openaiImageQuality: 'auto',
@@ -825,17 +840,25 @@ export class AiService {
     this.queuedStandardPrompt.set(null);
   }
 
-  getProviderLabel(provider: AiImageProvider): string {
+  getProviderLabel(provider: AiCloudProvider | AiImageProvider): string {
     if (provider === 'local') {
       return 'Local browser AI';
     }
 
-    return provider === 'openai' ? 'OpenAI' : 'xAI / Grok';
+    if (provider === 'openai') {
+      return 'OpenAI';
+    }
+
+    return provider === 'nostria' ? 'Nostria AI' : 'xAI / Grok';
   }
 
   getCloudAccessLabel(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): string {
     if (provider === 'openai') {
       return 'Your API key';
+    }
+
+    if (provider === 'nostria') {
+      return 'Your Nostria AI key';
     }
 
     return accessMode === 'hosted' ? 'Nostria backend' : 'Your xAI key';
@@ -846,10 +869,14 @@ export class AiService {
       return 'OpenAI';
     }
 
+    if (provider === 'nostria') {
+      return 'Nostria AI';
+    }
+
     return accessMode === 'hosted' ? 'Nostria Grok' : 'xAI / Grok';
   }
 
-  getImageModel(provider: AiCloudProvider): string {
+  getImageModel(provider: AiImageCloudProvider): string {
     const cloudSettings = this.cloudSettings();
     if (provider === 'openai') {
       return cloudSettings.openaiImageModel;
@@ -879,6 +906,10 @@ export class AiService {
       return cloudSettings.openaiChatModel;
     }
 
+    if (provider === 'nostria') {
+      return cloudSettings.nostriaChatModel;
+    }
+
     return accessMode === 'hosted'
       ? this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel
       : this.hasCloudApiKey('xai')
@@ -888,26 +919,37 @@ export class AiService {
 
   hasCloudApiKey(provider: AiCloudProvider): boolean {
     const cloudSettings = this.cloudSettings();
-    return provider === 'openai'
-      ? typeof cloudSettings.openaiApiKey === 'string' && cloudSettings.openaiApiKey.length > 0
-      : typeof cloudSettings.xaiApiKey === 'string' && cloudSettings.xaiApiKey.length > 0;
+    switch (provider) {
+      case 'openai':
+        return typeof cloudSettings.openaiApiKey === 'string' && cloudSettings.openaiApiKey.length > 0;
+      case 'nostria':
+        return typeof cloudSettings.nostriaApiKey === 'string' && cloudSettings.nostriaApiKey.length > 0;
+      default:
+        return typeof cloudSettings.xaiApiKey === 'string' && cloudSettings.xaiApiKey.length > 0;
+    }
   }
 
   hasCloudChatAccess(provider: AiCloudProvider): boolean {
-    return provider === 'openai'
-      ? this.hasCloudApiKey('openai')
-      : this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
+    if (provider === 'openai' || provider === 'nostria') {
+      return this.hasCloudApiKey(provider);
+    }
+
+    return this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
   }
 
   hasCloudChatAccessMode(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): boolean {
-    if (provider === 'openai') {
-      return accessMode === 'api-key' && this.hasCloudApiKey('openai');
+    if (provider === 'openai' || provider === 'nostria') {
+      return accessMode === 'api-key' && this.hasCloudApiKey(provider);
     }
 
     return accessMode === 'hosted' ? this.hasHostedGrokAccess() : this.hasCloudApiKey('xai');
   }
 
   hasCloudImageAccess(provider: AiCloudProvider): boolean {
+    if (provider === 'nostria') {
+      return false;
+    }
+
     return provider === 'openai'
       ? this.hasCloudApiKey('openai')
       : this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
@@ -921,8 +963,8 @@ export class AiService {
     return provider === 'xai' && this.hasCloudApiKey('xai');
   }
 
-  getConfiguredImageProviders(): AiCloudProvider[] {
-    const providers: AiCloudProvider[] = ['xai', 'openai'];
+  getConfiguredImageProviders(): AiImageCloudProvider[] {
+    const providers: AiImageCloudProvider[] = ['xai', 'openai'];
     return providers.filter(provider => this.hasCloudImageAccess(provider));
   }
 
@@ -934,7 +976,7 @@ export class AiService {
     return this.hasCloudVoiceAccess('xai') ? ['xai'] : [];
   }
 
-  getActiveImageProvider(preferredProvider?: AiCloudProvider | null): AiCloudProvider | null {
+  getActiveImageProvider(preferredProvider?: AiImageCloudProvider | null): AiImageCloudProvider | null {
     if (preferredProvider && this.hasCloudImageAccess(preferredProvider)) {
       return preferredProvider;
     }
@@ -958,16 +1000,36 @@ export class AiService {
   }
 
   setCloudApiKey(provider: AiCloudProvider, apiKey: string): void {
-    this.updateCloudSettings(provider === 'openai' ? { openaiApiKey: apiKey } : { xaiApiKey: apiKey });
+    switch (provider) {
+      case 'openai':
+        this.updateCloudSettings({ openaiApiKey: apiKey });
+        break;
+      case 'nostria':
+        this.updateCloudSettings({ nostriaApiKey: apiKey });
+        break;
+      default:
+        this.updateCloudSettings({ xaiApiKey: apiKey });
+        break;
+    }
   }
 
   clearCloudApiKey(provider: AiCloudProvider): void {
-    this.updateCloudSettings(provider === 'openai' ? { openaiApiKey: '' } : { xaiApiKey: '' });
+    switch (provider) {
+      case 'openai':
+        this.updateCloudSettings({ openaiApiKey: '' });
+        break;
+      case 'nostria':
+        this.updateCloudSettings({ nostriaApiKey: '' });
+        break;
+      default:
+        this.updateCloudSettings({ xaiApiKey: '' });
+        break;
+    }
   }
 
   async generateImage(
     prompt: string,
-    provider?: AiCloudProvider | null,
+    provider?: AiImageCloudProvider | null,
     options?: AiImageGenerationOptions,
   ): Promise<AiGeneratedImage[]> {
     const activeProvider = this.getActiveImageProvider(provider);
@@ -1089,7 +1151,12 @@ export class AiService {
   }
 
   async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string, accessMode: AiCloudAccessMode = 'api-key'): Promise<string> {
-    const apiKey = provider === 'openai' ? this.cloudSettings().openaiApiKey : this.cloudSettings().xaiApiKey;
+    const cloudSettings = this.cloudSettings();
+    const apiKey = provider === 'openai'
+      ? cloudSettings.openaiApiKey
+      : provider === 'nostria'
+        ? cloudSettings.nostriaApiKey
+        : cloudSettings.xaiApiKey;
     if (provider === 'xai' && (accessMode === 'hosted' || (!apiKey && this.hasHostedGrokAccess()))) {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
@@ -1118,9 +1185,7 @@ export class AiService {
       throw new Error(`${this.getProviderLabel(provider)} chat model is not configured.`);
     }
 
-    const url = provider === 'openai'
-      ? 'https://api.openai.com/v1/chat/completions'
-      : 'https://api.x.ai/v1/chat/completions';
+    const url = this.getChatCompletionUrl(provider);
 
     const payload = await this.fetchChatCompletion(url, apiKey, {
       model: resolvedModel,
@@ -1133,6 +1198,35 @@ export class AiService {
     }
 
     return content;
+  }
+
+  async fetchCloudModels(provider: AiCloudProvider): Promise<string[]> {
+    const apiKey = provider === 'openai'
+      ? this.cloudSettings().openaiApiKey
+      : provider === 'nostria'
+        ? this.cloudSettings().nostriaApiKey
+        : this.cloudSettings().xaiApiKey;
+
+    if (!apiKey) {
+      throw new Error(`${this.getCloudAccessLabel(provider)} is not configured.`);
+    }
+
+    const response = await fetch(this.getModelsUrl(provider), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const payload = await this.parseModelListResponse(response);
+    if (!response.ok) {
+      throw new Error(this.extractModelListError(payload) || `Model list failed with status ${response.status}.`);
+    }
+
+    return (payload.data ?? [])
+      .map(model => model.id?.trim() ?? '')
+      .filter(model => model.length > 0)
+      .sort((left, right) => left.localeCompare(right));
   }
 
   async deleteModelFromCache(modelId: string) {
@@ -1291,6 +1385,7 @@ export class AiService {
       preferredImageProvider: settings.preferredImageProvider === 'openai' ? 'openai' : 'xai',
       openaiChatModel: settings.openaiChatModel?.trim() || this.defaultCloudSettings.openaiChatModel,
       xaiChatModel: settings.xaiChatModel?.trim() || this.defaultCloudSettings.xaiChatModel,
+      nostriaChatModel: settings.nostriaChatModel?.trim() || this.defaultCloudSettings.nostriaChatModel,
       openaiImageModel: settings.openaiImageModel?.trim() || this.defaultCloudSettings.openaiImageModel,
       openaiImageSize: this.normalizeOpenAiImageSize(settings.openaiImageSize),
       openaiImageQuality: this.normalizeChoiceSetting(settings.openaiImageQuality, this.defaultCloudSettings.openaiImageQuality, ['auto', 'low', 'medium', 'high']),
@@ -1315,7 +1410,59 @@ export class AiService {
       piperVoiceSpeed: this.normalizeNumberSetting(settings.piperVoiceSpeed, this.defaultCloudSettings.piperVoiceSpeed, 0.5, 2),
       openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
       xaiApiKey: this.normalizeApiKey(settings.xaiApiKey),
+      nostriaApiKey: this.normalizeApiKey(settings.nostriaApiKey),
     };
+  }
+
+  private getChatCompletionUrl(provider: AiCloudProvider): string {
+    switch (provider) {
+      case 'openai':
+        return 'https://api.openai.com/v1/chat/completions';
+      case 'nostria':
+        return `${AiService.NOSTRIA_AI_BASE_URL}/chat/completions`;
+      default:
+        return 'https://api.x.ai/v1/chat/completions';
+    }
+  }
+
+  private getModelsUrl(provider: AiCloudProvider): string {
+    switch (provider) {
+      case 'openai':
+        return 'https://api.openai.com/v1/models';
+      case 'nostria':
+        return `${AiService.NOSTRIA_AI_BASE_URL}/models`;
+      default:
+        return 'https://api.x.ai/v1/models';
+    }
+  }
+
+  private async parseModelListResponse(response: Response): Promise<AiCloudModelListPayload> {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text) as AiCloudModelListPayload;
+    } catch {
+      return { message: text };
+    }
+  }
+
+  private extractModelListError(payload: AiCloudModelListPayload): string | null {
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+
+    if (typeof payload.error === 'object' && typeof payload.error?.message === 'string' && payload.error.message.trim()) {
+      return payload.error.message.trim();
+    }
+
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim();
+    }
+
+    return null;
   }
 
   private normalizeApiKey(value?: string): string | undefined {
@@ -2075,7 +2222,7 @@ export class AiService {
     return null;
   }
 
-  private mapGeneratedImages(payload: AiImageApiPayload, provider: AiCloudProvider, prompt: string): AiGeneratedImage[] {
+  private mapGeneratedImages(payload: AiImageApiPayload, provider: AiImageCloudProvider, prompt: string): AiGeneratedImage[] {
     if (!Array.isArray(payload.data) || payload.data.length === 0) {
       throw new Error('The provider returned no images.');
     }

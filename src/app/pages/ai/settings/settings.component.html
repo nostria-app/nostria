@@ -280,6 +280,67 @@
                 <section class="provider-section">
                   <div class="provider-heading-row">
                     <div>
+                      <h3>Nostria AI</h3>
+                      <p>Use the OpenAI-compatible API at ai.nostria.app with your own key.</p>
+                    </div>
+                    <span class="provider-status" [class.configured]="providerConfigured('nostria')">
+                      {{ providerConfigured('nostria') ? 'Configured' : 'Not configured' }}
+                    </span>
+                  </div>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nostria AI API key</mat-label>
+                    <input matInput [type]="showNostriaAiApiKey ? 'text' : 'password'" [(ngModel)]="nostriaAiApiKey"
+                      placeholder="sk-..." autocomplete="new-password" autocorrect="off" spellcheck="false"
+                      name="field-ai3" id="input-ai3" data-1p-ignore data-bwignore="true" data-lpignore="true"
+                      data-form-type="other" data-protonpass-ignore="true" />
+                    <button mat-icon-button matSuffix type="button" (click)="toggleApiKeyVisibility('nostria')"
+                      [attr.aria-label]="showNostriaAiApiKey ? 'Hide API key' : 'Show API key'">
+                      <mat-icon>{{ showNostriaAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                  </mat-form-field>
+
+                  @if (nostriaModels().length) {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nostria AI chat model</mat-label>
+                    <mat-select [value]="aiService.cloudSettings().nostriaChatModel"
+                      (selectionChange)="updateChatModel('nostria', $event.value)">
+                      @for (model of nostriaModels(); track model) {
+                      <mat-option [value]="model">{{ model }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  } @else {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nostria AI chat model</mat-label>
+                    <input matInput [ngModel]="aiService.cloudSettings().nostriaChatModel"
+                      (ngModelChange)="updateChatModel('nostria', $event)" placeholder="llama-4-scout" />
+                  </mat-form-field>
+                  }
+
+                  <p class="provider-hint">
+                    OpenAI-compatible APIs can expose available models through GET /v1/models. If ai.nostria.app does
+                    not return a model list, Nostria uses llama-4-scout.
+                  </p>
+
+                  @if (nostriaModelsError()) {
+                  <p class="provider-hint provider-error">{{ nostriaModelsError() }}</p>
+                  }
+
+                  <div class="provider-actions">
+                    <button mat-flat-button type="button" (click)="saveApiKey('nostria')">Save key</button>
+                    <button mat-stroked-button type="button" (click)="refreshNostriaModels()"
+                      [disabled]="nostriaModelsLoading() || (!providerConfigured('nostria') && !nostriaAiApiKey.trim())">
+                      {{ nostriaModelsLoading() ? 'Loading...' : 'Load models' }}
+                    </button>
+                    <button mat-stroked-button type="button" (click)="clearApiKey('nostria')"
+                      [disabled]="!providerConfigured('nostria') && !nostriaAiApiKey.trim()">Clear</button>
+                  </div>
+                </section>
+
+                <section class="provider-section">
+                  <div class="provider-heading-row">
+                    <div>
                       <h3>xAI / Grok</h3>
                       <p>Optional direct xAI API key for video, voice, or personal API usage outside Nostria-hosted
                         credits.</p>
