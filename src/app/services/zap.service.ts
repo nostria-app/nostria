@@ -50,6 +50,12 @@ export interface GiftPremiumData {
   duration: 1 | 3;
 }
 
+export interface SplitInvoice {
+  pubkey: string;
+  amount: number;
+  invoice: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -1423,6 +1429,97 @@ export class ZapService {
       this.logger.warn('Failed to extract sender from zap receipt:', error);
     }
     return undefined;
+  }
+
+  /**
+   * Generate Lightning invoices for manual payment of a split zap (NIP-57 Appendix G).
+   * Since a single invoice cannot pay multiple recipients, this returns one invoice
+   * per valid recipient so the user can pay them individually.
+   */
+  async generateSplitInvoicesForManualPayment(
+    event: Event,
+    totalAmount: number,
+    message?: string
+  ): Promise<SplitInvoice[]> {
+    const splits = this.parseZapSplits(event);
+    const eventAddress = this.getEventAddress(event);
+
+    if (splits.length === 0) {
+      throw new Error('No valid zap split recipients found in event');
+    }
+
+    // Calculate individual amounts (rounding to nearest sat)
+    const splitPayments = splits.map(split => ({
+      ...split,
+      amount: Math.round(totalAmount * split.weight),
+    }));
+
+    // Ensure we're not losing sats due to rounding - adjust the largest recipient
+    const totalCalculated = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+    if (totalCalculated !== totalAmount) {
+      const difference = totalAmount - totalCalculated;
+      const largestRecipient = splitPayments.reduce((max, p) => (p.amount > max.amount ? p : max));
+      largestRecipient.amount += difference;
+    }
+
+    // Fetch metadata for all recipients in parallel with timeout
+    const metadataPromises = splitPayments.map(async payment => {
+      try {
+        const timeoutPromise = new Promise<NostrRecord | undefined>((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout fetching profile')), 5000)
+        );
+        const profilePromise = this.dataService.getProfile(payment.pubkey);
+        const profile = await Promise.race([profilePromise, timeoutPromise]);
+        return { ...payment, metadata: profile?.data ?? null };
+      } catch (error) {
+        this.logger.warn(`Failed to get metadata for split recipient ${payment.pubkey}`, error);
+        return { ...payment, metadata: null };
+      }
+    });
+
+    const paymentsWithMetadata = await Promise.all(metadataPromises);
+
+    // Filter out recipients without lightning addresses or zero amount
+    const validPayments = paymentsWithMetadata.filter(p => {
+      if (p.amount <= 0) {
+        return false;
+      }
+      if (!p.metadata) {
+        this.logger.warn(`Skipping split recipient ${p.pubkey} - no metadata`);
+        return false;
+      }
+      if (!this.getLightningAddress(p.metadata)) {
+        this.logger.warn(`Skipping split recipient ${p.pubkey} - no lightning address`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validPayments.length === 0) {
+      throw new Error('No recipients have valid lightning addresses configured');
+    }
+
+    // Generate an invoice for each valid recipient sequentially
+    const invoices: SplitInvoice[] = [];
+    for (const payment of validPayments) {
+      const invoice = await this.generateInvoiceForManualPayment(
+        payment.pubkey,
+        payment.amount,
+        message,
+        event.id,
+        payment.metadata as Record<string, unknown>,
+        event.kind,
+        eventAddress
+      );
+
+      invoices.push({
+        pubkey: payment.pubkey,
+        amount: payment.amount,
+        invoice,
+      });
+    }
+
+    return invoices;
   }
 
   /**

@@ -17,7 +17,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { SatAmountComponent } from '../sat-amount/sat-amount.component';
-import { ZapService } from '../../services/zap.service';
+import { ZapService, SplitInvoice } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { ZapErrorHandlerService } from '../../services/zap-error-handler.service';
 import { DataService } from '../../services/data.service';
@@ -115,6 +115,14 @@ export class ZapDialogComponent {
   selectedPaymentMethod = signal<PaymentMethod>('nwc');
   invoiceUrl = signal<string | null>(null);
   isMobile = signal(false);
+
+  // Split-zap manual/native payment state (one invoice per recipient)
+  splitInvoices = signal<SplitInvoice[]>([]);
+  currentSplitIndex = signal(0);
+  isSplitZap = computed(() => !!this.data.zapSplits && this.data.zapSplits.length > 0);
+  currentSplitInvoice = computed<SplitInvoice | null>(
+    () => this.splitInvoices()[this.currentSplitIndex()] ?? null
+  );
   lnurlPayInfo = signal<LnurlPayResponse | null>(null);
   isLoadingLnurlInfo = signal(false);
   lnurlError = signal<string | null>(null);
@@ -474,6 +482,8 @@ export class ZapDialogComponent {
   backToInput(): void {
     this.currentState.set('input');
     this.invoiceUrl.set(null);
+    this.splitInvoices.set([]);
+    this.currentSplitIndex.set(0);
     this.isProcessing.set(false);
     this.errorMessage.set(null);
     this.isErrorRecoverable.set(false);
@@ -513,6 +523,33 @@ export class ZapDialogComponent {
   async generateInvoice(): Promise<void> {
     this.isProcessing.set(true);
     try {
+      // Split zaps require a separate invoice per recipient
+      if (this.isSplitZap()) {
+        // Get the event - either from data or load it
+        let event = this.data.event;
+        if (!event) {
+          if (!this.data.eventId) {
+            throw new Error('Event ID required for zap splits');
+          }
+          const eventRecord = await this.dataService.getEventById(this.data.eventId);
+          if (!eventRecord?.event) {
+            throw new Error('Could not load event for zap split. The event may not be available yet.');
+          }
+          event = eventRecord.event;
+        }
+
+        const invoices = await this.zapService.generateSplitInvoicesForManualPayment(
+          event,
+          this.getFinalAmount(),
+          this.zapForm.get('message')?.value || undefined
+        );
+
+        this.splitInvoices.set(invoices);
+        this.currentSplitIndex.set(0);
+        this.invoiceUrl.set(invoices[0]?.invoice ?? null);
+        return;
+      }
+
       // Use ZapService to generate the actual invoice
       const invoice = await this.zapService.generateInvoiceForManualPayment(
         this.data.recipientPubkey,
@@ -735,6 +772,45 @@ export class ZapDialogComponent {
   markAsPaid(): void {
     const amount = this.getFinalAmount();
     const message = this.zapForm.get('message')?.value || '';
+
+    // For split zaps, advance to the next recipient's invoice until all are paid
+    if (this.isSplitZap()) {
+      const invoices = this.splitInvoices();
+      const nextIndex = this.currentSplitIndex() + 1;
+
+      if (nextIndex < invoices.length) {
+        this.currentSplitIndex.set(nextIndex);
+        this.invoiceUrl.set(invoices[nextIndex].invoice);
+        this.snackBar.open(
+          `⚡ Payment ${nextIndex} of ${invoices.length} done. Pay the next recipient.`,
+          'Dismiss',
+          {
+            duration: 4000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          }
+        );
+        return;
+      }
+
+      this.snackBar.open(
+        `⚡ Payment initiated for ${amount} sats split to ${invoices.length} recipients!`,
+        'Dismiss',
+        {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
+
+      this.dialogRef.close({
+        amount,
+        message,
+        paymentMethod: this.selectedPaymentMethod(),
+        invoice: this.invoiceUrl(),
+      } as ZapDialogResult);
+      return;
+    }
 
     this.snackBar.open(
       `⚡ Payment initiated for ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,

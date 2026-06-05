@@ -380,6 +380,17 @@
           @if (selectedPaymentMethod() === 'native') {
           @if (invoiceUrl()) {
           <div class="native-wallet-section">
+            @if (isSplitZap() && currentSplitInvoice(); as split) {
+            <div class="split-invoice-progress">
+              <mat-icon>people</mat-icon>
+              <span>
+                Paying {{ currentSplitIndex() + 1 }} of {{ splitInvoices().length }}:
+                <app-profile-display-name [pubkey]="split.pubkey"
+                  [showFallbackWhileLoading]="true"></app-profile-display-name>
+                ({{ formatAmount(split.amount) }} sats)
+              </span>
+            </div>
+            }
             <p class="method-description">
               Open your mobile Lightning wallet app to pay this invoice.
             </p>
@@ -407,6 +418,17 @@
           @if (selectedPaymentMethod() === 'manual') {
           @if (invoiceUrl()) {
           <div class="qr-code-section">
+            @if (isSplitZap() && currentSplitInvoice(); as split) {
+            <div class="split-invoice-progress">
+              <mat-icon>people</mat-icon>
+              <span>
+                Paying {{ currentSplitIndex() + 1 }} of {{ splitInvoices().length }}:
+                <app-profile-display-name [pubkey]="split.pubkey"
+                  [showFallbackWhileLoading]="true"></app-profile-display-name>
+                ({{ formatAmount(split.amount) }} sats)
+              </span>
+            </div>
+            }
             <p class="method-description">
               Scan this QR code with any Lightning wallet to pay.
             </p>
@@ -473,10 +495,10 @@
       } @else {
       <button mat-flat-button type="button" class="confirm-button primary" (click)="markAsPaid()">
         <mat-icon>check</mat-icon>
-        I've Paid
-      </button>
-      }
-      }
+        @if (isSplitZap() && currentSplitIndex() + 1 < splitInvoices().length) { I've Paid — Next } @else { I've Paid }
+          </button>
+          }
+          }
     </div>
     }
   </div>

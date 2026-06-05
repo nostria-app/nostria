@@ -320,6 +320,24 @@
   text-align: center;
 }
 
+.split-invoice-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: var(--mat-sys-corner-small);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  font-size: 13px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+  }
+}
+
 .open-wallet-btn {
   margin: 16px 0;
   display: flex;
