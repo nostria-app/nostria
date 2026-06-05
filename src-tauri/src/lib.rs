@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod android_signer;
+mod image_thumbnail;
 mod media_session;
 
 #[cfg(desktop)]
@@ -74,6 +75,10 @@ pub fn run() {
     install_rustls_crypto_provider();
 
     let builder = tauri::Builder::default();
+
+    // Native inline-image thumbnailing (custom `thumbimg://` URI scheme). Used only by the
+    // frontend when running inside Tauri to cap WebKit's decoded-bitmap memory in feeds.
+    let builder = image_thumbnail::register(builder);
 
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

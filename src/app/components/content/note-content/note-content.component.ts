@@ -25,6 +25,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
+import { TauriImageService } from '../../../services/tauri-image.service';
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { PollEventComponent } from '../../event-types/poll-event.component';
 import { ZapPollEventComponent } from '../../event-types/zap-poll-event.component';
@@ -128,6 +129,7 @@ export class NoteContentComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private videoPlayback = inject(VideoPlaybackService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private tauriImage = inject(TauriImageService);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
   private rssParser = inject(RssParserService);
   private mediaPlayer = inject(MediaPlayerService);
@@ -1598,7 +1600,12 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   getImageSrc(imageUrl: string): string {
-    return this.imageSrcOverrides().get(imageUrl) || imageUrl;
+    const override = this.imageSrcOverrides().get(imageUrl);
+    if (override) {
+      return override;
+    }
+    // In Tauri this returns a bounded-width native thumbnail URL; on web it returns the original.
+    return this.tauriImage.getInlineImageUrl(imageUrl);
   }
 
   /**
@@ -1623,7 +1630,23 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   onImageError(imageUrl: string): void {
-    const currentSrc = this.getImageSrc(imageUrl);
+    const override = this.imageSrcOverrides().get(imageUrl);
+
+    // Step 1: a native thumbnail (Tauri) failed - fall back to the original source URL.
+    if (!override) {
+      const transformed = this.tauriImage.getInlineImageUrl(imageUrl);
+      if (transformed !== imageUrl) {
+        this.imageSrcOverrides.update(map => {
+          const newMap = new Map(map);
+          newMap.set(imageUrl, imageUrl);
+          return newMap;
+        });
+        return;
+      }
+    }
+
+    // Step 2: the original (or web) source failed - try stripping any third-party proxy wrapper.
+    const currentSrc = override ?? imageUrl;
     const fallbackSrc = stripImageProxy(currentSrc);
 
     if (fallbackSrc && fallbackSrc !== currentSrc) {

@@ -885,6 +885,13 @@ For items with optional content (comments, metadata), use these techniques to ma
 - **Profile details page**: Original source (full resolution)
 - **Lazy loading**: Images load as they enter viewport
 - **Preloading**: Critical images preloaded in background
+- **Inline feed images (Tauri only)**: On desktop/mobile (Tauri), inline feed images are routed
+  through a native `thumbimg://` URI scheme handled in Rust (`src-tauri/src/image_thumbnail.rs`).
+  It downloads, EXIF-orients, downscales (max width ~1080px), disk-caches, and re-encodes images
+  as JPEG so WebKit (webkit2gtk) retains small decoded bitmaps instead of full-resolution
+  originals — the dominant driver of native memory usage in long feeds. The web build is
+  unaffected and loads original URLs directly (no proxy load for feed thumbnails). Frontend entry
+  point: `TauriImageService`. The full-resolution original is still used by the image viewer.
 
 ### Route Reuse Strategy
 

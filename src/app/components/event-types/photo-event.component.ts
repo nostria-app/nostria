@@ -12,6 +12,7 @@ import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
+import { TauriImageService } from '../../services/tauri-image.service';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
@@ -43,6 +44,7 @@ export class PhotoEventComponent {
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private tauriImage = inject(TauriImageService);
   private utilities = inject(UtilitiesService);
 
   // Current carousel index for inline navigation
@@ -558,7 +560,12 @@ export class PhotoEventComponent {
 
   getImageSrc(index: number): string {
     const urls = this.imageUrls();
-    return this.imageSrcOverrides().get(index) || urls[index] || '';
+    const override = this.imageSrcOverrides().get(index);
+    if (override) {
+      return override;
+    }
+    // In Tauri this returns a bounded-width native thumbnail URL; on web it returns the original.
+    return this.tauriImage.getInlineImageUrl(urls[index] || '');
   }
 
   hasImageFailed(index: number): boolean {
@@ -566,7 +573,25 @@ export class PhotoEventComponent {
   }
 
   onImageError(index: number): void {
-    const currentSrc = this.getImageSrc(index);
+    const urls = this.imageUrls();
+    const original = urls[index] || '';
+    const override = this.imageSrcOverrides().get(index);
+
+    // Step 1: a native thumbnail (Tauri) failed - fall back to the original source URL.
+    if (!override) {
+      const transformed = this.tauriImage.getInlineImageUrl(original);
+      if (transformed !== original) {
+        this.imageSrcOverrides.update(map => {
+          const newMap = new Map(map);
+          newMap.set(index, original);
+          return newMap;
+        });
+        return;
+      }
+    }
+
+    // Step 2: the original (or web) source failed - try stripping any third-party proxy wrapper.
+    const currentSrc = override ?? original;
     const fallbackSrc = stripImageProxy(currentSrc);
 
     if (fallbackSrc && fallbackSrc !== currentSrc) {

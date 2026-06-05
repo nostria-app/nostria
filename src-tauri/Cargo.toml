@@ -32,3 +32,17 @@ souvlaki = { version = "0.8.3", default-features = false, features = ["use_zbus"
 rustls = { version = "=0.23.37", default-features = false, features = ["std", "ring"] }
 tauri-plugin-deep-link = "=2.4.7"
 tauri-plugin-single-instance = { version = "=2.4.0", features = ["deep-link"] }
+
+# Native inline-image thumbnailing (Tauri desktop/mobile only).
+# Downloads, EXIF-orients, and downscales feed images so WebKit retains small decoded
+# bitmaps instead of full-resolution originals. Uses ring-based rustls via ureq to match
+# the crypto provider installed in lib.rs and to avoid C/CMake build deps (aws-lc) on Android.
+#
+# Pinned to 0.25.5: it has the EXIF orientation API (ImageReader::into_decoder,
+# ImageDecoder::orientation, DynamicImage::apply_orientation) but predates the newer
+# convolution code in later 0.25.x patches that relies on the `slice_as_chunks` feature
+# stabilized only in Rust 1.88. Pinning keeps the crate buildable on the toolchains used
+# locally and in CI without forcing a Rust upgrade.
+image = { version = "=0.25.5", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
+ureq = { version = "2", features = ["tls"] }
+base64 = "0.22"

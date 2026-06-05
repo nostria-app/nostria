@@ -72,8 +72,9 @@ export class ZapService {
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
 
-  // Cache for LNURL pay endpoints
+  // Cache for LNURL pay endpoints (bounded to avoid unbounded growth over long sessions)
   private lnurlCache = new Map<string, LnurlPayResponse>();
+  private static readonly LNURL_CACHE_MAX_SIZE = 500;
 
   // Default retry configuration
   private readonly DEFAULT_RETRY_OPTIONS: RetryOptions = {
@@ -272,6 +273,25 @@ export class ZapService {
   }
 
   /**
+   * Store an LNURL-pay response with a bounded, LRU-style cache.
+   * Re-inserting refreshes recency; oldest entries are evicted past the size limit.
+   */
+  private setLnurlCache(key: string, value: LnurlPayResponse): void {
+    if (this.lnurlCache.has(key)) {
+      this.lnurlCache.delete(key);
+    }
+    this.lnurlCache.set(key, value);
+
+    while (this.lnurlCache.size > ZapService.LNURL_CACHE_MAX_SIZE) {
+      const oldestKey = this.lnurlCache.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      this.lnurlCache.delete(oldestKey);
+    }
+  }
+
+  /**
    * Fetch LNURL-pay information for a Lightning address
    */
   async fetchLnurlPayInfo(lightningAddress: string): Promise<LnurlPayResponse> {
@@ -279,7 +299,6 @@ export class ZapService {
     if (this.lnurlCache.has(lightningAddress)) {
       return this.lnurlCache.get(lightningAddress)!;
     }
-
     try {
       let url: string;
 
@@ -316,7 +335,7 @@ export class ZapService {
       }
 
       // Cache the response
-      this.lnurlCache.set(lightningAddress, data);
+      this.setLnurlCache(lightningAddress, data);
 
       return data;
     } catch (error) {
