@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT } from '@angular/core';
+import { PLATFORM_ID, effect, inject, signal, DOCUMENT, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
@@ -24,9 +24,7 @@ export const DEFAULT_TEXT_SCALE: TextScaleValue = 1.0;
  * - Typography CSS variables use calc() with this multiplier
  * - rem-based font sizes respect both system settings AND this multiplier
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class TextScaleService {
   readonly STORAGE_KEY = 'nostria-text-scale';
   readonly CSS_PROPERTY = '--nostria-text-scale';

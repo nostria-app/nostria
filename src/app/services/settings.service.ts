@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { effect, inject, signal, untracked, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { Event, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
@@ -135,9 +135,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   googleFaviconEnabled: false,
 };
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SettingsService {
   private nostrService = inject(NostrService);
   private accountState = inject(AccountStateService);

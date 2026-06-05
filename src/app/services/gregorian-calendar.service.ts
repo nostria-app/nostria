@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 /**
  * Gregorian Calendar Service
@@ -6,9 +6,7 @@ import { Injectable } from '@angular/core';
  * Provides localized month names for the Gregorian calendar system.
  * Uses $localize for i18n support.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class GregorianCalendarService {
   /**
    * Get localized full month names (January, February, etc.)

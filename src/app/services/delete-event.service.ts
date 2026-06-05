@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { CustomDialogService } from './custom-dialog.service';
 import {
@@ -22,9 +22,7 @@ export interface DeleteCoordinateTarget {
   identifier?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DeleteEventService {
   private readonly customDialog = inject(CustomDialogService);
 

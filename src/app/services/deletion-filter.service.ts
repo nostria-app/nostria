@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DatabaseService } from './database.service';
@@ -18,9 +18,7 @@ import { AccountStateService } from './account-state.service';
  * - EventService — has its own checkDeletionRequest() for individual
  *   events opened by the user.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DeletionFilterService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);

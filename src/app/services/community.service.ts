@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, Filter, UnsignedEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
@@ -61,9 +61,7 @@ export interface CommunityPost {
   isTopLevel: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CommunityService {
   private readonly logger = inject(LoggerService);
   private readonly pool = inject(RelayPoolService);

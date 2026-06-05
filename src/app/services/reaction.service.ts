@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import { NostrService } from './nostr.service';
@@ -12,9 +12,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { MusicLikedSongsService } from './music-liked-songs.service';
 import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ReactionService {
   private nostrService = inject(NostrService);
   private utilities = inject(UtilitiesService);

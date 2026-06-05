@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { EncryptionService } from './encryption.service';
 import { LoggerService } from './logger.service';
@@ -20,9 +20,7 @@ import { LocalStorageService } from './local-storage.service';
  * - d tag: "nostria-notes"
  * - content: NIP-44 encrypted JSON array of all memos
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MemosService {
   private readonly nostrService = inject(NostrService);
   private readonly encryptionService = inject(EncryptionService);

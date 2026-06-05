@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import { Event } from 'nostr-tools';
 
@@ -69,9 +69,7 @@ export type PublishEventUnion =
  * - NotificationService subscribes to these events to create notifications
  * - No direct dependency between the two services
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PublishEventBus {
   private events$ = new Subject<PublishEventUnion>();
 

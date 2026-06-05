@@ -1,12 +1,10 @@
-import { Injectable, PLATFORM_ID, inject, isDevMode, signal } from '@angular/core';
+import { PLATFORM_ID, inject, isDevMode, signal, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 export type FeatureLevel = 'stable' | 'beta' | 'preview';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class LoggerService {
   readonly LOG_LEVEL_KEY = 'nostria-log-level';
   readonly LOG_OVERLAY_KEY = 'nostria-log-overlay';

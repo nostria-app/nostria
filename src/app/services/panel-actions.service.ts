@@ -1,4 +1,4 @@
-import { Injectable, signal, TemplateRef } from '@angular/core';
+import { signal, TemplateRef, Service } from '@angular/core';
 
 export interface PanelAction {
   id: string;
@@ -23,9 +23,7 @@ export interface BreadcrumbItem {
  * Components can register their actions to be displayed in the main toolbar.
  * Left panel uses breadcrumb navigation, right panel uses back button.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class PanelActionsService {
   // Breadcrumb items for left panel navigation (e.g., ["Music", "Songs"])
   // The last item is the current page (not clickable)

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 export interface ChroniaDate {
   year: number;
@@ -32,9 +32,7 @@ export interface ChroniaDateTime extends ChroniaDate {
  * - Except divisible by 100: not a leap year
  * - Except divisible by 400: leap year
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ChroniaCalendarService {
   // Chronia epoch: December 22, 2015 (Gregorian) = Chronia Year 0, Month 1, Day 1
   private readonly CHRONIA_EPOCH_MS = Date.UTC(2015, 11, 22, 0, 0, 0, 0); // December 22, 2015

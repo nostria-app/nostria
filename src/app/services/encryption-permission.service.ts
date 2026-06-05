@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { LoggerService } from './logger.service';
 
@@ -12,9 +12,7 @@ export interface DecryptionRequest {
   };
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EncryptionPermissionService {
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);

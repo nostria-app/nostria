@@ -1,9 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { PoolService } from './relays/pool.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EventRelaySourcesService {
   private readonly poolService = inject(PoolService);
 

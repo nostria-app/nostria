@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector, effect, signal } from '@angular/core';
+import { inject, Injector, effect, signal, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
@@ -30,9 +30,7 @@ interface BunkerQueueItem<T> {
   priority: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EncryptionService {
   private readonly unsupportedRemoteSignerHosts = new Set<string>([
     'nos.lol',

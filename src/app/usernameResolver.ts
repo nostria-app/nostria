@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { ActivatedRouteSnapshot, Resolve, Router } from '@angular/router';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -7,7 +7,7 @@ import { AccountStateService } from './services/account-state.service';
 import { UsernameService } from './services/username';
 import { LoggerService } from './services/logger.service';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UsernameResolver implements Resolve<{ id: string | undefined; username: string }> {
   private usernameService = inject(UsernameService);
   private accountState = inject(AccountStateService);

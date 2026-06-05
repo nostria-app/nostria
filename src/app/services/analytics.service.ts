@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, effect, inject } from '@angular/core';
+import { PLATFORM_ID, effect, inject, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
@@ -6,9 +6,7 @@ import { LoggerService } from './logger.service';
 type ApplicationInsightsModule = typeof import('@microsoft/applicationinsights-web');
 type ApplicationInsightsInstance = InstanceType<ApplicationInsightsModule['ApplicationInsights']>;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AnalyticsService {
   private static readonly CONNECTION_STRING = 'InstrumentationKey=243bbf41-7f98-48b7-b4cd-ac9f9ead4985;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=6b331861-c4cc-4605-831f-a8d43ca240d7';
 

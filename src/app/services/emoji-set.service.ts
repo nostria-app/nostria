@@ -1,4 +1,4 @@
-import { inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { inject, OnDestroy, signal, Service } from '@angular/core';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
 import { UserDataService } from './user-data.service';
@@ -19,9 +19,7 @@ export interface EmojiSetGroup {
   emojis: { shortcode: string; url: string }[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EmojiSetService implements OnDestroy {
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);

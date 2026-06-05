@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UserRelaysService } from './relays/user-relays';
@@ -37,9 +37,7 @@ export interface BatchQueryResult {
  * Example: If users A, B, C all have relays X, Y, Z in common, we can query X (or Y or Z)
  * once for all 3 users instead of making 3 separate queries.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RelayBatchService {
   private readonly logger = inject(LoggerService);
   private readonly userRelaysService = inject(UserRelaysService);

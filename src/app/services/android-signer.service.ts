@@ -1,4 +1,4 @@
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 
@@ -19,9 +19,7 @@ interface AndroidSignerCommandResponse {
   event?: string | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AndroidSignerService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);

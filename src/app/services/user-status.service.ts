@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { inject, signal, effect, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { AccountStateService } from './account-state.service';
 import { UserDataService } from './user-data.service';
@@ -21,9 +21,7 @@ export interface UserStatus {
 
 const USER_STATUS_KIND = 30315;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class UserStatusService {
   private nostr = inject(NostrService);
   private accountState = inject(AccountStateService);

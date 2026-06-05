@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { signal, computed, inject, effect, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { ApplicationStateService } from './application-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -13,9 +13,7 @@ import { DatabaseService } from './database.service';
  * Stores NIP-28 channel IDs the user has joined/pinned using "e" tags
  * referencing kind:40 channel definition events.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PublicChatsListService {
   private accountRelay = inject(AccountRelayService);
   private nostr = inject(NostrService);

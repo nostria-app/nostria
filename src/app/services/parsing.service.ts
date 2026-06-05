@@ -1,4 +1,4 @@
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, OnDestroy, Service } from '@angular/core';
 import { DataService } from './data.service';
 import { nip19 } from 'nostr-tools';
 import type { ProfilePointer } from 'nostr-tools/nip19';
@@ -99,9 +99,7 @@ export interface ParseContentResult {
   pendingMentions: PendingMentionResolution[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ParsingService implements OnDestroy {
   private readonly ignoredBareLinkDomains = new Set([
     'andrzej.btc',

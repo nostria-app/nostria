@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 import { sanitizeProfileNameInput } from '../utils/profile-name';
 
@@ -26,9 +26,7 @@ export interface MentionReplacement {
   newCursorPosition: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MentionInputService {
 
   /**

@@ -2,10 +2,10 @@ import {
   computed,
   effect,
   inject,
-  Injectable,
   PLATFORM_ID,
   signal,
   untracked,
+  Service,
 } from '@angular/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { isTauri } from '@tauri-apps/api/core';
@@ -29,9 +29,7 @@ import { CustomDialogService } from './custom-dialog.service';
 import { AndroidSignerService } from './android-signer.service';
 import { AndroidWipeRestartDialogComponent } from '../components/android-wipe-restart-dialog/android-wipe-restart-dialog.component';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ApplicationService {
   /** Application version */
   readonly version = signal('Loading...');

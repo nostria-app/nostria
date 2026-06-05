@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { DestroyRef, Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { DestroyRef, PLATFORM_ID, computed, inject, signal, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 export type BroadcastState = 'idle' | 'preparing' | 'connecting' | 'live' | 'stopping' | 'error';
@@ -20,9 +20,7 @@ interface WhipAnswerNormalizationResult {
   removedLines: string[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class LiveStreamBroadcastService {
   private static readonly MAX_PROVIDER_BITRATE_BPS = 500_000;
   private static readonly MAX_AUDIO_BITRATE_BPS = 64_000;

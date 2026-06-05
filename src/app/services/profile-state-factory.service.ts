@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector, InjectionToken } from '@angular/core';
+import { inject, Injector, InjectionToken, Service } from '@angular/core';
 import { ProfileState } from './profile-state';
 import { UserRelayService } from './relays/user-relay';
 import { LoggerService } from './logger.service';
@@ -16,9 +16,7 @@ export const PROFILE_STATE = new InjectionToken<ProfileState>('ProfileState');
  * Each ProfileComponent should create its own ProfileState instance to ensure
  * data isolation when multiple profiles are open in different panes.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ProfileStateFactory {
   private readonly injector = inject(Injector);
   private readonly logger = inject(LoggerService);

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { signal, computed, inject, effect, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
@@ -10,9 +10,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
 import { UserRelayService } from './relays/user-relay';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PinnedService {
   accountRelay = inject(AccountRelayService);
   userRelay = inject(UserRelayService);

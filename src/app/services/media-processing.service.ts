@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { PLATFORM_ID, inject, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { MediaService } from './media.service';
@@ -52,9 +52,7 @@ interface CompressionCandidateResult {
   failureReason?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MediaProcessingService {
   private readonly logger = inject(LoggerService);
   private readonly mediaService = inject(MediaService);

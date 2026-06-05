@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, OnDestroy, PLATFORM_ID, inject, signal } from '@angular/core';
+import { OnDestroy, PLATFORM_ID, inject, signal, Service } from '@angular/core';
 
 export type EventTtsPlaybackStatus = 'loading' | 'playing' | 'paused';
 
@@ -10,7 +10,7 @@ export interface EventTtsPlaybackState {
   status: EventTtsPlaybackStatus;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class EventTtsPlaybackService implements OnDestroy {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private audio: HTMLAudioElement | null = null;

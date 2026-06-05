@@ -1,13 +1,11 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, inject, signal, DOCUMENT } from '@angular/core';
+import { PLATFORM_ID, computed, inject, signal, DOCUMENT, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 /**
  * Service for interacting with browser localStorage with SSR compatibility
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class LocalStorageService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);

@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { effect, inject, signal, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -30,9 +30,7 @@ export interface CreateMusicBookmarkPlaylistData {
   gradient?: string | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MusicBookmarkPlaylistService {
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);

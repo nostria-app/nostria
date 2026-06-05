@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
@@ -27,9 +27,7 @@ export interface WebBookmark {
   domain: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class WebBookmarkService {
   private readonly socialAuthorBatchSize = 100;
   private readonly accountState = inject(AccountStateService);

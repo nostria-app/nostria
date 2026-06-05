@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
@@ -79,9 +79,7 @@ const POPULAR_STARTER_PACK_EVENT: Event = {
   sig: 'da9ca388615e1fc6a485fe548f49ae27b6230e3fe733be10b939cbf0d7edfe2448952f6622de371037f9244aaa397f4139c59be74fc920a4d3fe4ad8e6cc5c6d',
 };
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Followset {
   private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);

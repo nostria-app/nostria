@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { DeviceNotificationPreferences } from './database.service';
@@ -226,9 +226,7 @@ export const ANONYMOUS_PUBKEY = 'anonymous';
  * This centralizes state that should be stored per-account rather than globally
  * Uses in-memory caching to avoid repeated localStorage reads
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AccountLocalStateService {
   private localStorage = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);

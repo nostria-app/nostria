@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, signal, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { getVersion } from '@tauri-apps/api/app';
 import { isTauri } from '@tauri-apps/api/core';
@@ -27,9 +27,7 @@ interface AndroidReleaseInfo {
   source: 'latest-json' | 'github-api';
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AndroidUpdaterService {
   private readonly latestJsonUrl = 'https://github.com/nostria-app/nostria/releases/latest/download/latest.json';
   private readonly githubLatestReleaseUrl = 'https://api.github.com/repos/nostria-app/nostria/releases/latest';

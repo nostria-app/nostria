@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { AiService } from './ai.service';
 import { SettingsService } from './settings.service';
 import { LocalStorageService } from './local-storage.service';
@@ -45,9 +45,7 @@ export interface DictationLoadingState {
   totalBytes: number | null;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class SpeechService {
   private static readonly SELECTED_MODEL_STORAGE_KEY = 'nostria-dictation-model';
   private static readonly DICTATION_MODE_STORAGE_KEY = 'nostria-dictation-mode';

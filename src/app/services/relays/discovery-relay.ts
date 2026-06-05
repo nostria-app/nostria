@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { RelayServiceBase } from './relay';
 import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
@@ -12,9 +12,7 @@ import { RegionService } from '../region.service';
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
 export const DiscoveryRelayListKind = 10086;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DiscoveryRelayService extends RelayServiceBase implements NostriaService {
   private readonly maxRelayCacheEntries = 256;
   private localStorage = inject(LocalStorageService);

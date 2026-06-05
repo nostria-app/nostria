@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import { inject, signal, computed, effect, untracked, Service } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService, TrustMetrics } from './database.service';
@@ -35,9 +35,7 @@ export interface FollowingProfile {
  * Service that maintains an in-memory cache of all following profiles
  * This is the single source of truth for followed user data
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FollowingService {
   private readonly accountState = inject(AccountStateService);
   private readonly database = inject(DatabaseService);

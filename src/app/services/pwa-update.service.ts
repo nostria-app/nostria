@@ -1,13 +1,11 @@
-import { Injectable, effect, inject, signal, OnDestroy } from '@angular/core';
+import { effect, inject, signal, OnDestroy, Service } from '@angular/core';
 import { SwUpdate, VersionReadyEvent, UnrecoverableStateEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { NotificationType } from './database.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PwaUpdateService implements OnDestroy {
   private swUpdate = inject(SwUpdate);
   private logger = inject(LoggerService);

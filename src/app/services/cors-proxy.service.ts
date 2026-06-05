@@ -1,13 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { DiscoveryRelayService } from './discovery-relay.service';
 
 /**
  * Service for fetching resources through our CORS proxy.
  * Uses the user's selected region for optimal latency.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class CorsProxyService {
   private readonly discoveryRelay = inject(DiscoveryRelayService);
 

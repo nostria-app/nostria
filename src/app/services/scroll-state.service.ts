@@ -1,4 +1,4 @@
-import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
+import { signal, PLATFORM_ID, inject, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -6,7 +6,7 @@ import { isPlatformBrowser } from '@angular/common';
  * This service is extracted from LayoutService to break circular dependencies
  * in components that only need scroll state information.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ScrollStateService {
   private platformId = inject(PLATFORM_ID);
 

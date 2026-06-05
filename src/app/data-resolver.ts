@@ -1,4 +1,4 @@
-import { inject, Injectable, makeStateKey, TransferState } from '@angular/core';
+import { inject, makeStateKey, TransferState, Service } from '@angular/core';
 import { ActivatedRouteSnapshot, Resolve } from '@angular/router';
 import { NostrService } from './services/nostr.service';
 import { LayoutService } from './services/layout.service';
@@ -526,7 +526,7 @@ export interface EventData {
   metadata?: any;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class DataResolver implements Resolve<EventData | null> {
   nostr = inject(NostrService);
   layout = inject(LayoutService);

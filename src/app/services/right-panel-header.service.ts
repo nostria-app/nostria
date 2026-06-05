@@ -1,4 +1,4 @@
-import { Injectable, signal, TemplateRef } from '@angular/core';
+import { signal, TemplateRef, Service } from '@angular/core';
 
 /**
  * Service to manage the right panel header content.
@@ -10,9 +10,7 @@ import { Injectable, signal, TemplateRef } from '@angular/core';
  * This ensures the header is a direct child of the scroll container,
  * making position: sticky work reliably.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class RightPanelHeaderService {
   // Template for the header content
   private _headerTemplate = signal<TemplateRef<unknown> | null>(null);

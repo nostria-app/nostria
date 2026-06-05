@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal } from '@angular/core';
+import { effect, inject, signal, Service } from '@angular/core';
 
 import { AccountStateService } from './account-state.service';
 import { LoggerService } from './logger.service';
@@ -47,9 +47,7 @@ interface ApiEnvelope<T> {
   message?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class XDualPostService {
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);

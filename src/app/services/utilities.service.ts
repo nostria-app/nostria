@@ -1,4 +1,4 @@
-import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { inject, PLATFORM_ID, signal, Service } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
@@ -40,9 +40,7 @@ export interface RelayNormalizationContext {
   totalItems?: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);

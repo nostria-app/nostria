@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { type NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
@@ -11,9 +11,7 @@ export interface ReferencedEventLookupOptions {
   forceRefresh?: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ReferencedEventService {
   private data = inject(DataService);
   private database = inject(DatabaseService);

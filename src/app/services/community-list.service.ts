@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { signal, computed, inject, effect, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { ApplicationStateService } from './application-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -15,9 +15,7 @@ import { DatabaseService } from './database.service';
  *
  * Tag format: ["a", "34550:<pubkey>:<d-tag>"]
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CommunityListService {
   private accountRelay = inject(AccountRelayService);
   private nostr = inject(NostrService);

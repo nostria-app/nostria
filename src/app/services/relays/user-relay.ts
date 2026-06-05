@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector } from '@angular/core';
+import { inject, Injector, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { DiscoveryRelayService } from './discovery-relay';
 import { LoggerService } from '../logger.service';
@@ -14,9 +14,7 @@ interface LookupOptions {
   useFullRelaySet?: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class UserRelayService {
   private discoveryRelay = inject(DiscoveryRelayService);
   private pool = inject(RelayPoolService);

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import type { Filter } from 'nostr-tools';
 
@@ -47,9 +47,7 @@ export interface RelayMetrics {
  * across the application. This helps prevent "too many concurrent REQs" errors
  * and provides detailed metrics for debugging relay usage.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SubscriptionManagerService {
   private logger = inject(LoggerService);
 

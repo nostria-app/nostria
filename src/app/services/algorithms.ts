@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { Metrics } from './metrics';
 import { UserMetric } from '../interfaces/metrics';
@@ -6,9 +6,7 @@ import { FavoritesService } from './favorites.service';
 import { UtilitiesService } from './utilities.service';
 import { RegionService } from './region.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Algorithms {
   private readonly accountState = inject(AccountStateService);
   private readonly metrics = inject(Metrics);

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
@@ -6,9 +6,7 @@ import { DatabaseService } from '../database.service';
 import { LoggerService } from '../logger.service';
 import { kinds } from 'nostr-tools';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class UserRelaysService {
   private readonly discoveryRelayService = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);

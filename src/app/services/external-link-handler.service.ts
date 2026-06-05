@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { nip19 } from 'nostr-tools';
 import { ProfilePointer } from 'nostr-tools/nip19';
@@ -9,9 +9,7 @@ import { LocalStorageService } from './local-storage.service';
  * Service for handling external links and optionally routing them internally
  * when they match configured domains
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ExternalLinkHandlerService {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);

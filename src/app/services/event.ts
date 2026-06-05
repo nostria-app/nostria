@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, kinds, nip19, Filter } from 'nostr-tools';
 import { firstValueFrom } from 'rxjs';
 import { LoggerService } from './logger.service';
@@ -138,9 +138,7 @@ export interface DeepResolutionResult {
   deletionEvent: Event | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EventService {
   private readonly logger = inject(LoggerService);
   private readonly data = inject(DataService);

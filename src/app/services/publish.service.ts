@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Event, UnsignedEvent, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelaysService } from './relays/relays';
@@ -52,9 +52,7 @@ export interface PublishResult {
  * 2. With signing: await publishService.signAndPublish(unsignedEvent, signFn, options)
  * 3. Auto-detect: await publishService.signAndPublishAuto(unsignedEvent, signFn, newlyFollowedPubkeys)
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PublishService {
   private readonly logger = inject(LoggerService);
   private readonly relaysService = inject(RelaysService);

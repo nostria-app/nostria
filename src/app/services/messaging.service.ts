@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, Injector, signal, untracked } from '@angular/core';
+import { computed, effect, inject, Injector, signal, untracked, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -168,9 +168,7 @@ interface DeadLetterListRecord {
   eventIds?: string[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MessagingService implements NostriaService {
   private nostr = inject(NostrService);
   private relay = inject(AccountRelayService);

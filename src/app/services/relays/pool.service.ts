@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { SimplePool } from 'nostr-tools';
 
 /**
@@ -12,7 +12,7 @@ import { SimplePool } from 'nostr-tools';
  * Services that need their own connection lifecycle (SearchRelayService,
  * NwcRelayService) create their own pools independently.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class PoolService {
   readonly pool = new SimplePool({ enablePing: false, enableReconnect: true });
 

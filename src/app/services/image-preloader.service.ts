@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { SettingsService } from './settings.service';
 
@@ -6,9 +6,7 @@ import { SettingsService } from './settings.service';
  * Service for preloading and caching images using the Cache API
  * This provides faster image loading by prefetching images before they're needed
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ImagePreloaderService {
   private readonly logger = inject(LoggerService);
   private readonly settingsService = inject(SettingsService);

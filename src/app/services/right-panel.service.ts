@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, Type, inject, ComponentRef } from '@angular/core';
+import { signal, computed, Type, inject, ComponentRef, Service } from '@angular/core';
 import { Router } from '@angular/router';
 
 /**
@@ -25,9 +25,7 @@ export interface RightPanelEntry {
  * This allows the left panel (with router-outlet) to stay active while
  * showing detail views in the right panel.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class RightPanelService {
   private readonly router = inject(Router);
 

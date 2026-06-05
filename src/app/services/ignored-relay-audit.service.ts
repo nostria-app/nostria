@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { PLATFORM_ID, inject, signal, Service } from '@angular/core';
 
 export interface IgnoredRelayAuditEntry {
   pubkey: string;
@@ -17,9 +17,7 @@ export interface IgnoredRelayAuditSnapshot {
   entries: IgnoredRelayAuditEntry[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class IgnoredRelayAuditService {
   private readonly maxAuditEntries = 250;
   private readonly maxIgnoredDomainsPerEntry = 8;

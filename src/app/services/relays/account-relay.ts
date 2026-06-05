@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
 import { DatabaseService } from '../database.service';
 import { RelayServiceBase } from './relay';
@@ -8,9 +8,7 @@ import { RelayEntry } from '../utilities.service';
 import { DEFAULT_ACCOUNT_RELAYS } from './default-account-relays';
 import { UserRelaysService } from './user-relays';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AccountRelayService extends RelayServiceBase {
   private database = inject(DatabaseService);
   private discoveryRelay = inject(DiscoveryRelayService);

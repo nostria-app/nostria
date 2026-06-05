@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, NgZone } from '@angular/core';
+import { computed, inject, signal, NgZone, Service } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrService } from './nostr.service';
 import { Event, kinds, NostrEvent, type Filter } from 'nostr-tools';
@@ -47,9 +47,7 @@ interface ParsedReward {
   tags: string[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class BadgeService implements NostriaService {
   private readonly database = inject(DatabaseService);
   private readonly nostr = inject(NostrService);

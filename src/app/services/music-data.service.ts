@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 
 export interface ArtistData {
@@ -12,9 +12,7 @@ export interface ArtistData {
  * and the detail pages (tracks, playlists, artists).
  * This enables instant rendering when navigating with "Show all".
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MusicDataService {
   private _preloadedTracks = signal<Event[] | null>(null);
   private _preloadedPlaylists = signal<Event[] | null>(null);

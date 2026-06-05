@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, Service } from '@angular/core';
 
 // Type declarations for Google Cast SDK
 declare global {
@@ -60,9 +60,7 @@ export interface CastMediaInfo {
   thumbnail?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CastService {
   private sdkLoaded = false;
   private sdkLoading = false;

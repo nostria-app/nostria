@@ -1,9 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Metrics } from './metrics';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ProfileTrackingService {
   private readonly metrics = inject(Metrics);
 

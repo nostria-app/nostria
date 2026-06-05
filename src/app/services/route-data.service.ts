@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
+import { inject, signal, computed, OnDestroy, Service } from '@angular/core';
 import { Router, NavigationEnd, Event } from '@angular/router';
 import { filter, take } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,9 +11,7 @@ export interface NavigationHistoryItem {
   timestamp: Date;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RouteDataService implements OnDestroy {
   private router = inject(Router);
   private titleService = inject(Title);

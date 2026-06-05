@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { inject, signal, computed, effect, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
@@ -65,9 +65,7 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
  * - Publishing updated kind 10040 events when the user modifies their provider list
  * - Resolving which provider/relay to query for a given assertion kind + metric
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class TrustProviderService {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);

@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { nip19 } from 'nostr-tools';
@@ -6,9 +6,7 @@ import { Wallets } from './wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from './layout.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NostrProtocolService {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);

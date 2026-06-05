@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
@@ -16,9 +16,7 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
  * 
  * @see https://github.com/nostria-app/nips/blob/master/06.md
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MnemonicService {
   private readonly logger = inject(LoggerService);
   private readonly crypto = inject(CryptoEncryptionService);

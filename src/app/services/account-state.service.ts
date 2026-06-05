@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, OnDestroy, effect } from '@angular/core';
+import { computed, inject, signal, OnDestroy, effect, Service } from '@angular/core';
 import { Event, kinds, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
@@ -36,9 +36,7 @@ type ProcessingTracking = Record<
   }
 >;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AccountStateService implements OnDestroy {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);

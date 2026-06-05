@@ -1,4 +1,4 @@
-import { Injectable, inject, computed, PLATFORM_ID } from '@angular/core';
+import { inject, computed, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { SettingsService } from './settings.service';
 import { SwUpdate } from '@angular/service-worker';
@@ -6,9 +6,7 @@ import { ImagePreloaderService } from './image-preloader.service';
 import { DiscoveryRelayService } from './discovery-relay.service';
 import { stripImageProxy } from '../utils/strip-image-proxy';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ImageCacheService {
   private readonly settingsService = inject(SettingsService);
   private readonly swUpdate = inject(SwUpdate);

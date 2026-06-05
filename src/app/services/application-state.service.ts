@@ -1,11 +1,9 @@
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal, DOCUMENT } from '@angular/core';
+import { computed, effect, inject, PLATFORM_ID, signal, DOCUMENT, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ApplicationStateService {
   router = inject(Router);
   logger = inject(LoggerService);

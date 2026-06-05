@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { RelayServiceBase } from './relay';
 import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
@@ -18,9 +18,7 @@ export interface SearchResultWithSources {
   relayUrls: string[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SearchRelayService extends RelayServiceBase implements NostriaService {
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);

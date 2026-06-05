@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, Service } from '@angular/core';
 import { Event as NostrEvent, getEventHash, UnsignedEvent } from 'nostr-tools';
 
 export interface PowResult {
@@ -16,9 +16,7 @@ export interface PowProgress {
   bestEvent: UnsignedEvent | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PowService {
   // Signals for reactive state
   progress = signal<PowProgress>({

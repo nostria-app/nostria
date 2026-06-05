@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { inject, signal, OnDestroy, Service } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
@@ -9,9 +9,7 @@ import { BadgeHoverCardComponent } from '../components/badge/hover-card/badge-ho
  * Service to manage badge hover cards across the application
  * Provides a unified way to display badge hover cards with consistent behavior
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class BadgeHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
   private router = inject(Router);

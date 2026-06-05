@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { WebRequest } from './web-request';
 
 interface OpenResistAuthorizationPayload {
@@ -32,9 +32,7 @@ export interface OpenResistWhipSession {
   token: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class OpenResistStreamService {
   private static readonly STREAMS_API_URL = 'https://stream.openresist.com/api/streams';
 

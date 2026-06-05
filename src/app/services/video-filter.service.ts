@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 export interface VideoFilter {
   id: string;
@@ -16,9 +16,7 @@ export interface PhotoAdjustments {
   vignette: number;     // 0 to 100
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class VideoFilterService {
   private gl: WebGLRenderingContext | null = null;
   private program: WebGLProgram | null = null;

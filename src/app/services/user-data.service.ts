@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
@@ -26,9 +26,7 @@ export interface DataOptions {
   includeAccountRelays?: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class UserDataService {
   private readonly MASTODON_GATEWAY_RELAY = 'wss://relay.ditto.pub';
   private readonly database = inject(DatabaseService);

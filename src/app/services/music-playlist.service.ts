@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { inject, signal, effect, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -35,9 +35,7 @@ export interface CreateMusicPlaylistData {
   customRelays?: string[]; // Optional custom relay URLs to publish to
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MusicPlaylistService {
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);

@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { PLATFORM_ID, inject, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { SettingsService } from './settings.service';
 import { MediaPlayerService } from './media-player.service';
@@ -21,7 +21,7 @@ export function getZapTier(amount: number): ZapTier {
   return 5;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ZapSoundService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly settingsService = inject(SettingsService);

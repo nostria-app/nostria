@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, Service } from '@angular/core';
 import { Subject } from 'rxjs';
 
 /**
@@ -40,9 +40,7 @@ export type SearchHandler = (query: string) => SearchHandlerResult;
  * this.searchAction.unregisterHandler(this.myHandler);
  * ```
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class SearchActionService {
   /** Subject for search trigger events (for components using RxJS) */
   private readonly searchTriggered$ = new Subject<void>();

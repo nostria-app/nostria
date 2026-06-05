@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
@@ -21,7 +21,7 @@ interface CachedVerification {
 
 const EMPTY_RESULT: Nip05VerificationResult = { value: '', valid: false, status: '' };
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class Nip05VerificationService {
   private readonly utilities = inject(UtilitiesService);
   private readonly logger = inject(LoggerService);

@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal, computed } from '@angular/core';
+import { effect, inject, signal, computed, Service } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MediaItem, OnInitialized, Playlist, PodcastProgress } from '../interfaces';
@@ -30,9 +30,7 @@ interface YouTubePlayerEvent {
   data: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MediaPlayerService implements OnInitialized {
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);

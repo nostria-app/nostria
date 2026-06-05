@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect, untracked } from '@angular/core';
+import { inject, signal, effect, untracked, Service } from '@angular/core';
 import { Event, UnsignedEvent, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -40,9 +40,7 @@ interface DecryptedFollowSetPayload {
 const NOSTRIA_PREFIX = 'nostria-';
 const FAVORITES_D_TAG = 'nostria-favorites';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FollowSetsService {
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);

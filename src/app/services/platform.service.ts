@@ -1,4 +1,4 @@
-import { Injectable, inject, PLATFORM_ID, signal, computed } from '@angular/core';
+import { inject, PLATFORM_ID, signal, computed, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -24,9 +24,7 @@ export type PaymentPlatform = 'bitcoin' | 'play-store' | 'app-store' | 'external
  * Detects whether the app is running as a native app, PWA, or in a browser,
  * and provides payment platform routing based on the app context.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PlatformService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);

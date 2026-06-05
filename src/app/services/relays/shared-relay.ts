@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector } from '@angular/core';
+import { inject, Injector, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
@@ -23,9 +23,7 @@ interface SharedRelayFilter {
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SharedRelayService {
   readonly #poolService = inject(PoolService);
   get #pool() { return this.#poolService.pool; }

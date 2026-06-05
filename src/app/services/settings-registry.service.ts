@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { signal, computed, Service } from '@angular/core';
 
 /**
  * Represents a single searchable setting item
@@ -38,9 +38,7 @@ export interface SettingsSection {
  * Service that manages the registry of all searchable settings items.
  * This enables search functionality across all settings.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class SettingsRegistryService {
   /** Search query */
   readonly searchQuery = signal('');

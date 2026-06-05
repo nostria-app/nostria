@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, EventTemplate, VerifiedEvent } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DatabaseService } from '../database.service';
@@ -18,9 +18,7 @@ export type AuthSignFunction = (evt: EventTemplate) => Promise<Event>;
  * This service manages the authentication state of relays that require authentication
  * and provides the `onauth` callback for nostr-tools SimplePool operations.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RelayAuthService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);

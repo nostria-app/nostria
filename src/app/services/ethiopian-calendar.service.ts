@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 export interface EthiopianDate {
   year: number;
@@ -35,9 +35,7 @@ export interface EthiopianDateTime extends EthiopianDate {
  * For practical conversion, we use:
  * - September 11, 2015 Gregorian = Meskerem 1, 2008 Ethiopian (non-leap year)
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EthiopianCalendarService {
   // Ethiopian epoch offset in days from Unix epoch (January 1, 1970)
   // September 11, 1970 (Gregorian) = Meskerem 1, 1963 (Ethiopian)

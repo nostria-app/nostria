@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { CorsProxyService } from './cors-proxy.service';
 
 export interface RssFeedItem {
@@ -25,9 +25,7 @@ export interface RssFeed {
   items: RssFeedItem[];
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class RssParserService {
   private readonly corsProxy = inject(CorsProxyService);
 

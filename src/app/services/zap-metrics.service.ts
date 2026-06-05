@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import { inject, signal, computed, effect, untracked, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 
@@ -34,9 +34,7 @@ export interface ZapPerformanceEvent {
   eventId?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ZapMetricsService {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);

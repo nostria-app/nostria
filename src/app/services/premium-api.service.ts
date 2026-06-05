@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiConfiguration } from '../api/api-configuration';
@@ -49,7 +49,7 @@ export interface RenewSubscriptionRequest {
  * - Payment history
  * - Subscription history
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class PremiumApiService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApiConfiguration);

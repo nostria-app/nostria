@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { SimplePool, Event, Filter } from 'nostr-tools';
 import { RelayServiceBase } from './relay';
 import { LoggerService } from '../logger.service';
@@ -7,9 +7,7 @@ import { LoggerService } from '../logger.service';
  * Dedicated relay service for Nostr Wallet Connect (NWC) operations
  * This service manages connections to specific NWC relays mentioned in connection strings
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NwcRelayService extends RelayServiceBase {
   protected override logger = inject(LoggerService);
   private connectionPools = new Map<string, SimplePool>();

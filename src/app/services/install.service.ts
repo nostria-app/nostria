@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { LoggerService } from './logger.service';
@@ -18,9 +18,7 @@ export interface PlatformInfo {
   isInstalled: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class InstallService {
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);

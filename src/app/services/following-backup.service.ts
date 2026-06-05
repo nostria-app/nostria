@@ -1,4 +1,4 @@
-import { Injectable, inject, effect, signal } from '@angular/core';
+import { inject, effect, signal, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -21,9 +21,7 @@ export interface FollowingBackup {
  * Service for managing automatic backups of the following list (kind 3)
  * Keeps the last 10 backups and allows restore/merge operations
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FollowingBackupService {
   private readonly nostrService = inject(NostrService);
   private readonly logger = inject(LoggerService);

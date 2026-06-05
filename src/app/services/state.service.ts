@@ -1,4 +1,4 @@
-import { effect, inject, Injectable } from '@angular/core';
+import { effect, inject, Service } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MediaService } from './media.service';
@@ -23,9 +23,7 @@ import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
 import { RegionService } from './region.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class StateService implements NostriaService {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);

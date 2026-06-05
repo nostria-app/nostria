@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Event, UnsignedEvent } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
@@ -13,9 +13,7 @@ export interface RepostReference {
   pubkey?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RepostService {
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);

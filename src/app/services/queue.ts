@@ -1,8 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class QueueService {
   // A queue for publishing Nostr events. Needs to process events in order and wait for signing.
   private queue: (() => Promise<void>)[] = [];

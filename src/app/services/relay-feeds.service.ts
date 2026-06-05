@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
@@ -43,9 +43,7 @@ export interface RelaySet {
   created_at: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RelayFeedsService {
   private logger = inject(LoggerService);
   private nostrService = inject(NostrService);

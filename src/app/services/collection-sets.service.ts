@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { inject, signal, effect, Service } from '@angular/core';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
@@ -73,9 +73,7 @@ export interface InterestSet {
   created_at: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CollectionSetsService {
   private logger = inject(LoggerService);
   private nostrService = inject(NostrService);

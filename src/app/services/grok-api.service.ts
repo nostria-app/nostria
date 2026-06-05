@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { ApiConfiguration } from '../api/api-configuration';
 import { Payment } from '../api/models';
@@ -81,9 +81,7 @@ export interface GrokResponseResult {
   billing: unknown;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class GrokApiService {
   private readonly config = inject(ApiConfiguration);
   private readonly nostr = inject(NostrService);

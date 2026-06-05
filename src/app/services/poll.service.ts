@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationService } from './application.service';
@@ -9,9 +9,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { OnInitialized, Poll, PollDraft, PollOption, PollResponse, PollResults } from '../interfaces';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PollService implements OnInitialized {
   private localStorage = inject(LocalStorageService);
   private app = inject(ApplicationService);

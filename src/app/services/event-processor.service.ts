@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { ReportingService } from './reporting.service';
@@ -45,9 +45,7 @@ export interface EventProcessingStats {
  * This service should be used by relay services to process events before
  * passing them to consumers.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EventProcessorService {
   private readonly logger = inject(LoggerService);
   private readonly reportingService = inject(ReportingService);

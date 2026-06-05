@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 
@@ -8,9 +8,7 @@ import { LoggerService } from './logger.service';
  * 
  * Uses the Screen Wake Lock API when available.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class WakeLockService {
   private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);

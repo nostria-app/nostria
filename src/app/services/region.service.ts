@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 // Region interface from location selection dialog
 export interface Region {
@@ -8,9 +8,7 @@ export interface Region {
   icon: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RegionService {
   private readonly legacyMediaServerHosts: Record<string, string> = {
     'mibo.us.nostria.app': 'milo.nostria.app',

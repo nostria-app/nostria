@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
@@ -38,9 +38,7 @@ export interface CurationSet {
   created_at: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CurationSetsService {
   private logger = inject(LoggerService);
   private nostrService = inject(NostrService);

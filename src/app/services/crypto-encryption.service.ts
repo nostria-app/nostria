@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 /**
@@ -24,9 +24,7 @@ export interface EncryptedData {
  * Default PIN: "0000" - provides basic protection against casual access
  * Users can set custom PINs for stronger protection
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CryptoEncryptionService {
   private readonly logger = inject(LoggerService);
 

@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject, signal, computed } from '@angular/core';
+import { PLATFORM_ID, inject, signal, computed, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -84,9 +84,7 @@ const MAX_COUNTER_TIMESTAMPS = 200;
  *
  * All data is held in memory only - nothing is persisted.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PerformanceMetricsService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);

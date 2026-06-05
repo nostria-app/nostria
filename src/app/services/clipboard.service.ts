@@ -1,4 +1,4 @@
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -7,9 +7,7 @@ import { LoggerService } from './logger.service';
  * Centralized service for clipboard operations.
  * Provides consistent success/error handling with snackbar notifications.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ClipboardService {
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);

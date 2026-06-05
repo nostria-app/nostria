@@ -1,4 +1,4 @@
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { convertFileSrc, isTauri } from '@tauri-apps/api/core';
 
@@ -15,9 +15,7 @@ import { convertFileSrc, isTauri } from '@tauri-apps/api/core';
  * On the web (and SSR) this is a no-op: the original URL is returned unchanged, so the hosted
  * image proxy is never involved for feed thumbnails.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class TauriImageService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, UnsignedEvent, nip19, nip57 } from 'nostr-tools';
 import { LN } from '@getalby/sdk';
 import { NostrService } from './nostr.service';
@@ -56,9 +56,7 @@ export interface SplitInvoice {
   invoice: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ZapService {
   private nostr = inject(NostrService);
   private accountState = inject(AccountStateService);

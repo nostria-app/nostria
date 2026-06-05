@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, OnDestroy } from '@angular/core';
+import { signal, computed, OnDestroy, Service } from '@angular/core';
 
 /**
  * Node for the doubly-linked list used in LRU tracking
@@ -31,9 +31,7 @@ export interface CacheStats {
   evictions: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Cache implements OnDestroy {
   private readonly cache = new Map<string, CacheEntry<any>>();
 

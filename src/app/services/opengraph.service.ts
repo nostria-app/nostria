@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { isXStatusUrl, normalizePreviewUrl } from '../utils/url-cleaner';
 
@@ -22,9 +22,7 @@ export interface OpenGraphData {
   errorMessage?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class OpenGraphService {
   private document = inject(DOCUMENT);
   private sanitizer = inject(DomSanitizer);

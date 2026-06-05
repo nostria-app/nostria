@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { inject, signal, computed, effect, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DatabaseService } from './database.service';
@@ -24,9 +24,7 @@ export interface OfflineMusicTrack {
 const OFFLINE_MUSIC_CACHE = 'nostria-music';
 const OFFLINE_IMAGES_CACHE = 'nostria-music-images';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class OfflineMusicService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);

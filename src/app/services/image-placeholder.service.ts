@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { encode, decode } from 'blurhash';
 import { thumbHashToDataURL, rgbaToThumbHash } from 'thumbhash';
 import { SettingsService } from './settings.service';
@@ -30,9 +30,7 @@ export interface GeneratedPlaceholder {
   dimensions: { width: number; height: number };
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ImagePlaceholderService {
   private settings = inject(SettingsService);
   private logger = inject(LoggerService);

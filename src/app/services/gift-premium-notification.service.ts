@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { ZapService, GiftPremiumData } from './zap.service';
@@ -15,9 +15,7 @@ export interface GiftPremiumNotification {
   seen: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class GiftPremiumNotificationService {
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);

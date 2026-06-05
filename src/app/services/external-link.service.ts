@@ -1,10 +1,8 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { isTauri } from '@tauri-apps/api/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ExternalLinkService {
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);

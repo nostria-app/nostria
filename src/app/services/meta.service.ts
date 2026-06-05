@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -22,9 +22,7 @@ export interface MetadataResponse {
 // Keep this low enough to allow relay fallback within SSR total budget.
 const METADATA_REQUEST_TIMEOUT_MS = 1800;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MetaService {
   private meta = inject(Meta);
   private title = inject(Title);

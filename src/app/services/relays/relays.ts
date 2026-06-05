@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect, PLATFORM_ID } from '@angular/core';
+import { inject, signal, effect, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { UtilitiesService } from '../utilities.service';
 import { ObservedRelayStats, Nip11Info } from '../database.service';
@@ -61,9 +61,7 @@ export interface Nip11RelayInfo {
   };
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RelaysService {
   private utilities = inject(UtilitiesService);
   private readonly platformId = inject(PLATFORM_ID);

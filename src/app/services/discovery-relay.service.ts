@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, Service } from '@angular/core';
 import { SimplePool } from 'nostr-tools';
 
 export interface ServerInfo {
@@ -8,9 +8,7 @@ export interface ServerInfo {
   latency?: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DiscoveryRelayService {
   private servers: ServerInfo[] = [
     {

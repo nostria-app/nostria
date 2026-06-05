@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 export interface ZapError {
@@ -8,9 +8,7 @@ export interface ZapError {
   retryDelay?: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ZapErrorHandlerService {
   private snackBar = inject(MatSnackBar);
 

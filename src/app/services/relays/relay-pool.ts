@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector } from '@angular/core';
+import { inject, Injector, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
@@ -19,9 +19,7 @@ interface PublishRelayResult {
   error?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class RelayPoolService {
   readonly #poolService = inject(PoolService);
   get #pool() { return this.#poolService.pool; }

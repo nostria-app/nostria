@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { computed, inject, signal, Service } from '@angular/core';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -36,9 +36,7 @@ interface TauriUpdateHandle {
   ) => Promise<void>;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DesktopUpdaterService {
   private readonly DISMISSED_VERSION_KEY = 'nostria-dismissed-desktop-update-version';
   private readonly STARTUP_DELAY_MS = 15000;

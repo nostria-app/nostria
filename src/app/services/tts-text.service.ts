@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { nip19, type Event } from 'nostr-tools';
 import { ParsingService, type ContentToken } from './parsing.service';
 import { extractTextForTts, splitTtsParagraphs } from '../utils/tts-text';
@@ -8,7 +8,7 @@ export interface TtsReadableText {
   paragraphs: string[];
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class TtsTextService {
   private readonly parsing = inject(ParsingService);
 

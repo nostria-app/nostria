@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
@@ -16,9 +16,7 @@ import { LoggerService } from './logger.service';
  * - Removes old events beyond the 200-event limit per column
  * - Operates across all accounts
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class CacheCleanupService {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);

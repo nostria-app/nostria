@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
@@ -13,9 +13,7 @@ import { DataService } from '../data.service';
 import { RelayPoolService } from '../relays/relay-pool';
 import { UserRelaysService } from '../relays/user-relays';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FormatService {
   private static readonly MUSIC_ALBUM_KIND = 34139;
   private static readonly MUSIC_TRACK_KIND = 36787;

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -27,9 +27,7 @@ import { FollowSetsService } from './follow-sets.service';
  * users who post at different frequencies), we limit by TIME WINDOW.
  * This ensures we get ALL events from the time period without gaps.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FollowingDataService {
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);

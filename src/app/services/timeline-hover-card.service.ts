@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { inject, signal, OnDestroy, Service } from '@angular/core';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
@@ -9,9 +9,7 @@ import { TimelineHoverCardComponent } from '../components/timeline-hover-card/ti
  * Service to manage timeline hover cards across the application
  * Shows recent posts when hovering over favorite users
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class TimelineHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
   private router = inject(Router);

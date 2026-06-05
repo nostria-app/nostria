@@ -1,13 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { UserDataService } from './user-data.service';
 
 /**
  * Lightweight helper for common UserDataService operations.
  * Now that UserDataService is a singleton, this just provides convenient wrappers.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class OnDemandUserDataService {
   private userDataService = inject(UserDataService);
 

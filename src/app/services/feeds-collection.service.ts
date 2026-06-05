@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import { inject, signal, computed, effect, untracked, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { FeedService, FeedConfig } from './feed.service';
@@ -15,9 +15,7 @@ const DEFAULT_FEED_ID = 'default-feed-for-you';
 const ACTIVE_FEED_STORAGE_KEY = 'nostria-active-feed-by-account';
 const LAST_ACTIVE_FEED_STORAGE_KEY = 'nostria-last-active-feed';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FeedsCollectionService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { signal, computed, inject, effect, Service } from '@angular/core';
 import { moveItemInArray } from '@angular/cdk/drag-drop';
 import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
@@ -44,9 +44,7 @@ interface RelaySubscriptionHandle {
   unsubscribe?: () => void;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class BookmarkService {
   accountRelay = inject(AccountRelayService);
   nostr = inject(NostrService);

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { UtilitiesService } from './utilities.service';
 
 /**
@@ -173,9 +173,7 @@ export interface GameData {
 /**
  * Service to fetch game data from IGDB proxy API
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class IgdbService {
   private utilities = inject(UtilitiesService);
 

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { signal, computed, inject, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NavigationExtras, Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -62,9 +62,7 @@ export type RightPanelBackCallback = () => boolean;
  * - When navigating to a ROOT list component, clear ALL history
  * - Detail views preserve the current left panel content
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class PanelNavigationService {
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);

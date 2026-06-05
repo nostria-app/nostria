@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, OnDestroy, NgZone, Type, PLATFORM_ID } from '@angular/core';
+import { inject, signal, OnDestroy, NgZone, Type, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
@@ -11,9 +11,7 @@ import { filter } from 'rxjs/operators';
  * Provides a unified way to display profile hover cards with consistent behavior.
  * On touch devices, supports long-press (press and hold) to open hover cards.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ProfileHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
   private router = inject(Router);

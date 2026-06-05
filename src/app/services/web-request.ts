@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 
 export interface AuthenticationInit {
@@ -9,9 +9,7 @@ export interface AuthenticationInit {
   kind: 27235 | 24242;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class WebRequest {
   nostr = inject(NostrService);
 

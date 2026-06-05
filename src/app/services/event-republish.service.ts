@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { kinds } from 'nostr-tools';
 import { DatabaseService } from './database.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -32,9 +32,7 @@ export const IMPORTANT_EVENT_KINDS = [
  * This ensures that when a user modifies their relay list, all critical data
  * (profile, following, mutes, bookmarks, etc.) is synced to the new relays.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EventRepublishService {
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);

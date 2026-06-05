@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal, DOCUMENT, PLATFORM_ID } from '@angular/core';
+import { computed, effect, inject, signal, DOCUMENT, PLATFORM_ID, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -173,9 +173,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
  * Service for managing local-only settings that are persisted in localStorage
  * These settings are not synced across devices and are specific to this browser/device
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class LocalSettingsService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);

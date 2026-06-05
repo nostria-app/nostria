@@ -1,4 +1,4 @@
-import { Injectable, signal, inject, computed, effect } from '@angular/core';
+import { signal, inject, computed, effect, Service } from '@angular/core';
 import { WakeLockService } from './wake-lock.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
@@ -15,9 +15,7 @@ import { PanelNavigationService } from './panel-navigation.service';
  * Additionally manages mute state persistence - when user mutes/unmutes
  * a video, the preference is remembered for all subsequent videos.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class VideoPlaybackService {
   private wakeLockService = inject(WakeLockService);
   private accountLocalState = inject(AccountLocalStateService);

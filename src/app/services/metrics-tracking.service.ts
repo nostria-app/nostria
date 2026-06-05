@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { kinds, Event } from 'nostr-tools';
 import { PublishEventBus } from './publish-event-bus.service';
 import { Metrics } from './metrics';
@@ -19,9 +19,7 @@ import { AccountRelayService } from './relays/account-relay';
  * - Zap request (kind 9734): Zap to a user - 5 points
  * - Reply (kind 1 with reply marker): Reply to someone - 10 points
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MetricsTrackingService {
   private readonly eventBus = inject(PublishEventBus);
   private readonly metrics = inject(Metrics);

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect, computed, untracked } from '@angular/core';
+import { inject, signal, effect, computed, untracked, Service } from '@angular/core';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -26,9 +26,7 @@ export interface Shoutout {
   event: Event;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ShoutoutService {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);

@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { signal, inject, Service } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelaysService } from './relays/relays';
@@ -171,9 +171,7 @@ export const CURATION_KINDS = {
   PICTURE_CURATION: 30006,
 } as const;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DiscoveryService {
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);

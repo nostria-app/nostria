@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect, untracked } from '@angular/core';
+import { signal, computed, inject, effect, untracked, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationService } from './application.service';
 import { NostrService } from './nostr.service';
@@ -8,9 +8,7 @@ import { Event, Filter } from 'nostr-tools';
 import { formatDuration } from '../utils/format-duration';
 import { LoggerService } from './logger.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PlaylistService implements OnInitialized {
   private localStorage = inject(LocalStorageService);
   private app = inject(ApplicationService);

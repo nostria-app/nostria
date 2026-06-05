@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { DatabaseService } from './database.service';
 import { DataService } from './data.service';
@@ -58,9 +58,7 @@ export interface ProfileCreateResult {
  * Service for managing user profiles
  * Handles profile creation, updates, and publishing to Nostr relays
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Profile {
   private nostr = inject(NostrService);
   // private relay = inject(RelayService);

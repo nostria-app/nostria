@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { ActivatedRouteSnapshot, Resolve, Router } from '@angular/router';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -10,7 +10,7 @@ export interface ArticleResolverData {
   identifier: string; // The original identifier (nip05 or npub/hex)
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ArticleResolver implements Resolve<ArticleResolverData> {
   private router = inject(Router);
 

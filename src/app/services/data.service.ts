@@ -1,4 +1,4 @@
-import { inject, Injectable, Injector, signal, OnDestroy } from '@angular/core';
+import { inject, Injector, signal, OnDestroy, Service } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -47,9 +47,7 @@ export interface MalformedEventsInspectorSnapshot {
   recentSamples: MalformedEventSample[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DataService implements OnDestroy {
   private readonly MASTODON_GATEWAY_RELAY = 'wss://relay.ditto.pub';
   private readonly database = inject(DatabaseService);

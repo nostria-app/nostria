@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event, SimplePool, Filter } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -69,9 +69,7 @@ export const DEEP_EVENT_KINDS = [
   30078,  // Application-specific data
 ];
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MigrationService {
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, computed, OnDestroy, effect, untracked, PLATFORM_ID, Injector, runInInjectionContext, NgZone, DestroyRef } from '@angular/core';
+import { inject, signal, computed, OnDestroy, effect, untracked, PLATFORM_ID, Injector, runInInjectionContext, NgZone, DestroyRef, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -58,9 +58,7 @@ export interface OpenEventOptions {
 }
 import { SearchActionService } from './search-action.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class LayoutService implements OnDestroy {
   /** Used to perform queries or search when input has been parsed to be NIP-5 or similar. */
   query = signal<string | null>(null);

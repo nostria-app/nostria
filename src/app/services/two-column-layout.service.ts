@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { signal, computed, inject, Service } from '@angular/core';
 import { Router, NavigationEnd, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { PanelNavigationService } from './panel-navigation.service';
@@ -36,9 +36,7 @@ interface RouteCategory {
  * - Feeds is always centered when no right content, moves to left when right content exists
  * - On mobile, right panel overlays the left panel
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class TwoColumnLayoutService {
   private router = inject(Router);
   private panelNav = inject(PanelNavigationService);

@@ -1,8 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { computed, signal, Service } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class EventFocusService {
   private readonly focusedCount = signal(0);
   private readonly bootstrapActive = signal(false);

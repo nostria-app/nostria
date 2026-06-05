@@ -1,4 +1,4 @@
-import { Injectable, inject, PLATFORM_ID, NgZone, OnDestroy } from '@angular/core';
+import { inject, PLATFORM_ID, NgZone, OnDestroy, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -66,9 +66,7 @@ interface ObservedEntry {
  * }
  * ```
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class IntersectionObserverService implements OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly ngZone = inject(NgZone);

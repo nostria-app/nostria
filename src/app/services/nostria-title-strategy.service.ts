@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 
@@ -8,7 +8,7 @@ import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
  * This ensures consistent branding in browser tabs while keeping
  * the route-defined titles simple (e.g., "Music" becomes "Nostria – Music").
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class NostriaTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
 

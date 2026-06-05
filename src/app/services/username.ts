@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { AccountService } from '../api/services';
 import { firstValueFrom } from 'rxjs';
@@ -10,9 +10,7 @@ import { LoggerService } from './logger.service';
 type UsernameByPubkeyMap = Record<string, string>;
 type PubkeyByUsernameMap = Record<string, string>;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class UsernameService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);

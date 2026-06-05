@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, signal, inject } from '@angular/core';
+import { computed, effect, signal, inject, Service } from '@angular/core';
 import { isTauri } from '@tauri-apps/api/core';
 
 import { AccountStateService } from './account-state.service';
@@ -282,9 +282,7 @@ interface WorkerCallback {
   progress?: (data: unknown) => void;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class AiService {
   private static readonly CLOUD_SETTINGS_STORAGE_KEY = 'nostria-ai-cloud-settings';
   private static readonly TRANSFORMERS_CACHE_NAME = 'transformers-cache';

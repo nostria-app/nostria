@@ -1,11 +1,9 @@
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as htmlToImage from 'html-to-image';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class EventImageService {
   private platformId = inject(PLATFORM_ID);
   private snackBar = inject(MatSnackBar);

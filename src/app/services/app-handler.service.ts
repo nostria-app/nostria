@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, nip19 } from 'nostr-tools';
 import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
@@ -31,9 +31,7 @@ export interface AppHandler {
  *
  * See: https://github.com/nostr-protocol/nips/blob/master/89.md
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AppHandlerService {
   private relayPool = inject(RelayPoolService);
   private discoveryRelay = inject(DiscoveryRelayService);

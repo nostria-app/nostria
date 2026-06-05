@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { computed, inject, signal, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 
 export type RuneId = 'bitcoin-price' | 'weather' | 'nostr-swiss-knife' | 'music-favorites';
@@ -43,9 +43,7 @@ const DEFAULT_SETTINGS: RunesSettings = {
   weatherManualLocation: null,
 };
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class RunesSettingsService {
   private readonly localStorage = inject(LocalStorageService);
 

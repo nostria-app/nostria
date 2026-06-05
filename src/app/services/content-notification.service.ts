@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
+import { inject, signal, PLATFORM_ID, OnDestroy, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
@@ -36,9 +36,7 @@ const NOTIFICATION_QUERY_LIMITS = {
  * - Immediately checks when the app returns to visibility after being hidden
  * - Pauses polling when the app is hidden to conserve resources
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ContentNotificationService implements OnDestroy {
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);

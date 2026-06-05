@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { DataService } from './data.service';
 import { MentionInputService, MentionDetectionResult } from './mention-input.service';
@@ -65,9 +65,7 @@ export interface BuildTagsConfig {
  * Extracts common logic used by both the note-editor-dialog (full featured)
  * and inline-reply-editor (simplified) components.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NoteEditorService {
   private dataService = inject(DataService);
   private mentionInputService = inject(MentionInputService);

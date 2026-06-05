@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { computed, effect, inject, signal, untracked, Service } from '@angular/core';
 import { Event, kinds, nip19 } from 'nostr-tools';
 import {
   AccountLocalStateService,
@@ -79,9 +79,7 @@ const PROFILE_REPOST_LIMIT = 360;
 const PROFILE_REPLY_LIMIT = 360;
 const ARTICLE_LIMIT = 3;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FeaturedFeedCardsService {
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);

@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { effect, inject, signal, Service } from '@angular/core';
 import { Event, Filter, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -21,9 +21,7 @@ export interface LikedSongsReference {
 
 type LikedCollectionType = 'tracks' | 'albums';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MusicLikedSongsService {
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);

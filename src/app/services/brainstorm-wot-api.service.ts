@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 
@@ -45,9 +45,7 @@ interface ConfigTagObject {
 
 type RawConfigTag = [unknown, unknown, unknown, ...unknown[]];
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class BrainstormWotApiService {
   private readonly nostr = inject(NostrService);
   private readonly logger = inject(LoggerService);

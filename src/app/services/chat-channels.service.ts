@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
@@ -127,9 +127,7 @@ export interface ChannelMessage {
  * - Kind 43: Hide message (client-side moderation)
  * - Kind 44: Mute user (client-side moderation)
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ChatChannelsService implements NostriaService {
   private readonly nostrService = inject(NostrService);
   private readonly logger = inject(LoggerService);

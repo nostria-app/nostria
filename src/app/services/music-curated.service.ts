@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { DatabaseService } from './database.service';
 import { RelayPoolService } from './relays/relay-pool';
@@ -27,7 +27,7 @@ const FALLBACK_CURATED_MUSIC_EVENT: Event = {
   ],
 };
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class MusicCuratedService {
   private database = inject(DatabaseService);
   private pool = inject(RelayPoolService);

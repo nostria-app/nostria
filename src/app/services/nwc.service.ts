@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, computed, effect, PLATFORM_ID } from '@angular/core';
+import { inject, signal, computed, effect, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NWCClient } from '@getalby/sdk';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -104,9 +104,7 @@ export interface PaymentContext {
  * NWC Service - Implements NIP-47 Nostr Wallet Connect
  * Provides balance checking and transaction history
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NwcService {
   private logger = inject(LoggerService);
   private walletsService = inject(Wallets);

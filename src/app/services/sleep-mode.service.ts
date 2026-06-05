@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
+import { inject, signal, PLATFORM_ID, OnDestroy, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { PoolService } from './relays/pool.service';
@@ -11,9 +11,7 @@ export interface SleepModeState {
   showWakeupOverlay: boolean;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SleepModeService implements OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly platformId = inject(PLATFORM_ID);

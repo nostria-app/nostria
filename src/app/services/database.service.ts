@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { inject, signal, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
 
@@ -428,9 +428,7 @@ const EVENT_INDEXES = {
  * This service provides direct access to IndexedDB without using wrapper libraries
  * to avoid potential lock issues and improve performance.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class DatabaseService {
   private readonly logger = inject(LoggerService);
 

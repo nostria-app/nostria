@@ -1,13 +1,11 @@
-import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT, computed } from '@angular/core';
+import { PLATFORM_ID, effect, inject, signal, DOCUMENT, computed, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
 
 export type ThemePreference = 'auto' | 'dark' | 'light';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ThemeService {
   readonly THEME_KEY = 'nostria-theme';
 

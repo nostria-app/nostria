@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { inject, signal, computed, Service } from '@angular/core';
 import { Event, kinds, UnsignedEvent } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
@@ -39,9 +39,7 @@ type ProfileMutedWordField = {
 /**
  * Service to handle NIP-56 reporting and NIP-51 mute list management
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ReportingService {
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);

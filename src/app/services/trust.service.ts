@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, Injector, runInInjectionContext, effect } from '@angular/core';
+import { inject, signal, computed, Injector, runInInjectionContext, effect, Service } from '@angular/core';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
@@ -19,9 +19,7 @@ interface QueuedFetchRequest {
  * Service for managing NIP-85 Web of Trust data
  * Fetches trusted assertions (kind 30382) from configured relay
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class TrustService {
   private localSettings = inject(LocalSettingsService);
   private logger = inject(LoggerService);

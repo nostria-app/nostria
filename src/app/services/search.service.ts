@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { computed, effect, inject, signal, untracked, Service } from '@angular/core';
 import { LayoutService } from './layout.service';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { nip19 } from 'nostr-tools';
@@ -38,9 +38,7 @@ export interface SearchResultEvent {
 
 export type SearchTab = 'all' | 'profiles' | 'notes' | 'articles' | 'messages';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SearchService {
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);

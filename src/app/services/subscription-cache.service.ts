@@ -1,4 +1,4 @@
-import { Injectable, signal, OnDestroy } from '@angular/core';
+import { signal, OnDestroy, Service } from '@angular/core';
 
 interface PendingSubscription {
   key: string;
@@ -23,9 +23,7 @@ interface SubscriptionCacheOptions<T> {
  * Service to prevent duplicate subscriptions and cache results for event-related queries.
  * This helps reduce the number of concurrent relay subscriptions and prevents redundant requests.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SubscriptionCacheService implements OnDestroy {
   private pendingSubscriptions = new Map<string, PendingSubscription>();
   private resultCache = new Map<string, CachedResult>();

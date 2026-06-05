@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { PLATFORM_ID, computed, effect, inject, signal, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 import { SettingsService } from './settings.service';
@@ -27,9 +27,7 @@ export interface SatDisplayValue {
 const PRICE_CACHE_KEY = 'nostria-bitcoin-price-cache';
 const PRICE_CACHE_TTL_SECONDS = 5 * 60;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class SatDisplayService {
   private readonly settings = inject(SettingsService);
   private readonly localStorage = inject(LocalStorageService);

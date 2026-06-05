@@ -1,4 +1,4 @@
-import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { inject, PLATFORM_ID, signal, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 
@@ -25,9 +25,7 @@ interface WebKitWindow extends Window {
  * 
  * This service provides a bridge for the iOS native app to communicate with the PWA.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NativePushService {
   private platformId = inject(PLATFORM_ID);
   private logger = inject(LoggerService);

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { PinPromptDialogComponent, PinPromptDialogData } from '../components/pin-prompt-dialog/pin-prompt-dialog.component';
@@ -21,9 +21,7 @@ export interface PinPromptOptions {
  * This service provides a centralized way to prompt users for their PIN
  * when accessing encrypted private keys.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PinPromptService {
   private dialog = inject(MatDialog);
   private cachedPin: string | null = null;

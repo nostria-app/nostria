@@ -1,5 +1,4 @@
 import {
-  Injectable,
   inject,
   signal,
   computed,
@@ -7,6 +6,7 @@ import {
   WritableSignal,
   effect,
   untracked,
+  Service,
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
@@ -191,9 +191,7 @@ const TRENDING_FEED: FeedConfig = {
   updatedAt: Date.now(),
 };
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FeedService {
   private readonly FOLLOWING_INITIAL_MIN_EVENTS = 12;
   private readonly FOLLOWING_INITIAL_BACKFILL_PAGES = 3;

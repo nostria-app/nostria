@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { PLATFORM_ID, inject, signal, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { ThemeService } from './theme.service';
@@ -14,9 +14,7 @@ export interface ExtractedColors {
   saturation: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class ColorExtractionService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);

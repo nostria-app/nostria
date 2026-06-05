@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NostrService } from './nostr.service';
 import { DatabaseService, StoredDirectMessage } from './database.service';
@@ -62,9 +62,7 @@ export interface MediaUsageReference {
   encryptionType?: 'nip04' | 'nip44';
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MediaService implements NostriaService {
   private readonly nostrService = inject(NostrService);
   readonly accountRelay = inject(AccountRelayService);

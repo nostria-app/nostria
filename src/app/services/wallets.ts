@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, Injector, signal, runInInjectionContext } from '@angular/core';
+import { computed, effect, inject, Injector, signal, runInInjectionContext, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { AccountLocalStateService, AccountWallet } from './account-local-state.service';
@@ -10,9 +10,7 @@ export type Wallet = AccountWallet;
 // Import type only to avoid circular dependency at runtime
 import type { AccountStateService as AccountStateServiceType } from './account-state.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Wallets {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);

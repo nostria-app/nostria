@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked, OnDestroy } from '@angular/core';
+import { effect, inject, signal, untracked, OnDestroy, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import {
   GeneralNotification,
@@ -14,9 +14,7 @@ import { AccountStateService } from './account-state.service';
 import { PublishEventBus } from './publish-event-bus.service';
 import { AccountRelayService } from './relays/account-relay';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NotificationService implements OnDestroy {
   private readonly MAX_IN_MEMORY_READ_NOTIFICATIONS = 250;
   private readonly MAX_CONTENT_NOTIFICATION_MESSAGE_LENGTH = 240;

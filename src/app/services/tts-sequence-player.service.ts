@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { computed, inject, signal, Service } from '@angular/core';
 import { type Event, kinds } from 'nostr-tools';
 import { AiModelLoadOptions, AiService } from './ai.service';
 import { EventTtsPlaybackService } from './event-tts-playback.service';
@@ -56,7 +56,7 @@ interface ReadableEventContext {
   announceAuthor: boolean;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class TtsSequencePlayerService {
   private readonly ai = inject(AiService);
   private readonly eventTtsPlayback = inject(EventTtsPlaybackService);

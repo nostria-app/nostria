@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT } from '@angular/core';
+import { PLATFORM_ID, effect, inject, signal, DOCUMENT, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
@@ -49,9 +49,7 @@ export const DEFAULT_FONT: FontOption = 'roboto';
  * - Sets a CSS custom property `--nostria-font-family` on the document root
  * - Saves preference to localStorage for persistence
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FontService {
   readonly STORAGE_KEY = 'nostria-font';
   readonly CSS_PROPERTY = '--nostria-font-family';

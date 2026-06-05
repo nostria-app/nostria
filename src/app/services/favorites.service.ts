@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, effect } from '@angular/core';
+import { computed, inject, signal, effect, Service } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
@@ -8,9 +8,7 @@ import { SettingsService } from './settings.service';
 
 type FavoritesData = Record<string, string[]>;
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class FavoritesService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);

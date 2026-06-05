@@ -1,4 +1,4 @@
-import { Injectable, signal, effect, inject, NgZone, Injector, PLATFORM_ID } from '@angular/core';
+import { signal, effect, inject, NgZone, Injector, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import {
   Event,
@@ -108,9 +108,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   pubkey: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NostrService implements NostriaService {
   private readonly deleteEventService = inject(DeleteEventService);
   private readonly logger = inject(LoggerService);

@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, PLATFORM_ID } from '@angular/core';
+import { effect, inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PlatformService } from './platform.service';
@@ -138,9 +138,7 @@ interface AppStorePurchaseResponse {
  *
  * On web/PWA, this service is not used (Bitcoin Lightning is used instead).
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class InAppPurchaseService {
   private readonly platformService = inject(PlatformService);
   private readonly logger = inject(LoggerService);

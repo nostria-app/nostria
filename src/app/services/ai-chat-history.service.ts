@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { computed, effect, inject, signal, Service } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { AiGeneratedImageSettings, AiGeneratedMediaProvider, AiGeneratedVoiceSettings } from './ai.service';
 import { DatabaseService, StoredAiChatHistoryEntry } from './database.service';
@@ -63,9 +63,7 @@ export interface AiChatHistoryEntry {
   messages: AiHistoryMessage[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AiChatHistoryService {
   private readonly accountState = inject(AccountStateService);
   private readonly database = inject(DatabaseService);

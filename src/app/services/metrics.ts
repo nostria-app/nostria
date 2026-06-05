@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { UserMetric, MetricUpdate, MetricQuery } from '../interfaces/metrics';
 import { UtilitiesService } from './utilities.service';
@@ -11,9 +11,7 @@ interface InfoRecord {
   [key: string]: unknown;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class Metrics {
   private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);

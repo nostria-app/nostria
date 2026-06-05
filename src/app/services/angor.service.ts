@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, NgZone } from '@angular/core';
+import { inject, signal, NgZone, Service } from '@angular/core';
 import { SimplePool, Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -56,9 +56,7 @@ export interface AngorProject {
   metadata?: AngorProjectMetadata;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class AngorService {
   private logger = inject(LoggerService);
   private zone = inject(NgZone);

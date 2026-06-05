@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, PLATFORM_ID } from '@angular/core';
+import { inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { kinds } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
@@ -19,9 +19,7 @@ export interface Device {
   userAgent?: string;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class WebPushService {
   private server: string = environment.backendUrl;
   accountState = inject(AccountStateService);

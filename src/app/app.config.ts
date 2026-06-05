@@ -8,7 +8,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, RouteReuseStrategy, TitleStrategy, withExperimentalAutoCleanupInjectors, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, TitleStrategy, withExperimentalAutoCleanupInjectors, withExperimentalPlatformNavigation, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
 import { NostriaTitleStrategy } from './services/nostria-title-strategy.service';
 import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';

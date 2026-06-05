@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from '@angular/router';
 
 /**
@@ -10,9 +10,7 @@ import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from 
  * Note: FeedsComponent is embedded directly in app.html (not routed), so it
  * stays alive regardless of this strategy.
  */
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class CustomReuseStrategy implements RouteReuseStrategy {
   /**
    * Never detach routes - don't cache any components
