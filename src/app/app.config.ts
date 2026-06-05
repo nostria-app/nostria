@@ -38,6 +38,24 @@ function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && isTauri();
 }
 
+/**
+ * Flags the document as running inside the Tauri desktop shell (not mobile),
+ * enabling window transparency styles for the side menu and right pane.
+ */
+function markTauriDesktopRuntime(): void {
+  if (!isTauriRuntime() || typeof document === 'undefined' || typeof navigator === 'undefined') {
+    return;
+  }
+
+  const userAgent = navigator.userAgent || '';
+  const isMobileShell = /android|iphone|ipad|ipod/i.test(userAgent);
+  if (isMobileShell) {
+    return;
+  }
+
+  document.documentElement.classList.add('tauri-desktop');
+}
+
 async function clearTauriServiceWorkerState(): Promise<void> {
   if (!isTauriRuntime() || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return;
@@ -95,6 +113,7 @@ export const appConfig: ApplicationConfig = {
       inject(DesktopUpdaterService).initialize();
     }),
     provideAppInitializer(() => clearTauriServiceWorkerState()),
+    provideAppInitializer(() => markTauriDesktopRuntime()),
     provideAppInitializer(() => {
       inject(ExternalLinkService).initialize();
     }),

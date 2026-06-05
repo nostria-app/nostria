@@ -529,6 +529,43 @@ mat-sidenav-content {
   background-color: rgba(26, 26, 26, 0.85) !important;
 }
 
+// ============================================
+// Tauri desktop window transparency
+// ============================================
+// When the app runs inside the transparent Tauri desktop window, the left
+// navigation menu and the right pane become translucent so the desktop
+// wallpaper shows through. The central content column (toolbar + panels) keeps
+// an opaque background so it stays readable.
+:host-context(.tauri-desktop) {
+  // Let the desktop show through everything that isn't explicitly painted.
+  // `!important` overrides the inline [style.background] set in the template.
+  .app-container {
+    background: transparent !important;
+  }
+
+  // Keep the central content column opaque and readable.
+  .app-toolbar,
+  .dual-panel-layout {
+    background-color: var(--mat-app-background-color);
+  }
+
+  // Left navigation menu - translucent over the desktop wallpaper.
+  .sidenav {
+    background-color: rgba(250, 250, 250, 0.55) !important;
+  }
+
+  // Right pane (mini-apps sidebar) - fully translucent over the desktop.
+  .right-sidebar {
+    background-color: transparent;
+  }
+}
+
+// Dark theme variant for the translucent side menu. Both classes live on the
+// <html> element, so the compound :host-context selector matches.
+:host-context(.tauri-desktop.dark) .sidenav {
+  background-color: rgba(26, 26, 26, 0.55) !important;
+}
+
 // Close button row at top of sidenav
 .sidenav-close-row {
   display: flex;

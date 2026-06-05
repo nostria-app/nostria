@@ -717,6 +717,25 @@ body {
   transition: background-color 0.3s ease;
 }
 
+// ============================================
+// Tauri desktop window transparency
+// ============================================
+// The Tauri desktop window is configured as transparent. The document root and
+// body must stay transparent so the OS desktop shows through the translucent
+// side menu and right pane. The theme service sets an inline background-color on
+// <body>, so `!important` is required to override it here.
+html.tauri-desktop,
+html.tauri-desktop body {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+html.tauri-desktop .mat-drawer-container,
+html.tauri-desktop .mat-drawer-content,
+html.tauri-desktop .mat-sidenav-content {
+  background-color: transparent !important;
+}
+
 .dark {
   color: white;
 }
