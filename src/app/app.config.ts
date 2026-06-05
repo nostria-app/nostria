@@ -8,7 +8,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, RouteReuseStrategy, TitleStrategy, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, TitleStrategy, withExperimentalAutoCleanupInjectors, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
 import { NostriaTitleStrategy } from './services/nostria-title-strategy.service';
 import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -116,6 +116,10 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(
       routes,
+      // Angular v22: automatically destroy DI injectors for routes that are no
+      // longer active, preventing memory leaks from idle route-level providers.
+      // Safe here because CustomReuseStrategy never detaches/caches routes.
+      withExperimentalAutoCleanupInjectors(),
       withInMemoryScrolling({
         // Disabled: With two-column layout, scroll containers are .left-panel-content and .right-panel-content
         // Angular tracks the wrong element, and we manage scroll manually where needed
