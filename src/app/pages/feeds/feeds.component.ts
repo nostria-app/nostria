@@ -217,6 +217,9 @@ export class FeedsComponent implements OnDestroy {
   // Feed expanded state - use layoutService signal for cross-component communication
   feedsExpanded = computed(() => this.layoutService.feedsExpanded());
   private lastScrollTop = 0;
+  // Identity of the currently displayed feed (regular/relay/list/dynamic), used to detect
+  // feed switches and reset the scroll position. null until the first effect run.
+  private previousFeedKey: string | null = null;
 
   // Relay feed state - for showing public posts from a specific relay
   activeRelayDomain = signal<string>('');
@@ -971,6 +974,34 @@ export class FeedsComponent implements OnDestroy {
       });
     });
 
+    // Reset scroll position to the top whenever the displayed feed changes.
+    // The previous scroll offset does not correspond to the new feed's content, so keeping
+    // it would leave the user partway down an unrelated timeline. This tracks every feed
+    // type (regular, relay, list, dynamic hashtag) via a composite key and skips the very
+    // first run so the initial render isn't disturbed.
+    effect(() => {
+      const feedKey = [
+        this.feedsCollectionService.activeFeedId() ?? '',
+        this.activeRelayDomain(),
+        this.activeListFeed()?.dTag ?? '',
+        this.dynamicFeed()?.id ?? '',
+      ].join('|');
+
+      untracked(() => {
+        if (this.previousFeedKey === null) {
+          // First run: record the initial feed without scrolling.
+          this.previousFeedKey = feedKey;
+          return;
+        }
+
+        if (feedKey !== this.previousFeedKey) {
+          this.previousFeedKey = feedKey;
+          // Defer to the next frame so the new feed's columns are rendered before resetting.
+          requestAnimationFrame(() => this.resetFeedScrollToTop());
+        }
+      });
+    });
+
     // Handle query parameters for relay feed (e.g., /f?r=trending.relays.land) and dynamic hashtag feed (e.g., /f?t=bitcoin,nostr)
     // Since FeedsComponent is embedded directly in app.html (not through router-outlet),
     // we need to use Router events to get query params from the URL
@@ -1500,6 +1531,25 @@ export class FeedsComponent implements OnDestroy {
       // Also reset the header to visible
       this.headerHidden.set(false);
     }
+  }
+
+  /**
+   * Reset the feed scroll position to the very top immediately (no smooth animation).
+   * Used when switching to a different feed, where the previous scroll position is
+   * meaningless for the new feed's content.
+   */
+  private resetFeedScrollToTop(): void {
+    const container = this.columnsContainer?.nativeElement;
+    if (container) {
+      container.scrollTop = 0;
+    }
+
+    // Reset scroll-related state so the new feed starts in a clean state.
+    this.feedsScrollTop.set(0);
+    this.lastScrollTop = 0;
+    this.headerHidden.set(false);
+    this.userHasScrolledAway.set(false);
+    this.userHasScrolledFeedContent.set(false);
   }
 
   /**
