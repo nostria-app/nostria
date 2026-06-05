@@ -13,7 +13,7 @@
     <div class="track-card prev-card" [class.animating]="isAnimating()"
       [style.transform]="'translateX(' + (swipeOffset() * 0.5 - 180) + 'px) scale(0.7) rotateY(30deg)'">
       @if (previousTrack()?.artwork) {
-      <img [src]="previousTrack()?.artwork" alt="" class="card-artwork" />
+      <img [src]="$safeNavigationMigration(previousTrack()?.artwork)" alt="" class="card-artwork" />
       } @else {
       <div class="card-placeholder">
         <mat-icon>music_note</mat-icon>
@@ -40,7 +40,7 @@
         <!-- Album art inside circle -->
         <div class="artwork-container">
           @if (media.current()?.artwork) {
-          <img [src]="media.current()?.artwork" alt="{{ media.current()?.title }}" class="card-artwork" />
+          <img [src]="$safeNavigationMigration(media.current()?.artwork)" alt="{{ media.current()?.title }}" class="card-artwork" />
           } @else {
           <div class="card-placeholder">
             <mat-icon>music_note</mat-icon>
@@ -58,7 +58,7 @@
     <div class="track-card next-card" [class.animating]="isAnimating()"
       [style.transform]="'translateX(' + (swipeOffset() * 0.5 + 180) + 'px) scale(0.7) rotateY(-30deg)'">
       @if (nextTrack()?.artwork) {
-      <img [src]="nextTrack()?.artwork" alt="" class="card-artwork" />
+      <img [src]="$safeNavigationMigration(nextTrack()?.artwork)" alt="" class="card-artwork" />
       } @else {
       <div class="card-placeholder">
         <mat-icon>music_note</mat-icon>

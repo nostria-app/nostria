@@ -72,7 +72,7 @@ interface RelayInfo {
       } @else if (relayInfo()) {
         @if (relayInfo()?.banner) {
           <div class="banner-container">
-            <img [src]="relayInfo()?.banner" alt="Relay Banner" class="relay-banner" />
+            <img [src]="$safeNavigationMigration(relayInfo()?.banner)" alt="Relay Banner" class="relay-banner" />
           </div>
         }
 
@@ -100,7 +100,7 @@ interface RelayInfo {
           @if (relayInfo()?.contact) {
             <div class="info-row">
               <strong>Contact:</strong>&nbsp;<a
-                [href]="relayInfo()?.contact"
+                [href]="$safeNavigationMigration(relayInfo()?.contact)"
                 target="_blank"
                 rel="noopener noreferrer"
                 >{{ relayInfo()?.contact }}</a
@@ -110,7 +110,7 @@ interface RelayInfo {
           @if (relayInfo()?.posting_policy) {
             <div class="info-row">
               <strong>Posting Policy:</strong>&nbsp;<a
-                [href]="relayInfo()?.posting_policy"
+                [href]="$safeNavigationMigration(relayInfo()?.posting_policy)"
                 target="_blank"
                 rel="noopener noreferrer"
                 >{{ relayInfo()?.posting_policy }}</a
@@ -120,7 +120,7 @@ interface RelayInfo {
           @if (relayInfo()?.privacy_policy) {
             <div class="info-row">
               <strong>Privacy Policy:</strong>&nbsp;<a
-                [href]="relayInfo()?.privacy_policy"
+                [href]="$safeNavigationMigration(relayInfo()?.privacy_policy)"
                 target="_blank"
                 rel="noopener noreferrer"
                 >{{ relayInfo()?.privacy_policy }}</a
@@ -150,7 +150,7 @@ interface RelayInfo {
           @if (relayInfo()?.payments_url) {
             <div class="info-row">
               <strong>Payment:</strong>&nbsp;<a
-                [href]="relayInfo()?.payments_url"
+                [href]="$safeNavigationMigration(relayInfo()?.payments_url)"
                 target="_blank"
                 rel="noopener noreferrer"
                 >{{ relayInfo()?.payments_url }}</a
@@ -180,7 +180,7 @@ interface RelayInfo {
                 }
               </p>
               @if (relayInfo()?.payments_url) {
-                <a [href]="relayInfo()?.payments_url" target="_blank" rel="noopener noreferrer" class="signup-link">
+                <a [href]="$safeNavigationMigration(relayInfo()?.payments_url)" target="_blank" rel="noopener noreferrer" class="signup-link">
                   Sign up or pay for access →
                 </a>
               }

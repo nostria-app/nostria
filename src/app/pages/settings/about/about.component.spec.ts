@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { AboutComponent } from './about.component';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -39,7 +39,7 @@ describe('AboutComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
         { provide: RightPanelService, useValue: mockRightPanel },
         { provide: Location, useValue: mockLocation },

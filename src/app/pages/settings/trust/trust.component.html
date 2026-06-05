@@ -137,15 +137,15 @@
               </p>
             </div>
             <span class="trust-status-pill"
-              [class]="'trust-status-pill ' + getStatusPillClass(brainstormStatus()?.status)">
-              {{ formatCalculationStatus(brainstormStatus()?.status) }}
+              [class]="'trust-status-pill ' + getStatusPillClass($safeNavigationMigration(brainstormStatus()?.status))">
+              {{ formatCalculationStatus($safeNavigationMigration(brainstormStatus()?.status)) }}
             </span>
           </div>
 
           @if ((brainstormStatus()?.how_many_others_with_priority ?? 0) > 0) {
           <div class="trust-queue-highlight">
             <span class="trust-status-label" i18n="@@settings.trust.personalized.queueAhead">Queue ahead</span>
-            <span class="trust-queue-value">{{ formatNullableValue(brainstormStatus()?.how_many_others_with_priority)
+            <span class="trust-queue-value">{{ formatNullableValue($safeNavigationMigration(brainstormStatus()?.how_many_others_with_priority))
               }}</span>
           </div>
           }

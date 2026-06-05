@@ -78,7 +78,7 @@
               browser settings.
             </p>
           } @else {
-            @if (isRemotelyEnabled(currentDevice()?.deviceId)) {
+            @if (isRemotelyEnabled($safeNavigationMigration(currentDevice()?.deviceId))) {
               Notifications are enabled on this device.
               <p>
                 <button mat-flat-button routerLink="/notifications/manage">

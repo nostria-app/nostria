@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, provideZonelessChangeDetection } from '@angular/core';
+import { Component, provideZonelessChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { MessageContentComponent } from './message-content.component';
 
 @Component({
     selector: 'app-test-host',
     imports: [MessageContentComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
     template: `<app-message-content [content]="content" />`,
 })
 class TestHostComponent {

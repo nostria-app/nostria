@@ -17,7 +17,7 @@ import { importProvidersFrom } from '@angular/core';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideClientHydration, withEventReplay, withNoIncrementalHydration } from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -158,7 +158,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimations(),
     provideHttpClient(withFetch(), withInterceptors([nip98AuthInterceptor])),
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(withEventReplay(), withNoIncrementalHydration()),
     provideServiceWorker('service-worker.js', {
       enabled: shouldEnableServiceWorker,
       // enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.

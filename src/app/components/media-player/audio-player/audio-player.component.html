@@ -82,7 +82,7 @@
             }
           </div>
           <div class="media-artist clickable" (click)="goToArtist()" [class.has-link]="hasArtistLink()">
-            @if (isNpubArtist(media.current()?.artist)) {
+            @if (isNpubArtist($safeNavigationMigration(media.current()?.artist))) {
             <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
             } @else {
             {{ media.current()?.artist }}

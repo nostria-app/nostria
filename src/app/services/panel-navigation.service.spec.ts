@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { provideRouter } from '@angular/router';
 import { Component } from '@angular/core';
@@ -11,11 +11,13 @@ import { PanelActionsService } from './panel-actions.service';
 import { LoggerService } from './logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: '',
 })
 class TestPrimaryComponent { }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: '',
 })
 class TestRightPanelComponent { }

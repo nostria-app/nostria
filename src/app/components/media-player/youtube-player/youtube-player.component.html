@@ -29,7 +29,7 @@
     <div class="media-info-text" [class.hidden]="isFullscreen()">
       <div class="media-title">{{ media.current()?.title }}</div>
       <div class="media-artist">
-        @if (isNpubArtist(media.current()?.artist)) {
+        @if (isNpubArtist($safeNavigationMigration(media.current()?.artist))) {
         <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
         } @else {
         {{ media.current()?.artist }}

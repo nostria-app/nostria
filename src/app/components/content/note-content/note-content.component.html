@@ -138,7 +138,7 @@
 }
 } @else if (token.type === 'cashu') {
 <div class="cashu-container">
-  <app-cashu-token [token]="token.content" [mint]="token.cashuData?.mint" [amount]="token.cashuData?.amount"
+  <app-cashu-token [token]="token.content" [mint]="$safeNavigationMigration(token.cashuData?.mint)" [amount]="$safeNavigationMigration(token.cashuData?.amount)"
     [unit]="token.cashuData?.unit || 'sat'">
   </app-cashu-token>
 </div>

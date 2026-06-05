@@ -103,7 +103,7 @@ export interface AiToolsDialogData {
             <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
               {{ sentimentIcon() }}
             </mat-icon>
-            <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
+            <span>{{ sentimentResult()?.label }} ({{ $safeNavigationMigration(sentimentResult()?.score) | percent:'1.0-2' }})</span>
           </div>
           }
           }

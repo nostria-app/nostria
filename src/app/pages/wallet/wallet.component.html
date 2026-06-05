@@ -68,7 +68,7 @@
               </span>
               <span class="balance-label">{{ displaySatsInUsdEnabled() ? 'USD' : 'sats' }}</span>
               <button mat-icon-button matTooltip="Refresh balance" i18n-matTooltip="@@wallet.refresh-balance"
-                (click)="refreshBalance(wallet[0]); $event.stopPropagation()" [disabled]="walletData?.loading"
+                (click)="refreshBalance(wallet[0]); $event.stopPropagation()" [disabled]="$safeNavigationMigration(walletData?.loading)"
                 class="refresh-btn">
                 @if (walletData?.loading) {
                 <mat-spinner diameter="16"></mat-spinner>

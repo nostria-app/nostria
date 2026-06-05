@@ -16,7 +16,7 @@
 
     <div class="tab-content">
       @let currentAccount = accountState.account();
-      @let currentMetadata = accountState.profile()?.data;
+      @let currentMetadata = $safeNavigationMigration(accountState.profile()?.data);
 
       <div class="current-account">
         <h2>Current Account</h2>
@@ -685,7 +685,7 @@
                 }
               </span>
               <span matListItemLine [class.expired-text]="isExpired()">
-                {{ accountState.subscription()?.expires | date: 'mediumDate' }}
+                {{ $safeNavigationMigration(accountState.subscription()?.expires) | date: 'mediumDate' }}
                 @if (!isExpired() && expiresIn()) {
                 ({{ expiresIn() }} remaining)
                 }

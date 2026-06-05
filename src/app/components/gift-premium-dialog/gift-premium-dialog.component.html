@@ -171,12 +171,12 @@
 
       <div class="summary-row">
         <span class="summary-label">Plan</span>
-        <span class="summary-value highlight">{{ getPremiumTypeName(giftForm.get('premiumType')?.value) }}</span>
+        <span class="summary-value highlight">{{ getPremiumTypeName($safeNavigationMigration(giftForm.get('premiumType')?.value)) }}</span>
       </div>
 
       <div class="summary-row">
         <span class="summary-label">Duration</span>
-        <span class="summary-value">{{ getDurationText(giftForm.get('duration')?.value) }}</span>
+        <span class="summary-value">{{ getDurationText($safeNavigationMigration(giftForm.get('duration')?.value)) }}</span>
       </div>
 
       <div class="summary-divider"></div>

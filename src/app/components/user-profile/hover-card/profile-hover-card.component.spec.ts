@@ -1,6 +1,6 @@
 import type { Mock } from "vitest";
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
+import { Component, provideZonelessChangeDetection, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ProfileHoverCardComponent } from './profile-hover-card.component';
 import { DataService } from '../../../services/data.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -24,6 +24,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 @Component({
     selector: 'app-test-host',
     template: '<app-profile-hover-card [pubkey]="pubkey" />',
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [ProfileHoverCardComponent],
 })
 class TestHostComponent {

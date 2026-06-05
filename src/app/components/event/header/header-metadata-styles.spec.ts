@@ -5,7 +5,7 @@
  * indicator use reduced visual weight so the display name stands out
  * more in the feed.
  */
-import { Component, ViewEncapsulation } from '@angular/core';
+import { Component, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 
@@ -36,6 +36,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
       margin-right: 0.4rem;
     }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="user-profile-npub">@alice&#64;example.com</div>
     <a class="date-link">5 minutes ago</a>

@@ -43,7 +43,7 @@
   } @else {
   <!-- Media Preview -->
   <div class="media-preview-card">
-    <div class="media-preview" [class.pdf-media-preview]="isPdfFile(mediaItem()?.type)">
+    <div class="media-preview" [class.pdf-media-preview]="isPdfFile($safeNavigationMigration(mediaItem()?.type))">
       @if (mediaItem()?.type?.startsWith('image')) {
       <img [src]="mediaUrl() || mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'"
         title="{{ mediaItem()!.url || 'Image' }}" (click)="openFullScreen()" />
@@ -72,11 +72,11 @@
       } @else {
       <pre class="text-preview">{{ textContent() }}</pre>
       }
-      } @else if (isPdfFile(mediaItem()?.type)) {
+      } @else if (isPdfFile($safeNavigationMigration(mediaItem()?.type))) {
       <app-pdf-viewer [src]="mediaUrl() || mediaItem()!.url" [title]="getFileName(mediaItem()!)"></app-pdf-viewer>
       } @else {
       <div class="generic-preview">
-        <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
+        <mat-icon>{{ getMediaIcon($safeNavigationMigration(mediaItem()?.type)) }}</mat-icon>
       </div>
       }
     </div>
@@ -85,7 +85,7 @@
   <!-- File Information Card (below preview) -->
   <mat-card class="metadata-card">
     <mat-card-header>
-      <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
+      <mat-icon mat-card-avatar>{{ getMediaIcon($safeNavigationMigration(mediaItem()?.type)) }}</mat-icon>
       <mat-card-title>File Information</mat-card-title>
     </mat-card-header>
 

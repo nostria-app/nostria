@@ -29,7 +29,7 @@
   <div class="badge-details">
     <div class="badge-image">
       @if (badge()?.image) {
-      <img [src]="badge()?.image" alt="{{ badge()?.name }}" />
+      <img [src]="$safeNavigationMigration(badge()?.image)" alt="{{ badge()?.name }}" />
       } @else {
       <div class="no-image-placeholder">
         <mat-icon>image</mat-icon>
@@ -72,7 +72,7 @@
             </div>
             <div>
               <h3>Created</h3>
-              <p>{{ badge()?.created | date: 'medium' }}</p>
+              <p>{{ $safeNavigationMigration(badge()?.created) | date: 'medium' }}</p>
             </div>
             <div>
               <h3>Slug</h3>

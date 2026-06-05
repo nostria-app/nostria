@@ -573,7 +573,7 @@
               <mat-icon class="detail-icon">code</mat-icon>
               <span class="detail-label" i18n="@@settings.relays.observed.nip11.software">Software:</span>
               <span class="detail-value">
-                <a [href]="getNip11Info(relay.url)?.software" target="_blank" rel="noopener noreferrer">
+                <a [href]="$safeNavigationMigration(getNip11Info(relay.url)?.software)" target="_blank" rel="noopener noreferrer">
                   {{ getNip11Info(relay.url)?.software }}
                 </a>
               </span>

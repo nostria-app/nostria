@@ -43,10 +43,10 @@
           <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-avatar-button">
             @if (accountState.profile()?.data?.picture) {
             @if (settings.settings().imageCacheEnabled) {
-            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
+            <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" alt="Profile"
               class="avatar-image" />
             } @else {
-            <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
+            <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" alt="Profile" class="avatar-image" />
             }
             } @else {
             @if (app.authenticated()) {
@@ -156,10 +156,10 @@
           class="nav-item profile-nav-item sidenav-minimized-avatar-button" matTooltipPosition="right">
           @if (accountState.profile()?.data?.picture) {
           @if (settings.settings().imageCacheEnabled) {
-          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="sidenav-minimized-avatar"
+          <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" class="sidenav-minimized-avatar"
             alt="Profile" />
           } @else {
-          <img [src]="accountState.profile()?.data?.picture" class="sidenav-minimized-avatar" alt="Profile" />
+          <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" class="sidenav-minimized-avatar" alt="Profile" />
           }
           } @else {
           <mat-icon class="sidenav-minimized-icon">{{ app.authenticated() ? 'account_circle' : 'account_circle_off'
@@ -259,10 +259,10 @@
             <div class="menu-button-content">
               @if (accountState.profile()?.data?.picture) {
               @if (settings.settings().imageCacheEnabled) {
-              <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
+              <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" class="menu-profile-avatar"
                 alt="Menu" />
               } @else {
-              <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
+              <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" class="menu-profile-avatar" alt="Menu" />
               }
               } @else {
               @if (app.authenticated()) {

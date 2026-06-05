@@ -73,7 +73,7 @@ export interface EditPeopleListDialogResult {
           <div class="person-item">
             <div class="person-info">
               @if (profile.profile?.data?.picture) {
-              <img [src]="getOptimizedImageUrl(profile.profile?.data?.picture)" 
+              <img [src]="getOptimizedImageUrl($safeNavigationMigration(profile.profile?.data?.picture))" 
                    class="person-avatar" 
                    alt="Profile picture" />
               } @else {

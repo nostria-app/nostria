@@ -184,7 +184,7 @@
     <mat-icon>link</mat-icon>
     Link
   </button>
-  <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
+  <button mat-menu-item (click)="layout.copyToClipboard($safeNavigationMigration(record()?.data), 'text')">
     <mat-icon>content_copy</mat-icon>
     Text
   </button>

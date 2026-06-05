@@ -68,7 +68,7 @@
           <div class="chat-item-top">
             <span class="chat-item-name">{{ getGroupDisplayName(item.chat) }}</span>
             @if (item.chat.lastMessage?.created_at) {
-            <span class="chat-item-time">{{ item.chat.lastMessage?.created_at | ago }}</span>
+            <span class="chat-item-time">{{ $safeNavigationMigration(item.chat.lastMessage?.created_at) | ago }}</span>
             }
           </div>
           <div class="chat-item-preview">
@@ -89,7 +89,7 @@
           <div class="chat-item-top">
             <app-profile-display-name [pubkey]="item.chat.pubkey" [disableLink]="true" />
             @if (item.chat.lastMessage?.created_at) {
-            <span class="chat-item-time">{{ item.chat.lastMessage?.created_at | ago }}</span>
+            <span class="chat-item-time">{{ $safeNavigationMigration(item.chat.lastMessage?.created_at) | ago }}</span>
             }
           </div>
           <div class="chat-item-preview">

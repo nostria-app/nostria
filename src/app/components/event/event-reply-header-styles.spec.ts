@@ -7,7 +7,7 @@
  * - Adequate spacing between reply header and quoted container
  * - Adequate padding inside quoted containers
  */
-import { Component, ViewEncapsulation } from '@angular/core';
+import { Component, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 
@@ -33,6 +33,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
       padding-top: 8px;
     }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="reply-header">
       <span class="mat-icon">reply</span>

@@ -102,7 +102,7 @@
           <div class="info-section">
             <div class="info-label">Contact</div>
             <div class="info-value">
-              <a [href]="getNip11Info(url)?.contact" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.contact)" target="_blank" rel="noopener noreferrer">
                 {{ getNip11Info(url)?.contact }}
               </a>
             </div>
@@ -124,7 +124,7 @@
           <div class="info-section">
             <div class="info-label">Limitations</div>
             <div class="info-value limitations-grid">
-              @if (getNip11Info(url)?.limitation?.payment_required !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.payment_required) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.payment_required">
                   {{ getNip11Info(url)?.limitation?.payment_required ? 'payment' : 'money_off' }}
@@ -132,7 +132,7 @@
                 <span>{{ getNip11Info(url)?.limitation?.payment_required ? 'Payment Required' : 'Free' }}</span>
               </div>
               }
-              @if (getNip11Info(url)?.limitation?.auth_required !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.auth_required) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.auth_required">
                   {{ getNip11Info(url)?.limitation?.auth_required ? 'lock' : 'lock_open' }}
@@ -140,7 +140,7 @@
                 <span>{{ getNip11Info(url)?.limitation?.auth_required ? 'Auth Required' : 'Public' }}</span>
               </div>
               }
-              @if (getNip11Info(url)?.limitation?.restricted_writes !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.restricted_writes) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.restricted_writes">
                   {{ getNip11Info(url)?.limitation?.restricted_writes ? 'edit_off' : 'edit' }}
@@ -158,13 +158,13 @@
             <div class="info-label">Policies</div>
             <div class="info-value policy-links">
               @if (getNip11Info(url)?.posting_policy) {
-              <a [href]="getNip11Info(url)?.posting_policy" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.posting_policy)" target="_blank" rel="noopener noreferrer">
                 <mat-icon>policy</mat-icon>
                 Posting Policy
               </a>
               }
               @if (getNip11Info(url)?.privacy_policy) {
-              <a [href]="getNip11Info(url)?.privacy_policy" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.privacy_policy)" target="_blank" rel="noopener noreferrer">
                 <mat-icon>privacy_tip</mat-icon>
                 Privacy Policy
               </a>
@@ -264,7 +264,7 @@
           <div class="info-section">
             <div class="info-label">Contact</div>
             <div class="info-value">
-              <a [href]="getNip11Info(url)?.contact" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.contact)" target="_blank" rel="noopener noreferrer">
                 {{ getNip11Info(url)?.contact }}
               </a>
             </div>
@@ -286,7 +286,7 @@
           <div class="info-section">
             <div class="info-label">Limitations</div>
             <div class="info-value limitations-grid">
-              @if (getNip11Info(url)?.limitation?.payment_required !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.payment_required) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.payment_required">
                   {{ getNip11Info(url)?.limitation?.payment_required ? 'payment' : 'money_off' }}
@@ -294,7 +294,7 @@
                 <span>{{ getNip11Info(url)?.limitation?.payment_required ? 'Payment Required' : 'Free' }}</span>
               </div>
               }
-              @if (getNip11Info(url)?.limitation?.auth_required !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.auth_required) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.auth_required">
                   {{ getNip11Info(url)?.limitation?.auth_required ? 'lock' : 'lock_open' }}
@@ -302,7 +302,7 @@
                 <span>{{ getNip11Info(url)?.limitation?.auth_required ? 'Auth Required' : 'Public' }}</span>
               </div>
               }
-              @if (getNip11Info(url)?.limitation?.restricted_writes !== undefined) {
+              @if ($safeNavigationMigration(getNip11Info(url)?.limitation?.restricted_writes) !== undefined) {
               <div class="limitation-item">
                 <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.restricted_writes">
                   {{ getNip11Info(url)?.limitation?.restricted_writes ? 'edit_off' : 'edit' }}
@@ -320,13 +320,13 @@
             <div class="info-label">Policies</div>
             <div class="info-value policy-links">
               @if (getNip11Info(url)?.posting_policy) {
-              <a [href]="getNip11Info(url)?.posting_policy" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.posting_policy)" target="_blank" rel="noopener noreferrer">
                 <mat-icon>policy</mat-icon>
                 Posting Policy
               </a>
               }
               @if (getNip11Info(url)?.privacy_policy) {
-              <a [href]="getNip11Info(url)?.privacy_policy" target="_blank" rel="noopener noreferrer">
+              <a [href]="$safeNavigationMigration(getNip11Info(url)?.privacy_policy)" target="_blank" rel="noopener noreferrer">
                 <mat-icon>privacy_tip</mat-icon>
                 Privacy Policy
               </a>

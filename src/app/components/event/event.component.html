@@ -1,6 +1,6 @@
 @let item = record();
 @let targetItem = repostedRecord() || item;
-@let repostedEvent = repostedRecord()?.event;
+@let repostedEvent = $safeNavigationMigration(repostedRecord()?.event);
 @let parentRecordData = parentRecord();
 @let rootRecordData = rootRecord();
 
@@ -178,7 +178,7 @@
     } @else {
     @if (isKnownRenderable(targetItem.event.kind)) {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
+      <app-content [content]="$safeNavigationMigration(displayedRecord()?.data)" [event]="targetItem.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
         [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
         [hideInlineMediaAndLinks]="isMainContentCollapsed()"
@@ -241,7 +241,7 @@
     }
     } @else {
     <!-- Unknown event kind (NIP-31 alt text + NIP-89 app handlers) -->
-    <app-unknown-event [event]="targetItem.event" [content]="displayedRecord()?.data"
+    <app-unknown-event [event]="targetItem.event" [content]="$safeNavigationMigration(displayedRecord()?.data)"
       [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
@@ -753,7 +753,7 @@
     } @else {
     @if (isKnownRenderable(item.event.kind)) {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+      <app-content [content]="$safeNavigationMigration(displayedRecord()?.data)" [event]="item.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
         [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
         [hideInlineMediaAndLinks]="isMainContentCollapsed()"
@@ -816,7 +816,7 @@
     }
     } @else {
     <!-- Unknown event kind (NIP-31 + NIP-89) -->
-    <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
+    <app-unknown-event [event]="item.event" [content]="$safeNavigationMigration(displayedRecord()?.data)"
       [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
@@ -941,7 +941,7 @@
     } @else {
     @if (isKnownRenderable(item.event.kind)) {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+      <app-content [content]="$safeNavigationMigration(displayedRecord()?.data)" [event]="item.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
         [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
         [hideInlineMediaAndLinks]="isMainContentCollapsed()"
@@ -1005,7 +1005,7 @@
     }
     } @else {
     <!-- Unknown event kind (NIP-31 + NIP-89) -->
-    <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
+    <app-unknown-event [event]="item.event" [content]="$safeNavigationMigration(displayedRecord()?.data)"
       [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }

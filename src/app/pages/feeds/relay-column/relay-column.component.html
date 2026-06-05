@@ -116,10 +116,10 @@
       <span class="metadata-label">Limitations</span>
       <div class="limitations-grid">
         @if (relayInfo()?.limitation?.max_message_length) {
-        <span class="limitation-item">Max message: {{ relayInfo()?.limitation?.max_message_length | number }}</span>
+        <span class="limitation-item">Max message: {{ $safeNavigationMigration(relayInfo()?.limitation?.max_message_length) | number }}</span>
         }
         @if (relayInfo()?.limitation?.max_content_length) {
-        <span class="limitation-item">Max content: {{ relayInfo()?.limitation?.max_content_length | number }}</span>
+        <span class="limitation-item">Max content: {{ $safeNavigationMigration(relayInfo()?.limitation?.max_content_length) | number }}</span>
         }
         @if (relayInfo()?.limitation?.max_subscriptions) {
         <span class="limitation-item">Max subscriptions: {{ relayInfo()?.limitation?.max_subscriptions }}</span>
