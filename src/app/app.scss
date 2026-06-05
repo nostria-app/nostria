@@ -532,11 +532,20 @@ mat-sidenav-content {
 // ============================================
 // Tauri desktop window transparency
 // ============================================
-// When the app runs inside the transparent Tauri desktop window, the left
-// navigation menu and the right pane become translucent so the desktop
-// wallpaper shows through. The central content column (toolbar + panels) keeps
-// an opaque background so it stays readable.
+// Premium glassmorphism for the desktop shell. The toolbar, side menu and right
+// pane use a diagonal frosted gradient subtly tinted with the app's purple brand
+// color, a top inner-highlight for a glass edge, and a soft depth shadow. The
+// translucency is balanced so the desktop hints through without clutter. The
+// central content column stays opaque.
 :host-context(.tauri-desktop) {
+
+  // Shared glass tokens (light theme).
+  --glass-tint: 124, 92, 220; // app purple, used at low alpha
+  --glass-base-1: 255, 255, 255;
+  --glass-base-2: 244, 242, 252;
+  --glass-edge: rgba(255, 255, 255, 0.65);
+  --glass-hairline: rgba(124, 92, 220, 0.12);
+
   // Let the desktop show through everything that isn't explicitly painted.
   // `!important` overrides the inline [style.background] set in the template.
   .app-container {
@@ -544,26 +553,108 @@ mat-sidenav-content {
   }
 
   // Keep the central content column opaque and readable.
-  .app-toolbar,
   .dual-panel-layout {
     background-color: var(--mat-app-background-color);
   }
 
-  // Left navigation menu - translucent over the desktop wallpaper.
-  .sidenav {
-    background-color: rgba(250, 250, 250, 0.55) !important;
+  // Top toolbar - diagonal frosted glass with a glass top-edge highlight.
+  .app-toolbar {
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.78) 0%,
+        rgba(var(--glass-base-2), 0.7) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.05),
+        rgba(var(--glass-tint), 0.05));
+    -webkit-backdrop-filter: blur(28px) saturate(1.9);
+    backdrop-filter: blur(28px) saturate(1.9);
+    border-bottom: 1px solid var(--glass-hairline);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  // Right pane (mini-apps sidebar) - fully translucent over the desktop.
+  // Left navigation menu - matching diagonal frost with a vertical glass edge.
+  .sidenav {
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.8) 0%,
+        rgba(var(--glass-base-2), 0.72) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.06),
+        rgba(var(--glass-tint), 0.06)) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.9);
+    backdrop-filter: blur(28px) saturate(1.9);
+    border-right: 1px solid var(--glass-hairline);
+    box-shadow:
+      inset 1px 0 0 var(--glass-edge),
+      2px 0 16px rgba(0, 0, 0, 0.05);
+  }
+
+  // Right pane (mini-apps sidebar) - lighter frost, glass edge on its left.
   .right-sidebar {
-    background-color: transparent;
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.72) 0%,
+        rgba(var(--glass-base-2), 0.64) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.05),
+        rgba(var(--glass-tint), 0.05));
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    backdrop-filter: blur(24px) saturate(1.7);
+    border-left: 1px solid var(--glass-hairline);
+    box-shadow: inset 1px 0 0 var(--glass-edge);
   }
 }
 
-// Dark theme variant for the translucent side menu. Both classes live on the
-// <html> element, so the compound :host-context selector matches.
-:host-context(.tauri-desktop.dark) .sidenav {
-  background-color: rgba(26, 26, 26, 0.55) !important;
+// Dark theme variants - deep glass with a luminous purple undertone.
+:host-context(.tauri-desktop.dark) {
+
+  --glass-tint: 150, 120, 240; // brighter purple reads on dark glass
+  --glass-base-1: 36, 34, 44;
+  --glass-base-2: 22, 20, 28;
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-hairline: rgba(150, 120, 240, 0.18);
+
+  .app-toolbar {
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.82) 0%,
+        rgba(var(--glass-base-2), 0.74) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.07),
+        rgba(var(--glass-tint), 0.07));
+    border-bottom: 1px solid var(--glass-hairline);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      0 2px 14px rgba(0, 0, 0, 0.3);
+  }
+
+  .sidenav {
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.84) 0%,
+        rgba(var(--glass-base-2), 0.76) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.08),
+        rgba(var(--glass-tint), 0.08)) !important;
+    border-right: 1px solid var(--glass-hairline);
+    box-shadow:
+      inset 1px 0 0 var(--glass-edge),
+      2px 0 18px rgba(0, 0, 0, 0.28);
+  }
+
+  .right-sidebar {
+    background:
+      linear-gradient(135deg,
+        rgba(var(--glass-base-1), 0.76) 0%,
+        rgba(var(--glass-base-2), 0.68) 100%),
+      linear-gradient(0deg,
+        rgba(var(--glass-tint), 0.06),
+        rgba(var(--glass-tint), 0.06));
+    border-left: 1px solid var(--glass-hairline);
+    box-shadow: inset 1px 0 0 var(--glass-edge);
+  }
 }
 
 // Close button row at top of sidenav

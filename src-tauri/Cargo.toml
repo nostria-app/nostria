@@ -32,3 +32,7 @@ souvlaki = { version = "0.8.3", default-features = false, features = ["use_zbus"
 rustls = { version = "=0.23.37", default-features = false, features = ["std", "ring"] }
 tauri-plugin-deep-link = "=2.4.7"
 tauri-plugin-single-instance = { version = "=2.4.0", features = ["deep-link"] }
+
+# Real OS-level blurred desktop background (Acrylic on Windows, Vibrancy on macOS).
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+window-vibrancy = "0.6"

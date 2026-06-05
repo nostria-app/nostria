@@ -69,6 +69,31 @@ fn install_rustls_crypto_provider() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
+/// Applies an OS-level translucency effect to the main window. On Windows the
+/// window is left as a plain transparent window (no Acrylic) because Acrylic
+/// renders as a flat opaque-looking surface here; the translucent CSS surfaces
+/// let the desktop show through directly. macOS still gets native Vibrancy.
+#[cfg(desktop)]
+fn apply_window_effects<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    #[cfg(target_os = "macos")]
+    {
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+        if let Err(error) = apply_vibrancy(
+            window,
+            NSVisualEffectMaterial::HudWindow,
+            None,
+            None,
+        ) {
+            eprintln!("failed to apply vibrancy window effect: {error}");
+        }
+    }
+
+    // Silence unused-variable warnings on platforms without a vibrancy backend
+    // (Windows now relies purely on the transparent window + CSS surfaces).
+    #[cfg(not(target_os = "macos"))]
+    let _ = window;
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     install_rustls_crypto_provider();
@@ -96,6 +121,13 @@ pub fn run() {
 
                 if let Err(error) = app.deep_link().register_all() {
                     eprintln!("failed to register deep link schemes: {error}");
+                }
+            }
+
+            #[cfg(desktop)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    apply_window_effects(&window);
                 }
             }
 
