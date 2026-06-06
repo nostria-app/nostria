@@ -118,16 +118,29 @@ export class FollowingService {
     this.isActive.set(true);
   }
 
+  // Guard to prevent overlapping initial loads while background enrichment runs.
+  // This is separate from the UI-facing `isLoading` signal, which is released as
+  // soon as cached profiles are rendered so the People list appears instantly.
+  private loadInProgress = false;
+
   /**
-   * Load profiles for the given pubkeys
-   * Uses optimized batch loading from discovery relays
+   * Load profiles for the given pubkeys.
+   *
+   * Rendering strategy (progressive):
+   * 1. Gather profiles already in the in-memory cache / local database (fast).
+   * 2. Immediately publish the profiles map from cached data and release the
+   *    blocking loading spinner so the People list renders right away.
+   * 3. In the background, enrich each profile with local metadata (info, trust,
+   *    metrics) and fetch any profiles missing from cache from user relays,
+   *    updating the signal incrementally as data arrives.
    */
   private async loadProfiles(pubkeys: string[]): Promise<void> {
-    if (this.isLoading()) {
+    if (this.loadInProgress) {
       this.logger.debug('[FollowingService] Already loading, skipping duplicate load');
       return;
     }
 
+    this.loadInProgress = true;
     this.isLoading.set(true);
     this.logger.info(`[FollowingService] Loading ${pubkeys.length} following profiles...`);
 
@@ -151,12 +164,9 @@ export class FollowingService {
         }
       }
 
-      // Create a new map to store all profiles
-      const newMap = new Map<string, FollowingProfile>();
       const now = Math.floor(Date.now() / 1000);
 
       // PHASE 1: Check in-memory cache and local database for all profiles
-      const missingPubkeys: string[] = [];
       const cachedProfiles = new Map<string, NostrRecord>();
 
       // First, check the in-memory cache
@@ -177,20 +187,104 @@ export class FollowingService {
         }
       }
 
-      // Identify which profiles are still missing
-      for (const pk of pubkeys) {
-        if (!cachedProfiles.has(pk)) {
-          missingPubkeys.push(pk);
-        }
-      }
+      // Identify which profiles are still missing (need network fetch)
+      const missingPubkeys = pubkeys.filter(pk => !cachedProfiles.has(pk));
 
       this.logger.info(`[FollowingService] Found ${cachedProfiles.size} profiles in cache/storage, ${missingPubkeys.length} need fetching`);
 
-      // PHASE 2: Batch fetch missing profiles from user relays
-      if (missingPubkeys.length > 0) {
-        this.logger.info(`[FollowingService] Batch fetching ${missingPubkeys.length} profiles from user relays...`);
+      // PHASE 2: Publish profiles immediately from cached data so the UI renders
+      // right away. Metadata (info/trust/metrics) and missing profiles are loaded
+      // in the background and merged into the map incrementally.
+      const initialMap = new Map<string, FollowingProfile>();
+      for (const pk of pubkeys) {
+        const cachedProfile = cachedProfiles.get(pk);
+        initialMap.set(pk, {
+          pubkey: pk,
+          event: cachedProfile?.event || null,
+          profile: cachedProfile || null,
+          info: null,
+          trust: null,
+          metric: null,
+          lastUpdated: now,
+        });
+      }
 
-        // Fetch in batches of 100 with limited concurrency to reduce CPU spikes
+      this.profilesMap.set(initialMap);
+      this.isInitialized.set(true);
+      // Release the blocking spinner now - the list is rendered from cache.
+      this.isLoading.set(false);
+      this.logger.info(`[FollowingService] Rendered ${initialMap.size} profiles from cache, enriching in background...`);
+
+      // PHASE 3: Enrich profiles and fetch missing ones in the background.
+      // Intentionally not awaited so the load promise resolves and the UI stays
+      // responsive while data streams in.
+      void this.enrichProfilesInBackground(pubkeys, missingPubkeys, now)
+        .finally(() => {
+          this.loadInProgress = false;
+        });
+      return;
+    } catch (error) {
+      this.logger.error('[FollowingService] Error loading profiles:', error);
+      this.isLoading.set(false);
+      this.loadInProgress = false;
+    }
+  }
+
+  /**
+   * Enrich already-rendered profiles with local metadata and fetch any profiles
+   * that are missing from cache. Updates the profiles signal incrementally so the
+   * UI reflects new data as it arrives, without blocking the initial render.
+   */
+  private async enrichProfilesInBackground(
+    pubkeys: string[],
+    missingPubkeys: string[],
+    now: number
+  ): Promise<void> {
+    try {
+      // STEP A: Load local metadata (info, trust, metrics) in batches and merge
+      // into the existing profiles map incrementally.
+      const metadataBatchSize = 50;
+      for (let i = 0; i < pubkeys.length; i += metadataBatchSize) {
+        const batch = pubkeys.slice(i, i + metadataBatchSize);
+        const enriched = await Promise.all(
+          batch.map(async (pk) => {
+            try {
+              const [infoRecord, trustMetrics, metricData] = await Promise.all([
+                this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
+                this.database.getTrustMetrics(pk).catch(() => null),
+                this.metrics.getUserMetric(pk).catch(() => null),
+              ]);
+              return { pk, infoRecord, trustMetrics, metricData };
+            } catch (error) {
+              this.logger.error(`[FollowingService] Failed to load metadata for ${pk}:`, error);
+              return { pk, infoRecord: null, trustMetrics: null, metricData: null };
+            }
+          })
+        );
+
+        this.profilesMap.update(map => {
+          const newMap = new Map(map);
+          for (const { pk, infoRecord, trustMetrics, metricData } of enriched) {
+            const existing = newMap.get(pk);
+            newMap.set(pk, {
+              pubkey: pk,
+              event: existing?.event || null,
+              profile: existing?.profile || null,
+              info: infoRecord || null,
+              trust: trustMetrics,
+              metric: metricData,
+              lastUpdated: now,
+            });
+          }
+          return newMap;
+        });
+      }
+
+      // STEP B: Fetch profiles missing from cache from user relays, merging each
+      // batch into the map as it completes.
+      if (missingPubkeys.length > 0) {
+        this.logger.info(`[FollowingService] Background fetching ${missingPubkeys.length} profiles from user relays...`);
+
         const fetchBatchSize = 100;
         const maxConcurrentBatches = 2;
         const activePromises: Promise<void>[] = [];
@@ -203,17 +297,34 @@ export class FollowingService {
             try {
               const fetchedEvents = await this.userRelayService.getEventsByPubkeyAndKind(batch, kinds.Metadata);
 
-              // Process fetched events
-              for (const event of fetchedEvents) {
-                const record = this.userData.toRecord(event);
-                cachedProfiles.set(event.pubkey, record);
-                // Save to database for future use (don't await to keep things fast)
-                this.database.saveEvent(event).catch(err =>
-                  this.logger.warn(`[FollowingService] Failed to save profile to DB:`, err)
-                );
-                // Also update the account state cache
-                this.accountState.addToCache(event.pubkey, record);
+              if (fetchedEvents.length === 0) {
+                return;
               }
+
+              this.profilesMap.update(map => {
+                const newMap = new Map(map);
+                for (const event of fetchedEvents) {
+                  const record = this.userData.toRecord(event);
+                  // Save to database for future use (don't await to keep things fast)
+                  this.database.saveEvent(event).catch(err =>
+                    this.logger.warn(`[FollowingService] Failed to save profile to DB:`, err)
+                  );
+                  // Also update the account state cache
+                  this.accountState.addToCache(event.pubkey, record);
+
+                  const existing = newMap.get(event.pubkey);
+                  newMap.set(event.pubkey, {
+                    pubkey: event.pubkey,
+                    event: record.event,
+                    profile: record,
+                    info: existing?.info || null,
+                    trust: existing?.trust || null,
+                    metric: existing?.metric || null,
+                    lastUpdated: now,
+                  });
+                }
+                return newMap;
+              });
 
               this.logger.debug(`[FollowingService] Fetched batch ${batchIndex}: ${fetchedEvents.length} profiles`);
             } catch (error) {
@@ -234,48 +345,9 @@ export class FollowingService {
         }
       }
 
-      // PHASE 3: Build the final profiles map with all metadata
-      // Process profiles in smaller batches to reduce startup CPU spikes
-      const profileBatchSize = 50;
-      for (let i = 0; i < pubkeys.length; i += profileBatchSize) {
-        const batch = pubkeys.slice(i, i + profileBatchSize);
-        await Promise.all(
-          batch.map(async (pk) => {
-            try {
-              const cachedProfile = cachedProfiles.get(pk);
-
-              // Load additional metadata in parallel
-              const [infoRecord, trustMetrics, metricData] = await Promise.all([
-                this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
-                this.database.getTrustMetrics(pk).catch(() => null),
-                this.metrics.getUserMetric(pk).catch(() => null),
-              ]);
-
-              newMap.set(pk, {
-                pubkey: pk,
-                event: cachedProfile?.event || null,
-                profile: cachedProfile || null,
-                info: infoRecord || null,
-                trust: trustMetrics,
-                metric: metricData,
-                lastUpdated: now,
-              });
-            } catch (error) {
-              this.logger.error(`[FollowingService] Failed to load metadata for ${pk}:`, error);
-              newMap.set(pk, this.createMinimalProfile(pk));
-            }
-          })
-        );
-      }
-
-      // Update the signal with the new map
-      this.profilesMap.set(newMap);
-      this.isInitialized.set(true);
-      this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles`);
+      this.logger.info(`[FollowingService] Background enrichment complete for ${pubkeys.length} profiles`);
     } catch (error) {
-      this.logger.error('[FollowingService] Error loading profiles:', error);
-    } finally {
-      this.isLoading.set(false);
+      this.logger.error('[FollowingService] Error during background enrichment:', error);
     }
   }
 
