@@ -21,6 +21,10 @@ export interface MusicPlaylist {
   isPublic: boolean;
   isCollaborative: boolean;
   trackRefs: string[]; // a-tags referencing tracks
+  type?: string; // release format (album, ep, single, ...)
+  role?: string; // playlist role (release, curated, personal, collaborative)
+  podcastFeedGuids: string[]; // Podcasting 2.0 feed GUIDs from `i` tags
+  podcastItemGuids: string[]; // Podcasting 2.0 item GUIDs from `i` tags (ordered)
   created_at: number;
   event?: Event;
 }
@@ -32,6 +36,8 @@ export interface CreateMusicPlaylistData {
   gradient?: string | null;
   isPublic: boolean;
   isCollaborative: boolean;
+  type?: string; // release format (album, ep, single, ...)
+  role?: string; // playlist role (release, curated, personal, collaborative)
   customRelays?: string[]; // Optional custom relay URLs to publish to
 }
 
@@ -147,12 +153,16 @@ export class MusicPlaylistService {
     return {
       id: dTag,
       title: titleTag?.[1] || 'Untitled Album',
-      description: descTag?.[1] || event.content || undefined,
+      description: descTag?.[1] || undefined,
       image: imageTag?.[1] || undefined,
       pubkey: event.pubkey,
       isPublic,
       isCollaborative: collaborativeTag?.[1] === 'true',
       trackRefs,
+      type: this.utilities.getMusicPlaylistType(event),
+      role: this.utilities.getMusicPlaylistRole(event),
+      podcastFeedGuids: this.utilities.getMusicPlaylistPodcastFeedGuids(event),
+      podcastItemGuids: this.utilities.getMusicPlaylistPodcastItemGuids(event),
       created_at: event.created_at,
       event,
     };
@@ -182,6 +192,14 @@ export class MusicPlaylistService {
       tags.push(['description', data.description]);
     }
 
+    // Release format (type) and playlist role (per extended spec)
+    if (data.type) {
+      tags.push(['type', data.type]);
+    }
+    if (data.role) {
+      tags.push(['role', data.role]);
+    }
+
     if (data.image) {
       tags.push(['image', data.image]);
     } else if (data.gradient) {
@@ -196,7 +214,9 @@ export class MusicPlaylistService {
     }
     tags.push(['collaborative', data.isCollaborative ? 'true' : 'false']);
 
-    const content = data.description || '';
+    // The `.content` field is reserved for a track listing fallback. A newly
+    // created album has no tracks yet, so leave it empty.
+    const content = '';
 
     const event = this.nostrService.createEvent(MUSIC_ALBUM_KIND, content, tags);
     if (!event) {
@@ -296,7 +316,7 @@ export class MusicPlaylistService {
    */
   async updatePlaylist(
     playlistId: string,
-    updates: Partial<CreateMusicPlaylistData> & { trackRefs?: string[]; zapSplits?: string[][] }
+    updates: Partial<CreateMusicPlaylistData> & { trackRefs?: string[]; zapSplits?: string[][]; content?: string }
   ): Promise<MusicPlaylist | null> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
@@ -325,6 +345,17 @@ export class MusicPlaylistService {
     const description = updates.description ?? playlist.description;
     if (description) {
       newTags.push(['description', description]);
+    }
+
+    // Release format (type) and playlist role (per extended spec).
+    // `undefined` keeps the existing value; an empty string clears it.
+    const type = updates.type !== undefined ? updates.type : playlist.type;
+    if (type) {
+      newTags.push(['type', type]);
+    }
+    const role = updates.role !== undefined ? updates.role : playlist.role;
+    if (role) {
+      newTags.push(['role', role]);
     }
 
     // Image
@@ -362,6 +393,13 @@ export class MusicPlaylistService {
       newTags.push(['a', ref]);
     }
 
+    // Preserve Podcasting 2.0 `i` references (feed/item GUIDs) from the
+    // existing event so they survive edits.
+    const podcastRefTags = this.utilities.getMusicPlaylistPodcastRefTags(playlist.event);
+    for (const refTag of podcastRefTags) {
+      newTags.push([...refTag]);
+    }
+
     // Add zap splits
     if (updates.zapSplits && updates.zapSplits.length > 0) {
       for (const zapTag of updates.zapSplits) {
@@ -369,7 +407,9 @@ export class MusicPlaylistService {
       }
     }
 
-    const content = description || '';
+    // The `.content` field is reserved for a track listing fallback. Use the
+    // provided listing when given, otherwise preserve the existing content.
+    const content = updates.content !== undefined ? updates.content : (playlist.event.content || '');
 
     const event = this.nostrService.createEvent(MUSIC_ALBUM_KIND, content, newTags);
     if (!event) {

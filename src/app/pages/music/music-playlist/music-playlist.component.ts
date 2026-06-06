@@ -49,6 +49,13 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/c
 import { DeleteEventService } from '../../../services/delete-event.service';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { OfflineMusicService } from '../../../services/offline-music.service';
+import {
+  getMusicPlaylistTypeLabel,
+  getMusicPlaylistTypeIcon,
+  getMusicPlaylistRoleLabel,
+  getMusicPlaylistRoleIcon,
+  DEFAULT_MUSIC_PLAYLIST_ROLE,
+} from '../music-playlist-meta';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
@@ -219,6 +226,70 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!event) return '';
     const date = new Date(event.created_at * 1000);
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  });
+
+  // Release format (type) and role chips (extended Music Playlists spec)
+  playlistType = computed(() => {
+    const event = this.playlist();
+    if (!event) return undefined;
+    return this.utilities.getMusicPlaylistType(event);
+  });
+
+  playlistTypeLabel = computed(() => getMusicPlaylistTypeLabel(this.playlistType()));
+  playlistTypeIcon = computed(() => getMusicPlaylistTypeIcon(this.playlistType()));
+
+  playlistRole = computed(() => {
+    const event = this.playlist();
+    if (!event) return undefined;
+    return this.utilities.getMusicPlaylistRole(event);
+  });
+
+  // Only surface non-default roles as a chip (release is the assumed default).
+  playlistRoleLabel = computed(() => {
+    const role = this.playlistRole();
+    if (!role || role === DEFAULT_MUSIC_PLAYLIST_ROLE) return null;
+    return getMusicPlaylistRoleLabel(role);
+  });
+  playlistRoleIcon = computed(() => getMusicPlaylistRoleIcon(this.playlistRole()));
+
+  // Podcasting 2.0 references (i tags) — resolved client-side via a podcast
+  // catalogue. We currently surface them using the .content fallback listing.
+  podcastItemGuids = computed(() => {
+    const event = this.playlist();
+    if (!event) return [];
+    return this.utilities.getMusicPlaylistPodcastItemGuids(event);
+  });
+
+  podcastFeedGuids = computed(() => {
+    const event = this.playlist();
+    if (!event) return [];
+    return this.utilities.getMusicPlaylistPodcastFeedGuids(event);
+  });
+
+  // Parsed `.content` track listing (fallback display).
+  contentTracks = computed(() => {
+    const event = this.playlist();
+    if (!event) return [];
+    return this.utilities.parseMusicPlaylistContentTracks(event.content);
+  });
+
+  // Show the podcast / external track listing section when the playlist
+  // references tracks via `i` tags (which we resolve from `.content`).
+  hasPodcastTracks = computed(() => this.podcastItemGuids().length > 0);
+
+  // The track entries shown for podcast references: prefer the parsed
+  // `.content` listing, falling back to the raw item GUIDs.
+  podcastTrackEntries = computed(() => {
+    const itemGuids = this.podcastItemGuids();
+    const contentTracks = this.contentTracks();
+    return itemGuids.map((guid, index) => {
+      const fromContent = contentTracks[index];
+      return {
+        guid,
+        title: fromContent?.title || guid,
+        artist: fromContent?.artist || '',
+      };
+    });
   });
 
   constructor() {
@@ -1086,6 +1157,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       isPublic: this.utilities.isMusicPlaylistPublic(ev),
       isCollaborative: collaborativeTag?.[1] === 'true',
       trackRefs,
+      type: this.utilities.getMusicPlaylistType(ev),
+      role: this.utilities.getMusicPlaylistRole(ev),
+      podcastFeedGuids: this.utilities.getMusicPlaylistPodcastFeedGuids(ev),
+      podcastItemGuids: this.utilities.getMusicPlaylistPodcastItemGuids(ev),
       created_at: ev.created_at,
       event: ev,
     };

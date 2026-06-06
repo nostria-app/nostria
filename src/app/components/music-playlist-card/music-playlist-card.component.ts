@@ -975,6 +975,10 @@ export class MusicPlaylistCardComponent {
         isPublic: this.utilities.isMusicPlaylistPublic(ev),
         isCollaborative: collaborativeTag?.[1] === 'true',
         trackRefs,
+        type: this.utilities.getMusicPlaylistType(ev),
+        role: this.utilities.getMusicPlaylistRole(ev),
+        podcastFeedGuids: this.utilities.getMusicPlaylistPodcastFeedGuids(ev),
+        podcastItemGuids: this.utilities.getMusicPlaylistPodcastItemGuids(ev),
         created_at: ev.created_at,
         event: ev,
       };

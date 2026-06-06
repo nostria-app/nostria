@@ -108,6 +108,19 @@
           <span class="date">{{ publishedDate() }}</span>
           <span class="separator">•</span>
           <span class="track-count">{{ trackCount() }} tracks</span>
+          @if (playlistTypeLabel()) {
+          <span class="separator">•</span>
+          <mat-chip class="meta-chip">
+            <mat-icon class="meta-chip-icon">{{ playlistTypeIcon() }}</mat-icon>
+            {{ playlistTypeLabel() }}
+          </mat-chip>
+          }
+          @if (playlistRoleLabel()) {
+          <mat-chip class="meta-chip">
+            <mat-icon class="meta-chip-icon">{{ playlistRoleIcon() }}</mat-icon>
+            {{ playlistRoleLabel() }}
+          </mat-chip>
+          }
           @if (isPrivate()) {
           <span class="separator">•</span>
           <mat-chip>
@@ -206,6 +219,39 @@
       </div>
       }
     </div>
+
+    <!-- Podcast Index referenced tracks (Podcasting 2.0 `i` tags) -->
+    @if (hasPodcastTracks()) {
+    <div class="podcast-tracks-section">
+      <div class="podcast-tracks-header">
+        <mat-icon>podcasts</mat-icon>
+        <div class="podcast-tracks-heading">
+          <span class="podcast-tracks-title">Podcast Index tracks</span>
+          <span class="podcast-tracks-subtitle">
+            {{ podcastItemGuids().length }} referenced
+            @if (podcastFeedGuids().length > 0) {
+            from {{ podcastFeedGuids().length }} {{ podcastFeedGuids().length === 1 ? 'feed' : 'feeds' }}
+            }
+          </span>
+        </div>
+      </div>
+
+      <div class="podcast-track-list" role="list">
+        @for (entry of podcastTrackEntries(); track entry.guid; let i = $index) {
+        <div class="podcast-track-row" role="listitem">
+          <span class="podcast-track-number">{{ i + 1 }}</span>
+          <div class="podcast-track-text">
+            <span class="podcast-track-title">{{ entry.title }}</span>
+            @if (entry.artist) {
+            <span class="podcast-track-artist">{{ entry.artist }}</span>
+            }
+          </div>
+          <mat-icon class="podcast-track-icon" matTooltip="Referenced via Podcast Index GUID">rss_feed</mat-icon>
+        </div>
+        }
+      </div>
+    </div>
+    }
 
     <!-- Comments Section -->
     <div class="comments-section">

@@ -29,6 +29,32 @@
           autocomplete="off"></textarea>
       </mat-form-field>
 
+      <div class="meta-row">
+        <mat-form-field appearance="outline" class="meta-field">
+          <mat-label>Type</mat-label>
+          <mat-select formControlName="type">
+            @for (option of playlistTypes; track option.value) {
+            <mat-option [value]="option.value">
+              <mat-icon class="meta-option-icon">{{ option.icon }}</mat-icon>
+              {{ option.label }}
+            </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="meta-field">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role">
+            @for (option of playlistRoles; track option.value) {
+            <mat-option [value]="option.value">
+              <mat-icon class="meta-option-icon">{{ option.icon }}</mat-icon>
+              {{ option.label }}
+            </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
       <div class="cover-section" [class.drag-over]="isDraggingImage()" (dragenter)="onImageDragEnter($event)"
         (dragover)="onImageDragOver($event)" (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
         <span class="cover-label">Cover Image</span>

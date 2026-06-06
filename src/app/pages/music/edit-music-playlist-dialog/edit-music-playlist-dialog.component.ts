@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -26,6 +27,7 @@ import { MentionInputService } from '../../../services/mention-input.service';
 import { NostrRecord } from '../../../interfaces';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 import { LoggerService } from '../../../services/logger.service';
+import { MUSIC_PLAYLIST_TYPES, MUSIC_PLAYLIST_ROLES, DEFAULT_MUSIC_PLAYLIST_ROLE } from '../music-playlist-meta';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 
@@ -72,6 +74,7 @@ interface ZapSplit {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatIconModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
@@ -103,6 +106,9 @@ export class EditMusicPlaylistDialogComponent {
   private mentionInputService = inject(MentionInputService);
   private readonly logger = inject(LoggerService);
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
+
+  readonly playlistTypes = MUSIC_PLAYLIST_TYPES;
+  readonly playlistRoles = MUSIC_PLAYLIST_ROLES;
 
   playlistForm: FormGroup;
   isSaving = signal(false);
@@ -169,6 +175,8 @@ export class EditMusicPlaylistDialogComponent {
     this.playlistForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(1)]],
       description: [''],
+      type: ['album'],
+      role: [DEFAULT_MUSIC_PLAYLIST_ROLE],
       imageUrl: [''],
       isPublic: [true],
       isCollaborative: [false],
@@ -184,6 +192,8 @@ export class EditMusicPlaylistDialogComponent {
           this.playlistForm.patchValue({
             title: playlist.title,
             description: playlist.description || '',
+            type: playlist.type || 'album',
+            role: playlist.role || DEFAULT_MUSIC_PLAYLIST_ROLE,
             imageUrl: playlist.image || '',
             isPublic: playlist.isPublic,
             isCollaborative: playlist.isCollaborative,
@@ -950,6 +960,33 @@ export class EditMusicPlaylistDialogComponent {
     }
   }
 
+  /**
+   * Build the `.content` track listing fallback (Markdown, one track per line)
+   * from the currently ordered tracks, per the extended Music Playlists spec.
+   */
+  private buildContentTrackListing(title: string): string {
+    const tracks = this.tracks();
+    if (tracks.length === 0) {
+      return '';
+    }
+
+    const lines: string[] = [];
+    const trimmedTitle = (title || '').trim();
+    if (trimmedTitle) {
+      lines.push(`# ${trimmedTitle}`, '');
+    }
+
+    for (const track of tracks) {
+      const trackTitle = (track.title || 'Untitled Track').trim();
+      const artist = (track.artist || '').trim();
+      lines.push(artist ? `${artist} - ${trackTitle}` : trackTitle);
+    }
+
+    lines.push('', `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`);
+
+    return lines.join('\n');
+  }
+
   async onSubmit(): Promise<void> {
     if (!this.playlistForm.valid || this.isSaving()) return;
 
@@ -965,6 +1002,7 @@ export class EditMusicPlaylistDialogComponent {
     try {
       const formValue = this.playlistForm.value;
       const newTrackRefs = this.tracks().map(t => t.ref);
+      const content = this.buildContentTrackListing(formValue.title);
 
       // Build custom relay list from config
       let customRelays: string[] | undefined;
@@ -998,11 +1036,14 @@ export class EditMusicPlaylistDialogComponent {
       const result = await this.musicPlaylistService.updatePlaylist(this.data().playlist.id, {
         title: formValue.title,
         description: formValue.description || undefined,
+        type: formValue.type || '',
+        role: formValue.role || '',
         image: formValue.imageUrl || undefined,
         gradient: formValue.imageUrl ? null : this.currentGradient(),
         isPublic: formValue.isPublic,
         isCollaborative: formValue.isCollaborative,
         trackRefs: newTrackRefs,
+        content,
         zapSplits: zapSplitTags.length > 0 ? zapSplitTags : undefined,
         customRelays: customRelays && customRelays.length > 0 ? customRelays : undefined,
       });

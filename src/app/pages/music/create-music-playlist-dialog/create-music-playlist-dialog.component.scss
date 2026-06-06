@@ -43,6 +43,30 @@
   width: 100%;
 }
 
+.meta-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+
+  .meta-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.meta-option-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .cover-section {
   display: flex;
   flex-direction: column;

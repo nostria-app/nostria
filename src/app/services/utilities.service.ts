@@ -1561,6 +1561,86 @@ export class UtilitiesService {
   }
 
   /**
+   * Get the music playlist release format (`type` tag), e.g. album, ep, single.
+   */
+  getMusicPlaylistType(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'type')?.trim() || undefined;
+  }
+
+  /**
+   * Get the music playlist role (`role` tag). When omitted, `release` is assumed.
+   */
+  getMusicPlaylistRole(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'role')?.trim() || undefined;
+  }
+
+  /**
+   * Get Podcasting 2.0 feed GUID references from `i` tags.
+   * Format: `["i", "podcast:guid:<feedGuid>"]`.
+   */
+  getMusicPlaylistPodcastFeedGuids(event: Event | UnsignedEvent): string[] {
+    return event.tags
+      .filter(tag => tag[0] === 'i' && typeof tag[1] === 'string' && tag[1].startsWith('podcast:guid:'))
+      .map(tag => tag[1].slice('podcast:guid:'.length).trim())
+      .filter(guid => guid.length > 0);
+  }
+
+  /**
+   * Get Podcasting 2.0 item GUID references from `i` tags, in playlist order.
+   * Format: `["i", "podcast:item:guid:<itemGuid>"]`.
+   */
+  getMusicPlaylistPodcastItemGuids(event: Event | UnsignedEvent): string[] {
+    return event.tags
+      .filter(tag => tag[0] === 'i' && typeof tag[1] === 'string' && tag[1].startsWith('podcast:item:guid:'))
+      .map(tag => tag[1].slice('podcast:item:guid:'.length).trim())
+      .filter(guid => guid.length > 0);
+  }
+
+  /**
+   * Get all Podcasting 2.0 `i` reference tags (raw values) from a playlist event.
+   */
+  getMusicPlaylistPodcastRefTags(event: Event | UnsignedEvent): string[][] {
+    return event.tags.filter(
+      tag => tag[0] === 'i' && typeof tag[1] === 'string' && tag[1].startsWith('podcast:')
+    );
+  }
+
+  /**
+   * Parse the `.content` track listing of a music playlist into ordered entries.
+   *
+   * The content SHOULD use Markdown with one track per line in playlist order:
+   *   `Artist - Track Title`
+   * A leading `# Heading` line and a trailing `N tracks` summary line are ignored.
+   */
+  parseMusicPlaylistContentTracks(content: string | undefined | null): { artist?: string; title: string }[] {
+    if (!content) return [];
+
+    const lines = content.split(/\r?\n/);
+    const tracks: { artist?: string; title: string }[] = [];
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      // Skip Markdown headings (e.g. "# Playlist Title").
+      if (line.startsWith('#')) continue;
+      // Skip a trailing track-count summary line (e.g. "3 tracks").
+      if (/^\d+\s+tracks?$/i.test(line)) continue;
+
+      // Split on the first " - " separator into artist / title.
+      const separatorIndex = line.indexOf(' - ');
+      if (separatorIndex > 0) {
+        const artist = line.slice(0, separatorIndex).trim();
+        const title = line.slice(separatorIndex + 3).trim();
+        tracks.push({ artist: artist || undefined, title: title || line });
+      } else {
+        tracks.push({ title: line });
+      }
+    }
+
+    return tracks;
+  }
+
+  /**
    * Get the alt tag value from an event.
    */
   getAltTag(event: Event | UnsignedEvent): string | undefined {

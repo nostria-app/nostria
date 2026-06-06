@@ -4,6 +4,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -21,6 +22,7 @@ import { MusicListFilterComponent } from '../../../components/music-list-filter/
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CURATED_MUSIC_FILTER, MusicCuratedService } from '../../../services/music-curated.service';
+import { MUSIC_PLAYLIST_TYPES, MUSIC_PLAYLIST_ROLES } from '../music-playlist-meta';
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -36,6 +38,7 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatDividerModule,
     MatTooltipModule,
     MusicPlaylistCardComponent,
     MusicListFilterComponent,
@@ -62,6 +65,10 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
       <button mat-icon-button [matMenuTriggerFor]="sourceMenu" [matTooltip]="'Playlist source: ' + sourceFilterLabel()">
         <mat-icon>filter_alt</mat-icon>
       </button>
+      <button mat-icon-button [matMenuTriggerFor]="categoryMenu" matTooltip="Filter by type & role"
+        [class.has-active-filter]="typeFilter() !== 'all' || roleFilter() !== 'all'" class="hide-small">
+        <mat-icon>tune</mat-icon>
+      </button>
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
         <mat-icon>sort</mat-icon>
       </button>
@@ -77,10 +84,59 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
           <mat-icon>filter_alt</mat-icon>
           <span>Source</span>
         </button>
+        <button mat-menu-item [matMenuTriggerFor]="typeMenu">
+          <mat-icon>category</mat-icon>
+          <span>Type</span>
+        </button>
+        <button mat-menu-item [matMenuTriggerFor]="roleMenu">
+          <mat-icon>label</mat-icon>
+          <span>Role</span>
+        </button>
         <button mat-menu-item [matMenuTriggerFor]="sortMenu">
           <mat-icon>sort</mat-icon>
           <span>Sort</span>
         </button>
+      </mat-menu>
+      <mat-menu #categoryMenu="matMenu">
+        <button mat-menu-item [matMenuTriggerFor]="typeMenu">
+          <mat-icon>category</mat-icon>
+          <span>Type: {{ typeFilterLabel() }}</span>
+        </button>
+        <button mat-menu-item [matMenuTriggerFor]="roleMenu">
+          <mat-icon>label</mat-icon>
+          <span>Role: {{ roleFilterLabel() }}</span>
+        </button>
+        @if (typeFilter() !== 'all' || roleFilter() !== 'all') {
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="clearCategoryFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            <span>Clear filters</span>
+          </button>
+        }
+      </mat-menu>
+      <mat-menu #typeMenu="matMenu">
+        <button mat-menu-item (click)="setTypeFilter('all')">
+          <mat-icon>{{ typeFilter() === 'all' ? 'check' : '' }}</mat-icon>
+          <span>All types</span>
+        </button>
+        @for (option of playlistTypes; track option.value) {
+          <button mat-menu-item (click)="setTypeFilter(option.value)">
+            <mat-icon>{{ typeFilter() === option.value ? 'check' : option.icon }}</mat-icon>
+            <span>{{ option.label }}</span>
+          </button>
+        }
+      </mat-menu>
+      <mat-menu #roleMenu="matMenu">
+        <button mat-menu-item (click)="setRoleFilter('all')">
+          <mat-icon>{{ roleFilter() === 'all' ? 'check' : '' }}</mat-icon>
+          <span>All roles</span>
+        </button>
+        @for (option of playlistRoles; track option.value) {
+          <button mat-menu-item (click)="setRoleFilter(option.value)">
+            <mat-icon>{{ roleFilter() === option.value ? 'check' : option.icon }}</mat-icon>
+            <span>{{ option.label }}</span>
+          </button>
+        }
       </mat-menu>
       <mat-menu #sourceMenu="matMenu">
         <button mat-menu-item (click)="setSourceFilter('own')">
@@ -140,6 +196,24 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
           Public
         </button>
       </div>
+      @if (typeFilter() !== 'all' || roleFilter() !== 'all') {
+        <div class="active-category-filters" aria-label="Active album filters">
+          @if (typeFilter() !== 'all') {
+            <button type="button" class="active-filter-chip" (click)="setTypeFilter('all')">
+              <mat-icon>category</mat-icon>
+              <span>{{ typeFilterLabel() }}</span>
+              <mat-icon class="remove-icon">close</mat-icon>
+            </button>
+          }
+          @if (roleFilter() !== 'all') {
+            <button type="button" class="active-filter-chip" (click)="setRoleFilter('all')">
+              <mat-icon>label</mat-icon>
+              <span>{{ roleFilterLabel() }}</span>
+              <mat-icon class="remove-icon">close</mat-icon>
+            </button>
+          }
+        </div>
+      }
       @if (showSearch() && searchQuery()) {
         <div class="search-results-info">
           @if (searchedPlaylists().length > 0) {
@@ -316,7 +390,40 @@ type PlaylistSourceFilter = 'own' | 'curated' | 'following' | 'public';
       color: var(--mat-sys-on-primary-container);
       border-color: var(--mat-sys-primary);
     }
-    
+
+    .has-active-filter {
+      color: var(--mat-sys-primary);
+    }
+
+    .active-category-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .active-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid var(--mat-sys-primary);
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      border-radius: var(--mat-sys-corner-full);
+      padding: 0.3rem 0.6rem 0.3rem 0.7rem;
+      cursor: pointer;
+      font-size: 0.8125rem;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      .remove-icon {
+        opacity: 0.8;
+      }
+    }
+
     .music-playlists-container {
       display: flex;
       flex-direction: column;
@@ -430,6 +537,24 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   sortBy = signal<'recents' | 'alphabetical'>('recents');
   sourceFilter = signal<PlaylistSourceFilter>(CURATED_MUSIC_FILTER);
 
+  // Type / role filters (extended Music Playlists spec)
+  readonly playlistTypes = MUSIC_PLAYLIST_TYPES;
+  readonly playlistRoles = MUSIC_PLAYLIST_ROLES;
+  typeFilter = signal<string>('all');
+  roleFilter = signal<string>('all');
+
+  typeFilterLabel = computed(() => {
+    const value = this.typeFilter();
+    if (value === 'all') return 'All';
+    return MUSIC_PLAYLIST_TYPES.find(option => option.value === value)?.label ?? value;
+  });
+
+  roleFilterLabel = computed(() => {
+    const value = this.roleFilter();
+    if (value === 'all') return 'All';
+    return MUSIC_PLAYLIST_ROLES.find(option => option.value === value)?.label ?? value;
+  });
+
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
@@ -535,6 +660,21 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
     if (this.hideGruuv()) {
       filtered = filtered.filter(playlist => !this.hasGruuvTag(playlist));
+    }
+
+    // Filter by release format (type) and role (extended spec)
+    const typeFilter = this.typeFilter();
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(playlist => this.utilities.getMusicPlaylistType(playlist) === typeFilter);
+    }
+
+    const roleFilter = this.roleFilter();
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(playlist => {
+        // When the role tag is omitted, `release` is assumed per spec.
+        const role = this.utilities.getMusicPlaylistRole(playlist) || 'release';
+        return role === roleFilter;
+      });
     }
 
     switch (sourceFilter) {
@@ -678,6 +818,22 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
 
   onHideGruuvChanged(value: boolean): void {
     this.hideGruuv.set(value);
+  }
+
+  setTypeFilter(type: string): void {
+    this.typeFilter.set(type);
+    this.displayLimit.set(PAGE_SIZE);
+  }
+
+  setRoleFilter(role: string): void {
+    this.roleFilter.set(role);
+    this.displayLimit.set(PAGE_SIZE);
+  }
+
+  clearCategoryFilters(): void {
+    this.typeFilter.set('all');
+    this.roleFilter.set('all');
+    this.displayLimit.set(PAGE_SIZE);
   }
 
   setSourceFilter(source: PlaylistSourceFilter): void {

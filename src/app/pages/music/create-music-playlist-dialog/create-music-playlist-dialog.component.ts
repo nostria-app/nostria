@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -13,6 +14,7 @@ import { MediaService } from '../../../services/media.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 import { LoggerService } from '../../../services/logger.service';
+import { MUSIC_PLAYLIST_TYPES, MUSIC_PLAYLIST_ROLES, DEFAULT_MUSIC_PLAYLIST_ROLE } from '../music-playlist-meta';
 
 export interface CreateMusicPlaylistDialogData {
   // Optional track to add immediately after creation
@@ -29,6 +31,7 @@ export interface CreateMusicPlaylistDialogData {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatIconModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
@@ -50,6 +53,9 @@ export class CreateMusicPlaylistDialogComponent {
   private snackBar = inject(MatSnackBar);
   private readonly logger = inject(LoggerService);
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
+
+  readonly playlistTypes = MUSIC_PLAYLIST_TYPES;
+  readonly playlistRoles = MUSIC_PLAYLIST_ROLES;
 
   playlistForm: FormGroup;
   isCreating = signal(false);
@@ -79,6 +85,8 @@ export class CreateMusicPlaylistDialogComponent {
     this.playlistForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(1)]],
       description: [''],
+      type: ['album'],
+      role: [DEFAULT_MUSIC_PLAYLIST_ROLE],
       imageUrl: [''],
       isPublic: [true],
       isCollaborative: [false],
@@ -245,6 +253,8 @@ export class CreateMusicPlaylistDialogComponent {
       const data: CreateMusicPlaylistData = {
         title: formValue.title,
         description: formValue.description || undefined,
+        type: formValue.type || undefined,
+        role: formValue.role || undefined,
         image: formValue.imageUrl || undefined,
         gradient: formValue.imageUrl ? null : this.currentGradient(),
         isPublic: formValue.isPublic,
