@@ -866,8 +866,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   clearNotifications(): void {
     this.notificationService.clearNotifications();
 
-    // Reset notification state so the next refresh triggers a full first-time scan
-    this.contentNotificationService.resetLastCheckTimestamp();
+    // Set the check cursor and clear floor to now so a subsequent refresh only
+    // surfaces notifications that arrive after this clear. To see older
+    // notifications again the user must reset notifications from settings.
+    this.contentNotificationService.markNotificationsCleared();
   }
 
   removeNotification(id: string): void {

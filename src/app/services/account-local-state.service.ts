@@ -74,6 +74,7 @@ export interface FeaturedFeedCardsState {
  */
 interface AccountLocalState {
   notificationLastCheck?: number;
+  notificationClearedAt?: number;
   followerNotificationsProcessedAt?: Record<string, number>;
   messagesLastCheck?: number;
   activeFeed?: string;
@@ -381,6 +382,24 @@ export class AccountLocalStateService {
    */
   setNotificationLastCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { notificationLastCheck: timestamp });
+  }
+
+  /**
+   * Get the timestamp the user last cleared all notifications for an account.
+   * Acts as a hard floor so refreshes don't backfill notifications older than
+   * the clear. Returns 0 when notifications have never been cleared (or were
+   * reset from settings).
+   */
+  getNotificationClearedAt(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.notificationClearedAt || 0;
+  }
+
+  /**
+   * Set the timestamp the user cleared all notifications for an account.
+   */
+  setNotificationClearedAt(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { notificationClearedAt: timestamp });
   }
 
   /**

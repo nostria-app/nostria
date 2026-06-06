@@ -79,9 +79,28 @@ export class ContentNotificationService implements OnDestroy {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setNotificationLastCheck(pubkey, 0);
+      this.accountLocalState.setNotificationClearedAt(pubkey, 0);
       this.accountLocalState.clearFollowerNotificationsProcessed(pubkey);
     }
     this.logger.info('ContentNotificationService last check timestamp reset for account');
+  }
+
+  /**
+   * Mark all notifications as cleared by the user.
+   * Sets the last-check cursor and a hard clear floor to "now" so that a
+   * subsequent refresh only surfaces notifications that arrive after the clear.
+   * To see older notifications again the user must reset notifications from
+   * settings, which calls resetLastCheckTimestamp() and removes this floor.
+   */
+  markNotificationsCleared(): void {
+    const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+    this._lastCheckTimestamp.set(now);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setNotificationLastCheck(pubkey, now);
+      this.accountLocalState.setNotificationClearedAt(pubkey, now);
+    }
+    this.logger.info('ContentNotificationService notifications cleared; check timestamp set to now');
   }
 
   /**
@@ -480,6 +499,13 @@ export class ContentNotificationService implements OnDestroy {
         const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);
         since = Math.max(since, limitTimestamp);
         this.logger.info(`Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`);
+      }
+
+      // Never go below the clear floor: once the user clears all notifications,
+      // nothing older than the clear time should reappear until they reset.
+      const clearedAt = this.accountLocalState.getNotificationClearedAt(pubkey);
+      if (clearedAt > 0) {
+        since = Math.max(since, clearedAt);
       }
 
       this.logger.debug(`Fetching notifications since timestamp: ${since} (${new Date(since * 1000).toISOString()})`);
@@ -1325,7 +1351,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.info(`Refreshing notifications for the last ${days} days`);
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      const since = now - (days * 24 * 60 * 60);
+      let since = now - (days * 24 * 60 * 60);
+
+      // Respect the clear floor: after the user clears all notifications, a
+      // refresh must not backfill anything older than the clear time. To load
+      // older notifications again the user resets notifications from settings.
+      const clearedAt = this.accountLocalState.getNotificationClearedAt(pubkey);
+      if (clearedAt > 0) {
+        since = Math.max(since, clearedAt);
+      }
 
       this.logger.debug(`Fetching notifications from ${new Date(since * 1000).toISOString()} to now`);
 
