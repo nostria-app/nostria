@@ -181,6 +181,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   isLoadingNotifications = computed(() =>
     this.contentNotificationService.isCheckingNotifications(),
   );
+  // Timestamp (Nostr seconds) when the user last cleared all notifications.
+  // 0 means notifications have never been cleared (or were reset from here/settings).
+  clearedAtTimestamp = signal<number>(0);
+  // Human-friendly "ago" text describing how far back notifications are shown after a clear.
+  clearedAtAgo = computed(() => {
+    const ts = this.clearedAtTimestamp();
+    if (!ts) {
+      return '';
+    }
+    return this.formatTimeAgoFromSeconds(ts);
+  });
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
@@ -603,6 +614,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
 
+    // Load the timestamp the user last cleared notifications so the empty state
+    // can communicate how far back notifications are being shown.
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.clearedAtTimestamp.set(this.accountLocalState.getNotificationClearedAt(pubkey));
+    }
+
     // Handle auxiliary outlet navigation changes while this list component stays mounted.
     this.routerNavigationSubscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
@@ -868,8 +886,23 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Set the check cursor and clear floor to now so a subsequent refresh only
     // surfaces notifications that arrive after this clear. To see older
-    // notifications again the user must reset notifications from settings.
+    // notifications again the user must reset notifications from here or settings.
     this.contentNotificationService.markNotificationsCleared();
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.clearedAtTimestamp.set(this.accountLocalState.getNotificationClearedAt(pubkey));
+    }
+  }
+
+  /**
+   * Reset the notification cursor and clear floor so notification history
+   * (older events) is loaded again, then refresh from relays.
+   */
+  async resetNotifications(): Promise<void> {
+    this.contentNotificationService.resetLastCheckTimestamp();
+    this.clearedAtTimestamp.set(0);
+    await this.refreshNotifications();
   }
 
   removeNotification(id: string): void {
@@ -926,6 +959,28 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         hour: 'numeric',
         minute: '2-digit',
       });
+    }
+  }
+
+  /**
+   * Format a Nostr timestamp (seconds) as a friendly relative "ago" string.
+   */
+  formatTimeAgoFromSeconds(timestampSeconds: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = Math.max(0, now - timestampSeconds);
+
+    const minutes = Math.floor(diff / 60);
+    const hours = Math.floor(diff / 3600);
+    const days = Math.floor(diff / 86400);
+
+    if (diff < 60) {
+      return 'just now';
+    } else if (minutes < 60) {
+      return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    } else if (hours < 24) {
+      return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    } else {
+      return `${days} day${days === 1 ? '' : 's'} ago`;
     }
   }
 

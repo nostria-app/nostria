@@ -186,7 +186,15 @@
     <div class="empty-state">
       <mat-icon class="empty-icon">people</mat-icon>
       <h2>No activity yet</h2>
+      @if (clearedAtTimestamp() > 0) {
+      <p>Only showing notifications since you cleared them {{ clearedAtAgo() }}.</p>
+      <button mat-flat-button (click)="resetNotifications()">
+        <mat-icon>history</mat-icon>
+        Show all notifications
+      </button>
+      } @else {
       <p>You'll see mentions, follows, reposts, and other interactions here.</p>
+      }
     </div>
     } @else if (contentNotifications().length === 0 && searchQuery()) {
     <div class="empty-state">
