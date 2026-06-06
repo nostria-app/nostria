@@ -61,7 +61,7 @@ export class FollowSetsService {
   private lastEffectPubkey: string | null = null;
   // Track the pubkey we last loaded data for, to avoid clearing on re-initialization
   private lastDataPubkey: string | null = null;
-  private liveFollowSetsSubscription: { close: () => void } | { unsubscribe: () => void } | null = null;
+  private liveFollowSetsSubscriptions: ({ close: () => void } | { unsubscribe: () => void })[] = [];
   private liveFollowSetsSubscriptionPubkey: string | null = null;
 
   // Function to sign events - must be set by NostrService to avoid circular dependency
@@ -300,32 +300,25 @@ export class FollowSetsService {
   }
 
   private startLiveFollowSetsSubscription(pubkey: string): void {
-    // Calculate since filter: use last sync timestamp with 60-second overlap buffer, capped at 7 days
-    const lastSync = this.accountLocalState.getFollowSetsLastSync(pubkey);
     const now = Math.floor(Date.now() / 1000);
-    const OVERLAP_BUFFER = 60; // 60 seconds overlap to avoid missing events near boundary
-    const MAX_CAP = 7 * 24 * 60 * 60; // 7 days maximum lookback
-
-    const filter: {
-      kinds: number[];
-      authors: string[];
-      limit: number;
-      since?: number;
-    } = {
-      kinds: [30000, kinds.EventDeletion],
-      authors: [pubkey],
-      limit: 200,
-    };
-
-    if (lastSync > 0) {
-      const sinceValue = Math.max(lastSync - OVERLAP_BUFFER, now - MAX_CAP);
-      filter.since = sinceValue;
-      this.logger.debug('[FollowSets] Using since filter for follow sets subscription:', sinceValue);
-    }
+    const lastSync = this.accountLocalState.getFollowSetsLastSync(pubkey);
 
     this.liveFollowSetsSubscriptionPubkey = pubkey;
-    this.liveFollowSetsSubscription = this.accountRelay.subscribe(
-      filter,
+
+    // Follow sets (kind 30000) are parameterized replaceable events: relays only
+    // retain the latest version per d-tag, so the total volume is small (one event
+    // per list). We deliberately do NOT apply a `since` filter here so that lists
+    // created or edited on another device always sync to this device on reload.
+    // A `since` filter based on the last sync time can silently drop these events
+    // when device clocks are skewed (a newly created list's created_at may be older
+    // than this device's stored last-sync timestamp), which previously prevented
+    // cross-device syncing even after a reload.
+    const followSetsSub = this.accountRelay.subscribe(
+      {
+        kinds: [30000],
+        authors: [pubkey],
+        limit: 200,
+      },
       (event) => {
         void this.handleLiveFollowSetEvent(event);
       },
@@ -335,22 +328,55 @@ export class FollowSetsService {
         this.isLoading.set(false);
         this.hasInitiallyLoaded.set(true);
 
-        // Save the current timestamp for subsequent since-filtered loads
+        // Save the current timestamp for the deletions subscription's since filter
         this.accountLocalState.setFollowSetsLastSync(pubkey, now);
       }
     );
+    this.liveFollowSetsSubscriptions.push(followSetsSub);
+
+    // Deletion events (kind 5) cover every event kind the user has ever deleted, so
+    // their volume can be large. Keep a `since` filter (with a 60-second overlap
+    // buffer, capped at 7 days) to bound how many we fetch, while still catching
+    // recent follow set deletions made on other devices.
+    const OVERLAP_BUFFER = 60; // 60 seconds overlap to avoid missing events near boundary
+    const MAX_CAP = 7 * 24 * 60 * 60; // 7 days maximum lookback
+
+    const deletionFilter: {
+      kinds: number[];
+      authors: string[];
+      limit: number;
+      since?: number;
+    } = {
+      kinds: [kinds.EventDeletion],
+      authors: [pubkey],
+      limit: 200,
+    };
+
+    if (lastSync > 0) {
+      const sinceValue = Math.max(lastSync - OVERLAP_BUFFER, now - MAX_CAP);
+      deletionFilter.since = sinceValue;
+      this.logger.debug('[FollowSets] Using since filter for follow set deletions subscription:', sinceValue);
+    }
+
+    const deletionsSub = this.accountRelay.subscribe(
+      deletionFilter,
+      (event) => {
+        void this.handleLiveFollowSetEvent(event);
+      }
+    );
+    this.liveFollowSetsSubscriptions.push(deletionsSub);
   }
 
   private stopLiveFollowSetsSubscription(): void {
-    if (this.liveFollowSetsSubscription) {
-      if ('close' in this.liveFollowSetsSubscription) {
-        this.liveFollowSetsSubscription.close();
+    for (const subscription of this.liveFollowSetsSubscriptions) {
+      if ('close' in subscription) {
+        subscription.close();
       } else {
-        this.liveFollowSetsSubscription.unsubscribe();
+        subscription.unsubscribe();
       }
     }
 
-    this.liveFollowSetsSubscription = null;
+    this.liveFollowSetsSubscriptions = [];
     this.liveFollowSetsSubscriptionPubkey = null;
   }
 
