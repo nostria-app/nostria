@@ -2069,7 +2069,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private getEventAiTitle(event: TimelineEvent): string {
-    return this.compactAiText(
+    return this.compactAiTextForPrompt(
       this.getTaggedValue(event, 'title') ||
       this.getTaggedValue(event, 'name') ||
       this.getEventJsonString(event, 'name'),
@@ -2078,22 +2078,26 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private getEventAiContent(event: TimelineEvent): string {
+    let content = '';
+
     if (event.kind === 6 || event.kind === 16) {
       try {
         const embedded = JSON.parse(event.content) as { content?: unknown };
         if (typeof embedded.content === 'string') {
-          return embedded.content;
+          content = embedded.content;
         }
       } catch {
         // Use the event content below.
       }
     }
 
-    return event.content ||
+    content ||= event.content ||
       this.getTaggedValue(event, 'summary') ||
       this.getTaggedValue(event, 'description') ||
       this.getTaggedValue(event, 'alt') ||
       this.getEventPreview(event);
+
+    return this.cleanAiEventContent(content);
   }
 
   private getEventAiTags(event: TimelineEvent): string {
@@ -2102,12 +2106,35 @@ export class SummaryComponent implements OnInit, OnDestroy {
       .map(tag => tag.slice(0, 2).join(':'))
       .join(', ');
 
-    return this.compactAiText(usefulTags, 240);
+    return this.compactAiTextForPrompt(usefulTags, 240);
   }
 
   private compactAiText(value: string, maxLength: number): string {
     const compact = value.replace(/\s+/g, ' ').replace(/"/g, '\\"').trim();
     return compact.length > maxLength ? `${compact.slice(0, maxLength - 3).trimEnd()}...` : compact;
+  }
+
+  private compactAiTextForPrompt(value: string, maxLength: number): string {
+    return this.compactAiText(this.cleanAiEventContent(value), maxLength);
+  }
+
+  private cleanAiEventContent(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    return value
+      .replace(/!\[[^\]]*]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, ' ')
+      .replace(/\[([^\]]+)]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, '$1')
+      .replace(/(?:https?|wss?):\/\/[^\s<>"{}|\\^`\[\]]+/gi, ' ')
+      .replace(/\b(?:web\+)?nostr:[^\s<>"{}|\\^`\[\]]+/gi, ' ')
+      .replace(/\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+/gi, ' ')
+      .replace(/\b(?:lnbc|lntb|lnbcrt)[a-z0-9]+/gi, ' ')
+      .replace(/\bmagnet:\?[^\s<>"{}|\\^`\[\]]+/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[`*_~>#|[\](){}]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private async generateSummaryAiAnswer(model: AiPromptModelInfo, messages: AiChatMessage[]): Promise<string> {
