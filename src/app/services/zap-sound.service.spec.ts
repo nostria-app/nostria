@@ -8,7 +8,7 @@ import { SettingsService } from './settings.service';
 import { MediaPlayerService } from './media-player.service';
 
 describe('ZapSoundService', () => {
-  const settings = signal({ zapSoundsEnabled: true });
+  const settings = signal({ zapSoundsEnabled: true, uiInteractionSoundsEnabled: true });
   const isMusicPlaying = signal(false);
   let audioConstructor: ReturnType<typeof vi.fn>;
   let audioContextConstructor: ReturnType<typeof vi.fn>;
@@ -23,12 +23,14 @@ describe('ZapSoundService', () => {
       createElement: vi.fn(() => ({})),
     });
     play = vi.fn().mockResolvedValue(undefined);
-    audioConstructor = vi.fn().mockImplementation(() => ({
+    audioConstructor = vi.fn(function () {
+      return {
       preload: '',
       currentTime: 0,
       volume: 1,
       play,
-    }));
+      };
+    });
     audioContextConstructor = vi.fn();
     vi.stubGlobal('Audio', audioConstructor);
     vi.stubGlobal('AudioContext', audioContextConstructor);
@@ -51,8 +53,26 @@ describe('ZapSoundService', () => {
   });
 
   afterEach(() => {
-    settings.set({ zapSoundsEnabled: true });
+    settings.set({ zapSoundsEnabled: true, uiInteractionSoundsEnabled: true });
     isMusicPlaying.set(false);
+  });
+
+  it('does not play like sounds when UI interaction sounds are disabled', () => {
+    settings.set({ zapSoundsEnabled: true, uiInteractionSoundsEnabled: false });
+
+    TestBed.inject(ZapSoundService).playLikeSound();
+
+    expect(audioConstructor).not.toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('still allows like sounds when zap sounds are disabled', () => {
+    settings.set({ zapSoundsEnabled: false, uiInteractionSoundsEnabled: true });
+
+    TestBed.inject(ZapSoundService).playLikeSound();
+
+    expect(audioConstructor).toHaveBeenCalledWith('/sounds/like.wav');
+    expect(play).toHaveBeenCalled();
   });
 
   it('does not play like sounds while music is playing', () => {

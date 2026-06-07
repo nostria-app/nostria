@@ -20,6 +20,9 @@ import { SettingActionButtonsComponent } from './action-buttons.component';
 import { SettingLockScreenRotationComponent } from './lock-screen-rotation.component';
 import { SettingRightSidebarComponent } from './right-sidebar.component';
 import { SettingRelayModeComponent } from './relay-mode.component';
+import { SettingSoundsComponent } from './sounds.component';
+import { SettingPostToXComponent } from './post-to-x.component';
+import { SettingGlobalExpirationComponent } from './global-expiration.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
@@ -32,6 +35,7 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   'dark-mode': SettingDarkModeComponent,
   'language': SettingLanguageComponent,
   'logging': SettingLoggingComponent,
+  'sounds': SettingSoundsComponent,
 
   // Appearance settings
   'text-size': SettingTextSizeComponent,
@@ -61,6 +65,8 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   'client-tags': SettingClientTagsComponent,
   'external-links': SettingExternalLinksComponent,
   'music-status': SettingMusicStatusComponent,
+  'x-dual-posting': SettingPostToXComponent,
+  'event-expiration': SettingGlobalExpirationComponent,
 
   // Relay settings
   'auto-relay-auth': SettingRelayAuthComponent,

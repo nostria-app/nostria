@@ -190,6 +190,11 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.settings.updateSettings({ messageNotificationSoundsEnabled: !currentValue });
   }
 
+  toggleUiInteractionSounds(): void {
+    const currentValue = this.settings.settings().uiInteractionSoundsEnabled !== false;
+    this.settings.updateSettings({ uiInteractionSoundsEnabled: !currentValue });
+  }
+
   toggleZapSounds(): void {
     const currentValue = this.settings.settings().zapSoundsEnabled !== false;
     this.settings.updateSettings({ zapSoundsEnabled: !currentValue });

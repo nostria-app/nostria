@@ -387,8 +387,6 @@ export class SettingsHomeComponent implements OnInit {
    */
   async openSectionInRightPanel(sectionId: string): Promise<void> {
     const section = this.registry.sections.find(s => s.id === sectionId);
-    if (!section) return;
-
     const componentLoader = getSettingsSectionComponent(sectionId);
     if (!componentLoader) return;
 
@@ -396,9 +394,10 @@ export class SettingsHomeComponent implements OnInit {
       await this.clearRouterRightPanelIfNeeded();
 
       const component = await componentLoader();
+      const item = this.registry.items.find(i => i.route.match(new RegExp(`/settings/${sectionId}(?:[?#/]|$)`)));
       this.rightPanel.open({
         component,
-        title: section.title,
+        title: section?.title ?? item?.title ?? $localize`:@@settings.title:Settings`,
       });
       this.scheduleScrollReset();
     } catch (error) {

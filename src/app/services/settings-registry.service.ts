@@ -371,6 +371,17 @@ export class SettingsRegistryService {
       priority: 16,
     },
     {
+      id: 'sounds',
+      title: $localize`:@@settings.sounds.title:Sounds`,
+      description: $localize`:@@settings.sounds.description:Choose which in-app sounds Nostria should play`,
+      keywords: ['sound', 'sounds', 'audio', 'message', 'notification', 'dm', 'direct message', 'zap', 'zaps', 'like', 'reaction', 'ui interaction'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'volume_up',
+      route: '/settings/general',
+      priority: 17,
+    },
+    {
       id: 'logging',
       title: $localize`:@@settings.logging:Logging`,
       description: $localize`:@@settings.logging.description:Configure application logging levels`,
@@ -379,7 +390,7 @@ export class SettingsRegistryService {
       sectionTitle: $localize`:@@settings.sections.logs-debug:Logs & Debug`,
       icon: 'terminal',
       route: '/settings/logs-debug',
-      priority: 17,
+      priority: 18,
     },
     {
       id: 'notification-spam-filter',

@@ -297,7 +297,15 @@
 
   <div>
     <h2>Sounds</h2>
-    <p class="setting-description">Choose which in-app notification sounds Nostria should play.</p>
+    <p class="setting-description">Choose which in-app sounds Nostria should play.</p>
+
+    <div class="setting-item">
+      <span>UI Interaction Sounds</span>
+      <mat-slide-toggle [checked]="settings.settings().uiInteractionSoundsEnabled !== false"
+        (change)="toggleUiInteractionSounds()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">Play subtle feedback sounds for likes and other direct UI actions.</p>
 
     <div class="setting-item">
       <span>Message Notification Sounds</span>

@@ -40,6 +40,7 @@ export interface SyncedFeedConfig {
 
 export interface UserSettings {
   socialSharingPreview: boolean;
+  uiInteractionSoundsEnabled?: boolean;
   messageNotificationSoundsEnabled?: boolean;
   zapSoundsEnabled?: boolean;
   postToXByDefault?: boolean;
@@ -92,6 +93,7 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
+  uiInteractionSoundsEnabled: true,
   messageNotificationSoundsEnabled: true,
   zapSoundsEnabled: true,
   postToXByDefault: false,

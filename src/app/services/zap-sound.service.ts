@@ -96,7 +96,7 @@ export class ZapSoundService {
   playLikeSound(): void {
     if (
       !this.isBrowser
-      || this.settingsService.settings().zapSoundsEnabled === false
+      || this.settingsService.settings().uiInteractionSoundsEnabled === false
       || this.shouldMuteInteractionSounds()
     ) {
       return;

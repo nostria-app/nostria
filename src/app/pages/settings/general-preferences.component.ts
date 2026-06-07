@@ -13,6 +13,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingCalendarComponent } from './sections/calendar.component';
 import { SettingLanguageComponent } from './sections/language.component';
+import { SettingSoundsComponent } from './sections/sounds.component';
 
 @Component({
   selector: 'app-general-preferences-settings',
@@ -25,6 +26,7 @@ import { SettingLanguageComponent } from './sections/language.component';
     MatTooltipModule,
     SettingCalendarComponent,
     SettingLanguageComponent,
+    SettingSoundsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -40,6 +42,7 @@ import { SettingLanguageComponent } from './sections/language.component';
     <div class="content-medium">
       <app-setting-language />
       <app-setting-calendar />
+      <app-setting-sounds />
 
       @if (accountState.hasActiveSubscription()) {
         <div class="setting-section">
