@@ -24,6 +24,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
+import { SafeHtml } from '@angular/platform-browser';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -46,6 +47,7 @@ import { COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
 import { AiChatMessage, AiGenerationProgress, AiMultimodalChatMessage, AiService } from '../../services/ai.service';
 import { AiPromptActionService, AiPromptHandler } from '../../services/ai-prompt-action.service';
 import { AiPromptModelInfo, AiPromptModelService } from '../../services/ai-prompt-model.service';
+import { FormatService } from '../../services/format/format.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -281,6 +283,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly aiService = inject(AiService);
   private readonly aiPromptAction = inject(AiPromptActionService);
   private readonly aiPromptModels = inject(AiPromptModelService);
+  private readonly formatService = inject(FormatService);
   protected readonly app = inject(ApplicationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -348,9 +351,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
   aiPromptRunning = signal(false);
   aiPromptQuery = signal('');
   aiPromptAnswer = signal('');
+  aiPromptAnswerHtml = signal<SafeHtml>('');
   aiPromptError = signal('');
   aiPromptProviderLabel = signal('');
   aiPromptAgents = signal<SummaryAiAgentState[]>([]);
+  private aiPromptAnswerRenderVersion = 0;
 
   // Captured "last visit" timestamp - frozen at component init, doesn't update during session
   private frozenLastVisitTimestamp = 0;
@@ -804,6 +809,25 @@ export class SummaryComponent implements OnInit, OnDestroy {
         // Use setTimeout to ensure DOM is updated
         setTimeout(() => this.setupLoadMoreObserver(), 0);
       }
+    });
+
+    effect(() => {
+      const answer = this.aiPromptAnswer();
+      const renderVersion = ++this.aiPromptAnswerRenderVersion;
+
+      if (!answer.trim()) {
+        this.aiPromptAnswerHtml.set('');
+        return;
+      }
+
+      const initialHtml = this.formatService.markdownToHtmlNonBlocking(answer, updatedHtml => {
+        if (renderVersion !== this.aiPromptAnswerRenderVersion) {
+          return;
+        }
+
+        this.aiPromptAnswerHtml.set(updatedHtml);
+      });
+      this.aiPromptAnswerHtml.set(initialHtml);
     });
   }
 
@@ -1643,6 +1667,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
       const answer = await this.runSummaryPromptAgents(trimmedPrompt, events, model);
       this.aiPromptAnswer.set(answer.trim() || 'The model returned an empty answer.');
+      this.aiPromptAgents.set([]);
     } catch (error) {
       this.logger.warn('[Summary] AI prompt failed:', error);
       this.aiPromptError.set(this.getSummaryPromptErrorMessage(error, model));
@@ -1792,30 +1817,24 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private buildSummaryPromptBatchMessages(prompt: string, batch: SummaryPromptEventBatch, totalEvents: number): AiChatMessage[] {
     const context = this.buildSummaryPromptContext(batch.events, Number.MAX_SAFE_INTEGER, {
       filteredEventCount: totalEvents,
-      headerLines: [
-        `Batch: ${batch.index} of ${batch.total}`,
-        `Batch events: ${batch.events.length}`,
-        `Total filtered events: ${totalEvents}`,
-      ],
     });
 
     return [
       {
         role: 'system',
         content: [
-          'You are one analysis agent in a staged Nostria Summary prompt workflow.',
-          'Use only this batch of supplied Nostr events.',
-          'Answer the user request for this batch only, but do not mention batches, agents, partial results, or workflow mechanics.',
+          'You answer questions about supplied Nostr events from the Nostria Summary page.',
+          'Base your answer only on the supplied events.',
+          'Keep the output focused only on Nostr event content and the direct answer.',
           'When asked to summarize the summary, summarize the actual event content: topics, notable posts, repeated themes, media/articles/live/calendar/music items, and important context.',
           'If the request asks to find matching notes, include event id, kind label, time, and a short excerpt for each match.',
-          'If this batch has no relevant matches or evidence, say only that no relevant items were found in this slice.',
-          'Never claim that the full data set has no other events; you only see one slice.',
-          'Keep the result compact and content-focused because another step will combine results later.',
+          'If these supplied events have no relevant matches or evidence, say only that no relevant items were found.',
+          'Keep the result compact and content-focused.',
         ].join(' '),
       },
       {
         role: 'user',
-        content: `User request:\n${prompt}\n\nBatch data:\n${context}`,
+        content: `User request:\n${prompt}\n\nSummary events:\n${context}`,
       },
     ];
   }
@@ -1833,16 +1852,17 @@ export class SummaryComponent implements OnInit, OnDestroy {
       {
         role: 'system',
         content: [
-          finalRound
-            ? 'You are the final reducer agent for a staged Nostria Summary prompt workflow.'
-            : 'You are a reducer agent for a staged Nostria Summary prompt workflow.',
-          'Use only the supplied partial agent results.',
-          'Answer the user directly. Do not mention reducers, agents, batches, slices, partial results, or the workflow unless the user explicitly asks about processing.',
+          'You answer questions about Nostr Summary event findings.',
+          'Use only the supplied event findings.',
+          'Answer the user directly and keep the output focused only on Nostr event content.',
+          'Do not start with phrases like "based on the provided findings"; start with the answer.',
           'Merge duplicate findings, preserve event ids for matching notes, and do not invent events.',
-          'Ignore "no relevant items" notes when other partial results contain relevant content.',
+          'Ignore "no relevant items" notes when other findings contain relevant content.',
           'Do not say there were fewer available events than the total unless the user asked about processing coverage.',
           'When summarizing, synthesize the actual Nostr event content into themes and notable details.',
-          finalRound ? 'Produce the final concise answer to the user.' : 'Condense these results into content-focused findings for a later final answer.',
+          finalRound
+            ? 'Produce a useful, moderately detailed markdown answer. Prefer short sections and bullets over one compressed paragraph when there are multiple themes or notable items.'
+            : 'Preserve distinct useful findings with enough detail for a later final answer. Do not over-compress.',
         ].join(' '),
       },
       {
@@ -1850,7 +1870,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
         content: [
           `User request:\n${prompt}`,
           `Total filtered events: ${totalEvents}`,
-          `Partial agent results: ${partials.length}`,
           '',
           partialContext,
         ].join('\n'),
@@ -1940,7 +1959,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         if (lines.length === 0) {
           lines.push(this.compactAiText(text, Math.max(400, charLimit - 80)));
         }
-        lines.push(`[Partial results truncated after ${lines.length} summaries of ${partials.length}.]`);
+        lines.push(`[Additional findings omitted to fit context.]`);
         break;
       }
 
@@ -1952,11 +1971,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private formatSummaryPromptPartial(partial: SummaryPromptPartial): string {
-    return [
-      `## ${partial.label}`,
-      `Events represented: ${partial.eventCount}`,
-      partial.content.trim(),
-    ].join('\n');
+    return partial.content.trim();
   }
 
   private addSummaryAiAgent(agent: SummaryAiAgentState): void {

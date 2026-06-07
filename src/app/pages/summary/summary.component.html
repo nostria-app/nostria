@@ -197,7 +197,7 @@
     </div>
     }
 
-    @if (aiPromptAgents().length > 0) {
+    @if (aiPromptRunning() && aiPromptAgents().length > 0) {
     <div class="summary-ai-progress" aria-label="AI prompt progress">
       <div class="summary-ai-progress-head">
         <span>{{ aiPromptAgentProgress().stage }}</span>
@@ -232,7 +232,7 @@
       <span>{{ aiPromptError() }}</span>
     </div>
     } @else if (aiPromptAnswer()) {
-    <div class="summary-ai-answer">{{ aiPromptAnswer() }}</div>
+    <div class="summary-ai-answer" [innerHTML]="aiPromptAnswerHtml()"></div>
     }
   </section>
   }

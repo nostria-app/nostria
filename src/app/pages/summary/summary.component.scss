@@ -376,9 +376,74 @@
 }
 
 .summary-ai-answer {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.5;
+
+  ::ng-deep {
+    p {
+      margin: 0 0 0.75rem;
+    }
+
+    p:last-child,
+    ul:last-child,
+    ol:last-child {
+      margin-bottom: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      margin: 1rem 0 0.5rem;
+      color: var(--mat-sys-on-surface);
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    h1:first-child,
+    h2:first-child,
+    h3:first-child,
+    h4:first-child {
+      margin-top: 0;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 0.75rem;
+      padding-left: 1.25rem;
+    }
+
+    li {
+      margin: 0.25rem 0;
+    }
+
+    a {
+      color: var(--mat-sys-primary);
+      text-decoration-color: var(--mat-sys-primary);
+    }
+
+    code {
+      padding: 0.1rem 0.25rem;
+      border-radius: var(--mat-sys-corner-extra-small);
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface);
+      font-size: 0.9em;
+    }
+
+    pre {
+      overflow-x: auto;
+      padding: 0.75rem;
+      border-radius: var(--mat-sys-corner-small);
+      background: var(--mat-sys-surface-container-high);
+    }
+
+    blockquote {
+      margin: 0 0 0.75rem;
+      padding-left: 0.75rem;
+      border-left: 3px solid var(--mat-sys-primary);
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
 }
 
 .summary-ai-progress {

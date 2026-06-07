@@ -54,7 +54,7 @@ export class AiPromptModelService {
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       fetchContextCharLimit: 4000,
       preferredParams: {
-        max_new_tokens: 384,
+        max_new_tokens: 640,
         do_sample: true,
         temperature: 0.7,
       },
@@ -75,7 +75,7 @@ export class AiPromptModelService {
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       preferredParams: {
-        max_new_tokens: 512,
+        max_new_tokens: 768,
         do_sample: false,
       },
     },
@@ -135,7 +135,7 @@ export class AiPromptModelService {
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       preferredParams: {
-        max_new_tokens: 384,
+        max_new_tokens: 640,
         do_sample: false,
       },
     },
@@ -155,7 +155,7 @@ export class AiPromptModelService {
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       preferredParams: {
-        max_new_tokens: 384,
+        max_new_tokens: 640,
         do_sample: false,
       },
     },
@@ -175,7 +175,7 @@ export class AiPromptModelService {
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       preferredParams: {
-        max_new_tokens: 384,
+        max_new_tokens: 640,
         do_sample: false,
       },
     },
