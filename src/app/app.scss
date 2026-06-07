@@ -1942,11 +1942,14 @@ mat-sidenav-content {
   --mobile-bottom-cube-visible-width: calc(100% - (var(--mobile-bottom-cube-side-margin) * 2));
   --mobile-bottom-cube-perspective-scale: calc(568 / 600);
 
-  // Shared glass tokens — matched to desktop media player
-  --cube-glass-bg: rgba(255, 255, 255, 0.05);
-  --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
+  // Shared glass tokens. Keep the surface present enough that light media behind
+  // the nav cannot wash out labels/icons, while still letting content blend through.
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface-container-high) 64%, transparent);
+  --cube-glass-fg: var(--mat-sys-on-surface);
+  --cube-glass-fg-muted: var(--mat-sys-on-surface-variant);
+  --cube-glass-hover: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
   --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 28%, transparent);
-  --cube-glass-active-border: color-mix(in srgb, white 30%, transparent);
+  --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary) 26%, var(--mat-sys-outline-variant));
   --cube-glass-active-shadow: 0 0 16px color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
 
   // Keep the animated 3D cube at the same visual width as the settled 2D faces.
@@ -2072,8 +2075,10 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-bottom-cube {
-  --cube-glass-bg: rgba(0, 0, 0, 0.1);
-  --cube-glass-hover: color-mix(in srgb, white 8%, transparent);
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface-container-lowest) 62%, transparent);
+  --cube-glass-fg: var(--mat-sys-on-surface);
+  --cube-glass-fg-muted: var(--mat-sys-on-surface-variant);
+  --cube-glass-hover: color-mix(in srgb, var(--mat-sys-on-surface) 10%, transparent);
   --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 32%, transparent);
   --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 22%, transparent);
   --cube-glass-active-shadow: 0 0 20px color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
@@ -2172,7 +2177,7 @@ mat-sidenav-content {
 
   a,
   button {
-    color: var(--mat-sys-on-surface);
+    color: var(--cube-glass-fg-muted);
   }
 }
 
@@ -2189,7 +2194,7 @@ mat-sidenav-content {
 
   a,
   button {
-    color: var(--mat-sys-on-surface);
+    color: var(--cube-glass-fg-muted);
   }
 }
 
@@ -2365,6 +2370,7 @@ mat-sidenav-content {
   margin-left: auto;
   margin-right: auto;
   overflow: visible;
+  color: var(--cube-glass-fg-muted);
 }
 
 .cube-face-nav .mobile-nav-label {
@@ -2380,6 +2386,7 @@ mat-sidenav-content {
   padding: 0;
   margin-top: 0;
   opacity: 0.7;
+  color: var(--cube-glass-fg-muted);
 }
 
 .sidenav-labels {
