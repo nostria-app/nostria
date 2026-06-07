@@ -124,6 +124,7 @@ import { getRuntimeResourceProfile } from './utils/runtime-resource-profile';
 import { ColorExtractionService } from './services/color-extraction.service';
 import { ChatWidgetComponent } from './components/chat-widget/chat-widget.component';
 import { TtsSequencePlayerComponent } from './components/tts-sequence-player/tts-sequence-player.component';
+import { stripImageProxy } from './utils/strip-image-proxy';
 
 interface NavItem {
   path: string;
@@ -142,6 +143,8 @@ interface NavItem {
   badge?: () => number | null; // Function that returns badge count or null
   queryParams?: Record<string, string>; // Query parameters for navigation
 }
+
+type ShellAvatarImageFailure = 'optimized' | 'original';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -439,6 +442,8 @@ export class App implements OnInit, OnDestroy {
       }))
       .sort((a, b) => (b.account.lastUsed ?? 0) - (a.account.lastUsed ?? 0));
   });
+
+  private readonly shellAvatarImageFailures = signal<Record<string, ShellAvatarImageFailure>>({});
 
   // Computed signal to count unread content notifications only (excludes technical/system notifications)
   // Content notification types for badge count (social interactions that users care about)
@@ -2715,6 +2720,49 @@ export class App implements OnInit, OnDestroy {
     if (!originalUrl) return '';
 
     return this.imageCacheService.getOptimizedImageUrl(originalUrl);
+  }
+
+  getShellAvatarImageUrl(originalUrl: string | null | undefined): string {
+    const cleanUrl = stripImageProxy(originalUrl ?? '').trim();
+    if (!cleanUrl) {
+      return '';
+    }
+
+    const failure = this.shellAvatarImageFailures()[cleanUrl];
+    if (failure === 'original') {
+      return '';
+    }
+
+    if (failure === 'optimized' || !this.settings.settings().imageCacheEnabled) {
+      return cleanUrl;
+    }
+
+    return this.imageCacheService.getOptimizedImageUrl(cleanUrl);
+  }
+
+  onShellAvatarImageError(originalUrl: string | null | undefined): void {
+    const cleanUrl = stripImageProxy(originalUrl ?? '').trim();
+    if (!cleanUrl) {
+      return;
+    }
+
+    this.shellAvatarImageFailures.update(failures => {
+      const currentFailure = failures[cleanUrl];
+      if (currentFailure === 'original') {
+        return failures;
+      }
+
+      const optimizedUrl = this.imageCacheService.getOptimizedImageUrl(cleanUrl);
+      const nextFailure: ShellAvatarImageFailure =
+        currentFailure === 'optimized' || optimizedUrl === cleanUrl || !this.settings.settings().imageCacheEnabled
+          ? 'original'
+          : 'optimized';
+
+      return {
+        ...failures,
+        [cleanUrl]: nextFailure,
+      };
+    });
   }
 
   /**

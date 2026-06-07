@@ -41,13 +41,9 @@
         <div class="sidenav-profile-row">
           <!-- Avatar button - closes sidenav (same position as toolbar avatar) -->
           <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-avatar-button">
-            @if (accountState.profile()?.data?.picture) {
-            @if (settings.settings().imageCacheEnabled) {
-            <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" alt="Profile"
-              class="avatar-image" />
-            } @else {
-            <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" alt="Profile" class="avatar-image" />
-            }
+            @if (getShellAvatarImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture)); as avatarUrl) {
+            <img [src]="avatarUrl" (error)="onShellAvatarImageError($safeNavigationMigration(accountState.profile()?.data?.picture))"
+              alt="Profile" class="avatar-image" />
             } @else {
             @if (app.authenticated()) {
             <mat-icon class="avatar-icon">account_circle</mat-icon>
@@ -90,12 +86,9 @@
           @for (item of accountsWithProfiles(); track item.account.pubkey) {
           <button class="sidenav-account-item" (click)="switchAccount(item.account.pubkey); closeSidenavOnMobile()">
             <div class="sidenav-account-avatar">
-              @if (item.profile?.data?.picture) {
-              @if (settings.settings().imageCacheEnabled) {
-              <img [src]="getOptimizedImageUrl(item.profile!.data!.picture)" alt="Profile" class="avatar-image" />
-              } @else {
-              <img [src]="item.profile!.data!.picture" alt="Profile" class="avatar-image" />
-              }
+              @if (getShellAvatarImageUrl(item.profile?.data?.picture); as avatarUrl) {
+              <img [src]="avatarUrl" (error)="onShellAvatarImageError(item.profile?.data?.picture)" alt="Profile"
+                class="avatar-image" />
               } @else {
               <mat-icon>account_circle</mat-icon>
               }
@@ -154,13 +147,9 @@
         @if (!displayLabels()) {
         <button mat-list-item (click)="toggleSidenav()"
           class="nav-item profile-nav-item sidenav-minimized-avatar-button" matTooltipPosition="right">
-          @if (accountState.profile()?.data?.picture) {
-          @if (settings.settings().imageCacheEnabled) {
-          <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" class="sidenav-minimized-avatar"
-            alt="Profile" />
-          } @else {
-          <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" class="sidenav-minimized-avatar" alt="Profile" />
-          }
+          @if (getShellAvatarImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture)); as avatarUrl) {
+          <img [src]="avatarUrl" (error)="onShellAvatarImageError($safeNavigationMigration(accountState.profile()?.data?.picture))"
+            class="sidenav-minimized-avatar" alt="Profile" />
           } @else {
           <mat-icon class="sidenav-minimized-icon">{{ app.authenticated() ? 'account_circle' : 'account_circle_off'
             }}</mat-icon>
@@ -255,15 +244,11 @@
         <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()"
           [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
           <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
-            [class.profile-button-picture]="accountState.profile()?.data?.picture">
+            [class.profile-button-picture]="!!getShellAvatarImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))">
             <div class="menu-button-content">
-              @if (accountState.profile()?.data?.picture) {
-              @if (settings.settings().imageCacheEnabled) {
-              <img [src]="getOptimizedImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture))" class="menu-profile-avatar"
-                alt="Menu" />
-              } @else {
-              <img [src]="$safeNavigationMigration(accountState.profile()?.data?.picture)" class="menu-profile-avatar" alt="Menu" />
-              }
+              @if (getShellAvatarImageUrl($safeNavigationMigration(accountState.profile()?.data?.picture)); as avatarUrl) {
+              <img [src]="avatarUrl" (error)="onShellAvatarImageError($safeNavigationMigration(accountState.profile()?.data?.picture))"
+                class="menu-profile-avatar" alt="Menu" />
               } @else {
               @if (app.authenticated()) {
               <mat-icon class="profile-icon">account_circle</mat-icon>
@@ -701,12 +686,9 @@
   @for (item of accountsWithProfiles(); track item.account.pubkey) {
   <button mat-menu-item (click)="switchAccount(item.account.pubkey)" class="account-switch-item">
     <div class="menu-account-avatar">
-      @if (item.profile?.data?.picture) {
-      @if (settings.settings().imageCacheEnabled) {
-      <img [src]="getOptimizedImageUrl(item.profile!.data!.picture)" alt="Profile" class="avatar-image" />
-      } @else {
-      <img [src]="item.profile!.data!.picture" alt="Profile" class="avatar-image" />
-      }
+      @if (getShellAvatarImageUrl(item.profile?.data?.picture); as avatarUrl) {
+      <img [src]="avatarUrl" (error)="onShellAvatarImageError(item.profile?.data?.picture)" alt="Profile"
+        class="avatar-image" />
       } @else {
       <mat-icon>account_circle</mat-icon>
       }
