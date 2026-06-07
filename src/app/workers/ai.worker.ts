@@ -437,6 +437,9 @@ addEventListener('message', async ({ data }) => {
       case 'load':
         await handleLoad(payload, id);
         break;
+      case 'unload':
+        await handleUnload(payload, id);
+        break;
       case 'generate':
         await handleGenerate(payload, id);
         break;
@@ -544,6 +547,50 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
     type: 'complete',
     id,
     payload: { task, model, status: 'loaded' }
+  });
+}
+
+async function disposeModelResource(resource: any): Promise<void> {
+  const resolved = await Promise.resolve(resource);
+  if (!resolved) {
+    return;
+  }
+
+  if (typeof resolved.dispose === 'function') {
+    await resolved.dispose();
+    return;
+  }
+
+  if (typeof resolved.model?.dispose === 'function') {
+    await resolved.model.dispose();
+  }
+
+  if (typeof resolved.processor?.dispose === 'function') {
+    await resolved.processor.dispose();
+  }
+}
+
+async function handleUnload(payload: { task?: string, model?: string }, id: string) {
+  const { task, model } = payload;
+
+  if ((!task || task === 'text-generation') && model && textGenerators.has(model)) {
+    await disposeModelResource(textGenerators.get(model));
+    textGenerators.delete(model);
+  }
+
+  if ((!task || task === 'image-text-to-text') && model && multimodalGenerators.has(model)) {
+    const generator = multimodalGenerators.get(model);
+    multimodalGenerators.delete(model);
+    await Promise.all([
+      disposeModelResource(generator?.processor),
+      disposeModelResource(generator?.model),
+    ]);
+  }
+
+  postMessage({
+    type: 'complete',
+    id,
+    payload: { task, model, status: 'unloaded' }
   });
 }
 

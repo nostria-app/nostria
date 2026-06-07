@@ -1068,7 +1068,8 @@
 
       <mat-menu #modelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false" yPosition="above">
         @for (chatModel of visibleComposerModels(); track chatModel.id) {
-        <button mat-menu-item type="button" (click)="selectModel(chatModel.id)">
+        <button mat-menu-item type="button" (click)="selectModel(chatModel.id)"
+          [disabled]="!!chatModel.chatDisabledReason">
           <div class="model-menu-item" [class.model-menu-item-selected]="chatModel.id === selectedModelId()">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ chatModel.name }}</span>

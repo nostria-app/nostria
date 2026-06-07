@@ -659,6 +659,40 @@ export class AiService {
     this.initializeWorker();
   }
 
+  async resetLocalModelRuntime(): Promise<void> {
+    const resetError = new Error('AI worker was reset.');
+
+    for (const controller of this.activeAbortControllers) {
+      controller.abort(resetError);
+    }
+    this.activeAbortControllers.clear();
+
+    const pendingIds = Object.keys(this.callbacks);
+    for (const id of pendingIds) {
+      this.callbacks[id]?.reject(resetError);
+      delete this.callbacks[id];
+    }
+
+    this._processingCount = 0;
+    this.processingState.set({ isProcessing: false, task: null });
+
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    this.loadedModels.set(new Set());
+    this.textModelLoaded.set(false);
+    this.translationModelLoaded.set(false);
+    this.summarizationModelLoaded.set(false);
+    this.sentimentModelLoaded.set(false);
+    this.transcriptionModelLoaded.set(false);
+    this.speechModelLoaded.set(false);
+
+    this.initializeWorker();
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
   isAbortError(error: unknown): boolean {
     if (error instanceof DOMException) {
       return error.name === 'AbortError';
@@ -764,6 +798,20 @@ export class AiService {
 
       return res;
     });
+  }
+
+  async unloadModel(task: string, model: string): Promise<void> {
+    await this.postMessage('unload', { task, model });
+
+    this.loadedModels.update(models => {
+      const newModels = new Set(models);
+      newModels.delete(model);
+      return newModels;
+    });
+
+    if (task === 'text-generation' || task === 'image-text-to-text') {
+      this.textModelLoaded.set(this.hasLoadedTextModel());
+    }
   }
 
   async generateText(
@@ -2349,6 +2397,13 @@ export class AiService {
     }
 
     return 'image/png';
+  }
+
+  private hasLoadedTextModel(): boolean {
+    const loadedModelIds = this.loadedModels();
+    return this.manageableModels.some(model =>
+      loadedModelIds.has(model.id) && (model.task === 'text-generation' || model.task === 'image-text-to-text')
+    );
   }
 
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {

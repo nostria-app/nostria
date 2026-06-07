@@ -168,6 +168,44 @@
     </div>
   </ng-template>
 
+  @if (showAiPromptPanel()) {
+  <section class="summary-ai-panel" aria-live="polite">
+    <div class="summary-ai-header">
+      <div class="summary-ai-title">
+        <mat-icon>auto_awesome</mat-icon>
+        <span>AI Prompt</span>
+      </div>
+      <div class="summary-ai-actions">
+        @if (aiPromptProviderLabel()) {
+        <span class="summary-ai-provider">{{ aiPromptProviderLabel() }}</span>
+        }
+        <span class="summary-ai-count">{{ aiPromptEventCount() }} events</span>
+        <button mat-icon-button type="button" (click)="clearAiPromptResult()" matTooltip="Close AI prompt result">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (aiPromptQuery()) {
+    <p class="summary-ai-query">{{ aiPromptQuery() }}</p>
+    }
+
+    @if (aiPromptRunning()) {
+    <div class="summary-ai-loading">
+      <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+      <span>Running prompt...</span>
+    </div>
+    } @else if (aiPromptError()) {
+    <div class="summary-ai-error">
+      <mat-icon>error</mat-icon>
+      <span>{{ aiPromptError() }}</span>
+    </div>
+    } @else if (aiPromptAnswer()) {
+    <div class="summary-ai-answer">{{ aiPromptAnswer() }}</div>
+    }
+  </section>
+  }
+
   @if (isLoading()) {
   <div class="loading-state">
     <mat-spinner diameter="48"></mat-spinner>

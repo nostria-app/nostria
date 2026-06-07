@@ -264,22 +264,38 @@
         <!-- Center section: Always-visible search -->
         <div class="toolbar-center" [class.mobile-search-expanded]="searchFocused() && layout.isHandset()">
           <div class="search-container toolbar-section" [class.search-active]="layout.search()"
-            [class.has-results]="search.hasVisibleResults()" (focusout)="onSearchBlur($event)">
-            <button mat-icon-button class="search-icon-button" (click)="twoColumnLayout.resetNavigation('/search')"
-              matTooltip="Advanced search" i18n-matTooltip="@@app.search.advanced-search">
-              <mat-icon class="search-icon">search</mat-icon>
+            [class.prompt-active]="searchInputMode() === 'prompt'"
+            [class.has-results]="searchInputMode() === 'search' && search.hasVisibleResults()"
+            (focusout)="onSearchBlur($event)">
+            <button mat-icon-button class="search-icon-button" [matMenuTriggerFor]="searchModeMenu"
+              [matTooltip]="searchModeTooltip()" aria-label="Search mode">
+              <mat-icon class="search-icon">{{ searchModeIcon() }}</mat-icon>
             </button>
-            <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
-              (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
-              (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
-              placeholder="Search..." autocomplete="off" name="nostria-global-search" />
+            <mat-menu #searchModeMenu="matMenu">
+              <button mat-menu-item (click)="selectSearchInputMode('search')">
+                <mat-icon>{{ searchInputMode() === 'search' ? 'check' : 'search' }}</mat-icon>
+                <span>Search</span>
+              </button>
+              <button mat-menu-item (click)="selectSearchInputMode('prompt')">
+                <mat-icon>{{ searchInputMode() === 'prompt' ? 'check' : 'auto_awesome' }}</mat-icon>
+                <span>AI Prompt</span>
+              </button>
+              <button mat-menu-item (click)="openAdvancedSearch()">
+                <mat-icon>manage_search</mat-icon>
+                <span>Advanced Search</span>
+              </button>
+            </mat-menu>
+            <input [type]="searchInputMode() === 'prompt' ? 'text' : 'search'" class="search-input" #searchInputElement
+              [(ngModel)]="layout.searchInput" (input)="onGlobalSearchInput($event)"
+              (keydown)="onSearchInputKeyDown($event)" (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()"
+              [placeholder]="searchInputPlaceholder()" autocomplete="off" name="nostria-global-search" />
             @if (layout.searchInput && layout.searchInput.length > 0) {
             <button mat-icon-button class="search-action-button clear-search-button" (click)="clearSearchInput()"
               matTooltip="Clear search">
               <mat-icon>close</mat-icon>
             </button>
             }
-            @if (layout.search() && (!layout.searchInput || layout.searchInput.length === 0)) {
+            @if (searchInputMode() === 'search' && layout.search() && (!layout.searchInput || layout.searchInput.length === 0)) {
             <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
               [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
               @if (isSearchListening()) {
@@ -294,11 +310,43 @@
               <mat-icon>qr_code_scanner</mat-icon>
             </button>
             }
+            @if (searchInputMode() === 'prompt' && aiPromptModels.selectedModel(); as promptModel) {
+            <button mat-icon-button class="search-action-button prompt-model-button"
+              [matMenuTriggerFor]="promptModelMenu" [attr.aria-label]="'Select AI model: ' + promptModel.name"
+              [matTooltip]="promptModel.name">
+              <mat-icon>model_training</mat-icon>
+            </button>
+            <mat-menu #promptModelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false">
+              @for (model of aiPromptModels.promptModels(); track model.id) {
+              <button mat-menu-item type="button" (click)="selectAiPromptModel(model.id)"
+                [disabled]="!!model.chatDisabledReason">
+                <div class="model-menu-item" [class.model-menu-item-selected]="model.id === aiPromptModels.selectedModelId()">
+                  <div class="model-menu-copy">
+                    <span class="model-menu-title">{{ model.name }}</span>
+                    <span class="model-menu-meta">{{ aiPromptModelMenuMeta(model) }}</span>
+                  </div>
+                  <div class="model-menu-trailing">
+                    <span class="status-chip" [class.status-loaded]="model.loaded"
+                      [class.status-cached]="!model.loaded && model.cached"
+                      [class.status-idle]="!model.loaded && !model.cached && !model.loading"
+                      [class.status-loading]="model.loading">
+                      {{ aiPromptModelStatusLabel(model) }}
+                    </span>
+                    @if (model.id === aiPromptModels.selectedModelId()) {
+                    <mat-icon class="model-menu-selected-icon">check_circle</mat-icon>
+                    }
+                  </div>
+                </div>
+              </button>
+              }
+            </mat-menu>
+            } @else {
             <button mat-icon-button class="search-action-button command-palette-button" (click)="openCommandPalette()"
               i18n-matTooltip="@@app.search.command-palette" matTooltip="Command palette (Ctrl+K)">
               <mat-icon>terminal</mat-icon>
             </button>
-            @if (searchResultsMounted()) {
+            }
+            @if (searchInputMode() === 'search' && searchResultsMounted()) {
             <app-search-results></app-search-results>
             }
           </div>

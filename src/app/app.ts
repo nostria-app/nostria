@@ -94,6 +94,8 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { CreateMenuComponent } from './components/create-menu/create-menu.component';
 import { AiService } from './services/ai.service';
+import { AiPromptActionService } from './services/ai-prompt-action.service';
+import { AiPromptModelService, AiPromptModelInfo } from './services/ai-prompt-model.service';
 import { CustomDialogService } from './services/custom-dialog.service';
 import { SpeechService } from './services/speech.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
@@ -145,6 +147,7 @@ interface NavItem {
 }
 
 type ShellAvatarImageFailure = 'optimized' | 'original';
+type SearchInputMode = 'search' | 'prompt';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -243,6 +246,8 @@ export class App implements OnInit, OnDestroy {
   routeDataService = inject(RouteDataService);
   installService = inject(InstallService);
   ai = inject(AiService);
+  aiPromptAction = inject(AiPromptActionService);
+  aiPromptModels = inject(AiPromptModelService);
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
   protected readonly wallets = inject(Wallets);
@@ -310,6 +315,7 @@ export class App implements OnInit, OnDestroy {
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild('settingsQuickCardLayer') settingsQuickCardLayer?: ElementRef<HTMLElement>;
+  searchInputMode = signal<SearchInputMode>('search');
 
   // Create menu overlay
   private createMenuOverlayRef?: OverlayRef;
@@ -1703,6 +1709,68 @@ export class App implements OnInit, OnDestroy {
     this.layout.toggleSearch();
   }
 
+  searchModeIcon(): string {
+    return this.searchInputMode() === 'prompt' ? 'auto_awesome' : 'search';
+  }
+
+  searchModeTooltip(): string {
+    return this.searchInputMode() === 'prompt' ? 'AI prompt mode' : 'Search mode';
+  }
+
+  searchInputPlaceholder(): string {
+    return this.searchInputMode() === 'prompt' ? 'Prompt...' : 'Search...';
+  }
+
+  aiPromptModelStatusLabel(model: AiPromptModelInfo): string {
+    return this.aiPromptModels.statusLabel(model);
+  }
+
+  aiPromptModelMenuMeta(model: AiPromptModelInfo): string {
+    return this.aiPromptModels.modelMenuMeta(model);
+  }
+
+  selectAiPromptModel(modelId: string): void {
+    this.aiPromptModels.selectModel(modelId);
+    this.searchInputElement?.nativeElement?.focus();
+  }
+
+  selectSearchInputMode(mode: SearchInputMode): void {
+    this.searchInputMode.set(mode);
+    this.clearSearchInput(true);
+  }
+
+  openAdvancedSearch(): void {
+    this.searchInputMode.set('search');
+    this.clearSearchInput(false);
+    this.twoColumnLayout.resetNavigation('/search');
+  }
+
+  onGlobalSearchInput(event: Event): void {
+    if (this.searchInputMode() === 'prompt') {
+      this.search.clearResults();
+      this.layout.query.set('');
+      return;
+    }
+
+    this.layout.onSearchInput(event);
+  }
+
+  async submitGlobalPrompt(): Promise<void> {
+    const prompt = this.layout.searchInput.trim();
+    if (!prompt) {
+      return;
+    }
+
+    const handled = await this.aiPromptAction.triggerPrompt(prompt);
+    if (!handled) {
+      this.ai.queueStandardPrompt({ title: 'Prompt', prompt });
+      await this.router.navigate(['/ai']);
+    }
+
+    this.clearSearchInput(false);
+    this.layout.closeSearch();
+  }
+
   /**
    * Handle search input focus event.
    * Opens the search results panel when the always-visible search input is focused.
@@ -2510,6 +2578,17 @@ export class App implements OnInit, OnDestroy {
   }
 
   onSearchInputKeyDown(event: KeyboardEvent): void {
+    if (this.searchInputMode() === 'prompt') {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void this.submitGlobalPrompt();
+      } else if (event.key === 'Escape') {
+        this.clearSearchInput(false);
+        this.layout.closeSearch();
+      }
+      return;
+    }
+
     if (event.key === 'Enter') {
       // Execute the first search action if available
       const actions = this.search.searchActions();
@@ -2549,6 +2628,10 @@ export class App implements OnInit, OnDestroy {
   }
 
   onSearchInputPaste(event: ClipboardEvent): void {
+    if (this.searchInputMode() === 'prompt') {
+      return;
+    }
+
     // Handle paste events for nostr URLs
     event.preventDefault();
     let pastedText = event.clipboardData?.getData('text')?.trim();

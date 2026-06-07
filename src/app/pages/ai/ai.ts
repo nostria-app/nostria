@@ -31,6 +31,7 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
 import { CorsProxyService } from '../../services/cors-proxy.service';
 import { SpeechService, type DictationModelOption } from '../../services/speech.service';
 import { AiModelDownloadProgressTracker } from '../../utils/ai-model-download-progress';
+import { AiPromptModelService } from '../../services/ai-prompt-model.service';
 
 interface ModelInfo {
   id: string;
@@ -185,6 +186,7 @@ export class AiComponent {
   private readonly customDialog = inject(CustomDialogService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly panelNav = inject(PanelNavigationService);
+  private readonly aiPromptModels = inject(AiPromptModelService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
   private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
@@ -1166,7 +1168,7 @@ export class AiComponent {
 
     const model = this.selectedModel();
     if (model?.loading) {
-      const status = model.loadStatus || (model.cached ? 'Loading into memory' : 'Downloading');
+      const status = model.loadStatus || (model.cached ? 'Loading from cache' : 'Downloading');
       return `${status} ${model.name}...`;
     }
 
@@ -1386,7 +1388,12 @@ export class AiComponent {
         return;
       }
 
-      untracked(() => this.storeLastModelSelection(mode, model.id));
+      untracked(() => {
+        this.storeLastModelSelection(mode, model.id);
+        if (mode === 'text') {
+          this.aiPromptModels.selectModel(model.id);
+        }
+      });
     });
 
     effect(() => {
@@ -2276,6 +2283,7 @@ export class AiComponent {
         .join('\n\n');
       const message = this.resolveGenerationErrorMessage(model, err, attachmentContext);
       this.chatError.set(message);
+      this.markLocalModelUnavailableIfNeeded(model, err);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
       this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
@@ -2753,6 +2761,10 @@ export class AiComponent {
       details.push('Text chat');
     }
 
+    if (model.chatDisabledReason) {
+      details.push(model.chatDisabledReason);
+    }
+
     return details.join(' · ');
   }
 
@@ -2761,6 +2773,10 @@ export class AiComponent {
   }
 
   statusLabel(model: ModelInfo): string {
+    if (model.chatDisabledReason) {
+      return 'Unavailable';
+    }
+
     if (model.source === 'cloud') {
       if (model.task === 'text-generation') {
         if (model.provider === 'openai') {
@@ -2922,7 +2938,7 @@ export class AiComponent {
     this.updateModelStatus(model.id, {
       loading: true,
       progress: 0,
-      loadStatus: model.cached ? 'Loading into memory' : 'Preparing download',
+      loadStatus: model.cached ? 'Loading from cache' : 'Preparing download',
       loadFile: '',
       loadedBytes: null,
       totalBytes: null,
@@ -2939,7 +2955,7 @@ export class AiComponent {
               progress: progress.progress === null
                 ? (this.models().find(candidate => candidate.id === model.id)?.progress ?? 0)
                 : Math.min(progress.progress, 94),
-              loadStatus: progress.status,
+              loadStatus: this.getModelLoadStatus(progress.status, model.cached),
               loadFile: progress.file,
               loadedBytes: progress.loadedBytes,
               totalBytes: progress.totalBytes,
@@ -2960,7 +2976,9 @@ export class AiComponent {
       return true;
     } catch (err) {
       this.logger.error('AI model load error:', err);
-      this.chatError.set(err instanceof Error ? err.message : String(err));
+      const message = this.resolveModelLoadErrorMessage(model, err);
+      this.chatError.set(message);
+      this.markLocalModelUnavailableIfNeeded(model, err);
       return false;
     } finally {
       this.updateModelStatus(model.id, { loading: false });
@@ -3112,6 +3130,7 @@ export class AiComponent {
       this.logger.error('AI chat error:', err);
       const message = this.resolveGenerationErrorMessage(model, err, preparedPrompt.attachmentContext);
       this.chatError.set(message);
+      this.markLocalModelUnavailableIfNeeded(model, err);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
       this.finishMessageProcessing(assistantMessageId);
       this.persistCurrentConversation();
@@ -3122,6 +3141,24 @@ export class AiComponent {
 
   private updateModelStatus(id: string, updates: Partial<ModelInfo>): void {
     this.models.update(models => models.map(model => model.id === id ? { ...model, ...updates } : model));
+  }
+
+  private markLocalModelUnavailableIfNeeded(model: ModelInfo, error: unknown): void {
+    if (!this.isLocalModelMemoryError(model, error)) {
+      return;
+    }
+
+    this.updateModelStatus(model.id, {
+      chatDisabledReason: 'Not enough local memory on this device for this model.',
+      loaded: false,
+      cached: true,
+      loading: false,
+      progress: 0,
+      loadStatus: '',
+      loadFile: '',
+      loadedBytes: null,
+      totalBytes: null,
+    });
   }
 
   private isChatGenerationTask(task: string): boolean {
@@ -3424,11 +3461,62 @@ export class AiComponent {
   }
 
   private async ensureLocalModelReady(model: ModelInfo): Promise<boolean> {
-    if (model.loaded) {
+    if (this.isChatGenerationTask(model.task)) {
+      await this.resetOtherLocalChatModels(model.id);
+    }
+
+    if (this.aiService.isModelLoaded(model.id)) {
+      if (!model.loaded) {
+        this.updateModelStatus(model.id, { loaded: true, loading: false, progress: 100, loadStatus: 'Loaded' });
+      }
       return true;
     }
 
+    if (model.loaded) {
+      this.updateModelStatus(model.id, { loaded: false, cached: true, progress: 0, loadStatus: '' });
+    }
+
     return this.loadModel(model);
+  }
+
+  private async resetOtherLocalChatModels(activeModelId: string): Promise<void> {
+    const loadedModels = this.localChatModels()
+      .filter(model => model.id !== activeModelId && (model.loaded || this.aiService.isModelLoaded(model.id)));
+
+    if (loadedModels.length === 0) {
+      return;
+    }
+
+    await this.aiService.resetLocalModelRuntime();
+    this.models.update(models => models.map(model => this.isChatGenerationTask(model.task) && model.source !== 'cloud'
+      ? {
+        ...model,
+        loaded: false,
+        cached: model.cached || loadedModels.some(loadedModel => loadedModel.id === model.id),
+        loading: false,
+        progress: 0,
+        loadStatus: '',
+        loadFile: '',
+        loadedBytes: null,
+        totalBytes: null,
+      }
+      : model));
+  }
+
+  private getModelLoadStatus(status: string, cached: boolean): string {
+    if (!cached) {
+      return status;
+    }
+
+    switch (status) {
+      case 'Starting download':
+      case 'Downloading':
+        return 'Loading from cache';
+      case 'Downloaded':
+        return 'Loaded from cache';
+      default:
+        return status;
+    }
   }
 
   private focusComposerPromptPlaceholder(prompt: string): void {
@@ -5045,6 +5133,10 @@ export class AiComponent {
     const message = error instanceof Error ? error.message : String(error);
     const includesFetchedContext = attachmentContext.includes('Fetched web content:');
 
+    if (this.isLocalModelMemoryError(model, error)) {
+      return this.getLocalModelMemoryErrorMessage();
+    }
+
     if (model.id === 'onnx-community/gemma-4-E2B-it-ONNX' && message.includes('operation does not support unaligned accesses')) {
       return includesFetchedContext
         ? 'Gemma 4 hit a WebGPU runtime limitation while processing fetched page content. The #fetch command itself is already stripped before inference, but the fetched markdown context can still trigger this Gemma backend error. Try Qwen 3.5, a cloud model, or a shorter fetched page.'
@@ -5052,6 +5144,27 @@ export class AiComponent {
     }
 
     return message;
+  }
+
+  private resolveModelLoadErrorMessage(model: ModelInfo, error: unknown): string {
+    if (this.isLocalModelMemoryError(model, error)) {
+      return this.getLocalModelMemoryErrorMessage();
+    }
+
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  private isLocalModelMemoryError(model: ModelInfo, error: unknown): boolean {
+    if (model.source === 'cloud') {
+      return false;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return /WebGPU|CreateCommittedResource|CopyKVCache|OrtRun|out of memory|bad_alloc|Can't create a session/i.test(message);
+  }
+
+  private getLocalModelMemoryErrorMessage(): string {
+    return 'This local model cannot fit in memory on this device/runtime. Try Bonsai 1.7B, Gemma 4 if it works here, or a hosted cloud model.';
   }
 
   private async buildMultimodalGenerationInput(conversation: ConversationMessage[]): Promise<AiMultimodalChatMessage[]> {

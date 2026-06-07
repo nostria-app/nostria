@@ -43,6 +43,9 @@ import { ListFilterValue } from '../../components/list-filter-menu/list-filter-m
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
 import { getKindLabel } from '../../utils/kind-labels';
 import { COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
+import { AiChatMessage, AiGenerationProgress, AiMultimodalChatMessage, AiService } from '../../services/ai.service';
+import { AiPromptActionService, AiPromptHandler } from '../../services/ai-prompt-action.service';
+import { AiPromptModelInfo, AiPromptModelService } from '../../services/ai-prompt-model.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -214,6 +217,8 @@ const MAX_POSTERS_DISPLAY = 100;
 const MAX_PROFILE_UPDATES = 10;
 const TIMELINE_PAGE_SIZE = 20; // Events per page
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
+const SUMMARY_AI_CLOUD_CONTEXT_CHAR_LIMIT = 16000;
+const SUMMARY_AI_LOCAL_CONTEXT_CHAR_LIMIT = 4000;
 
 @Component({
   selector: 'app-summary',
@@ -249,11 +254,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followSetsService = inject(FollowSetsService);
   private readonly dialog = inject(MatDialog);
+  private readonly aiService = inject(AiService);
+  private readonly aiPromptAction = inject(AiPromptActionService);
+  private readonly aiPromptModels = inject(AiPromptModelService);
   protected readonly app = inject(ApplicationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly layout = inject(LayoutService);
   protected readonly localSettings = inject(LocalSettingsService);
+  private readonly summaryPromptHandler: AiPromptHandler = async (prompt: string) => {
+    await this.runSummaryPrompt(prompt);
+    return { handled: true };
+  };
 
   readonly summaryContentTypes = SUMMARY_CONTENT_TYPES;
 
@@ -309,6 +321,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
   isFetching = signal(false); // Whether we're fetching from relays
   fetchProgress = signal({ fetched: 0, total: 0 });
   lastCheckTimestamp = signal(0);
+  aiPromptRunning = signal(false);
+  aiPromptQuery = signal('');
+  aiPromptAnswer = signal('');
+  aiPromptError = signal('');
+  aiPromptProviderLabel = signal('');
 
   // Captured "last visit" timestamp - frozen at component init, doesn't update during session
   private frozenLastVisitTimestamp = 0;
@@ -664,6 +681,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Total timeline events count
   totalTimelineCount = computed(() => this.allTimelineEvents().length);
+  aiPromptEventCount = computed(() => this.getSummaryPromptEvents().length);
+  showAiPromptPanel = computed(() => this.aiPromptRunning() || !!this.aiPromptAnswer() || !!this.aiPromptError());
 
   // Expanded panel state
   expandedPanel = signal<'notes' | 'articles' | 'media' | null>(null);
@@ -751,6 +770,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.aiPromptAction.registerHandler(this.summaryPromptHandler);
     // Start periodic timestamp saving while on the summary page
     this.startTimestampSaveInterval();
   }
@@ -764,6 +784,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     // Cleanup IntersectionObserver
     this.cleanupLoadMoreObserver();
+
+    this.aiPromptAction.unregisterHandler(this.summaryPromptHandler);
 
     // Save final timestamp when leaving the page
     this.saveCurrentTimestamp();
@@ -1514,6 +1536,339 @@ export class SummaryComponent implements OnInit, OnDestroy {
       content: event.content,
       sig: '',
     };
+  }
+
+  clearAiPromptResult(): void {
+    this.aiPromptQuery.set('');
+    this.aiPromptAnswer.set('');
+    this.aiPromptError.set('');
+    this.aiPromptProviderLabel.set('');
+  }
+
+  private async runSummaryPrompt(prompt: string): Promise<void> {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      return;
+    }
+
+    const events = this.getSummaryPromptEvents();
+    if (events.length === 0) {
+      this.aiPromptQuery.set(trimmedPrompt);
+      this.aiPromptAnswer.set('');
+      this.aiPromptProviderLabel.set('');
+      this.aiPromptError.set('There are no summary events in the current filters to ask about.');
+      return;
+    }
+
+    this.aiPromptRunning.set(true);
+    this.aiPromptQuery.set(trimmedPrompt);
+    this.aiPromptAnswer.set('');
+    this.aiPromptError.set('');
+    this.aiPromptProviderLabel.set('');
+
+    let model: AiPromptModelInfo | null = null;
+
+    try {
+      model = this.aiPromptModels.selectedModel();
+
+      if (!model) {
+        throw new Error('No AI model is available. Configure an AI provider or choose a local model first.');
+      }
+
+      if (model.chatDisabledReason) {
+        throw new Error(model.chatDisabledReason);
+      }
+
+      const messages = this.buildSummaryPromptMessages(trimmedPrompt, events, model);
+      let answer: string;
+      this.aiPromptProviderLabel.set(model.name);
+
+      if (model.source === 'cloud' && model.provider) {
+        answer = await this.aiService.generateCloudText(
+          messages,
+          model.provider,
+          model.cloudModel,
+          model.cloudAccessMode,
+        );
+      } else if (model.task === 'image-text-to-text') {
+        await this.ensureLocalPromptModelReady(model);
+        answer = await this.aiService.generateMultimodalText(
+          this.buildSummaryMultimodalPromptMessages(messages),
+          model.preferredParams,
+          model.id,
+        );
+      } else {
+        await this.ensureLocalPromptModelReady(model);
+        answer = this.extractLocalAiText(await this.generateLocalSummaryPrompt(model, messages));
+      }
+
+      this.aiPromptAnswer.set(answer.trim() || 'The model returned an empty answer.');
+    } catch (error) {
+      this.logger.warn('[Summary] AI prompt failed:', error);
+      this.aiPromptError.set(this.getSummaryPromptErrorMessage(error, model));
+      this.markSummaryPromptModelUnavailableIfNeeded(error, model);
+    } finally {
+      this.aiPromptRunning.set(false);
+    }
+  }
+
+  private getSummaryPromptEvents(): TimelineEvent[] {
+    return this.allTimelineEvents();
+  }
+
+  private buildSummaryPromptMessages(prompt: string, events: TimelineEvent[], model: AiPromptModelInfo): AiChatMessage[] {
+    const context = this.buildSummaryPromptContext(events, this.getSummaryAiContextCharLimit(model));
+
+    return [
+      {
+        role: 'system',
+        content: [
+          'You answer questions about the current Nostria Summary page.',
+          'Use only the supplied summary data and events.',
+          'If the user asks to find or show matching notes, list only matches from the supplied events and include the event id, kind label, time, and a short excerpt.',
+          'If the supplied data is insufficient, say that clearly.',
+          'Keep the answer concise.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: `${prompt}\n\nCurrent summary data:\n${context}`,
+      },
+    ];
+  }
+
+  private getSummaryAiContextCharLimit(model: AiPromptModelInfo): number {
+    return model.fetchContextCharLimit
+      ?? (model.source === 'cloud' ? SUMMARY_AI_CLOUD_CONTEXT_CHAR_LIMIT : SUMMARY_AI_LOCAL_CONTEXT_CHAR_LIMIT);
+  }
+
+  private getSummaryPromptErrorMessage(error: unknown, model: AiPromptModelInfo | null): string {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (this.isLocalPromptModelMemoryError(error, model)) {
+      return 'This local model cannot fit in memory on this device/runtime. Try Bonsai 1.7B, Gemma 4 if it works here, or a hosted cloud model.';
+    }
+
+    return message;
+  }
+
+  private markSummaryPromptModelUnavailableIfNeeded(error: unknown, model: AiPromptModelInfo | null): void {
+    if (!this.isLocalPromptModelMemoryError(error, model) || !model) {
+      return;
+    }
+
+    this.aiPromptModels.markModelUnavailable(
+      model.id,
+      'Not enough local memory on this device for this model.',
+    );
+  }
+
+  private isLocalPromptModelMemoryError(error: unknown, model: AiPromptModelInfo | null): boolean {
+    if (model?.source === 'cloud') {
+      return false;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return /WebGPU|CreateCommittedResource|CopyKVCache|OrtRun|out of memory|bad_alloc|Can't create a session/i.test(message);
+  }
+
+  private buildSummaryPromptContext(events: TimelineEvent[], charLimit: number): string {
+    const summary = this.activitySummary();
+    const header = [
+      `Time range: ${this.timeSinceLastCheck()}`,
+      `List filter: ${this.currentListFilterLabel()}`,
+      `Content filter: ${this.hasActiveContentFilter() ? 'custom' : 'default'}`,
+      `Counts: notes=${summary.notesCount}, reposts=${summary.repostsCount}, articles=${summary.articlesCount}, audio=${summary.audioCount}, media=${summary.mediaCount}, communities=${summary.communitiesCount}, chats=${summary.chatsCount}, liveEvents=${summary.liveEventsCount}, calendar=${summary.calendarCount}, music=${summary.musicCount}, profileUpdates=${summary.profileUpdatesCount}`,
+      `Filtered events available: ${events.length}`,
+      '',
+      'Events:',
+    ];
+
+    const lines: string[] = [];
+    let usedChars = header.join('\n').length;
+
+    for (const event of events) {
+      const line = this.formatEventForAiContext(event);
+      if (usedChars + line.length + 1 > charLimit) {
+        lines.push(`[Context truncated after ${lines.length} events of ${events.length}.]`);
+        break;
+      }
+
+      lines.push(line);
+      usedChars += line.length + 1;
+    }
+
+    return [...header, ...lines].join('\n');
+  }
+
+  private formatEventForAiContext(event: TimelineEvent): string {
+    const createdAt = new Date(event.created_at * 1000).toISOString();
+    const title = this.getEventAiTitle(event);
+    const content = this.compactAiText(this.getEventAiContent(event), 480);
+    const tags = this.getEventAiTags(event);
+
+    return [
+      `- id=${event.id}`,
+      `kind=${event.kind} (${this.getEventKindLabel(event.kind)})`,
+      `author=${event.pubkey}`,
+      `created_at=${createdAt}`,
+      title ? `title="${title}"` : '',
+      tags ? `tags="${tags}"` : '',
+      `content="${content}"`,
+    ].filter(Boolean).join(' | ');
+  }
+
+  private getEventAiTitle(event: TimelineEvent): string {
+    return this.compactAiText(
+      this.getTaggedValue(event, 'title') ||
+      this.getTaggedValue(event, 'name') ||
+      this.getEventJsonString(event, 'name'),
+      160,
+    );
+  }
+
+  private getEventAiContent(event: TimelineEvent): string {
+    if (event.kind === 6 || event.kind === 16) {
+      try {
+        const embedded = JSON.parse(event.content) as { content?: unknown };
+        if (typeof embedded.content === 'string') {
+          return embedded.content;
+        }
+      } catch {
+        // Use the event content below.
+      }
+    }
+
+    return event.content ||
+      this.getTaggedValue(event, 'summary') ||
+      this.getTaggedValue(event, 'description') ||
+      this.getTaggedValue(event, 'alt') ||
+      this.getEventPreview(event);
+  }
+
+  private getEventAiTags(event: TimelineEvent): string {
+    const usefulTags = (event.tags ?? [])
+      .filter(tag => ['t', 'title', 'summary', 'description', 'name', 'status'].includes(tag[0]))
+      .map(tag => tag.slice(0, 2).join(':'))
+      .join(', ');
+
+    return this.compactAiText(usefulTags, 240);
+  }
+
+  private compactAiText(value: string, maxLength: number): string {
+    const compact = value.replace(/\s+/g, ' ').replace(/"/g, '\\"').trim();
+    return compact.length > maxLength ? `${compact.slice(0, maxLength - 3).trimEnd()}...` : compact;
+  }
+
+  private async ensureLocalPromptModelReady(model: AiPromptModelInfo): Promise<void> {
+    await this.aiPromptModels.unloadOtherLocalModels(model.id);
+
+    if (this.aiService.isModelLoaded(model.id)) {
+      this.aiPromptModels.updateModelStatus(model.id, { loaded: true, loading: false, progress: 100 });
+      return;
+    }
+
+    if (model.loaded) {
+      this.aiPromptModels.updateModelStatus(model.id, { loaded: false, cached: true, progress: 0 });
+    }
+
+    this.aiPromptModels.updateModelStatus(model.id, {
+      loading: true,
+      progress: 0,
+    });
+
+    try {
+      await this.aiService.loadModel(
+        model.task,
+        model.id,
+        (progress: unknown) => {
+          const percentage = this.extractModelLoadProgress(progress);
+          if (percentage !== null) {
+            this.aiPromptModels.updateModelStatus(model.id, { progress: percentage });
+          }
+        },
+        model.loadOptions,
+      );
+      this.aiPromptModels.updateModelStatus(model.id, {
+        loaded: true,
+        cached: true,
+        loading: false,
+        progress: 100,
+      });
+    } catch (error) {
+      this.aiPromptModels.updateModelStatus(model.id, { loading: false });
+      throw error;
+    }
+  }
+
+  private extractModelLoadProgress(progress: unknown): number | null {
+    if (typeof progress !== 'object' || progress === null) {
+      return null;
+    }
+
+    const value = (progress as { progress?: unknown }).progress;
+    return typeof value === 'number' && Number.isFinite(value)
+      ? Math.max(0, Math.min(94, Math.round(value)))
+      : null;
+  }
+
+  private async generateLocalSummaryPrompt(model: AiPromptModelInfo, messages: AiChatMessage[]): Promise<unknown> {
+    return this.aiService.generateText(
+      this.buildLocalGenerationInput(model, messages),
+      model.preferredParams ?? {
+        max_new_tokens: 220,
+        do_sample: true,
+        temperature: 0.7,
+        return_full_text: false,
+      },
+      model.id,
+      (progress: AiGenerationProgress) => {
+        if (progress.status === 'stream') {
+          this.aiPromptAnswer.update(answer => `${answer}${progress.text}`);
+        }
+      },
+    );
+  }
+
+  private buildSummaryMultimodalPromptMessages(messages: AiChatMessage[]): AiMultimodalChatMessage[] {
+    return messages.map(message => ({
+      role: message.role,
+      content: [{ type: 'text', text: message.content }],
+    }));
+  }
+
+  private buildLocalGenerationInput(model: AiPromptModelInfo, messages: AiChatMessage[]): string | AiChatMessage[] {
+    if (model.chatMode === 'messages') {
+      return messages;
+    }
+
+    const transcript = messages
+      .map(message => `${message.role === 'assistant' ? 'Assistant' : message.role === 'system' ? 'System' : 'User'}: ${message.content}`)
+      .join('\n\n');
+
+    return `${transcript}\n\nAssistant:`;
+  }
+
+  private extractLocalAiText(result: unknown): string {
+    if (Array.isArray(result) && result.length > 0) {
+      const firstResult = result[0] as { generated_text?: unknown };
+      if (typeof firstResult.generated_text === 'string') {
+        return firstResult.generated_text;
+      }
+
+      if (Array.isArray(firstResult.generated_text)) {
+        const lastMessage = firstResult.generated_text.at(-1) as { content?: unknown } | undefined;
+        if (typeof lastMessage?.content === 'string') {
+          return lastMessage.content;
+        }
+      }
+    }
+
+    if (typeof result === 'string') {
+      return result;
+    }
+
+    return JSON.stringify(result, null, 2);
   }
 
   async refresh(): Promise<void> {
