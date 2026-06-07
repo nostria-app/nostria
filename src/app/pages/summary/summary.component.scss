@@ -381,6 +381,71 @@
   line-height: 1.5;
 }
 
+.summary-ai-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface);
+}
+
+.summary-ai-progress-head,
+.summary-ai-progress-detail,
+.summary-ai-progress-meta {
+  display: flex;
+  align-items: center;
+}
+
+.summary-ai-progress-head {
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--mat-sys-on-surface);
+  font-size: 0.875rem;
+}
+
+.summary-ai-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-surface-container-high);
+}
+
+.summary-ai-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mat-sys-primary);
+  transition: width 0.2s ease;
+}
+
+.summary-ai-progress-detail {
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8rem;
+
+  mat-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--mat-sys-primary);
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.summary-ai-progress-meta {
+  justify-content: flex-end;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
 .summary-ai-loading,
 .summary-ai-error {
   gap: 0.5rem;

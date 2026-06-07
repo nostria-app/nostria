@@ -85,6 +85,29 @@ interface TimelineEvent {
   tags?: string[][]; // For article d-tag
 }
 
+type SummaryAiAgentStatus = 'queued' | 'running' | 'done' | 'error';
+
+interface SummaryAiAgentState {
+  id: string;
+  label: string;
+  detail: string;
+  status: SummaryAiAgentStatus;
+  eventCount?: number;
+  outputChars?: number;
+}
+
+interface SummaryPromptEventBatch {
+  index: number;
+  total: number;
+  events: TimelineEvent[];
+}
+
+interface SummaryPromptPartial {
+  label: string;
+  content: string;
+  eventCount: number;
+}
+
 interface MediaPreviewSource {
   previewUrl: string | null;
   mediaUrl: string | null;
@@ -219,6 +242,7 @@ const TIMELINE_PAGE_SIZE = 20; // Events per page
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 const SUMMARY_AI_CLOUD_CONTEXT_CHAR_LIMIT = 16000;
 const SUMMARY_AI_LOCAL_CONTEXT_CHAR_LIMIT = 4000;
+const SUMMARY_AI_REDUCE_CONTEXT_RATIO = 0.85;
 
 @Component({
   selector: 'app-summary',
@@ -326,6 +350,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   aiPromptAnswer = signal('');
   aiPromptError = signal('');
   aiPromptProviderLabel = signal('');
+  aiPromptAgents = signal<SummaryAiAgentState[]>([]);
 
   // Captured "last visit" timestamp - frozen at component init, doesn't update during session
   private frozenLastVisitTimestamp = 0;
@@ -682,6 +707,35 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Total timeline events count
   totalTimelineCount = computed(() => this.allTimelineEvents().length);
   aiPromptEventCount = computed(() => this.getSummaryPromptEvents().length);
+  aiPromptAgentProgress = computed(() => {
+    const agents = this.aiPromptAgents();
+    const total = agents.length;
+    const done = agents.filter(agent => agent.status === 'done').length;
+    const error = agents.some(agent => agent.status === 'error');
+    const active = agents.find(agent => agent.status === 'running')
+      ?? agents.find(agent => agent.status === 'error')
+      ?? [...agents].reverse().find(agent => agent.status === 'done')
+      ?? agents[0]
+      ?? null;
+    const analysisAgents = agents.filter(agent => agent.id.startsWith('analyze-'));
+    const analyzedEvents = analysisAgents
+      .filter(agent => agent.status === 'done')
+      .reduce((sum, agent) => sum + (agent.eventCount ?? 0), 0);
+    const totalEvents = analysisAgents.reduce((sum, agent) => sum + (agent.eventCount ?? 0), 0);
+    const stage = active?.id.startsWith('reduce-')
+      ? active.label === 'Final agent' ? 'Finalizing' : 'Reducing'
+      : this.aiPromptRunning() ? 'Analyzing' : error ? 'Stopped' : 'Complete';
+
+    return {
+      active,
+      done,
+      total,
+      analyzedEvents,
+      totalEvents,
+      stage,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+    };
+  });
   showAiPromptPanel = computed(() => this.aiPromptRunning() || !!this.aiPromptAnswer() || !!this.aiPromptError());
 
   // Expanded panel state
@@ -1543,6 +1597,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.aiPromptAnswer.set('');
     this.aiPromptError.set('');
     this.aiPromptProviderLabel.set('');
+    this.aiPromptAgents.set([]);
   }
 
   private async runSummaryPrompt(prompt: string): Promise<void> {
@@ -1565,6 +1620,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.aiPromptAnswer.set('');
     this.aiPromptError.set('');
     this.aiPromptProviderLabel.set('');
+    this.aiPromptAgents.set([]);
 
     let model: AiPromptModelInfo | null = null;
 
@@ -1579,29 +1635,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
         throw new Error(model.chatDisabledReason);
       }
 
-      const messages = this.buildSummaryPromptMessages(trimmedPrompt, events, model);
-      let answer: string;
       this.aiPromptProviderLabel.set(model.name);
 
-      if (model.source === 'cloud' && model.provider) {
-        answer = await this.aiService.generateCloudText(
-          messages,
-          model.provider,
-          model.cloudModel,
-          model.cloudAccessMode,
-        );
-      } else if (model.task === 'image-text-to-text') {
+      if (model.source !== 'cloud') {
         await this.ensureLocalPromptModelReady(model);
-        answer = await this.aiService.generateMultimodalText(
-          this.buildSummaryMultimodalPromptMessages(messages),
-          model.preferredParams,
-          model.id,
-        );
-      } else {
-        await this.ensureLocalPromptModelReady(model);
-        answer = this.extractLocalAiText(await this.generateLocalSummaryPrompt(model, messages));
       }
 
+      const answer = await this.runSummaryPromptAgents(trimmedPrompt, events, model);
       this.aiPromptAnswer.set(answer.trim() || 'The model returned an empty answer.');
     } catch (error) {
       this.logger.warn('[Summary] AI prompt failed:', error);
@@ -1614,6 +1654,118 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private getSummaryPromptEvents(): TimelineEvent[] {
     return this.allTimelineEvents();
+  }
+
+  private async runSummaryPromptAgents(
+    prompt: string,
+    events: TimelineEvent[],
+    model: AiPromptModelInfo,
+  ): Promise<string> {
+    const eventBatches = this.buildSummaryPromptEventBatches(events, model);
+    this.initializeSummaryAiAgents(eventBatches);
+
+    const partials: SummaryPromptPartial[] = [];
+    for (const batch of eventBatches) {
+      const agentId = `analyze-${batch.index}`;
+      this.updateSummaryAiAgent(agentId, {
+        status: 'running',
+        detail: `Reading ${batch.events.length} events`,
+      });
+
+      try {
+        const content = await this.generateSummaryAiAnswer(
+          model,
+          this.buildSummaryPromptBatchMessages(prompt, batch, events.length),
+        );
+        partials.push({
+          label: `Agent ${batch.index}`,
+          content,
+          eventCount: batch.events.length,
+        });
+        this.updateSummaryAiAgent(agentId, {
+          status: 'done',
+          detail: `Analyzed ${batch.events.length} events`,
+          outputChars: content.length,
+        });
+      } catch (error) {
+        this.updateSummaryAiAgent(agentId, { status: 'error', detail: 'Agent failed' });
+        throw error;
+      }
+    }
+
+    if (partials.length === 1) {
+      return partials[0].content;
+    }
+
+    return this.reduceSummaryPromptPartials(prompt, partials, model, events.length);
+  }
+
+  private initializeSummaryAiAgents(batches: SummaryPromptEventBatch[]): void {
+    this.aiPromptAgents.set(batches.map(batch => ({
+      id: `analyze-${batch.index}`,
+      label: `Agent ${batch.index}`,
+      detail: `Queued ${batch.events.length} events`,
+      status: 'queued',
+      eventCount: batch.events.length,
+    })));
+  }
+
+  private async reduceSummaryPromptPartials(
+    prompt: string,
+    partials: SummaryPromptPartial[],
+    model: AiPromptModelInfo,
+    totalEvents: number,
+  ): Promise<string> {
+    let current = partials;
+    let round = 1;
+
+    while (true) {
+      const groups = this.buildSummaryPromptPartialBatches(current, model);
+      const isFinalRound = groups.length === 1;
+      const next: SummaryPromptPartial[] = [];
+
+      for (const [groupIndex, group] of groups.entries()) {
+        const agentId = `reduce-${round}-${groupIndex + 1}`;
+        const label = isFinalRound ? 'Final agent' : `Reducer ${round}.${groupIndex + 1}`;
+        this.addSummaryAiAgent({
+          id: agentId,
+          label,
+          detail: `Queued ${group.length} summaries`,
+          status: 'queued',
+        });
+        this.updateSummaryAiAgent(agentId, {
+          status: 'running',
+          detail: `Combining ${group.length} summaries`,
+        });
+
+        try {
+          const content = await this.generateSummaryAiAnswer(
+            model,
+            this.buildSummaryPromptReduceMessages(prompt, group, model, totalEvents, isFinalRound),
+          );
+          this.updateSummaryAiAgent(agentId, {
+            status: 'done',
+            detail: isFinalRound ? 'Produced final answer' : `Condensed ${group.length} summaries`,
+            outputChars: content.length,
+          });
+          next.push({
+            label,
+            content,
+            eventCount: group.reduce((sum, partial) => sum + partial.eventCount, 0),
+          });
+        } catch (error) {
+          this.updateSummaryAiAgent(agentId, { status: 'error', detail: 'Reducer failed' });
+          throw error;
+        }
+      }
+
+      if (isFinalRound) {
+        return next[0]?.content ?? '';
+      }
+
+      current = next;
+      round++;
+    }
   }
 
   private buildSummaryPromptMessages(prompt: string, events: TimelineEvent[], model: AiPromptModelInfo): AiChatMessage[] {
@@ -1635,6 +1787,184 @@ export class SummaryComponent implements OnInit, OnDestroy {
         content: `${prompt}\n\nCurrent summary data:\n${context}`,
       },
     ];
+  }
+
+  private buildSummaryPromptBatchMessages(prompt: string, batch: SummaryPromptEventBatch, totalEvents: number): AiChatMessage[] {
+    const context = this.buildSummaryPromptContext(batch.events, Number.MAX_SAFE_INTEGER, {
+      filteredEventCount: totalEvents,
+      headerLines: [
+        `Batch: ${batch.index} of ${batch.total}`,
+        `Batch events: ${batch.events.length}`,
+        `Total filtered events: ${totalEvents}`,
+      ],
+    });
+
+    return [
+      {
+        role: 'system',
+        content: [
+          'You are one analysis agent in a staged Nostria Summary prompt workflow.',
+          'Use only this batch of supplied Nostr events.',
+          'Answer the user request for this batch only, but do not mention batches, agents, partial results, or workflow mechanics.',
+          'When asked to summarize the summary, summarize the actual event content: topics, notable posts, repeated themes, media/articles/live/calendar/music items, and important context.',
+          'If the request asks to find matching notes, include event id, kind label, time, and a short excerpt for each match.',
+          'If this batch has no relevant matches or evidence, say only that no relevant items were found in this slice.',
+          'Never claim that the full data set has no other events; you only see one slice.',
+          'Keep the result compact and content-focused because another step will combine results later.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: `User request:\n${prompt}\n\nBatch data:\n${context}`,
+      },
+    ];
+  }
+
+  private buildSummaryPromptReduceMessages(
+    prompt: string,
+    partials: SummaryPromptPartial[],
+    model: AiPromptModelInfo,
+    totalEvents: number,
+    finalRound: boolean,
+  ): AiChatMessage[] {
+    const partialContext = this.buildSummaryPromptPartialContext(partials, model);
+
+    return [
+      {
+        role: 'system',
+        content: [
+          finalRound
+            ? 'You are the final reducer agent for a staged Nostria Summary prompt workflow.'
+            : 'You are a reducer agent for a staged Nostria Summary prompt workflow.',
+          'Use only the supplied partial agent results.',
+          'Answer the user directly. Do not mention reducers, agents, batches, slices, partial results, or the workflow unless the user explicitly asks about processing.',
+          'Merge duplicate findings, preserve event ids for matching notes, and do not invent events.',
+          'Ignore "no relevant items" notes when other partial results contain relevant content.',
+          'Do not say there were fewer available events than the total unless the user asked about processing coverage.',
+          'When summarizing, synthesize the actual Nostr event content into themes and notable details.',
+          finalRound ? 'Produce the final concise answer to the user.' : 'Condense these results into content-focused findings for a later final answer.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: [
+          `User request:\n${prompt}`,
+          `Total filtered events: ${totalEvents}`,
+          `Partial agent results: ${partials.length}`,
+          '',
+          partialContext,
+        ].join('\n'),
+      },
+    ];
+  }
+
+  private buildSummaryPromptEventBatches(events: TimelineEvent[], model: AiPromptModelInfo): SummaryPromptEventBatch[] {
+    const charLimit = this.getSummaryAiContextCharLimit(model);
+    const summary = this.activitySummary();
+    const headerLength = [
+      `Time range: ${this.timeSinceLastCheck()}`,
+      `List filter: ${this.currentListFilterLabel()}`,
+      `Content filter: ${this.hasActiveContentFilter() ? 'custom' : 'default'}`,
+      `Counts: notes=${summary.notesCount}, reposts=${summary.repostsCount}, articles=${summary.articlesCount}, audio=${summary.audioCount}, media=${summary.mediaCount}, communities=${summary.communitiesCount}, chats=${summary.chatsCount}, liveEvents=${summary.liveEventsCount}, calendar=${summary.calendarCount}, music=${summary.musicCount}, profileUpdates=${summary.profileUpdatesCount}`,
+      `Filtered events available: ${events.length}`,
+      'Events:',
+    ].join('\n').length;
+    const batchCharLimit = Math.max(1200, charLimit - headerLength - 600);
+    const batches: TimelineEvent[][] = [];
+    let currentBatch: TimelineEvent[] = [];
+    let currentChars = 0;
+
+    for (const event of events) {
+      const lineLength = this.formatEventForAiContext(event).length + 1;
+      if (currentBatch.length > 0 && currentChars + lineLength > batchCharLimit) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentChars = 0;
+      }
+
+      currentBatch.push(event);
+      currentChars += lineLength;
+    }
+
+    if (currentBatch.length > 0) {
+      batches.push(currentBatch);
+    }
+
+    const total = Math.max(1, batches.length);
+    return batches.map((batchEvents, index) => ({
+      index: index + 1,
+      total,
+      events: batchEvents,
+    }));
+  }
+
+  private buildSummaryPromptPartialBatches(
+    partials: SummaryPromptPartial[],
+    model: AiPromptModelInfo,
+  ): SummaryPromptPartial[][] {
+    const charLimit = Math.max(1600, Math.floor(this.getSummaryAiContextCharLimit(model) * SUMMARY_AI_REDUCE_CONTEXT_RATIO));
+    const groups: SummaryPromptPartial[][] = [];
+    let currentGroup: SummaryPromptPartial[] = [];
+    let currentChars = 0;
+
+    for (const partial of partials) {
+      const partialLength = this.formatSummaryPromptPartial(partial).length + 1;
+      if (currentGroup.length > 0 && currentChars + partialLength > charLimit) {
+        groups.push(currentGroup);
+        currentGroup = [];
+        currentChars = 0;
+      }
+
+      currentGroup.push(partial);
+      currentChars += partialLength;
+    }
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  }
+
+  private buildSummaryPromptPartialContext(
+    partials: SummaryPromptPartial[],
+    model: AiPromptModelInfo,
+  ): string {
+    const charLimit = Math.max(1600, Math.floor(this.getSummaryAiContextCharLimit(model) * SUMMARY_AI_REDUCE_CONTEXT_RATIO));
+    const lines: string[] = [];
+    let usedChars = 0;
+
+    for (const partial of partials) {
+      const text = this.formatSummaryPromptPartial(partial);
+      if (usedChars + text.length + 1 > charLimit) {
+        if (lines.length === 0) {
+          lines.push(this.compactAiText(text, Math.max(400, charLimit - 80)));
+        }
+        lines.push(`[Partial results truncated after ${lines.length} summaries of ${partials.length}.]`);
+        break;
+      }
+
+      lines.push(text);
+      usedChars += text.length + 1;
+    }
+
+    return lines.join('\n\n');
+  }
+
+  private formatSummaryPromptPartial(partial: SummaryPromptPartial): string {
+    return [
+      `## ${partial.label}`,
+      `Events represented: ${partial.eventCount}`,
+      partial.content.trim(),
+    ].join('\n');
+  }
+
+  private addSummaryAiAgent(agent: SummaryAiAgentState): void {
+    this.aiPromptAgents.update(agents => [...agents, agent]);
+  }
+
+  private updateSummaryAiAgent(id: string, updates: Partial<SummaryAiAgentState>): void {
+    this.aiPromptAgents.update(agents => agents.map(agent => agent.id === id ? { ...agent, ...updates } : agent));
   }
 
   private getSummaryAiContextCharLimit(model: AiPromptModelInfo): number {
@@ -1672,14 +2002,19 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return /WebGPU|CreateCommittedResource|CopyKVCache|OrtRun|out of memory|bad_alloc|Can't create a session/i.test(message);
   }
 
-  private buildSummaryPromptContext(events: TimelineEvent[], charLimit: number): string {
+  private buildSummaryPromptContext(
+    events: TimelineEvent[],
+    charLimit: number,
+    options: { filteredEventCount?: number; headerLines?: string[] } = {},
+  ): string {
     const summary = this.activitySummary();
     const header = [
       `Time range: ${this.timeSinceLastCheck()}`,
       `List filter: ${this.currentListFilterLabel()}`,
       `Content filter: ${this.hasActiveContentFilter() ? 'custom' : 'default'}`,
       `Counts: notes=${summary.notesCount}, reposts=${summary.repostsCount}, articles=${summary.articlesCount}, audio=${summary.audioCount}, media=${summary.mediaCount}, communities=${summary.communitiesCount}, chats=${summary.chatsCount}, liveEvents=${summary.liveEventsCount}, calendar=${summary.calendarCount}, music=${summary.musicCount}, profileUpdates=${summary.profileUpdatesCount}`,
-      `Filtered events available: ${events.length}`,
+      `Filtered events available: ${options.filteredEventCount ?? events.length}`,
+      ...(options.headerLines ?? []),
       '',
       'Events:',
     ];
@@ -1760,6 +2095,27 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return compact.length > maxLength ? `${compact.slice(0, maxLength - 3).trimEnd()}...` : compact;
   }
 
+  private async generateSummaryAiAnswer(model: AiPromptModelInfo, messages: AiChatMessage[]): Promise<string> {
+    if (model.source === 'cloud' && model.provider) {
+      return this.aiService.generateCloudText(
+        messages,
+        model.provider,
+        model.cloudModel,
+        model.cloudAccessMode,
+      );
+    }
+
+    if (model.task === 'image-text-to-text') {
+      return this.aiService.generateMultimodalText(
+        this.buildSummaryMultimodalPromptMessages(messages),
+        model.preferredParams,
+        model.id,
+      );
+    }
+
+    return this.extractLocalAiText(await this.generateLocalSummaryPrompt(model, messages));
+  }
+
   private async ensureLocalPromptModelReady(model: AiPromptModelInfo): Promise<void> {
     await this.aiPromptModels.unloadOtherLocalModels(model.id);
 
@@ -1812,7 +2168,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
       : null;
   }
 
-  private async generateLocalSummaryPrompt(model: AiPromptModelInfo, messages: AiChatMessage[]): Promise<unknown> {
+  private async generateLocalSummaryPrompt(
+    model: AiPromptModelInfo,
+    messages: AiChatMessage[],
+    streamToAnswer = false,
+  ): Promise<unknown> {
     return this.aiService.generateText(
       this.buildLocalGenerationInput(model, messages),
       model.preferredParams ?? {
@@ -1823,7 +2183,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       },
       model.id,
       (progress: AiGenerationProgress) => {
-        if (progress.status === 'stream') {
+        if (streamToAnswer && progress.status === 'stream') {
           this.aiPromptAnswer.update(answer => `${answer}${progress.text}`);
         }
       },

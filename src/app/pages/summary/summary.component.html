@@ -193,9 +193,40 @@
     @if (aiPromptRunning()) {
     <div class="summary-ai-loading">
       <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
-      <span>Running prompt...</span>
+      <span>Running staged prompt...</span>
     </div>
-    } @else if (aiPromptError()) {
+    }
+
+    @if (aiPromptAgents().length > 0) {
+    <div class="summary-ai-progress" aria-label="AI prompt progress">
+      <div class="summary-ai-progress-head">
+        <span>{{ aiPromptAgentProgress().stage }}</span>
+        <span>{{ aiPromptAgentProgress().done }} / {{ aiPromptAgentProgress().total }} steps</span>
+      </div>
+      <div class="summary-ai-progress-track" aria-hidden="true">
+        <div class="summary-ai-progress-fill" [style.width.%]="aiPromptAgentProgress().percent"></div>
+      </div>
+      @if (aiPromptAgentProgress().active; as activeAgent) {
+      <div class="summary-ai-progress-detail">
+        @if (activeAgent.status === 'running') {
+        <mat-spinner diameter="16" strokeWidth="3"></mat-spinner>
+        } @else if (activeAgent.status === 'error') {
+        <mat-icon>error</mat-icon>
+        } @else {
+        <mat-icon>check_circle</mat-icon>
+        }
+        <span>{{ activeAgent.label }}: {{ activeAgent.detail }}</span>
+      </div>
+      }
+      @if (aiPromptAgentProgress().totalEvents > 0) {
+      <div class="summary-ai-progress-meta">
+        <span>{{ aiPromptAgentProgress().analyzedEvents }} / {{ aiPromptAgentProgress().totalEvents }} events analyzed</span>
+      </div>
+      }
+    </div>
+    }
+
+    @if (aiPromptError()) {
     <div class="summary-ai-error">
       <mat-icon>error</mat-icon>
       <span>{{ aiPromptError() }}</span>
