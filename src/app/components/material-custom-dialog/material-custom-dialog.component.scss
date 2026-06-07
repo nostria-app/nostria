@@ -278,6 +278,10 @@
   --material-custom-dialog-width: min(680px, 95vw);
   --material-custom-dialog-min-height: 0;
   --material-custom-dialog-max-height: calc(100dvh - var(--safe-area-top, 0px) - 32px);
+  --note-editor-dialog-visual-height: 100dvh;
+  --note-editor-dialog-visual-width: 100vw;
+  --note-editor-dialog-offset-top: 0px;
+  --note-editor-dialog-offset-left: 0px;
 
   app-material-custom-dialog.note-editor-shell {
     display: flex;
@@ -561,6 +565,8 @@
   }
 
   .material-custom-dialog-panel.note-editor-dialog-panel {
+    --material-custom-dialog-max-height: calc(var(--note-editor-dialog-visual-height, 100dvh) - var(--safe-area-top, 0px));
+
     app-material-custom-dialog.note-editor-shell .dialog-content {
       padding: 0 10px;
     }
@@ -570,6 +576,28 @@
     }
 
     app-material-custom-dialog.note-editor-shell .dialog-content>.note-editor-dialog {
+      height: 100%;
+      max-height: 100%;
+    }
+  }
+
+  .material-custom-dialog-panel.note-editor-dialog-panel.cdk-overlay-pane {
+    width: var(--note-editor-dialog-visual-width, 100vw) !important;
+    max-width: var(--note-editor-dialog-visual-width, 100vw) !important;
+    height: calc(var(--note-editor-dialog-visual-height, 100dvh) - var(--safe-area-top, 0px)) !important;
+    max-height: calc(var(--note-editor-dialog-visual-height, 100dvh) - var(--safe-area-top, 0px)) !important;
+    transform: translate3d(
+      var(--note-editor-dialog-offset-left, 0px),
+      var(--note-editor-dialog-offset-top, 0px),
+      0
+    );
+
+    .mat-mdc-dialog-container {
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+
+    .mat-mdc-dialog-surface {
       height: 100%;
       max-height: 100%;
     }

@@ -308,8 +308,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private readonly VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   private readonly handleViewportResize = (): void => {
     const textarea = this.contentTextarea?.nativeElement;
-    const isFocusedCompactTextarea = this.platformService.isIOS()
-      && this.isCompactDialogLayout()
+    this.syncDialogViewportMetrics();
+
+    const isFocusedCompactTextarea = this.isCompactDialogLayout()
       && !!textarea
       && typeof document !== 'undefined'
       && document.activeElement === textarea;
@@ -1310,9 +1311,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isDragOver.set(false);
 
     this.setupContentEditorBridge();
+    this.syncDialogViewportMetrics();
+    this.updateKeyboardCompactMode();
 
     window.addEventListener('resize', this.handleViewportResize);
     window.visualViewport?.addEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.addEventListener('scroll', this.handleViewportResize);
 
     // Auto-focus the textarea (only in dialog mode)
     if (!this.inlineMode()) {
@@ -1397,6 +1401,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.removeEventListener('scroll', this.handleViewportResize);
+    this.clearDialogViewportMetrics();
 
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
@@ -2930,7 +2936,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   onContentFocus(): void {
     this.isContentFocused.set(true);
-    if (this.platformService.isIOS() && this.isCompactDialogLayout()) {
+    this.syncDialogViewportMetrics();
+
+    if (this.isCompactDialogLayout()) {
       if (this.viewportResizeTimeout !== null) {
         clearTimeout(this.viewportResizeTimeout);
       }
@@ -3024,8 +3032,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.refreshViewportHeightBaseline(viewportHeight, hasTextareaFocus);
 
     const obscuredHeight = Math.max(0, this.viewportHeightBaseline - viewportHeight);
-    const shouldUseCompactMode = this.platformService.isIOS()
-      && this.isCompactDialogLayout()
+    const shouldUseCompactMode = this.isCompactDialogLayout()
       && hasTextareaFocus
       && obscuredHeight > 120;
 
@@ -3050,6 +3057,44 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     this.isKeyboardCompactMode.set(enabled);
+  }
+
+  private syncDialogViewportMetrics(): void {
+    if (typeof window === 'undefined' || this.inlineMode()) {
+      return;
+    }
+
+    const pane = this.getDialogOverlayPane();
+    if (!pane) {
+      return;
+    }
+
+    const visualViewport = window.visualViewport;
+    const visualHeight = Math.max(240, Math.floor(visualViewport?.height ?? window.innerHeight));
+    const visualWidth = Math.max(320, Math.floor(visualViewport?.width ?? window.innerWidth));
+    const offsetTop = Math.max(0, Math.floor(visualViewport?.offsetTop ?? 0));
+    const offsetLeft = Math.max(0, Math.floor(visualViewport?.offsetLeft ?? 0));
+
+    pane.style.setProperty('--note-editor-dialog-visual-height', `${visualHeight}px`);
+    pane.style.setProperty('--note-editor-dialog-visual-width', `${visualWidth}px`);
+    pane.style.setProperty('--note-editor-dialog-offset-top', `${offsetTop}px`);
+    pane.style.setProperty('--note-editor-dialog-offset-left', `${offsetLeft}px`);
+  }
+
+  private clearDialogViewportMetrics(): void {
+    const pane = this.getDialogOverlayPane();
+    if (!pane) {
+      return;
+    }
+
+    pane.style.removeProperty('--note-editor-dialog-visual-height');
+    pane.style.removeProperty('--note-editor-dialog-visual-width');
+    pane.style.removeProperty('--note-editor-dialog-offset-top');
+    pane.style.removeProperty('--note-editor-dialog-offset-left');
+  }
+
+  private getDialogOverlayPane(): HTMLElement | null {
+    return this.elementRef.nativeElement.closest('.note-editor-dialog-panel') as HTMLElement | null;
   }
 
   private setupContentEditorBridge(): void {
@@ -4059,7 +4104,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onContentClick(event: MouseEvent): void {
     const target = event.target as EditableContentElement;
     this.syncSlashAndMentionStateFromSelection(target);
-    if (this.platformService.isIOS() && this.isCompactDialogLayout()) {
+    if (this.isCompactDialogLayout()) {
       this.scheduleCaretVisibilityCheck(target);
     }
   }
@@ -4067,7 +4112,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onContentSelectionChange(event: Event): void {
     const target = event.target as EditableContentElement;
     this.syncSlashAndMentionStateFromSelection(target);
-    if (this.platformService.isIOS() && this.isCompactDialogLayout()) {
+    if (this.isCompactDialogLayout()) {
       this.scheduleCaretVisibilityCheck(target);
     }
   }
