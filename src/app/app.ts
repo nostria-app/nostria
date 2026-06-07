@@ -458,11 +458,16 @@ export class App implements OnInit, OnDestroy {
 
   // Computed signal to count unread content notifications only (excludes technical/system notifications)
   unreadNotificationsCount = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    const clearedAt = pubkey ? this.accountLocalState.getNotificationClearedAt(pubkey) : 0;
+
     return this.notificationService
       .notifications()
       .filter(
         notification =>
-          !notification.read && this.contentNotificationTypes.includes(notification.type)
+          !notification.read &&
+          this.contentNotificationTypes.includes(notification.type) &&
+          (clearedAt <= 0 || Math.floor(notification.timestamp / 1000) > clearedAt)
       ).length;
   });
 

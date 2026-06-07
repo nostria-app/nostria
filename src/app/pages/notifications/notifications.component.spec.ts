@@ -42,6 +42,19 @@ describe('NotificationsComponent', () => {
   let mockAccountRelay: {
     publishToRelay: Mock;
   };
+  let mockContentNotificationService: {
+    refreshRecentNotifications: Mock;
+    checkForOlderNotifications: Mock;
+    isCheckingNotifications: ReturnType<typeof signal<boolean>>;
+    stopPolling: Mock;
+    startPolling: Mock;
+    markNotificationsCleared: Mock;
+    markNotificationsReadWatermark: Mock;
+  };
+  let mockAccountLocalState: {
+    setNotificationLastCheck: Mock;
+    getNotificationClearedAt: Mock;
+  };
 
   TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
@@ -76,20 +89,23 @@ describe('NotificationsComponent', () => {
       getItem: vi.fn().mockReturnValue(null),
       setItem: vi.fn(),
     };
-    const mockContentNotificationService = {
+    mockContentNotificationService = {
       refreshRecentNotifications: vi.fn().mockReturnValue(Promise.resolve()),
       checkForOlderNotifications: vi.fn().mockReturnValue(Promise.resolve()),
       isCheckingNotifications: signal(false),
       stopPolling: vi.fn(),
       startPolling: vi.fn(),
+      markNotificationsCleared: vi.fn(),
+      markNotificationsReadWatermark: vi.fn(),
     };
     const mockAccountState = {
       pubkey: signal('test-pubkey'),
       mutedAccounts: signal<string[]>([]),
       followingList: signal<string[]>([]),
     };
-    const mockAccountLocalState = {
+    mockAccountLocalState = {
       setNotificationLastCheck: vi.fn(),
+      getNotificationClearedAt: vi.fn().mockReturnValue(0),
     };
     const mockDataService = {
       batchLoadProfiles: vi.fn().mockReturnValue(Promise.resolve(new Map())),
@@ -254,6 +270,70 @@ describe('NotificationsComponent', () => {
       component.markAllAsRead();
 
       expect(mockNotificationService.markAsRead).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('markAsRead', () => {
+    it('should set the notification read watermark when an unread content notification is read', () => {
+      mockAccountLocalState.getNotificationClearedAt.mockReturnValue(1700001000);
+      mockNotificationService.notifications.set([
+        createMockNotification({ id: 'n1', type: NotificationType.MENTION, read: false }),
+      ]);
+
+      component.markAsRead('n1');
+
+      expect(mockContentNotificationService.markNotificationsReadWatermark).toHaveBeenCalled();
+      expect(component.clearedAtTimestamp()).toBe(1700001000);
+      expect(mockNotificationService.markAsRead).toHaveBeenCalledWith('n1');
+    });
+
+    it('should not set the read watermark for an already read notification', () => {
+      mockNotificationService.notifications.set([
+        createMockNotification({ id: 'n1', type: NotificationType.MENTION, read: true }),
+      ]);
+
+      component.markAsRead('n1');
+
+      expect(mockContentNotificationService.markNotificationsReadWatermark).not.toHaveBeenCalled();
+      expect(mockNotificationService.markAsRead).toHaveBeenCalledWith('n1');
+    });
+
+    it('should not move an existing read watermark when another notification is read', () => {
+      component.clearedAtTimestamp.set(1700001000);
+      mockNotificationService.notifications.set([
+        createMockNotification({ id: 'n1', type: NotificationType.MENTION, read: false }),
+      ]);
+
+      component.markAsRead('n1');
+
+      expect(mockContentNotificationService.markNotificationsReadWatermark).not.toHaveBeenCalled();
+      expect(mockNotificationService.markAsRead).toHaveBeenCalledWith('n1');
+    });
+  });
+
+  describe('newNotificationCount', () => {
+    it('should only count unread notifications newer than the read watermark', () => {
+      const watermark = 1700001000;
+      component.clearedAtTimestamp.set(watermark);
+      mockNotificationService.notifications.set([
+        createMockNotification({
+          id: 'old-unread',
+          read: false,
+          timestamp: (watermark - 60) * 1000,
+        }),
+        createMockNotification({
+          id: 'new-unread',
+          read: false,
+          timestamp: (watermark + 60) * 1000,
+        }),
+        createMockNotification({
+          id: 'new-read',
+          read: true,
+          timestamp: (watermark + 120) * 1000,
+        }),
+      ]);
+
+      expect(component.newNotificationCount()).toBe(1);
     });
   });
 

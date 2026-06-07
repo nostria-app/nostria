@@ -86,13 +86,11 @@ export class ContentNotificationService implements OnDestroy {
   }
 
   /**
-   * Mark all notifications as cleared by the user.
-   * Sets the last-check cursor and a hard clear floor to "now" so that a
-   * subsequent refresh only surfaces notifications that arrive after the clear.
-   * To see older notifications again the user must reset notifications from
-   * settings, which calls resetLastCheckTimestamp() and removes this floor.
+   * Record the moment the user started handling notifications.
+   * The unread counter only represents content newer than this watermark;
+   * older historical notifications discovered later are kept visible but read.
    */
-  markNotificationsCleared(): void {
+  markNotificationsReadWatermark(): void {
     const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
     this._lastCheckTimestamp.set(now);
     const pubkey = this.accountState.pubkey();
@@ -100,6 +98,18 @@ export class ContentNotificationService implements OnDestroy {
       this.accountLocalState.setNotificationLastCheck(pubkey, now);
       this.accountLocalState.setNotificationClearedAt(pubkey, now);
     }
+    this.logger.info('ContentNotificationService notification read watermark set to now');
+  }
+
+  /**
+   * Mark all notifications as cleared by the user.
+   * Sets the last-check cursor and a hard clear floor to "now" so that a
+   * subsequent refresh only surfaces notifications that arrive after the clear.
+   * To see older notifications again the user must reset notifications from
+   * settings, which calls resetLastCheckTimestamp() and removes this floor.
+   */
+  markNotificationsCleared(): void {
+    this.markNotificationsReadWatermark();
     this.logger.info('ContentNotificationService notifications cleared; check timestamp set to now');
   }
 
@@ -1242,7 +1252,7 @@ export class ContentNotificationService implements OnDestroy {
       title: data.title,
       message: data.message,
       timestamp: data.timestamp,
-      read: false,
+      read: this.shouldCreateNotificationAsRead(data.recipientPubkey, data.timestamp),
       recipientPubkey: data.recipientPubkey, // Store which account received this notification
       authorPubkey: data.authorPubkey,
       eventId: data.eventId,
@@ -1267,6 +1277,16 @@ export class ContentNotificationService implements OnDestroy {
     await this.notificationService.persistNotificationToStorage(notification);
 
     this.logger.debug(`Created content notification: ${notification.id}`);
+  }
+
+  private shouldCreateNotificationAsRead(recipientPubkey: string, timestamp: number): boolean {
+    const clearedAt = this.accountLocalState.getNotificationClearedAt(recipientPubkey);
+
+    if (clearedAt <= 0) {
+      return false;
+    }
+
+    return Math.floor(timestamp / 1000) <= clearedAt;
   }
 
   private async getRelayHintsForAuthor(pubkey: string): Promise<string[] | undefined> {

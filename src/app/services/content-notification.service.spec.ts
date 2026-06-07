@@ -1,6 +1,13 @@
+// @vitest-environment jsdom
+import '@angular/compiler';
 import type { Mock, MockedObject } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
 import { ContentNotificationService } from './content-notification.service';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
@@ -9,6 +16,8 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
 import { LocalSettingsService } from './local-settings.service';
+import { UserRelayService } from './relays/user-relay';
+import { UtilitiesService } from './utilities.service';
 import { kinds } from 'nostr-tools';
 
 describe('ContentNotificationService', () => {
@@ -29,11 +38,22 @@ describe('ContentNotificationService', () => {
   let mockLocalSettings: {
     maxTaggedAccountsFilter: ReturnType<typeof signal<number | 'none'>>;
   };
+  let mockUserRelayService: {
+    ensureRelaysForPubkey: Mock;
+    getRelaysForPubkey: Mock;
+  };
+  let mockUtilities: {
+    getShareRelayHints: Mock;
+  };
 
   const TEST_PUBKEY_A = 'aaaa'.repeat(16);
   const TEST_PUBKEY_B = 'bbbb'.repeat(16);
 
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+
   beforeEach(() => {
+    TestBed.resetTestingModule();
+
     mockAccountState = {
       pubkey: signal<string | undefined>(TEST_PUBKEY_A),
       mutedAccounts: signal<string[]>([]),
@@ -42,6 +62,8 @@ describe('ContentNotificationService', () => {
     mockAccountLocalState = {
       getNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.getNotificationLastCheck"),
       setNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.setNotificationLastCheck"),
+      getNotificationClearedAt: vi.fn().mockName("AccountLocalStateService.getNotificationClearedAt"),
+      setNotificationClearedAt: vi.fn().mockName("AccountLocalStateService.setNotificationClearedAt"),
       getFollowerNotificationsProcessedAt: vi.fn().mockName("AccountLocalStateService.getFollowerNotificationsProcessedAt"),
       hasProcessedFollowerNotification: vi.fn().mockName("AccountLocalStateService.hasProcessedFollowerNotification"),
       markFollowerNotificationProcessed: vi.fn().mockName("AccountLocalStateService.markFollowerNotificationProcessed"),
@@ -51,6 +73,7 @@ describe('ContentNotificationService', () => {
       clearFollowerNotificationsProcessed: vi.fn().mockName("AccountLocalStateService.clearFollowerNotificationsProcessed")
     } as unknown as MockedObject<AccountLocalStateService>;
     mockAccountLocalState.getNotificationLastCheck.mockReturnValue(0);
+    mockAccountLocalState.getNotificationClearedAt.mockReturnValue(0);
     mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});
     mockAccountLocalState.getFollowerCheckLastTimestamp.mockReturnValue(1700000000);
     mockAccountLocalState.hasProcessedFollowerNotification.mockReturnValue(false);
@@ -84,6 +107,15 @@ describe('ContentNotificationService', () => {
       maxTaggedAccountsFilter: signal<number | 'none'>('none'),
     };
 
+    mockUserRelayService = {
+      ensureRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
+      getRelaysForPubkey: vi.fn().mockReturnValue([]),
+    };
+
+    mockUtilities = {
+      getShareRelayHints: vi.fn().mockReturnValue([]),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -104,6 +136,8 @@ describe('ContentNotificationService', () => {
         { provide: AccountStateService, useValue: mockAccountState },
         { provide: DatabaseService, useValue: mockDatabase },
         { provide: LocalSettingsService, useValue: mockLocalSettings },
+        { provide: UserRelayService, useValue: mockUserRelayService },
+        { provide: UtilitiesService, useValue: mockUtilities },
       ],
     });
 
@@ -111,7 +145,7 @@ describe('ContentNotificationService', () => {
   });
 
   afterEach(() => {
-    service.ngOnDestroy();
+    service?.ngOnDestroy();
   });
 
   it('should be created', () => {
@@ -172,7 +206,7 @@ describe('ContentNotificationService', () => {
 
   describe('overlap buffer', () => {
     it('should apply overlap buffer when fetching notifications for returning users', async () => {
-      const lastCheckTimestamp = 1700000000;
+      const lastCheckTimestamp = Math.floor(Date.now() / 1000) - (2 * 60 * 60);
       mockAccountLocalState.getNotificationLastCheck.mockReturnValue(lastCheckTimestamp);
 
       await service.initialize();
@@ -234,6 +268,7 @@ describe('ContentNotificationService', () => {
 
       // Start first check (it will hang)
       const firstCheck = service.checkForNewNotifications();
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Second check should be skipped due to isChecking guard
       mockAccountRelay.getMany.mockClear();
@@ -356,7 +391,74 @@ describe('ContentNotificationService', () => {
 
       expect(service.lastCheckTimestamp()).toBe(0);
       expect(mockAccountLocalState.setNotificationLastCheck).toHaveBeenCalledWith(TEST_PUBKEY_A, 0);
+      expect(mockAccountLocalState.setNotificationClearedAt).toHaveBeenCalledWith(TEST_PUBKEY_A, 0);
       expect(mockAccountLocalState.clearFollowerNotificationsProcessed).toHaveBeenCalledWith(TEST_PUBKEY_A);
+    });
+  });
+
+  describe('read watermark', () => {
+    it('should create older loaded notifications as read after notifications were marked read', async () => {
+      const clearedAt = 1700001000;
+      mockAccountLocalState.getNotificationClearedAt.mockReturnValue(clearedAt);
+
+      const oldMentionEvent = {
+        id: 'mention-old',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.ShortTextNote,
+        created_at: clearedAt - 60,
+        content: 'older mention',
+        tags: [['p', TEST_PUBKEY_A]],
+        sig: '',
+      };
+
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
+        if (filter.kinds?.includes(kinds.ShortTextNote)) {
+          return [oldMentionEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      await service.checkForOlderNotifications(clearedAt - 3600, clearedAt - 1);
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalled();
+      const lastCall = vi.mocked(mockNotificationService.addNotification).mock.lastCall;
+      expect(lastCall).toBeDefined();
+      const [notification] = lastCall!;
+      expect((notification as { read: boolean }).read).toBe(true);
+    });
+
+    it('should keep loaded notifications unread when they are newer than the read watermark', async () => {
+      const clearedAt = 1700001000;
+      mockAccountLocalState.getNotificationClearedAt.mockReturnValue(clearedAt);
+
+      const newMentionEvent = {
+        id: 'mention-new',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.ShortTextNote,
+        created_at: clearedAt + 60,
+        content: 'newer mention',
+        tags: [['p', TEST_PUBKEY_A]],
+        sig: '',
+      };
+
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
+        if (filter.kinds?.includes(kinds.ShortTextNote)) {
+          return [newMentionEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      await service.checkForOlderNotifications(clearedAt + 1, clearedAt + 3600);
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalled();
+      const lastCall = vi.mocked(mockNotificationService.addNotification).mock.lastCall;
+      expect(lastCall).toBeDefined();
+      const [notification] = lastCall!;
+      expect((notification as { read: boolean }).read).toBe(false);
     });
   });
 

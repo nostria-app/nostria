@@ -607,7 +607,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Count unread content notifications
   newNotificationCount = computed(() => {
     const contentNotifs = this.contentNotifications();
-    return contentNotifs.filter((n) => !n.read).length;
+    const clearedAt = this.clearedAtTimestamp();
+    return contentNotifs.filter((n) => !n.read && this.isNewerThanReadWatermark(n, clearedAt)).length;
   });
 
   async ngOnInit(): Promise<void> {
@@ -910,6 +911,21 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(id: string): void {
+    const notification = this.notifications().find(n => n.id === id);
+    if (
+      notification &&
+      !notification.read &&
+      this.isContentNotification(notification.type) &&
+      this.clearedAtTimestamp() <= 0
+    ) {
+      this.contentNotificationService.markNotificationsReadWatermark();
+
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.clearedAtTimestamp.set(this.accountLocalState.getNotificationClearedAt(pubkey));
+      }
+    }
+
     this.notificationService.markAsRead(id);
   }
 
@@ -920,11 +936,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Update the notification last check timestamp to now to prevent re-showing read notifications
+    // Treat this as a read watermark so older notifications discovered later
+    // remain historical instead of becoming unread again.
+    this.contentNotificationService.markNotificationsCleared();
+
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
-      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      this.accountLocalState.setNotificationLastCheck(pubkey, now);
+      this.clearedAtTimestamp.set(this.accountLocalState.getNotificationClearedAt(pubkey));
     }
   }
 
@@ -932,6 +950,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     notification: Notification,
   ): notification is RelayPublishingNotification {
     return notification.type === NotificationType.RELAY_PUBLISHING;
+  }
+
+  private isNewerThanReadWatermark(notification: Notification, clearedAt: number): boolean {
+    return clearedAt <= 0 || Math.floor(notification.timestamp / 1000) > clearedAt;
   }
 
   formatTimestamp(timestamp: number): string {
