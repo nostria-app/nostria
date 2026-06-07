@@ -23,7 +23,9 @@
   [style.aspect-ratio]="videoAspectRatio()" (click)="$event.stopPropagation()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
-  <div class="video-thumbnail-container" (click)="expandVideo($any($event))"
+  <div class="video-thumbnail-container" (pointerdown)="onVideoPointerDown($event)"
+    (pointermove)="onVideoPointerMove($event)" (pointerup)="onVideoPointerUp($event)"
+    (pointercancel)="onVideoPointerCancel()" (click)="expandVideo($any($event))"
     [class.thumbnail-loaded]="thumbnailLoaded()">
     <!-- Video icon indicator (shown in grid view) -->
     @if (showOverlay()) {
@@ -85,15 +87,18 @@
       <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [loop]="shouldRepeat()"
         [muted]="shouldBeMuted()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined"
         (play)="onVideoPlay($event)" (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()"
-        (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()" (click)="togglePlayPause()"
-        (dblclick)="onVideoDoubleClick($event)">
+        (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()"
+        (pointerdown)="onVideoPointerDown($event)" (pointermove)="onVideoPointerMove($event)"
+        (pointerup)="onVideoPointerUp($event)" (pointercancel)="onVideoPointerCancel()"
+        (click)="onVideoClick($event)" (dblclick)="onVideoDoubleClick($event)">
         <source [src]="videoInfo.url" [type]="videoMimeType()" />
         Your browser does not support the video tag.
       </video>
       <!-- Center play button positioned relative to actual video -->
       @if (videoPaused() && !hasPlayedOnce()) {
-      <button class="video-center-play-btn" (click)="onCenterPlayButtonClick(); $event.stopPropagation()"
-        aria-label="Play video">
+      <button class="video-center-play-btn" (pointerdown)="onVideoPointerDown($event)"
+        (pointermove)="onVideoPointerMove($event)" (pointerup)="onVideoPointerUp($event)"
+        (pointercancel)="onVideoPointerCancel()" (click)="onCenterPlayButtonClick($event)" aria-label="Play video">
         <mat-icon>play_arrow</mat-icon>
       </button>
       }

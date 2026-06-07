@@ -312,11 +312,75 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return true;
   }
 
+  private readonly actionTapMoveTolerancePx = 10;
+  private actionPointerDownType: string | null = null;
+  private actionPointerDownX = 0;
+  private actionPointerDownY = 0;
+  private actionPointerMovedBeyondTap = false;
+  private suppressNextActionClick = false;
+
+  onActionPointerDown(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') {
+      return;
+    }
+
+    this.actionPointerDownType = event.pointerType;
+    this.actionPointerDownX = event.clientX;
+    this.actionPointerDownY = event.clientY;
+    this.actionPointerMovedBeyondTap = false;
+  }
+
+  onActionPointerMove(event: PointerEvent): void {
+    if (!this.actionPointerDownType || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+      return;
+    }
+
+    const deltaX = event.clientX - this.actionPointerDownX;
+    const deltaY = event.clientY - this.actionPointerDownY;
+    if (Math.hypot(deltaX, deltaY) <= this.actionTapMoveTolerancePx) {
+      return;
+    }
+
+    this.actionPointerMovedBeyondTap = true;
+    this.suppressNextActionClick = true;
+  }
+
+  onActionPointerUp(event: PointerEvent): void {
+    if (this.actionPointerMovedBeyondTap) {
+      event.stopPropagation();
+      this.suppressNextActionClick = true;
+    }
+
+    this.actionPointerDownType = null;
+    this.actionPointerMovedBeyondTap = false;
+  }
+
+  onActionPointerCancel(): void {
+    this.actionPointerDownType = null;
+    this.actionPointerMovedBeyondTap = false;
+    this.suppressNextActionClick = true;
+  }
+
+  private consumeSuppressedActionClick(event: MouseEvent): boolean {
+    if (!this.suppressNextActionClick) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.suppressNextActionClick = false;
+    return true;
+  }
+
   onBlockedThreadInteraction(event: globalThis.Event): void {
     this.consumeBlockedThreadInteraction(event);
   }
 
   onLikeActionClick(reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
+    if (this.consumeSuppressedActionClick(event)) {
+      return;
+    }
+
     if (this.consumeBlockedThreadInteraction(event)) {
       return;
     }
@@ -326,6 +390,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   onZapActionClick(zapBtn: ZapButtonComponent, event: MouseEvent): void {
+    if (this.consumeSuppressedActionClick(event)) {
+      return;
+    }
+
     if (this.consumeBlockedThreadInteraction(event)) {
       return;
     }
@@ -3349,6 +3417,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   async openShareDialog(event?: MouseEvent) {
+    if (event && this.consumeSuppressedActionClick(event)) {
+      return;
+    }
+
     if (this.consumeBlockedThreadInteraction(event)) {
       return;
     }
@@ -3432,6 +3504,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Open the note editor dialog to reply to this event
    */
   async openReplyEditor(event: MouseEvent) {
+    if (this.consumeSuppressedActionClick(event)) {
+      return;
+    }
+
     if (this.consumeBlockedThreadInteraction(event)) {
       return;
     }
@@ -3849,6 +3925,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   async onBookmarkClick(event: MouseEvent) {
+    if (this.consumeSuppressedActionClick(event)) {
+      return;
+    }
+
     event.stopPropagation();
     // Skip bookmark action if this was a long press (display mode toggle)
     if (this.bookmarkLongPressed) {

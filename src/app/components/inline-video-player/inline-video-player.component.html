@@ -5,7 +5,10 @@
     [class.portrait-fit]="isPortraitVideo() && !fillContainer()"
     [class.needs-rotation-correction]="needsRotationCorrection()"
     [class.rotation-correction-fill]="needsRotationCorrection() && fillContainer()"
-    [style.object-fit]="effectiveObjectFit()" (click)="onVideoClick()" (dblclick)="onVideoDoubleClick($event)"></video>
+    [style.object-fit]="effectiveObjectFit()" (pointerdown)="onVideoPointerDown($event)"
+    (pointermove)="onVideoPointerMove($event)" (pointerup)="onVideoPointerUp($event)"
+    (pointercancel)="onVideoPointerCancel()" (click)="onVideoClick($event)"
+    (dblclick)="onVideoDoubleClick($event)"></video>
 
   <!-- Error overlay - shown when video fails to load -->
   @if (hasError()) {

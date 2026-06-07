@@ -49,6 +49,7 @@ import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.s
           [disabled]="isLoading() || disabled()"
           (click)="sendQuickZap($event)"
           (touchstart)="onTouchStart($event)"
+          (touchmove)="onTouchMove($event)"
           (touchend)="onTouchEnd($event)"
           (touchcancel)="onTouchCancel()"
           [matTooltip]="isHandset() ? '' : quickZapTooltip()"
@@ -80,6 +81,10 @@ import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.s
           [class.zapped]="hasZapped()"
           [disabled]="isLoading() || disabled()"
           (click)="openZapDialog($event)"
+          (touchstart)="onTouchStart($event)"
+          (touchmove)="onTouchMove($event)"
+          (touchend)="onTouchEnd($event)"
+          (touchcancel)="onTouchCancel()"
           [matTooltip]="tooltip()"
           matTooltipPosition="below"
         >
@@ -219,6 +224,11 @@ export class ZapButtonComponent {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressTriggered = false;
   private readonly LONG_PRESS_DURATION = 500; // ms
+  private readonly TAP_MOVE_TOLERANCE_PX = 10;
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private touchMovedBeyondTap = false;
+  private suppressNextClick = false;
 
   // Check if we're on mobile
   isHandset = computed(() => this.layout.isHandset());
@@ -276,6 +286,10 @@ export class ZapButtonComponent {
     }
 
     this.longPressTriggered = false;
+    this.touchMovedBeyondTap = false;
+    const touch = event.touches[0];
+    this.touchStartX = touch?.clientX ?? 0;
+    this.touchStartY = touch?.clientY ?? 0;
     this.longPressTimer = setTimeout(() => {
       this.ngZone.run(() => {
         this.longPressTriggered = true;
@@ -286,17 +300,42 @@ export class ZapButtonComponent {
     }, this.LONG_PRESS_DURATION);
   }
 
+  onTouchMove(event: TouchEvent): void {
+    if (!this.isHandset()) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+    if (Math.hypot(deltaX, deltaY) <= this.TAP_MOVE_TOLERANCE_PX) {
+      return;
+    }
+
+    this.touchMovedBeyondTap = true;
+    this.suppressNextClick = true;
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
   onTouchEnd(event: TouchEvent): void {
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
 
-    // If long press was triggered, prevent the click event
-    if (this.longPressTriggered) {
+    // If this was a long press or scroll gesture, prevent the synthetic click event.
+    if (this.longPressTriggered || this.touchMovedBeyondTap) {
       event.preventDefault();
       event.stopPropagation();
       this.longPressTriggered = false;
+      this.touchMovedBeyondTap = false;
     }
   }
 
@@ -306,6 +345,8 @@ export class ZapButtonComponent {
       this.longPressTimer = null;
     }
     this.longPressTriggered = false;
+    this.touchMovedBeyondTap = false;
+    this.suppressNextClick = true;
   }
 
   formatAmount(amount: number): string {
@@ -321,6 +362,12 @@ export class ZapButtonComponent {
   /** Public method to trigger zap from parent (e.g., when label is clicked). */
   onClick(event: MouseEvent): void {
     event.stopPropagation();
+    if (this.suppressNextClick) {
+      event.preventDefault();
+      this.suppressNextClick = false;
+      return;
+    }
+
     if (this.disabled()) {
       return;
     }
@@ -335,6 +382,11 @@ export class ZapButtonComponent {
   async sendQuickZap(event: MouseEvent): Promise<void> {
     event.stopPropagation();
     event.preventDefault();
+
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false;
+      return;
+    }
 
     if (this.disabled() || this.isLoading()) {
       return;
@@ -449,6 +501,12 @@ export class ZapButtonComponent {
   // Custom zap dialog
   async openZapDialog(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+
+    if (this.suppressNextClick) {
+      event.preventDefault();
+      this.suppressNextClick = false;
+      return;
+    }
 
     if (this.disabled()) {
       return;

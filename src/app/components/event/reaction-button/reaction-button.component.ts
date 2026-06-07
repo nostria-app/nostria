@@ -362,10 +362,14 @@ export class ReactionButtonComponent {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressTriggered = false;
   private readonly LONG_PRESS_DURATION = 500; // ms
+  private readonly TAP_MOVE_TOLERANCE_PX = 10;
   private readonly DESKTOP_HOVER_CLOSE_DELAY = 280;
   private reactionsMutationVersion = 0;
   private suppressNextClick = false;
   private pointerDownType: string | null = null;
+  private pointerDownX = 0;
+  private pointerDownY = 0;
+  private pointerMovedBeyondTap = false;
   private hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
   protected desktopHoverOpen = signal(false);
   protected desktopHoverSurfaceActive = signal(false);
@@ -415,6 +419,9 @@ export class ReactionButtonComponent {
     if (!this.isBrowser || this.disabled()) return;
     this.longPressTriggered = false;
     this.pointerDownType = event.pointerType || null;
+    this.pointerDownX = event.clientX;
+    this.pointerDownY = event.clientY;
+    this.pointerMovedBeyondTap = false;
     const isTouch = event.pointerType === 'touch';
     const pointerId = event.pointerId;
     this.longPressTimer = setTimeout(() => {
@@ -427,6 +434,25 @@ export class ReactionButtonComponent {
     }, this.LONG_PRESS_DURATION);
   }
 
+  onPointerMove(event: PointerEvent): void {
+    if (!this.pointerDownType || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+      return;
+    }
+
+    const deltaX = event.clientX - this.pointerDownX;
+    const deltaY = event.clientY - this.pointerDownY;
+    if (Math.hypot(deltaX, deltaY) <= this.TAP_MOVE_TOLERANCE_PX) {
+      return;
+    }
+
+    this.pointerMovedBeyondTap = true;
+    this.suppressNextClick = true;
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
   /**
    * Handle pointer up: if long-press was not triggered, send the default reaction.
    * If touch quick-select is active, delegate to its handler.
@@ -437,6 +463,16 @@ export class ReactionButtonComponent {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
+
+    if (this.pointerMovedBeyondTap) {
+      event.stopPropagation();
+      this.suppressNextClick = true;
+      this.pointerDownType = null;
+      this.longPressTriggered = false;
+      this.pointerMovedBeyondTap = false;
+      return;
+    }
+
     // If touch quick-select is active, the global pointerup listener handles it
     if (this.touchQuickSelectVisible()) {
       this.suppressNextClick = true;
@@ -565,6 +601,18 @@ export class ReactionButtonComponent {
       this.longPressTriggered = false;
     }
     this.pointerDownType = null;
+  }
+
+  onPointerCancel(): void {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+
+    this.pointerDownType = null;
+    this.longPressTriggered = false;
+    this.pointerMovedBeyondTap = false;
+    this.suppressNextClick = true;
   }
 
   // --- Touch quick-select emoji bar ---

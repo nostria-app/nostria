@@ -96,6 +96,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   // Track video playback state for center play button (positioned on video, not container)
   videoPaused = signal(true);
   hasPlayedOnce = signal(false);
+  private readonly videoTapMoveTolerancePx = 10;
+  private videoPointerDownType: string | null = null;
+  private videoPointerDownX = 0;
+  private videoPointerDownY = 0;
+  private videoPointerMovedBeyondTap = false;
+  private suppressNextVideoClick = false;
 
   // Short form video detection and settings
   isShortFormVideo = computed(() => {
@@ -418,6 +424,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   });
 
   expandVideo(clickEvent?: MouseEvent | KeyboardEvent): void {
+    if (clickEvent instanceof MouseEvent && this.consumeSuppressedVideoClick(clickEvent)) {
+      return;
+    }
+
     // Check if media should be blurred - reveal instead of opening dialog
     if (this.shouldBlurMedia()) {
       if (clickEvent) {
@@ -467,8 +477,74 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   /**
    * Handle center play button click - starts video and hides the big play button
    */
-  onCenterPlayButtonClick(): void {
+  onCenterPlayButtonClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.consumeSuppressedVideoClick(event)) {
+      return;
+    }
+
     this.togglePlayPause();
+  }
+
+  onVideoPointerDown(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') {
+      return;
+    }
+
+    this.videoPointerDownType = event.pointerType;
+    this.videoPointerDownX = event.clientX;
+    this.videoPointerDownY = event.clientY;
+    this.videoPointerMovedBeyondTap = false;
+  }
+
+  onVideoPointerMove(event: PointerEvent): void {
+    if (!this.videoPointerDownType || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+      return;
+    }
+
+    const deltaX = event.clientX - this.videoPointerDownX;
+    const deltaY = event.clientY - this.videoPointerDownY;
+    if (Math.hypot(deltaX, deltaY) <= this.videoTapMoveTolerancePx) {
+      return;
+    }
+
+    this.videoPointerMovedBeyondTap = true;
+    this.suppressNextVideoClick = true;
+  }
+
+  onVideoPointerUp(event: PointerEvent): void {
+    if (this.videoPointerMovedBeyondTap) {
+      event.stopPropagation();
+      this.suppressNextVideoClick = true;
+    }
+
+    this.videoPointerDownType = null;
+    this.videoPointerMovedBeyondTap = false;
+  }
+
+  onVideoPointerCancel(): void {
+    this.videoPointerDownType = null;
+    this.videoPointerMovedBeyondTap = false;
+    this.suppressNextVideoClick = true;
+  }
+
+  onVideoClick(event: MouseEvent): void {
+    if (this.consumeSuppressedVideoClick(event)) {
+      return;
+    }
+
+    this.togglePlayPause();
+  }
+
+  private consumeSuppressedVideoClick(event: MouseEvent): boolean {
+    if (!this.suppressNextVideoClick) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.suppressNextVideoClick = false;
+    return true;
   }
 
   /**

@@ -1042,7 +1042,9 @@
     <div class="actions-row" [class.compact]="compact()" [class.actions-locked]="requiresSpamConfirmation()"
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
       [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
-      [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
+      [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'"
+      (pointerdown)="onActionPointerDown($event)" (pointermove)="onActionPointerMove($event)"
+      (pointerup)="onActionPointerUp($event)" (pointercancel)="onActionPointerCancel()">
       <!-- Vote pill for community events (Reddit new-style: ↑ score ↓) -->
       @if (isCommunityEvent()) {
       <div class="vote-pill" [class.user-voted]="userVote() !== null">

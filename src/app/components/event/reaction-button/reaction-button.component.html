@@ -5,8 +5,9 @@
     <button class="reaction-button-trigger celebration-target" mat-icon-button cdkOverlayOrigin
       #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
       [disabled]="isLoadingReactions() || disabled() || reactionPending()" (pointerdown)="onPointerDown($event)"
-      (pointerup)="onPointerUp($event)" (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()"
-      (mouseleave)="onDesktopMouseLeave()" (contextmenu)="$event.preventDefault()" (click)="onClick($event)">
+      (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)" (pointerleave)="onPointerLeave()"
+      (pointercancel)="onPointerCancel()" (mouseenter)="onDesktopMouseEnter()" (mouseleave)="onDesktopMouseLeave()"
+      (contextmenu)="$event.preventDefault()" (click)="onClick($event)">
       @if (userReaction()) {
       @if (getCustomEmojiUrl(userReaction()!.event)) {
       <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"

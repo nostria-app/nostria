@@ -102,6 +102,12 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   hasError = signal(false);
   needsRotationCorrection = signal(false);
   isPortraitVideo = signal(false);
+  private readonly videoTapMoveTolerancePx = 10;
+  private videoPointerDownType: string | null = null;
+  private videoPointerDownX = 0;
+  private videoPointerDownY = 0;
+  private videoPointerMovedBeyondTap = false;
+  private suppressNextVideoClick = false;
 
   // Fallback blob URL when QUIC protocol fails
   private blobUrl = signal<string | null>(null);
@@ -634,7 +640,56 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onVideoClick(): void {
+  onVideoPointerDown(event: PointerEvent): void {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') {
+      return;
+    }
+
+    this.videoPointerDownType = event.pointerType;
+    this.videoPointerDownX = event.clientX;
+    this.videoPointerDownY = event.clientY;
+    this.videoPointerMovedBeyondTap = false;
+  }
+
+  onVideoPointerMove(event: PointerEvent): void {
+    if (!this.videoPointerDownType || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+      return;
+    }
+
+    const deltaX = event.clientX - this.videoPointerDownX;
+    const deltaY = event.clientY - this.videoPointerDownY;
+    if (Math.hypot(deltaX, deltaY) <= this.videoTapMoveTolerancePx) {
+      return;
+    }
+
+    this.videoPointerMovedBeyondTap = true;
+    this.suppressNextVideoClick = true;
+  }
+
+  onVideoPointerUp(event: PointerEvent): void {
+    if (this.videoPointerMovedBeyondTap) {
+      event.stopPropagation();
+      this.suppressNextVideoClick = true;
+    }
+
+    this.videoPointerDownType = null;
+    this.videoPointerMovedBeyondTap = false;
+  }
+
+  onVideoPointerCancel(): void {
+    this.videoPointerDownType = null;
+    this.videoPointerMovedBeyondTap = false;
+    this.suppressNextVideoClick = true;
+  }
+
+  onVideoClick(event: MouseEvent): void {
+    if (this.suppressNextVideoClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.suppressNextVideoClick = false;
+      return;
+    }
+
     this.videoControlsRef?.showControlsAndStartTimer();
     // Toggle play/pause when clicking on video
     this.togglePlay();
