@@ -2124,8 +2124,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
 
     return value
-      .replace(/!\[[^\]]*]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, ' ')
-      .replace(/\[([^\]]+)]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, '$1')
+      .replace(/!\[[^\]]*\]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, ' ')
+      .replace(/\[([^\]]+)\]\((?:https?|wss?|web\+nostr|nostr):[^)]+\)/gi, '$1')
       .replace(/(?:https?|wss?):\/\/[^\s<>"{}|\\^`\[\]]+/gi, ' ')
       .replace(/\b(?:web\+)?nostr:[^\s<>"{}|\\^`\[\]]+/gi, ' ')
       .replace(/\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+/gi, ' ')
