@@ -18,6 +18,7 @@ import { SettingFontSelectorComponent } from './font-selector.component';
 import { SettingReactionEmojiComponent } from './reaction-emoji.component';
 import { SettingActionButtonsComponent } from './action-buttons.component';
 import { SettingLockScreenRotationComponent } from './lock-screen-rotation.component';
+import { SettingChatWidgetComponent } from './chat-widget.component';
 import { SettingRightSidebarComponent } from './right-sidebar.component';
 import { SettingRelayModeComponent } from './relay-mode.component';
 import { SettingSoundsComponent } from './sounds.component';
@@ -41,12 +42,12 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   'text-size': SettingTextSizeComponent,
   'font-selector': SettingFontSelectorComponent,
   'lock-screen-rotation': SettingLockScreenRotationComponent,
+  'chat-widget': SettingChatWidgetComponent,
 
   // Media settings (multiple registry items map to same component)
   'media-privacy': SettingMediaComponent,
   'placeholder-algorithm': SettingMediaComponent,
   'auto-play-video': SettingMediaComponent,
-  'image-cache': SettingMediaComponent,
 
   // Navigation settings
   'navigation-settings': SettingNavigationComponent,

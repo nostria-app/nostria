@@ -8,6 +8,7 @@ export interface PanelConfig {
   component: Type<any>;
   inputs?: Record<string, any>;
   title?: string;
+  useBrowserHistory?: boolean;
 }
 
 /**
@@ -135,6 +136,12 @@ export class RightPanelService {
    * Go back in the right panel history
    */
   goBack(): void {
+    const currentEntry = this.currentEntry();
+    if (currentEntry?.config.useBrowserHistory && typeof window !== 'undefined') {
+      window.history.back();
+      return;
+    }
+
     const currentIndex = this._activeIndex();
     if (currentIndex <= 0) {
       // Close panel

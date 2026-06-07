@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -9,7 +10,6 @@ import { SettingMaxRelaysComponent } from './sections/max-relays.component';
 import { SettingRelayAuthComponent } from './sections/relay-auth.component';
 import { SettingRelayModeComponent } from './sections/relay-mode.component';
 import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
-import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-relays-network-settings',
@@ -83,37 +83,24 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
 export class RelaysNetworkSettingsComponent {
   private readonly rightPanel = inject(RightPanelService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly router = inject(Router);
 
   goBack(): void {
     this.rightPanel.goBack();
   }
 
   async openRelays(tab: 'account' | 'discovery' | 'observed'): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('relays');
-    if (!componentLoader) return;
-    const component = await componentLoader();
-
-    const titles: Record<string, string> = {
-      account: $localize`:@@settings.relays.account-relays:Account Relays`,
-      discovery: $localize`:@@settings.relays.discovery-relays:Discovery Relays`,
-      observed: $localize`:@@settings.relays.observed-relays:Observed Relays`,
+    const routeIds: Record<'account' | 'discovery' | 'observed', string> = {
+      account: 'account-relays',
+      discovery: 'discovery-relays',
+      observed: 'observed-relays',
     };
 
-    this.rightPanel.open({
-      component,
-      title: titles[tab],
-      inputs: { tab },
-    });
+    await this.router.navigate(['/settings', routeIds[tab]]);
   }
 
   async openSearchRelays(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('search');
-    if (!componentLoader) return;
-    const component = await componentLoader();
-    this.rightPanel.open({
-      component,
-      title: $localize`:@@settings.search.relays:Search Relays`,
-    });
+    await this.router.navigate(['/settings', 'search-relays']);
   }
 
   async openMediaServers(): Promise<void> {

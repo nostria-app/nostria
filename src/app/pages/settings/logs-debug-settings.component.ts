@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -8,7 +9,6 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingLoggingComponent } from './sections/logging.component';
 import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
-import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-logs-debug-settings',
@@ -79,6 +79,7 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
 export class LogsDebugSettingsComponent {
   readonly localSettings = inject(LocalSettingsService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly router = inject(Router);
 
   goBack(): void {
     this.rightPanel.goBack();
@@ -89,22 +90,10 @@ export class LogsDebugSettingsComponent {
   }
 
   async openLogs(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('logs');
-    if (!componentLoader) return;
-    const component = await componentLoader();
-    this.rightPanel.open({
-      component,
-      title: $localize`:@@settings.logs.title:Logs`,
-    });
+    await this.router.navigate(['/settings', 'app-logs']);
   }
 
   async openDebug(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('debug');
-    if (!componentLoader) return;
-    const component = await componentLoader();
-    this.rightPanel.open({
-      component,
-      title: $localize`:@@settings.sections.debug:Debug`,
-    });
+    await this.router.navigate(['/settings', 'simulate-platform']);
   }
 }

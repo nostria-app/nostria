@@ -25,7 +25,6 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { LoggerService } from '../../../services/logger.service';
-import { getSettingsSectionComponent } from '../settings-section-components.map';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -262,22 +261,10 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   }
 
   async navigateToDeleteEventPage(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('delete-event');
-    if (componentLoader) {
-      const component = await componentLoader();
-      this.rightPanel.open({ component, title: 'Delete Event' });
-    }
+    await this.router.navigate(['/settings', 'delete-event']);
   }
 
   async navigateToDeleteAccountPage(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('delete-account');
-    if (componentLoader) {
-      const component = await componentLoader();
-      this.rightPanel.open({
-        component,
-        title: 'Delete Account Data',
-        inputs: { source: 'privacy' },
-      });
-    }
+    await this.router.navigate(['/settings', 'delete-account'], { queryParams: { source: 'privacy' } });
   }
 }

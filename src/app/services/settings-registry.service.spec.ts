@@ -14,9 +14,11 @@ describe('SettingsRegistryService', () => {
   it('exposes the reorganized user-facing settings sections in order', () => {
     expect(service.sections.map(section => section.id)).toEqual([
       'general',
+      'profile',
       'appearance',
       'navigation',
       'content',
+      'wallet-subscriptions',
       'network',
       'privacy',
       'web-of-trust',
@@ -42,14 +44,14 @@ describe('SettingsRegistryService', () => {
   it('reassigns representative settings to the new sections', () => {
     const find = (id: string) => service.items.find(item => item.id === id);
 
-    expect(find('dark-mode')).toMatchObject({ section: 'appearance', route: '/settings/appearance' });
-    expect(find('navigation-settings')).toMatchObject({ section: 'navigation', route: '/settings/navigation' });
-    expect(find('media-privacy')).toMatchObject({ section: 'content', route: '/settings/content' });
-    expect(find('notification-spam-filter')).toMatchObject({ section: 'privacy', route: '/settings/privacy' });
-    expect(find('account-relays')).toMatchObject({ section: 'network', route: '/relays?tab=account' });
-    expect(find('search-relays')).toMatchObject({ section: 'network', route: '/settings/search' });
+    expect(find('dark-mode')).toMatchObject({ section: 'appearance', route: '/settings/dark-mode' });
+    expect(find('navigation-settings')).toMatchObject({ section: 'navigation', route: '/settings/navigation-settings' });
+    expect(find('media-privacy')).toMatchObject({ section: 'content', route: '/settings/media-privacy' });
+    expect(find('notification-spam-filter')).toMatchObject({ section: 'privacy', route: '/settings/notification-spam-filter' });
+    expect(find('account-relays')).toMatchObject({ section: 'network', route: '/settings/account-relays' });
+    expect(find('search-relays')).toMatchObject({ section: 'network', route: '/settings/search-relays' });
     expect(find('trust-network')).toMatchObject({ section: 'web-of-trust', route: '/settings/web-of-trust' });
     expect(find('storage-stats')).toMatchObject({ section: 'storage', route: '/settings/storage' });
-    expect(find('app-logs')).toMatchObject({ section: 'logs-debug', route: '/settings/logs' });
+    expect(find('app-logs')).toMatchObject({ section: 'logs-debug', route: '/settings/app-logs' });
   });
 });

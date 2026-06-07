@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, ElementRef, viewChild, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, computed, ElementRef, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,6 +19,25 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { LayoutService } from '../../../services/layout.service';
 import { getSettingComponent } from '../sections/settings-components.map';
 import { getSettingsSectionComponent } from '../settings-section-components.map';
+
+type RelaySettingsTab = 'account' | 'discovery' | 'observed';
+
+const RELAY_SETTINGS_ROUTE_TABS: Record<string, RelaySettingsTab> = {
+  'account-relays': 'account',
+  'dm-relays': 'account',
+  'discovery-relays': 'discovery',
+  'observed-relays': 'observed',
+};
+
+const ROUTED_SETTINGS_ITEM_IDS = new Set([
+  'account-relays',
+  'dm-relays',
+  'discovery-relays',
+  'observed-relays',
+  'search-relays',
+  'app-logs',
+  'simulate-platform',
+]);
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -276,7 +295,7 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
     }
   `],
 })
-export class SettingsHomeComponent implements OnInit {
+export class SettingsHomeComponent {
   readonly registry = inject(SettingsRegistryService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -292,47 +311,14 @@ export class SettingsHomeComponent implements OnInit {
   clearLabel = $localize`:@@settings.home.clear-search:Clear search`;
 
   constructor() {
-    // When the right panel is closed (e.g., via goBack), navigate to base settings
-    // so the route param resets. Without this, re-clicking the same section is a no-op
-    // because the Angular Router sees the param hasn't changed.
-    effect(() => {
-      const hasContent = this.rightPanel.hasContent();
-      if (!hasContent) {
-        const sectionId = this.route.snapshot.paramMap.get('section');
-        if (sectionId) {
-          void this.router.navigate(['/settings'], { replaceUrl: true });
-        }
-      }
-    });
-
-    // Subscribe to route param changes for deep linking and section-to-section navigation
+    // Subscribe to route param changes for deep linking and section-to-section navigation.
     this.route.paramMap.pipe(
       takeUntilDestroyed()
     ).subscribe(params => {
-      const sectionId = params.get('section');
+      const routeId = params.get('section');
 
-      if (sectionId === 'profile') {
-        void this.openProfileFromSettings();
-        return;
-      }
-
-      if (sectionId === 'wallet-subscriptions') {
-        void this.openWalletFromSettings();
-        return;
-      }
-
-      if (sectionId === 'wallet') {
-        void this.router.navigate(['/wallet']);
-        return;
-      }
-
-      if (sectionId === 'premium') {
-        void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
-        return;
-      }
-
-      if (sectionId) {
-        this.openSectionInRightPanel(sectionId);
+      if (routeId) {
+        void this.openSettingsRoute(routeId);
       } else {
         // Close right panel when returning to settings home (e.g., browser back)
         this.rightPanel.close();
@@ -367,10 +353,6 @@ export class SettingsHomeComponent implements OnInit {
     });
   });
 
-  ngOnInit(): void {
-    // Section handling is done via paramMap subscription in constructor
-  }
-
   canShowItem(item: SettingsItem): boolean {
     const authenticated = this.app.authenticated();
     const hasPremium = this.accountState.hasActiveSubscription();
@@ -381,45 +363,116 @@ export class SettingsHomeComponent implements OnInit {
   }
 
   /**
-   * Opens a settings section in the right panel.
+   * Opens a settings route in the right panel.
    * URL is managed by Angular Router (navigating to /settings/:section),
-   * not by rightPanel.open() URL parameter, to avoid router state corruption.
+   * while the panel content is still component-based.
    */
-  async openSectionInRightPanel(sectionId: string): Promise<void> {
-    const section = this.registry.sections.find(s => s.id === sectionId);
-    const componentLoader = getSettingsSectionComponent(sectionId);
-    if (!componentLoader) return;
+  async openSettingsRoute(routeId: string): Promise<void> {
+    if (routeId === 'wallet') {
+      void this.router.navigate(['/wallet']);
+      return;
+    }
+
+    if (routeId === 'premium') {
+      void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
+      return;
+    }
+
+    if (routeId === 'wallet-subscriptions') {
+      await this.openWalletInRightPanel();
+      return;
+    }
+
+    const relayTab = RELAY_SETTINGS_ROUTE_TABS[routeId];
+    if (relayTab) {
+      await this.openLazySettingsComponent('relays', this.getItemTitle(routeId), { tab: relayTab });
+      return;
+    }
+
+    if (routeId === 'search-relays') {
+      await this.openLazySettingsComponent('search', this.getItemTitle(routeId));
+      return;
+    }
+
+    if (routeId === 'app-logs') {
+      await this.openLazySettingsComponent('logs', this.getItemTitle(routeId));
+      return;
+    }
+
+    if (routeId === 'simulate-platform') {
+      await this.openLazySettingsComponent('debug', this.getItemTitle(routeId));
+      return;
+    }
+
+    if (routeId === 'delete-event') {
+      await this.openLazySettingsComponent('delete-event', $localize`:@@settings.privacy.event-management.delete-event:Delete Specific Event`);
+      return;
+    }
+
+    if (routeId === 'delete-account') {
+      await this.openLazySettingsComponent(
+        'delete-account',
+        $localize`:@@settings.privacy.event-management.delete-account:Delete All Account Data`,
+        { source: this.route.snapshot.queryParamMap.get('source') ?? undefined }
+      );
+      return;
+    }
+
+    const settingComponent = getSettingComponent(routeId);
+    if (settingComponent) {
+      await this.openResolvedSettingsComponent(settingComponent, this.getItemTitle(routeId));
+      return;
+    }
+
+    await this.openLazySettingsComponent(routeId, this.getRouteTitle(routeId));
+  }
+
+  private async openLazySettingsComponent(
+    componentId: string,
+    title: string,
+    inputs?: Record<string, unknown>
+  ): Promise<void> {
+    const componentLoader = getSettingsSectionComponent(componentId);
+    if (!componentLoader) {
+      this.logger.warn(`No settings component route found for: ${componentId}`);
+      return;
+    }
 
     try {
       await this.clearRouterRightPanelIfNeeded();
 
       const component = await componentLoader();
-      const item = this.registry.items.find(i => i.route.match(new RegExp(`/settings/${sectionId}(?:[?#/]|$)`)));
+      await this.openResolvedSettingsComponent(component, title, inputs);
+    } catch (error) {
+      this.logger.error(`Failed to load settings component: ${componentId}`, error);
+    }
+  }
+
+  private async openResolvedSettingsComponent(
+    component: NonNullable<ReturnType<typeof getSettingComponent>>,
+    title: string,
+    inputs?: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await this.clearRouterRightPanelIfNeeded();
+
+      this.rightPanel.clearHistory();
       this.rightPanel.open({
         component,
-        title: section?.title ?? item?.title ?? $localize`:@@settings.title:Settings`,
+        title,
+        inputs,
+        useBrowserHistory: true,
       });
       this.scheduleScrollReset();
     } catch (error) {
-      this.logger.error(`Failed to load settings section component: ${sectionId}`, error);
+      this.logger.error(`Failed to open settings component: ${title}`, error);
     }
   }
 
   async navigateToItem(item: SettingsItem): Promise<void> {
-    // Extract section from route (e.g., /settings/general -> general)
-    const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
-    if (sectionMatch && sectionMatch[1]) {
-      if (sectionMatch[1] === 'profile') {
-        await this.openProfileFromSettings();
-        return;
-      }
-
-      if (sectionMatch[1] === 'wallet-subscriptions') {
-        await this.openWalletFromSettings();
-        return;
-      }
-
-      await this.router.navigate(['/settings', sectionMatch[1]]);
+    const routeId = this.getSettingsRouteIdForItem(item);
+    if (routeId) {
+      await this.navigateToSettingsRoute(routeId);
       return;
     }
 
@@ -428,17 +481,7 @@ export class SettingsHomeComponent implements OnInit {
   }
 
   async navigateToSection(section: SettingsSection): Promise<void> {
-    if (section.id === 'profile') {
-      await this.openProfileFromSettings();
-      return;
-    }
-
-    if (section.id === 'wallet-subscriptions') {
-      await this.openWalletFromSettings();
-      return;
-    }
-
-    await this.router.navigate(['/settings', section.id]);
+    await this.navigateToSettingsRoute(section.id);
   }
 
   clearSearch(): void {
@@ -461,32 +504,16 @@ export class SettingsHomeComponent implements OnInit {
       await this.clearRouterRightPanelIfNeeded();
 
       const { WalletComponent } = await import('../../wallet/wallet.component');
+      this.rightPanel.clearHistory();
       this.rightPanel.open({
         component: WalletComponent,
         title: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`,
+        useBrowserHistory: true,
       });
       this.scheduleScrollReset();
     } catch (error) {
       this.logger.error('Failed to load wallet settings panel', error);
     }
-  }
-
-  private async openProfileFromSettings(): Promise<void> {
-    await this.navigateToSettingsRootIfNeeded();
-    this.layout.openProfileEdit();
-  }
-
-  private async openWalletFromSettings(): Promise<void> {
-    await this.navigateToSettingsRootIfNeeded();
-    await this.openWalletInRightPanel();
-  }
-
-  private async navigateToSettingsRootIfNeeded(): Promise<void> {
-    if (!this.route.snapshot.paramMap.get('section')) {
-      return;
-    }
-
-    await this.router.navigate(['/settings'], { replaceUrl: true });
   }
 
   private async clearRouterRightPanelIfNeeded(): Promise<void> {
@@ -503,5 +530,32 @@ export class SettingsHomeComponent implements OnInit {
     });
 
     await this.router.navigateByUrl(targetTree, { replaceUrl: true });
+  }
+
+  private async navigateToSettingsRoute(routeId: string): Promise<void> {
+    if (this.route.snapshot.paramMap.get('section') === routeId) {
+      await this.openSettingsRoute(routeId);
+      return;
+    }
+
+    await this.router.navigate(['/settings', routeId]);
+  }
+
+  private getSettingsRouteIdForItem(item: SettingsItem): string | null {
+    if (getSettingComponent(item.id) || ROUTED_SETTINGS_ITEM_IDS.has(item.id)) {
+      return item.id;
+    }
+
+    return item.route.match(/\/settings\/([^?#/]+)/)?.[1] ?? null;
+  }
+
+  private getRouteTitle(routeId: string): string {
+    return this.registry.sections.find(section => section.id === routeId)?.title
+      ?? this.getItemTitle(routeId);
+  }
+
+  private getItemTitle(routeId: string): string {
+    return this.registry.items.find(item => item.id === routeId)?.title
+      ?? $localize`:@@settings.title:Settings`;
   }
 }
