@@ -24,6 +24,7 @@ import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/pr
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 import { sanitizeProfileNameInput } from '../../../utils/profile-name';
 
 interface ExternalIdentity {
@@ -63,6 +64,7 @@ export class ProfileEditComponent implements OnInit {
   router = inject(Router);
   media = inject(MediaService);
   private panelNav = inject(PanelNavigationService);
+  private rightPanel = inject(RightPanelService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
@@ -103,7 +105,7 @@ export class ProfileEditComponent implements OnInit {
 
       // If the account changes while on edit screen, navigate back.
       if (account?.pubkey != this.pubkey) {
-        this.panelNav.goBackRight();
+        this.closeEditor();
       }
     });
   }
@@ -183,11 +185,11 @@ export class ProfileEditComponent implements OnInit {
   }
 
   goBack(): void {
-    this.panelNav.goBackRight();
+    this.closeEditor();
   }
 
   cancelEdit() {
-    this.panelNav.goBackRight();
+    this.closeEditor();
   }
 
   // Template-safe getters and setters for form fields
@@ -332,7 +334,7 @@ export class ProfileEditComponent implements OnInit {
 
       if (result.success) {
         this.loading.set(false);
-        this.panelNav.goBackRight();
+        this.closeEditor();
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
@@ -588,5 +590,14 @@ export class ProfileEditComponent implements OnInit {
 
   selectPlatformPreset(platform: string): void {
     this.newIdentityPlatform.set(platform);
+  }
+
+  private closeEditor(): void {
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.goBack();
+      return;
+    }
+
+    this.panelNav.goBackRight();
   }
 }

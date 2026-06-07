@@ -378,6 +378,11 @@ export class SettingsHomeComponent {
       return;
     }
 
+    if (routeId === 'profile') {
+      await this.openProfileEditorInRightPanel();
+      return;
+    }
+
     if (routeId === 'wallet-subscriptions') {
       await this.openWalletInRightPanel();
       return;
@@ -513,6 +518,20 @@ export class SettingsHomeComponent {
       this.scheduleScrollReset();
     } catch (error) {
       this.logger.error('Failed to load wallet settings panel', error);
+    }
+  }
+
+  private async openProfileEditorInRightPanel(): Promise<void> {
+    try {
+      await this.clearRouterRightPanelIfNeeded();
+
+      const { ProfileEditComponent } = await import('../../profile/profile-edit/profile-edit.component');
+      await this.openResolvedSettingsComponent(
+        ProfileEditComponent,
+        $localize`:@@settings.profile.edit:Edit Profile`
+      );
+    } catch (error) {
+      this.logger.error('Failed to load profile edit settings panel', error);
     }
   }
 
