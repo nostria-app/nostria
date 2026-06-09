@@ -189,6 +189,7 @@ export interface AiManagedModelStatus extends AiManageableModel {
 export interface AiStandardPromptSelection {
   title: string;
   prompt: string;
+  autoRun?: boolean;
 }
 
 export interface AiModelStorageReport {
@@ -879,7 +880,7 @@ export class AiService {
       return;
     }
 
-    this.queuedStandardPrompt.set({ title, prompt });
+    this.queuedStandardPrompt.set({ title, prompt, autoRun: selection.autoRun });
   }
 
   clearQueuedStandardPrompt(): void {

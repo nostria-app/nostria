@@ -1,6 +1,6 @@
 name: nostria
 options:
-  bundleIdPrefix: app.nostria
+  bundleIdPrefix: app.nostria.twa
   deploymentTarget:
     iOS: 14.0
 fileGroups: [../../src]
@@ -11,7 +11,7 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: Nostria
-      PRODUCT_BUNDLE_IDENTIFIER: app.nostria
+      PRODUCT_BUNDLE_IDENTIFIER: app.nostria.twa
 targetTemplates:
   app:
     type: application
@@ -54,7 +54,7 @@ targets:
         CFBundleShortVersionString: 3.1.47
         CFBundleVersion: "3.1.47"
         CFBundleURLTypes:
-          - CFBundleURLName: app.nostria.nostr
+          - CFBundleURLName: app.nostria.twa.nostr
             CFBundleURLSchemes:
               - nostr
               - nostr+walletconnect

@@ -502,7 +502,7 @@ jobs:
             IOS_TARGET='x86_64'
           fi
 
-          npx tauri ios build --ci --target "$IOS_TARGET"
+          npx tauri ios build --ci --target "$IOS_TARGET" --config src-tauri/tauri.ios.conf.json
 
       - name: Package iOS build outputs
         shell: bash
@@ -615,7 +615,7 @@ jobs:
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST_PATH")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST_PATH")
           APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST_PATH")
-          EXPECTED_BUNDLE_ID=$(node -p "require('./src-tauri/tauri.conf.json').identifier")
+          EXPECTED_BUNDLE_ID=$(node -p "require('./src-tauri/tauri.ios.conf.json').identifier || require('./src-tauri/tauri.conf.json').identifier")
           PROFILE_BUNDLE_ID="${APP_IDENTIFIER#${TEAM_ID}.}"
           GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$PROFILE_PLIST_PATH" 2>/dev/null || echo false)
           HAS_PROVISIONED_DEVICES=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices:0' "$PROFILE_PLIST_PATH" >/dev/null 2>&1 && echo true || echo false)
@@ -623,7 +623,7 @@ jobs:
 
           if [ "$PROFILE_BUNDLE_ID" != "$EXPECTED_BUNDLE_ID" ]; then
             echo "Provisioning profile bundle ID '$PROFILE_BUNDLE_ID' does not match app bundle ID '$EXPECTED_BUNDLE_ID'." >&2
-            echo 'Create or download a provisioning profile for the exact app identifier configured in src-tauri/tauri.conf.json.' >&2
+            echo 'Create or download a provisioning profile for the exact app identifier configured in src-tauri/tauri.ios.conf.json.' >&2
             exit 1
           fi
 
@@ -775,6 +775,7 @@ jobs:
           npx tauri ios build \
             --ci \
             --target aarch64 \
+            --config src-tauri/tauri.ios.conf.json \
             --export-method "${{ steps.ios-signing.outputs.export_method }}"
 
       - name: Package signed iOS outputs

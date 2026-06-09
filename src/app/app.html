@@ -312,8 +312,9 @@
             }
             @if (searchInputMode() === 'prompt' && aiPromptModels.selectedModel(); as promptModel) {
             <button mat-icon-button class="search-action-button prompt-model-button"
-              [matMenuTriggerFor]="promptModelMenu" [attr.aria-label]="'Select AI model: ' + promptModel.name"
-              [matTooltip]="promptModel.name">
+              [matMenuTriggerFor]="promptModelMenu" (pointerdown)="onPromptModelMenuInteractionStart()"
+              (menuOpened)="onPromptModelMenuOpened()" (menuClosed)="onPromptModelMenuClosed()"
+              [attr.aria-label]="'Select AI model: ' + promptModel.name" [matTooltip]="promptModel.name">
               <mat-icon>model_training</mat-icon>
             </button>
             <mat-menu #promptModelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false">

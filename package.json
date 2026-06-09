@@ -59,6 +59,8 @@
     "tauri:android:run:release:local": "powershell -ExecutionPolicy Bypass -Command \"$env:TAURI_ANDROID_RELEASE_USE_DEBUG_KEY='true'; tauri android run --release\"",
     "tauri:android:run:release:local:emulator": "powershell -ExecutionPolicy Bypass -File scripts/tauri-android-packaged.ps1 -Emulator -Run -Release -UseDebugKey",
     "tauri:android:run:packaged:emulator": "npm run tauri:android:run:release:local:emulator",
+    "tauri:ios:build": "tauri ios build --config src-tauri/tauri.ios.conf.json",
+    "tauri:ios:build:release": "tauri ios build --target aarch64 --config src-tauri/tauri.ios.conf.json",
     "tauri:build": "tauri build --ci",
     "tauri:build:linux": "tauri build --ci --bundles appimage,deb",
     "tauri:build:windows": "tauri build --ci --bundles nsis,msi",

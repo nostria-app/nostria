@@ -13,7 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageCloudProvider, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress, AiVoiceGenerationProgress } from '../../services/ai.service';
+import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageCloudProvider, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiStandardPromptSelection, AiVideoGenerationOptions, AiVideoGenerationProgress, AiVoiceGenerationProgress } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
@@ -1428,6 +1428,9 @@ export class AiComponent {
         this.showHistoryDrawer.set(false);
         this.applyChatPrompt(selection.prompt);
         this.aiService.clearQueuedStandardPrompt();
+        if (selection.autoRun) {
+          this.scheduleQueuedPromptAutoRun(selection);
+        }
       });
     });
 
@@ -1813,6 +1816,16 @@ export class AiComponent {
   applyChatPrompt(prompt: string): void {
     this.composerText.set(prompt);
     this.focusComposerPromptPlaceholder(prompt);
+  }
+
+  private scheduleQueuedPromptAutoRun(selection: AiStandardPromptSelection): void {
+    globalThis.setTimeout(() => {
+      if (this.composerText().trim() !== selection.prompt.trim()) {
+        return;
+      }
+
+      void this.sendMessage();
+    }, 0);
   }
 
   applyImagePrompt(prompt: string): void {

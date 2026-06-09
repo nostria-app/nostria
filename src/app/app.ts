@@ -316,6 +316,7 @@ export class App implements OnInit, OnDestroy {
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild('settingsQuickCardLayer') settingsQuickCardLayer?: ElementRef<HTMLElement>;
   searchInputMode = signal<SearchInputMode>('search');
+  promptModelMenuOpen = signal(false);
 
   // Create menu overlay
   private createMenuOverlayRef?: OverlayRef;
@@ -1730,7 +1731,24 @@ export class App implements OnInit, OnDestroy {
   }
 
   selectAiPromptModel(modelId: string): void {
+    this.syncSearchInputFromElement();
     this.aiPromptModels.selectModel(modelId);
+    this.searchInputElement?.nativeElement?.focus();
+  }
+
+  onPromptModelMenuInteractionStart(): void {
+    this.syncSearchInputFromElement();
+    this.promptModelMenuOpen.set(true);
+  }
+
+  onPromptModelMenuOpened(): void {
+    this.syncSearchInputFromElement();
+    this.promptModelMenuOpen.set(true);
+  }
+
+  onPromptModelMenuClosed(): void {
+    this.syncSearchInputFromElement();
+    this.promptModelMenuOpen.set(false);
     this.searchInputElement?.nativeElement?.focus();
   }
 
@@ -1763,7 +1781,7 @@ export class App implements OnInit, OnDestroy {
 
     const handled = await this.aiPromptAction.triggerPrompt(prompt);
     if (!handled) {
-      this.ai.queueStandardPrompt({ title: 'Prompt', prompt });
+      this.ai.queueStandardPrompt({ title: 'Prompt', prompt, autoRun: true });
       await this.router.navigate(['/ai']);
     }
 
@@ -1794,6 +1812,11 @@ export class App implements OnInit, OnDestroy {
 
     // If focus is moving to another element within the search container, don't close
     if (relatedTarget && searchContainer.contains(relatedTarget)) {
+      return;
+    }
+
+    if (this.searchInputMode() === 'prompt' && this.promptModelMenuOpen()) {
+      this.syncSearchInputFromElement();
       return;
     }
 
@@ -1833,6 +1856,17 @@ export class App implements OnInit, OnDestroy {
     if (keepFocus) {
       // Keep focus on search input after clearing
       this.searchInputElement?.nativeElement?.focus();
+    }
+  }
+
+  private syncSearchInputFromElement(): void {
+    if (this.searchInputMode() !== 'prompt') {
+      return;
+    }
+
+    const value = this.searchInputElement?.nativeElement?.value;
+    if (value !== undefined && value !== this.layout.searchInput) {
+      this.layout.searchInput = value;
     }
   }
 
