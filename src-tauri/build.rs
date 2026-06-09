@@ -126,7 +126,7 @@ fn ensure_ios_deep_link_url_schemes() -> Result<(), Box<dyn std::error::Error>> 
             let mut dictionary = plist::Dictionary::new();
             dictionary.insert(
                 "CFBundleURLName".into(),
-                plist::Value::String("app.nostria.twa.nostr".into()),
+                plist::Value::String("app.nostria.nostr".into()),
             );
             dictionary.insert(
                 "CFBundleURLSchemes".into(),
