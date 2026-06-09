@@ -51,8 +51,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 3.1.47
-        CFBundleVersion: "3.1.47"
+        CFBundleShortVersionString: 3.1.48
+        CFBundleVersion: "3.1.48"
         CFBundleURLTypes:
           - CFBundleURLName: app.nostria.twa.nostr
             CFBundleURLSchemes:
