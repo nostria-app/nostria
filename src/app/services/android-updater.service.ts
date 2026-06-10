@@ -29,8 +29,10 @@ interface AndroidReleaseInfo {
 
 @Service()
 export class AndroidUpdaterService {
-  private readonly latestJsonUrl = 'https://github.com/nostria-app/nostria/releases/latest/download/latest.json';
-  private readonly githubLatestReleaseUrl = 'https://api.github.com/repos/nostria-app/nostria/releases/latest';
+  private readonly latestJsonUrl =
+    'https://github.com/nostria-app/nostria/releases/latest/download/latest.json';
+  private readonly githubLatestReleaseUrl =
+    'https://api.github.com/repos/nostria-app/nostria/releases/latest';
 
   private readonly app = inject(ApplicationService);
   private readonly logger = inject(LoggerService);
@@ -43,8 +45,8 @@ export class AndroidUpdaterService {
   readonly checking = signal(false);
   readonly lastCheckedAt = signal<number | null>(null);
   readonly lastError = signal<string | null>(null);
-  readonly isAndroidInstalled = computed(() =>
-    this.app.isBrowser() && isTauri() && /Android/i.test(navigator.userAgent)
+  readonly isAndroidInstalled = computed(
+    () => this.app.isBrowser() && isTauri() && /Android/i.test(navigator.userAgent),
   );
   readonly hasUpdate = computed(() => {
     const currentVersion = this.currentVersion();
@@ -57,13 +59,15 @@ export class AndroidUpdaterService {
     return this.compareVersions(currentVersion, latestVersion) < 0;
   });
 
-  async checkForUpdates(options: { interactive: boolean } = { interactive: false }): Promise<boolean> {
+  async checkForUpdates(
+    options: { interactive: boolean } = { interactive: false },
+  ): Promise<boolean> {
     if (!this.isAndroidInstalled()) {
       if (options.interactive) {
         this.snackBar.open(
           $localize`:@@androidUpdater.androidOnly:APK updates are only available in the installed Android app.`,
           'Close',
-          { duration: 3500 }
+          { duration: 3500 },
         );
       }
 
@@ -89,10 +93,10 @@ export class AndroidUpdaterService {
       if (options.interactive) {
         this.snackBar.open(
           updateAvailable
-            ? $localize`:@@androidUpdater.updateAvailable:Android update available: ${releaseInfo.version}:version`
+            ? $localize`:@@androidUpdater.updateAvailable:Android update available: ${releaseInfo.version}:version:`
             : $localize`:@@androidUpdater.noUpdates:Nostria is already up to date.`,
           'Close',
-          { duration: updateAvailable ? 4500 : 3000 }
+          { duration: updateAvailable ? 4500 : 3000 },
         );
       }
 
@@ -115,14 +119,15 @@ export class AndroidUpdaterService {
 
   async openLatestApkDownload(): Promise<void> {
     try {
-      const releaseInfo = this.latestVersion() && this.downloadUrl()
-        ? {
-          version: this.latestVersion()!,
-          downloadUrl: this.downloadUrl()!,
-          releaseUrl: this.releaseUrl() ?? undefined,
-          source: 'latest-json' as const,
-        }
-        : await this.fetchLatestReleaseInfo();
+      const releaseInfo =
+        this.latestVersion() && this.downloadUrl()
+          ? {
+              version: this.latestVersion()!,
+              downloadUrl: this.downloadUrl()!,
+              releaseUrl: this.releaseUrl() ?? undefined,
+              source: 'latest-json' as const,
+            }
+          : await this.fetchLatestReleaseInfo();
 
       this.applyReleaseInfo(releaseInfo);
       await this.openUrl(releaseInfo.downloadUrl);
@@ -149,7 +154,10 @@ export class AndroidUpdaterService {
       this.currentVersion.set(version);
       return version;
     } catch (error) {
-      this.logger.warn('[AndroidUpdater] Failed to read Tauri version, falling back to app version', error);
+      this.logger.warn(
+        '[AndroidUpdater] Failed to read Tauri version, falling back to app version',
+        error,
+      );
       const fallbackVersion = this.normalizeVersion(this.app.version());
 
       if (!fallbackVersion) {
@@ -165,7 +173,10 @@ export class AndroidUpdaterService {
     try {
       return await this.fetchLatestJsonReleaseInfo();
     } catch (error) {
-      this.logger.warn('[AndroidUpdater] latest.json lookup failed, falling back to GitHub API', error);
+      this.logger.warn(
+        '[AndroidUpdater] latest.json lookup failed, falling back to GitHub API',
+        error,
+      );
       return this.fetchGitHubReleaseInfo();
     }
   }
@@ -182,7 +193,7 @@ export class AndroidUpdaterService {
       throw new Error(`latest.json request failed: ${response.status}`);
     }
 
-    const data = await response.json() as LatestJsonResponse;
+    const data = (await response.json()) as LatestJsonResponse;
     const version = this.normalizeVersion(typeof data.version === 'string' ? data.version : null);
 
     if (!version) {
@@ -209,22 +220,23 @@ export class AndroidUpdaterService {
       throw new Error(`GitHub latest release request failed: ${response.status}`);
     }
 
-    const data = await response.json() as GitHubLatestReleaseResponse;
+    const data = (await response.json()) as GitHubLatestReleaseResponse;
     const version = this.normalizeVersion(typeof data.tag_name === 'string' ? data.tag_name : null);
 
     if (!version) {
       throw new Error('GitHub latest release response does not contain a valid tag_name.');
     }
 
-    const assets = Array.isArray(data.assets) ? data.assets as GitHubReleaseAsset[] : [];
+    const assets = Array.isArray(data.assets) ? (data.assets as GitHubReleaseAsset[]) : [];
     const apkAsset = assets.find((asset) => {
       const name = typeof asset.name === 'string' ? asset.name : '';
       return name.toLowerCase().endsWith('.apk');
     });
 
-    const apkUrl = typeof apkAsset?.browser_download_url === 'string'
-      ? apkAsset.browser_download_url
-      : this.buildApkDownloadUrl(version);
+    const apkUrl =
+      typeof apkAsset?.browser_download_url === 'string'
+        ? apkAsset.browser_download_url
+        : this.buildApkDownloadUrl(version);
 
     return {
       version,

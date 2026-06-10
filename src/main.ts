@@ -4,7 +4,11 @@ import { App } from './app/app';
 import { registerLocaleData } from '@angular/common';
 import { loadTranslations } from '@angular/localize';
 import { initializeDebugUtils } from './app/utils/debug-utils';
-import { getAngularLocaleCode, normalizeLocale } from './app/utils/supported-locales';
+import {
+  detectPreferredLocale,
+  getAngularLocaleCode,
+  normalizeLocale,
+} from './app/utils/supported-locales';
 
 console.log('[BOOTSTRAP] Starting application bootstrap');
 
@@ -16,6 +20,8 @@ if (typeof window !== 'undefined') {
   if (settings) {
     const parsedSettings = JSON.parse(settings);
     appLang = normalizeLocale(parsedSettings.locale);
+  } else if (typeof navigator !== 'undefined') {
+    appLang = detectPreferredLocale(navigator.languages);
   }
 }
 
@@ -27,7 +33,7 @@ initLanguage(appLang)
     // Initialize debug utilities
     initializeDebugUtils(appRef);
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('[BOOTSTRAP ERROR] Failed to bootstrap application', err);
   });
 
@@ -78,6 +84,8 @@ async function getLocaleModule(locale: string) {
       return await import('@angular/common/locales/hi');
     case 'it':
       return await import('@angular/common/locales/it');
+    case 'id':
+      return await import('@angular/common/locales/id');
     case 'ja':
       return await import('@angular/common/locales/ja');
     case 'ko':
@@ -86,12 +94,18 @@ async function getLocaleModule(locale: string) {
       return await import('@angular/common/locales/pt');
     case 'ru':
       return await import('@angular/common/locales/ru');
+    case 'th':
+      return await import('@angular/common/locales/th');
+    case 'tr':
+      return await import('@angular/common/locales/tr');
     case 'sr-Latn':
       return await import('@angular/common/locales/sr-Latn');
     case 'nb':
       return await import('@angular/common/locales/nb');
     case 'sw':
       return await import('@angular/common/locales/sw');
+    case 'vi':
+      return await import('@angular/common/locales/vi');
     case 'zh':
       return await import('@angular/common/locales/zh');
     case 'zu':

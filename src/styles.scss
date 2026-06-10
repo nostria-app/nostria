@@ -105,13 +105,17 @@ html {
   --scrollbar-thumb: rgba(0, 0, 0, 0.2);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 
-  @include mat.theme((color: (theme-type: light,
+  @include mat.theme(
+    (
+      color: (
+        theme-type: light,
         primary: nostria-theme.$primary-palette,
         tertiary: nostria-theme.$tertiary-palette,
       ),
-      typography: "Roboto",
+      typography: 'Roboto',
       density: 0,
-    ));
+    )
+  );
 
   // Darker app background so content cards pop out more
   --mat-app-background-color: #efefef;
@@ -128,14 +132,20 @@ html {
   --scrollbar-thumb: rgba(255, 255, 255, 0.2);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 
-  @include mat.theme((color: (theme-type: dark,
+  @include mat.theme(
+    (
+      color: (
+        theme-type: dark,
         primary: nostria-theme.$primary-palette,
       ),
-    ));
+    )
+  );
 
   // Inverted surface hierarchy: background is lighter gray, cards/containers are darker
   // This makes cards appear "inset" against a softer dark background
-  @include mat.theme-overrides((surface: #1a1a1a,
+  @include mat.theme-overrides(
+    (
+      surface: #1a1a1a,
       surface-dim: #141414,
       surface-bright: #242424,
       surface-container-lowest: #080808,
@@ -143,7 +153,8 @@ html {
       surface-container: #111111,
       surface-container-high: #0a0a0a,
       surface-container-highest: #080808,
-    ));
+    )
+  );
 
   --mat-app-background-color: #1a1a1a;
   --mat-sidenav-content-background-color: #1a1a1a;
@@ -197,7 +208,6 @@ mat-nav-list,
   font-family: var(--nostria-font-family) !important;
 }
 
-
 @media (max-width: 700px) {
   .mat-mdc-tab-header-pagination {
     display: none !important;
@@ -225,18 +235,17 @@ mat-nav-list,
 // Android PWA safe area - ensure content doesn't overlap system navigation
 // Uses padding-bottom on html to push all content up
 @media all and (display-mode: standalone) {
-
   // Android specifically: gesture navigation can overlap fixed UI,
   // and some devices report env(safe-area-inset-bottom) as 0.
-  html[data-platform="android"] {
+  html[data-platform='android'] {
     padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
   }
 }
 
 // Android immersive shells do not always expose a non-zero top inset,
 // so provide a small fallback for camera cutouts and status bars.
-html[data-app-context="native-android"],
-html[data-platform="android"][data-display-mode="standalone"] {
+html[data-app-context='native-android'],
+html[data-platform='android'][data-display-mode='standalone'] {
   --safe-area-top: max(24px, env(safe-area-inset-top, 0px));
   --safe-area-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
@@ -278,6 +287,11 @@ html.locale-ko body {
   font-family: 'Noto Sans KR', var(--nostria-font-family);
 }
 
+html.locale-th,
+html.locale-th body {
+  font-family: 'Noto Sans Thai', var(--nostria-font-family);
+}
+
 html.locale-zh,
 html.locale-zh body {
   font-family: 'Noto Sans SC', var(--nostria-font-family);
@@ -286,7 +300,6 @@ html.locale-zh body {
 // Elements that should remain LTR even in RTL locales
 html.locale-ar,
 html.locale-fa {
-
   // Sidenavs should stay on their original sides
   .mat-drawer,
   .mat-sidenav,
@@ -394,7 +407,8 @@ html.locale-fa {
   overflow-x: hidden !important;
   scrollbar-gutter: stable;
   scrollbar-width: auto;
-  scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
+  scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline))
+    var(--scrollbar-track, transparent);
 }
 
 .mat-mdc-menu-panel.reaction-picker-menu .emoji-list-scroll::-webkit-scrollbar {
@@ -625,54 +639,98 @@ h6 {
 // Pane toolbars must always span full pane width.
 // Most routed pages render .panel-header inside a max-width-centered wrapper,
 // so this makes headers full-bleed to pane edges using pane container units.
-.left-panel .panel-content>router-outlet+*>.panel-header,
-.right-panel .panel-content>router-outlet+*>.panel-header,
-.right-panel .panel-content app-right-panel-container>*>.panel-header,
+.left-panel .panel-content > router-outlet + * > .panel-header,
+.right-panel .panel-content > router-outlet + * > .panel-header,
+.right-panel .panel-content app-right-panel-container > * > .panel-header,
 .left-panel .panel-header-wrapper .panel-header,
 .right-panel .panel-header-wrapper .panel-header {
   width: 100cqw !important;
   max-width: none !important;
   margin-left: calc((100% - 100cqw) / 2) !important;
   margin-right: 0 !important;
-  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
-  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-left: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
+  padding-right: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
 }
 
 // Two-pane mode: left pane content is right-aligned (towards center).
-.dual-panel-layout.has-right-content .left-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.has-right-content .left-panel .panel-content > router-outlet + * > .panel-header,
 .dual-panel-layout.has-right-content .left-panel .panel-header-wrapper .panel-header {
   margin-left: calc(100% - 100cqw) !important;
-  padding-left: max(16px, calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)) !important;
+  padding-left: max(
+    16px,
+    calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)
+  ) !important;
   padding-right: 56px !important;
 }
 
 // Two-pane mode: right pane content is left-aligned (towards center).
-.dual-panel-layout.has-right-content .right-panel .panel-content>router-outlet+*>.panel-header,
-.dual-panel-layout.has-right-content .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.has-right-content
+  .right-panel
+  .panel-content
+  > router-outlet
+  + *
+  > .panel-header,
+.dual-panel-layout.has-right-content
+  .right-panel
+  .panel-content
+  app-right-panel-container
+  > *
+  > .panel-header,
 .dual-panel-layout.has-right-content .right-panel .panel-header-wrapper .panel-header {
   margin-left: 0 !important;
   padding-left: 16px !important;
-  padding-right: max(16px, calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)) !important;
+  padding-right: max(
+    16px,
+    calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)
+  ) !important;
 }
 
 // Right panel becomes centered again when left panel is collapsed.
-.dual-panel-layout.left-collapsed .right-panel .panel-content>router-outlet+*>.panel-header,
-.dual-panel-layout.left-collapsed .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.left-collapsed .right-panel .panel-content > router-outlet + * > .panel-header,
+.dual-panel-layout.left-collapsed
+  .right-panel
+  .panel-content
+  app-right-panel-container
+  > *
+  > .panel-header,
 .dual-panel-layout.left-collapsed .right-panel .panel-header-wrapper .panel-header {
   margin-left: calc((100% - 100cqw) / 2) !important;
-  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
-  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-left: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
+  padding-right: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
 }
 
 // Mobile/overlay layouts center content wrappers in both panes.
-.dual-panel-layout.mobile-layout .left-panel .panel-content>router-outlet+*>.panel-header,
-.dual-panel-layout.mobile-layout .right-panel .panel-content>router-outlet+*>.panel-header,
-.dual-panel-layout.mobile-layout .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.mobile-layout .left-panel .panel-content > router-outlet + * > .panel-header,
+.dual-panel-layout.mobile-layout .right-panel .panel-content > router-outlet + * > .panel-header,
+.dual-panel-layout.mobile-layout
+  .right-panel
+  .panel-content
+  app-right-panel-container
+  > *
+  > .panel-header,
 .dual-panel-layout.mobile-layout .left-panel .panel-header-wrapper .panel-header,
 .dual-panel-layout.mobile-layout .right-panel .panel-header-wrapper .panel-header {
   margin-left: calc((100% - 100cqw) / 2) !important;
-  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
-  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-left: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
+  padding-right: max(
+    16px,
+    calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)
+  ) !important;
 }
 
 a:hover {
@@ -1667,7 +1725,6 @@ app-media-queue {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 0.5;
@@ -1697,7 +1754,6 @@ app-media-queue {
 // Timeline Hover Card - Light/Dark mode styles for CDK Overlay
 // These need to be global because CDK Overlay renders outside the component context
 .cdk-overlay-container {
-
   // Light mode (default)
   app-timeline-hover-card {
     .card-inner-content {
@@ -1830,7 +1886,6 @@ app-media-queue {
 
 // Glass bottom sheet styles
 .glass-bottom-sheet {
-
   // Make container background transparent for glass effect
   .mat-bottom-sheet-container {
     background: transparent !important;
@@ -1854,7 +1909,7 @@ app-media-queue {
   pointer-events: none;
 
   // Child dialogs need pointer events
-  >* {
+  > * {
     pointer-events: auto;
   }
 }
@@ -1936,27 +1991,27 @@ app-media-queue {
 
 // Android-specific safe area fix for mobile navigation
 // Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
-html[data-platform="android"][data-display-mode="standalone"] .mobile-nav,
-html[data-platform="android"][data-display-mode="standalone"] .mobile-bottom-cube,
-html[data-app-context="native-android"] .mobile-nav,
-html[data-app-context="native-android"] .mobile-bottom-cube {
+html[data-platform='android'][data-display-mode='standalone'] .mobile-nav,
+html[data-platform='android'][data-display-mode='standalone'] .mobile-bottom-cube,
+html[data-app-context='native-android'] .mobile-nav,
+html[data-app-context='native-android'] .mobile-bottom-cube {
   bottom: max(8px, var(--safe-area-bottom, 0px)) !important;
 }
 
 // iOS standalone/PWA: some WebView wrappers report an inflated safe-area inset,
 // which pushes the fixed bottom nav too far up.
-html[data-platform="ios"][data-display-mode="standalone"] .mobile-nav,
-html[data-platform="ios"][data-display-mode="standalone"] .mobile-bottom-cube {
+html[data-platform='ios'][data-display-mode='standalone'] .mobile-nav,
+html[data-platform='ios'][data-display-mode='standalone'] .mobile-bottom-cube {
   bottom: 22px !important;
 }
 
 // iOS standalone/PWA: align chat composer with the same bottom anchor as mobile nav.
 @media (max-width: 699px) {
-  html[data-platform="ios"][data-display-mode="standalone"] app-messages .message-input-container {
+  html[data-platform='ios'][data-display-mode='standalone'] app-messages .message-input-container {
     bottom: 22px !important;
   }
 
-  html[data-platform="ios"][data-display-mode="standalone"] app-messages .message-list {
+  html[data-platform='ios'][data-display-mode='standalone'] app-messages .message-list {
     padding-bottom: 80px !important;
   }
 }
@@ -1981,7 +2036,6 @@ html[data-font='sora'] {
 // iOS Safari auto-zooms focused form fields when computed text size is below 16px.
 // Keep Sora at 90% app-wide while restoring effective form control text size on iOS only.
 @supports (-webkit-touch-callout: none) {
-
   html[data-font='sora'] input,
   html[data-font='sora'] textarea,
   html[data-font='sora'] select,
@@ -2004,7 +2058,6 @@ html[data-font='sora'] {
 }
 
 @media (max-width: 499px) {
-
   .reply-filter-menu-panel.mat-mdc-menu-panel,
   .reply-filter-menu.mat-mdc-menu-panel {
     max-width: 90vw;

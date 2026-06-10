@@ -4,7 +4,11 @@ import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import { Subject, debounceTime } from 'rxjs';
-import { getSupportedLocale, normalizeLocale } from '../utils/supported-locales';
+import {
+  detectPreferredLocale,
+  getSupportedLocale,
+  normalizeLocale,
+} from '../utils/supported-locales';
 import type { MediaOptimizationOptionValue } from '../interfaces/media-upload';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
@@ -118,7 +122,7 @@ export interface LocalSettings {
   /**
    * Maximum number of tagged accounts allowed in an event for notifications.
    * Events with more tags than this threshold will not generate notifications.
-    * 'none' means no filtering.
+   * 'none' means no filtering.
    */
   maxTaggedAccountsFilter: MaxTaggedAccountsFilter;
   /** Default reaction emoji sent on single-tap. Empty string means open picker instead. */
@@ -204,7 +208,9 @@ export class LocalSettingsService {
   readonly trustRelay = computed(() => this.settings().trustRelay);
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
   readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
-  readonly featuredFeedCardsEnabled = computed(() => this.settings().featuredFeedCardsEnabled ?? true);
+  readonly featuredFeedCardsEnabled = computed(
+    () => this.settings().featuredFeedCardsEnabled ?? true,
+  );
   readonly showThreadLines = computed(() => this.settings().showThreadLines);
   readonly openThreadsExpanded = computed(() => this.settings().openThreadsExpanded);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
@@ -215,13 +221,17 @@ export class LocalSettingsService {
   readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
   readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 100);
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
-  readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
+  readonly articleEditorShowToolbar = computed(
+    () => this.settings().articleEditorShowToolbar ?? true,
+  );
   readonly articleEditorMediaOptimization = computed<MediaOptimizationOptionValue>(
-    () => this.settings().articleEditorMediaOptimization ?? 'balanced'
+    () => this.settings().articleEditorMediaOptimization ?? 'balanced',
   );
   readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
   readonly analyticsEnabled = computed(() => this.settings().analyticsEnabled ?? false);
-  readonly noteEditorNewExperience = computed(() => this.settings().noteEditorNewExperience ?? false);
+  readonly noteEditorNewExperience = computed(
+    () => this.settings().noteEditorNewExperience ?? false,
+  );
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
@@ -239,13 +249,13 @@ export class LocalSettingsService {
     }
 
     // Find first visible item
-    const firstVisible = menuConfig.find(item => item.visible);
+    const firstVisible = menuConfig.find((item) => item.visible);
     return firstVisible?.id || '/f';
   });
 
   constructor() {
     // Set up debounced save - waits 300ms after last change before saving
-    this.saveSubject.pipe(debounceTime(300)).subscribe(settings => {
+    this.saveSubject.pipe(debounceTime(300)).subscribe((settings) => {
       this.saveSettings(settings);
     });
 
@@ -276,13 +286,15 @@ export class LocalSettingsService {
     const htmlElement = this.document.documentElement;
 
     // Remove any existing locale classes
-    htmlElement.classList.forEach(className => {
+    htmlElement.classList.forEach((className) => {
       if (className.startsWith('locale-')) {
         htmlElement.classList.remove(className);
       }
     });
 
     const localeConfig = getSupportedLocale(locale);
+    htmlElement.lang = localeConfig?.angularCode ?? locale;
+    htmlElement.dir = localeConfig?.rtl ? 'rtl' : 'ltr';
 
     // Add the current locale class for locales that need custom font handling or RTL layout
     if (localeConfig?.rtl || localeConfig?.fontFamily) {
@@ -353,10 +365,12 @@ export class LocalSettingsService {
           startOnLastRoute: stored.startOnLastRoute !== undefined ? stored.startOnLastRoute : true,
           // Explicitly ensure startFeedsOnLastEvent defaults to true for existing users
           // who don't have this property yet
-          startFeedsOnLastEvent: stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
+          startFeedsOnLastEvent:
+            stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
           // Explicitly ensure featured feed cards default to true for existing users
           // who don't have this property yet
-          featuredFeedCardsEnabled: stored.featuredFeedCardsEnabled !== undefined ? stored.featuredFeedCardsEnabled : true,
+          featuredFeedCardsEnabled:
+            stored.featuredFeedCardsEnabled !== undefined ? stored.featuredFeedCardsEnabled : true,
           // Explicitly ensure autoRelayAuth defaults to false for existing users
           // who don't have this property yet (most users don't use authentication)
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
@@ -376,6 +390,10 @@ export class LocalSettingsService {
         const defaultSettings = {
           ...DEFAULT_LOCAL_SETTINGS,
           menuOpen: !isHandset, // Open on desktop, closed on mobile
+          locale:
+            typeof navigator !== 'undefined'
+              ? detectPreferredLocale(navigator.languages)
+              : DEFAULT_LOCAL_SETTINGS.locale,
         };
 
         this.logger.debug('No local settings found, using defaults with device-specific menuOpen', {
@@ -410,7 +428,7 @@ export class LocalSettingsService {
    * Update specific settings
    */
   updateSettings(updates: Partial<LocalSettings>): void {
-    this.settings.update(current => ({
+    this.settings.update((current) => ({
       ...current,
       ...updates,
     }));
@@ -444,7 +462,7 @@ export class LocalSettingsService {
   setLocaleImmediate(locale: string): void {
     const normalizedLocale = normalizeLocale(locale);
 
-    this.settings.update(current => ({
+    this.settings.update((current) => ({
       ...current,
       locale: normalizedLocale,
     }));
@@ -679,7 +697,9 @@ export class LocalSettingsService {
   /**
    * Set the default media optimization preset used by the article editor.
    */
-  setArticleEditorMediaOptimization(articleEditorMediaOptimization: MediaOptimizationOptionValue): void {
+  setArticleEditorMediaOptimization(
+    articleEditorMediaOptimization: MediaOptimizationOptionValue,
+  ): void {
     this.updateSettings({ articleEditorMediaOptimization });
   }
 

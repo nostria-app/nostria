@@ -45,20 +45,96 @@ export class SettingsRegistryService {
 
   /** All registered settings sections */
   readonly sections: SettingsSection[] = [
-    { id: 'general', title: $localize`:@@settings.sections.general:General`, icon: 'settings', route: '/settings/general' },
-    { id: 'profile', title: $localize`:@@settings.sections.profile:Profile`, icon: 'person', route: '/settings/profile', authenticated: true },
-    { id: 'appearance', title: $localize`:@@settings.sections.appearance:Appearance`, icon: 'palette', route: '/settings/appearance' },
-    { id: 'navigation', title: $localize`:@@settings.sections.navigation:Menu & Navigation`, icon: 'menu', route: '/settings/navigation' },
-    { id: 'content', title: $localize`:@@settings.sections.content:Feed & Content`, icon: 'article', route: '/settings/content' },
-    { id: 'wallet-subscriptions', title: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`, icon: 'account_balance_wallet', route: '/settings/wallet-subscriptions', authenticated: true },
-    { id: 'network', title: $localize`:@@settings.sections.network:Relays & Network`, icon: 'dns', route: '/settings/network', authenticated: true },
-    { id: 'privacy', title: $localize`:@@settings.sections.privacy:Privacy & Safety`, icon: 'security', route: '/settings/privacy', authenticated: true },
-    { id: 'web-of-trust', title: $localize`:@@settings.sections.web-of-trust:Web of Trust`, icon: 'verified_user', route: '/settings/web-of-trust', authenticated: true },
-    { id: 'algorithm', title: $localize`:@@settings.sections.algorithm:Algorithm`, icon: 'model_training', route: '/settings/algorithm' },
-    { id: 'storage', title: $localize`:@@settings.sections.storage:Storage`, icon: 'storage', route: '/settings/storage' },
-    { id: 'backup', title: $localize`:@@settings.sections.backup:Backup`, icon: 'archive', route: '/settings/backup', authenticated: true },
-    { id: 'logs-debug', title: $localize`:@@settings.sections.logs-debug:Logs & Debug`, icon: 'bug_report', route: '/settings/logs-debug' },
-    { id: 'about', title: $localize`:@@settings.sections.about:About`, icon: 'info', route: '/settings/about' },
+    {
+      id: 'general',
+      title: $localize`:@@settings.sections.general:General`,
+      icon: 'settings',
+      route: '/settings/general',
+    },
+    {
+      id: 'profile',
+      title: $localize`:@@settings.sections.profile:Profile`,
+      icon: 'person',
+      route: '/settings/profile',
+      authenticated: true,
+    },
+    {
+      id: 'appearance',
+      title: $localize`:@@settings.sections.appearance:Appearance`,
+      icon: 'palette',
+      route: '/settings/appearance',
+    },
+    {
+      id: 'navigation',
+      title: $localize`:@@settings.sections.navigation:Menu & Navigation`,
+      icon: 'menu',
+      route: '/settings/navigation',
+    },
+    {
+      id: 'content',
+      title: $localize`:@@settings.sections.content:Feed & Content`,
+      icon: 'article',
+      route: '/settings/content',
+    },
+    {
+      id: 'wallet-subscriptions',
+      title: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`,
+      icon: 'account_balance_wallet',
+      route: '/settings/wallet-subscriptions',
+      authenticated: true,
+    },
+    {
+      id: 'network',
+      title: $localize`:@@settings.sections.network:Relays & Network`,
+      icon: 'dns',
+      route: '/settings/network',
+      authenticated: true,
+    },
+    {
+      id: 'privacy',
+      title: $localize`:@@settings.sections.privacy:Privacy & Safety`,
+      icon: 'security',
+      route: '/settings/privacy',
+      authenticated: true,
+    },
+    {
+      id: 'web-of-trust',
+      title: $localize`:@@settings.sections.web-of-trust:Web of Trust`,
+      icon: 'verified_user',
+      route: '/settings/web-of-trust',
+      authenticated: true,
+    },
+    {
+      id: 'algorithm',
+      title: $localize`:@@settings.sections.algorithm:Algorithm`,
+      icon: 'model_training',
+      route: '/settings/algorithm',
+    },
+    {
+      id: 'storage',
+      title: $localize`:@@settings.sections.storage:Storage`,
+      icon: 'storage',
+      route: '/settings/storage',
+    },
+    {
+      id: 'backup',
+      title: $localize`:@@settings.sections.backup:Backup`,
+      icon: 'archive',
+      route: '/settings/backup',
+      authenticated: true,
+    },
+    {
+      id: 'logs-debug',
+      title: $localize`:@@settings.sections.logs-debug:Logs & Debug`,
+      icon: 'bug_report',
+      route: '/settings/logs-debug',
+    },
+    {
+      id: 'about',
+      title: $localize`:@@settings.sections.about:About`,
+      icon: 'info',
+      route: '/settings/about',
+    },
   ];
 
   /** All registered settings items (searchable) */
@@ -107,7 +183,17 @@ export class SettingsRegistryService {
       id: 'dark-mode',
       title: $localize`:@@settings.dark-mode:Theme`,
       description: $localize`:@@settings.dark-mode.description:Choose Auto, Dark, or Light theme`,
-      keywords: ['dark', 'light', 'auto', 'theme', 'mode', 'appearance', 'color', 'system', 'device'],
+      keywords: [
+        'dark',
+        'light',
+        'auto',
+        'theme',
+        'mode',
+        'appearance',
+        'color',
+        'system',
+        'device',
+      ],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
       icon: 'dark_mode',
@@ -119,7 +205,25 @@ export class SettingsRegistryService {
       id: 'language',
       title: $localize`:@@settings.language:Language`,
       description: $localize`:@@settings.language.description:Select your preferred language`,
-      keywords: ['language', 'locale', 'translation', 'english', 'spanish', 'french', 'german'],
+      keywords: [
+        'language',
+        'locale',
+        'translation',
+        'english',
+        'spanish',
+        'french',
+        'german',
+        'chinese',
+        'japanese',
+        'korean',
+        'italian',
+        'portuguese',
+        'russian',
+        'indonesian',
+        'turkish',
+        'vietnamese',
+        'thai',
+      ],
       section: 'general',
       sectionTitle: $localize`:@@settings.sections.general:General`,
       icon: 'language',
@@ -176,8 +280,8 @@ export class SettingsRegistryService {
     },
     {
       id: 'x-dual-posting',
-      title: 'Post to X',
-      description: 'Connect X and optionally post to X when publishing from Nostria',
+      title: $localize`:@@settings.post-to-x.title:Post to X`,
+      description: $localize`:@@settings.post-to-x.registry-description:Connect X and optionally post to X when publishing from Nostria`,
       keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'social', 'oauth'],
       section: 'content',
       sectionTitle: $localize`:@@settings.sections.content:Feed & Content`,
@@ -203,7 +307,15 @@ export class SettingsRegistryService {
       id: 'media-servers',
       title: $localize`:@@settings.media-servers.title:Media Servers`,
       description: $localize`:@@settings.media-servers.description:Manage your upload and fallback media servers`,
-      keywords: ['media servers', 'upload server', 'fallback server', 'nip-96', 'blossom', 'media upload', 'file hosting'],
+      keywords: [
+        'media servers',
+        'upload server',
+        'fallback server',
+        'nip-96',
+        'blossom',
+        'media upload',
+        'file hosting',
+      ],
       section: 'network',
       sectionTitle: $localize`:@@settings.sections.network:Relays & Network`,
       icon: 'cloud_upload',
@@ -249,7 +361,17 @@ export class SettingsRegistryService {
       id: 'home-destination',
       title: $localize`:@@settings.home-destination.title:Home Button Destination`,
       description: $localize`:@@settings.home-destination.description:Choose where the Nostria logo button should navigate to.`,
-      keywords: ['home', 'button', 'logo', 'destination', 'feeds', 'first', 'menu', 'navigate', 'click'],
+      keywords: [
+        'home',
+        'button',
+        'logo',
+        'destination',
+        'feeds',
+        'first',
+        'menu',
+        'navigate',
+        'click',
+      ],
       section: 'navigation',
       sectionTitle: $localize`:@@settings.sections.navigation:Menu & Navigation`,
       icon: 'home',
@@ -260,7 +382,19 @@ export class SettingsRegistryService {
       id: 'text-size',
       title: $localize`:@@settings.display.text-size:Text Size`,
       description: $localize`:@@settings.display.text-size.description:Adjust the text size for better readability`,
-      keywords: ['text', 'size', 'font', 'zoom', 'accessibility', 'display', 'scale', 'larger', 'smaller', 'readability', 'a11y'],
+      keywords: [
+        'text',
+        'size',
+        'font',
+        'zoom',
+        'accessibility',
+        'display',
+        'scale',
+        'larger',
+        'smaller',
+        'readability',
+        'a11y',
+      ],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
       icon: 'text_fields',
@@ -272,7 +406,17 @@ export class SettingsRegistryService {
       id: 'font-selector',
       title: $localize`:@@settings.display.font:Font`,
       description: $localize`:@@settings.display.font.description:Choose your preferred font for the app`,
-      keywords: ['font', 'typeface', 'roboto', 'system', 'sora', 'inter', 'typography', 'appearance', 'display'],
+      keywords: [
+        'font',
+        'typeface',
+        'roboto',
+        'system',
+        'sora',
+        'inter',
+        'typography',
+        'appearance',
+        'display',
+      ],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
       icon: 'font_download',
@@ -283,7 +427,16 @@ export class SettingsRegistryService {
       id: 'lock-screen-rotation',
       title: $localize`:@@settings.display.lock-screen-rotation:Lock Screen Rotation`,
       description: $localize`:@@settings.display.lock-screen-rotation.description:Keep the app in portrait mode so it does not rotate when your device rotates. Applies only on devices and browsers that support orientation lock.`,
-      keywords: ['rotation', 'orientation', 'portrait', 'landscape', 'lock', 'screen', 'display', 'mobile'],
+      keywords: [
+        'rotation',
+        'orientation',
+        'portrait',
+        'landscape',
+        'lock',
+        'screen',
+        'display',
+        'mobile',
+      ],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
       icon: 'screen_lock_rotation',
@@ -293,7 +446,8 @@ export class SettingsRegistryService {
     {
       id: 'chat-widget',
       title: 'Chat Widget',
-      description: 'Show a floating chat widget in the bottom-right corner for quick access to messages on desktop.',
+      description:
+        'Show a floating chat widget in the bottom-right corner for quick access to messages on desktop.',
       keywords: ['chat', 'widget', 'messages', 'floating', 'bubble', 'dm', 'direct', 'messenger'],
       section: 'appearance',
       sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
@@ -305,7 +459,18 @@ export class SettingsRegistryService {
       id: 'menu-customization',
       title: $localize`:@@settings.menu.title:Menu Customization`,
       description: $localize`:@@settings.menu.description:Drag items to reorder. Move items between lists to show or hide them.`,
-      keywords: ['menu', 'customize', 'sidebar', 'navigation', 'order', 'reorder', 'drag', 'drop', 'hide', 'show'],
+      keywords: [
+        'menu',
+        'customize',
+        'sidebar',
+        'navigation',
+        'order',
+        'reorder',
+        'drag',
+        'drop',
+        'hide',
+        'show',
+      ],
       section: 'navigation',
       sectionTitle: $localize`:@@settings.sections.navigation:Menu & Navigation`,
       icon: 'menu',
@@ -328,7 +493,19 @@ export class SettingsRegistryService {
       id: 'action-buttons',
       title: $localize`:@@settings.action-buttons.title:Action Buttons`,
       description: $localize`:@@settings.action-buttons.description:Choose how the action buttons (Like, Reply, Share, etc.) are displayed below posts and replies.`,
-      keywords: ['action', 'buttons', 'display', 'mode', 'icons', 'labels', 'posts', 'replies', 'like', 'reply', 'share'],
+      keywords: [
+        'action',
+        'buttons',
+        'display',
+        'mode',
+        'icons',
+        'labels',
+        'posts',
+        'replies',
+        'like',
+        'reply',
+        'share',
+      ],
       section: 'content',
       sectionTitle: $localize`:@@settings.sections.content:Feed & Content`,
       icon: 'touch_app',
@@ -339,7 +516,16 @@ export class SettingsRegistryService {
       id: 'right-sidebar',
       title: $localize`:@@settings.layout.right-sidebar:Show Right Sidebar`,
       description: $localize`:@@settings.layout.right-sidebar.description:Show the desktop right sidebar with Favorites and Runes. This syncs with your account settings across devices.`,
-      keywords: ['right sidebar', 'sidebar', 'favorites', 'runes', 'layout', 'desktop', 'panel', 'widgets'],
+      keywords: [
+        'right sidebar',
+        'sidebar',
+        'favorites',
+        'runes',
+        'layout',
+        'desktop',
+        'panel',
+        'widgets',
+      ],
       section: 'navigation',
       sectionTitle: $localize`:@@settings.sections.navigation:Menu & Navigation`,
       icon: 'right_panel_open',
@@ -374,7 +560,20 @@ export class SettingsRegistryService {
       id: 'sounds',
       title: $localize`:@@settings.sounds.title:Sounds`,
       description: $localize`:@@settings.sounds.description:Choose which in-app sounds Nostria should play`,
-      keywords: ['sound', 'sounds', 'audio', 'message', 'notification', 'dm', 'direct message', 'zap', 'zaps', 'like', 'reaction', 'ui interaction'],
+      keywords: [
+        'sound',
+        'sounds',
+        'audio',
+        'message',
+        'notification',
+        'dm',
+        'direct message',
+        'zap',
+        'zaps',
+        'like',
+        'reaction',
+        'ui interaction',
+      ],
       section: 'general',
       sectionTitle: $localize`:@@settings.sections.general:General`,
       icon: 'volume_up',
@@ -396,7 +595,17 @@ export class SettingsRegistryService {
       id: 'notification-spam-filter',
       title: $localize`:@@settings.notification-spam-filter.title:Notification Spam Filter`,
       description: $localize`:@@settings.notification-spam-filter.description:Filter out notifications from events that tag too many accounts`,
-      keywords: ['notification', 'spam', 'filter', 'tag', 'mass', 'tagged', 'accounts', 'block', 'mentions'],
+      keywords: [
+        'notification',
+        'spam',
+        'filter',
+        'tag',
+        'mass',
+        'tagged',
+        'accounts',
+        'block',
+        'mentions',
+      ],
       section: 'privacy',
       sectionTitle: $localize`:@@settings.sections.privacy:Privacy & Safety`,
       icon: 'filter_alt',
@@ -632,7 +841,17 @@ export class SettingsRegistryService {
       id: 'backup-restore',
       title: $localize`:@@settings.backup.restore:Backup & Restore`,
       description: $localize`:@@settings.backup.restore.description:Create and restore backups of your Nostr data`,
-      keywords: ['backup', 'restore', 'export', 'import', 'save', 'data', 'events', 'download', 'zip'],
+      keywords: [
+        'backup',
+        'restore',
+        'export',
+        'import',
+        'save',
+        'data',
+        'events',
+        'download',
+        'zip',
+      ],
       section: 'backup',
       sectionTitle: $localize`:@@settings.sections.backup:Backup`,
       icon: 'cloud_download',
@@ -653,7 +872,6 @@ export class SettingsRegistryService {
       authenticated: true,
       priority: 2,
     },
-
 
     // Logs Settings
     {
@@ -700,7 +918,17 @@ export class SettingsRegistryService {
       id: 'music-status',
       title: $localize`:@@settings.music-status.title:Music Status`,
       description: $localize`:@@settings.music-status.description:Share what you're listening to via NIP-38 user status`,
-      keywords: ['music', 'status', 'nip-38', 'now playing', 'listening', 'share', 'song', 'track', 'audio'],
+      keywords: [
+        'music',
+        'status',
+        'nip-38',
+        'now playing',
+        'listening',
+        'share',
+        'song',
+        'track',
+        'audio',
+      ],
       section: 'content',
       sectionTitle: $localize`:@@settings.sections.content:Feed & Content`,
       icon: 'music_note',
@@ -725,8 +953,8 @@ export class SettingsRegistryService {
   /** Popular settings for home page */
   readonly popularItems = computed(() =>
     this.items
-      .filter(item => item.popular)
-      .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
+      .filter((item) => item.popular)
+      .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)),
   );
 
   /** Filtered items based on search query */
@@ -737,10 +965,10 @@ export class SettingsRegistryService {
     }
 
     return this.items
-      .filter(item => {
+      .filter((item) => {
         const titleMatch = item.title.toLowerCase().includes(query);
         const descMatch = item.description?.toLowerCase().includes(query);
-        const keywordMatch = item.keywords.some(k => k.toLowerCase().includes(query));
+        const keywordMatch = item.keywords.some((k) => k.toLowerCase().includes(query));
         const sectionMatch = item.sectionTitle.toLowerCase().includes(query);
         return titleMatch || descMatch || keywordMatch || sectionMatch;
       })
@@ -793,7 +1021,7 @@ export class SettingsRegistryService {
    * Get section by ID
    */
   getSection(id: string): SettingsSection | undefined {
-    return this.sections.find(s => s.id === id);
+    return this.sections.find((s) => s.id === id);
   }
 
   /**
@@ -801,7 +1029,7 @@ export class SettingsRegistryService {
    */
   getItemsForSection(sectionId: string): SettingsItem[] {
     return this.items
-      .filter(item => item.section === sectionId)
+      .filter((item) => item.section === sectionId)
       .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
   }
 }

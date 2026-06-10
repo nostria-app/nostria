@@ -8,7 +8,15 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, RouteReuseStrategy, TitleStrategy, withExperimentalAutoCleanupInjectors, withExperimentalPlatformNavigation, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
+import {
+  provideRouter,
+  RouteReuseStrategy,
+  TitleStrategy,
+  withExperimentalAutoCleanupInjectors,
+  withExperimentalPlatformNavigation,
+  withInMemoryScrolling,
+  withNavigationErrorHandler,
+} from '@angular/router';
 import { NostriaTitleStrategy } from './services/nostria-title-strategy.service';
 import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -17,7 +25,11 @@ import { importProvidersFrom } from '@angular/core';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
-import { provideClientHydration, withEventReplay, withNoIncrementalHydration } from '@angular/platform-browser';
+import {
+  provideClientHydration,
+  withEventReplay,
+  withNoIncrementalHydration,
+} from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -29,7 +41,11 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { DesktopUpdaterService } from './services/desktop-updater.service';
 import { ExternalLinkService } from './services/external-link.service';
-import { getAngularLocaleCode, normalizeLocale } from './utils/supported-locales';
+import {
+  detectPreferredLocale,
+  getAngularLocaleCode,
+  normalizeLocale,
+} from './utils/supported-locales';
 import { isTauri } from '@tauri-apps/api/core';
 
 let appLang = 'en';
@@ -45,15 +61,15 @@ async function clearTauriServiceWorkerState(): Promise<void> {
 
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(registration => registration.unregister()));
+    await Promise.all(registrations.map((registration) => registration.unregister()));
 
     if (!('caches' in window)) {
       return;
     }
 
     const cacheNames = await caches.keys();
-    const ngswCacheNames = cacheNames.filter(cacheName => cacheName.includes('ngsw'));
-    await Promise.all(ngswCacheNames.map(cacheName => caches.delete(cacheName)));
+    const ngswCacheNames = cacheNames.filter((cacheName) => cacheName.includes('ngsw'));
+    await Promise.all(ngswCacheNames.map((cacheName) => caches.delete(cacheName)));
   } catch (error) {
     console.warn('[AppConfig] Failed to clear service worker state for Tauri runtime.', error);
   }
@@ -67,6 +83,8 @@ if (typeof window !== 'undefined') {
   if (settings) {
     const parsedSettings = JSON.parse(settings);
     appLang = getAngularLocaleCode(normalizeLocale(parsedSettings.locale));
+  } else if (typeof navigator !== 'undefined') {
+    appLang = getAngularLocaleCode(detectPreferredLocale(navigator.languages));
   }
 }
 
@@ -85,7 +103,7 @@ export const appConfig: ApplicationConfig = {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
         const outlinedFontSetClasses = defaultFontSetClasses
-          .filter(fontSetClass => fontSetClass !== 'material-icons')
+          .filter((fontSetClass) => fontSetClass !== 'material-icons')
           .concat(['material-symbols-outlined']);
         iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
       })(inject(MatIconRegistry));
@@ -135,22 +153,25 @@ export const appConfig: ApplicationConfig = {
           'ChunkLoadError',
           'MIME type',
         ];
-        const isChunkError = chunkErrorPatterns.some(pattern =>
-          errorMessage.toLowerCase().includes(pattern.toLowerCase())
+        const isChunkError = chunkErrorPatterns.some((pattern) =>
+          errorMessage.toLowerCase().includes(pattern.toLowerCase()),
         );
 
         if (isChunkError) {
-          console.error('[Router] Chunk loading error during navigation, reloading app:', errorMessage);
+          console.error(
+            '[Router] Chunk loading error during navigation, reloading app:',
+            errorMessage,
+          );
           // Clear caches and reload
           (async () => {
             try {
               if ('caches' in window) {
                 const cacheNames = await caches.keys();
-                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                await Promise.all(cacheNames.map((name) => caches.delete(name)));
               }
               if ('serviceWorker' in navigator) {
                 const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(registrations.map(reg => reg.unregister()));
+                await Promise.all(registrations.map((reg) => reg.unregister()));
               }
             } catch (e) {
               console.error('Error clearing caches:', e);
@@ -158,7 +179,7 @@ export const appConfig: ApplicationConfig = {
             window.location.reload();
           })();
         }
-      })
+      }),
     ),
     provideAnimations(),
     provideHttpClient(withFetch(), withInterceptors([nip98AuthInterceptor])),
