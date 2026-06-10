@@ -167,6 +167,8 @@ export interface ContentNotification extends Notification {
     reactionContent?: string; // For reactions, the emoji/content
     reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
     customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
+    relatedToOwnNote?: boolean; // Whether the notification targets the user's own note
+    relatedToMentionedNote?: boolean; // Whether the notification targets a note mentioning the user
     relayHints?: string[]; // Relay hints for resolving/opening referenced events
     zapAmount?: number; // For zaps, the amount in sats
     zappedEventId?: string; // For zaps, the event that was zapped (if any)

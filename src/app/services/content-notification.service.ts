@@ -18,19 +18,19 @@ import { UtilitiesService } from './utilities.service';
  * For extremely active accounts with viral posts, consider implementing pagination.
  */
 const NOTIFICATION_QUERY_LIMITS = {
-  FOLLOWERS: 200,   // New followers
-  MENTIONS: 500,    // Mentions in posts
-  REPOSTS: 300,     // Reposts/quotes
-  REPLIES: 500,     // Replies to your posts
-  REACTIONS: 500,   // Likes/reactions
-  ZAPS: 500,        // Zap receipts (often the highest volume, some relays reject limit >500)
+  FOLLOWERS: 200, // New followers
+  MENTIONS: 500, // Mentions in posts
+  REPOSTS: 300, // Reposts/quotes
+  REPLIES: 500, // Replies to your posts
+  REACTIONS: 500, // Likes/reactions
+  ZAPS: 500, // Zap receipts (often the highest volume, some relays reject limit >500)
 };
 
 /**
  * Service for managing content notifications (social interactions)
  * These are notifications about follows, mentions, reposts, replies, reactions, and zaps
  * that happen on the Nostr network.
- * 
+ *
  * This service also manages periodic polling for new notifications with visibility awareness:
  * - Checks for new notifications every 5 minutes when the app is visible
  * - Immediately checks when the app returns to visibility after being hidden
@@ -62,7 +62,8 @@ export class ContentNotificationService implements OnDestroy {
    * Regex to match nostr: URI identifiers and bare NIP-19 identifiers in content
    * These can be quite long (100-200+ chars for nprofile with relay hints)
    */
-  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
+  private readonly nostrUriRegex =
+    /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -110,7 +111,9 @@ export class ContentNotificationService implements OnDestroy {
    */
   markNotificationsCleared(): void {
     this.markNotificationsReadWatermark();
-    this.logger.info('ContentNotificationService notifications cleared; check timestamp set to now');
+    this.logger.info(
+      'ContentNotificationService notifications cleared; check timestamp set to now',
+    );
   }
 
   /**
@@ -135,7 +138,9 @@ export class ContentNotificationService implements OnDestroy {
     const timestamp = await this.getLastCheckTimestamp();
     this._lastCheckTimestamp.set(timestamp);
 
-    this.logger.info(`[AccountChange] Loaded lastCheckTimestamp for new account: ${timestamp} (${timestamp > 0 ? new Date(timestamp * 1000).toISOString() : 'never checked'})`);
+    this.logger.info(
+      `[AccountChange] Loaded lastCheckTimestamp for new account: ${timestamp} (${timestamp > 0 ? new Date(timestamp * 1000).toISOString() : 'never checked'})`,
+    );
   }
 
   // Track if we're currently checking for new content
@@ -171,10 +176,12 @@ export class ContentNotificationService implements OnDestroy {
       // If timestamp is 0 (first-time user or after cache clear),
       // immediately check for notifications to populate the list
       if (timestamp === 0) {
-        this.logger.info('[Initialize] Last check timestamp is 0, immediately fetching notifications');
+        this.logger.info(
+          '[Initialize] Last check timestamp is 0, immediately fetching notifications',
+        );
         // Use a short delay to ensure the app UI is ready
         setTimeout(() => {
-          this.checkForNewNotifications(7).catch(error => {
+          this.checkForNewNotifications(7).catch((error) => {
             this.logger.error('[Initialize] Failed to fetch initial notifications', error);
           });
         }, 1000);
@@ -199,10 +206,12 @@ export class ContentNotificationService implements OnDestroy {
     }
 
     // Count the number of 'p' tags (tagged accounts) in the event
-    const pTagCount = event.tags.filter(tag => tag[0] === 'p').length;
+    const pTagCount = event.tags.filter((tag) => tag[0] === 'p').length;
 
     if (pTagCount > maxTags) {
-      this.logger.debug(`Filtering notification from mass-tagged event: ${event.id} (${pTagCount} tags, limit: ${maxTags})`);
+      this.logger.debug(
+        `Filtering notification from mass-tagged event: ${event.id} (${pTagCount} tags, limit: ${maxTags})`,
+      );
       return true;
     }
 
@@ -211,14 +220,14 @@ export class ContentNotificationService implements OnDestroy {
 
   /**
    * Truncate content for notification preview without breaking nostr: URIs.
-   * 
+   *
    * Nostr URIs (nostr:nprofile1..., nostr:npub1..., etc.) can be 100-200+ characters long.
    * If we naively truncate at a fixed length, we can cut a URI in half, causing the
    * ResolveNostrPipe to fail to decode it and display raw "nostr:nprofile1..." text.
-   * 
+   *
    * This method ensures that if truncation would cut through a nostr URI, the URI is
    * either fully included or excluded from the result.
-   * 
+   *
    * @param content The full content string
    * @param maxLength Maximum length for the preview (default 500)
    * @returns Truncated content with intact nostr URIs
@@ -252,12 +261,12 @@ export class ContentNotificationService implements OnDestroy {
 
   /**
    * Resolve a notification message that may consist primarily of nostr:nevent/nostr:note references.
-   * 
+   *
    * When a note's content is just a reference to another event (e.g., a quote post like
    * "nostr:nevent1..."), the raw message would show as "note:abcdef01..." in the UI which
    * is meaningless. This method tries to fetch the referenced event's actual content
    * from the local database or relays and returns it as the message preview.
-   * 
+   *
    * @param content The raw event content
    * @returns Resolved content preview, or the original content if no resolution is possible
    */
@@ -498,7 +507,9 @@ export class ContentNotificationService implements OnDestroy {
       // Default to 7 days back maximum to avoid loading too much history
       // This applies when: since is 0 (first time), since is very old, or cache was cleared
       const defaultMaxDays = 7;
-      const defaultLimitTimestamp = Math.floor((Date.now() - defaultMaxDays * 24 * 60 * 60 * 1000) / 1000);
+      const defaultLimitTimestamp = Math.floor(
+        (Date.now() - defaultMaxDays * 24 * 60 * 60 * 1000) / 1000,
+      );
 
       // Always ensure we don't go further back than the default limit
       since = Math.max(since, defaultLimitTimestamp);
@@ -508,7 +519,9 @@ export class ContentNotificationService implements OnDestroy {
       if (limitDays !== undefined && limitDays > 0) {
         const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);
         since = Math.max(since, limitTimestamp);
-        this.logger.info(`Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`);
+        this.logger.info(
+          `Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`,
+        );
       }
 
       // Never go below the clear floor: once the user clears all notifications,
@@ -518,7 +531,9 @@ export class ContentNotificationService implements OnDestroy {
         since = Math.max(since, clearedAt);
       }
 
-      this.logger.debug(`Fetching notifications since timestamp: ${since} (${new Date(since * 1000).toISOString()})`);
+      this.logger.debug(
+        `Fetching notifications since timestamp: ${since} (${new Date(since * 1000).toISOString()})`,
+      );
 
       // Check for all notification types in parallel
       // Pass the pubkey to each check function
@@ -595,12 +610,12 @@ export class ContentNotificationService implements OnDestroy {
   private readonly FOLLOWER_SCAN_BATCH_SIZE = 500;
 
   private eventShowsFollower(event: Event, pubkey: string): boolean {
-    return event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+    return event.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
   }
 
   private async hasHistoricalFollowEvent(pubkey: string, event: Event): Promise<boolean> {
     const storedEvents = await this.database.getEventsByPubkeyAndKind(event.pubkey, kinds.Contacts);
-    const hasStoredHistoricalFollow = storedEvents.some(storedEvent => {
+    const hasStoredHistoricalFollow = storedEvents.some((storedEvent) => {
       if (storedEvent.id === event.id) {
         return false;
       }
@@ -623,7 +638,7 @@ export class ContentNotificationService implements OnDestroy {
       limit: 10,
     });
 
-    return relayEvents.some(previousEvent => {
+    return relayEvents.some((previousEvent) => {
       if (previousEvent.id === event.id) {
         return false;
       }
@@ -671,7 +686,9 @@ export class ContentNotificationService implements OnDestroy {
       const events = await this.accountRelay.getMany(filter);
       totalFetched += events.length;
 
-      this.logger.debug(`[FollowerScan] Batch returned ${events.length} events (total so far: ${totalFetched})`);
+      this.logger.debug(
+        `[FollowerScan] Batch returned ${events.length} events (total so far: ${totalFetched})`,
+      );
 
       if (events.length === 0) {
         break;
@@ -691,7 +708,7 @@ export class ContentNotificationService implements OnDestroy {
         if (seenInBatch.has(event.pubkey)) continue;
         if (this.accountLocalState.hasProcessedFollowerNotification(pubkey, event.pubkey)) continue;
 
-        const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+        const followsCurrentUser = event.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
         if (!followsCurrentUser) continue;
 
         seenInBatch.add(event.pubkey);
@@ -700,7 +717,11 @@ export class ContentNotificationService implements OnDestroy {
 
       if (batchFollowerPubkeys.length > 0) {
         uniqueFollowerCount += batchFollowerPubkeys.length;
-        this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, batchFollowerPubkeys, now);
+        this.accountLocalState.markFollowerNotificationsBatchProcessed(
+          pubkey,
+          batchFollowerPubkeys,
+          now,
+        );
       }
 
       // If we got fewer events than the batch size, we've exhausted all events
@@ -718,16 +739,19 @@ export class ContentNotificationService implements OnDestroy {
       }
     }
 
-    this.logger.info(`[FollowerScan] Complete. Found ${uniqueFollowerCount} unique followers from ${totalFetched} events`);
+    this.logger.info(
+      `[FollowerScan] Complete. Found ${uniqueFollowerCount} unique followers from ${totalFetched} events`,
+    );
 
     if (uniqueFollowerCount > 0) {
-      const message = uniqueFollowerCount === 1
-        ? '1 person is following you'
-        : `${uniqueFollowerCount} people are following you`;
+      const message =
+        uniqueFollowerCount === 1
+          ? $localize`:@@notifications.summary.single-follower:1 person is following you`
+          : $localize`:@@notifications.summary.multiple-followers:${uniqueFollowerCount}:count: people are following you`;
 
       await this.createContentNotification({
         type: NotificationType.FOLLOWER_SUMMARY,
-        title: 'Followers',
+        title: $localize`:@@notifications.type.followers:Followers`,
         message,
         authorPubkey: pubkey,
         recipientPubkey: pubkey,
@@ -758,14 +782,18 @@ export class ContentNotificationService implements OnDestroy {
     }
 
     if (await this.hasHistoricalFollowEvent(pubkey, event)) {
-      this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
+      this.accountLocalState.markFollowerNotificationProcessed(
+        pubkey,
+        event.pubkey,
+        event.created_at,
+      );
       return;
     }
 
     await this.createContentNotification({
       type: NotificationType.NEW_FOLLOWER,
-      title: 'New follower',
-      message: 'Someone started following you',
+      title: $localize`:@@notifications.type.new-follower:New follower`,
+      message: $localize`:@@notifications.message.new-follower:Someone started following you`,
       authorPubkey: event.pubkey,
       recipientPubkey: pubkey,
       eventId: event.id,
@@ -776,7 +804,11 @@ export class ContentNotificationService implements OnDestroy {
 
     // Persist follower as processed so future contact list updates from this user
     // do not depend on p-tag ordering and won't duplicate follow notifications.
-    this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
+    this.accountLocalState.markFollowerNotificationProcessed(
+      pubkey,
+      event.pubkey,
+      event.created_at,
+    );
   }
 
   /**
@@ -808,15 +840,13 @@ export class ContentNotificationService implements OnDestroy {
 
         // Filter out replies (which have 'e' tags referencing the original note)
         // and only keep pure mentions
-        const hasReplyTag = event.tags.some(
-          tag => tag[0] === 'e' && tag[3] === 'reply'
-        );
+        const hasReplyTag = event.tags.some((tag) => tag[0] === 'e' && tag[3] === 'reply');
 
         if (!hasReplyTag) {
           const resolvedMessage = await this.resolveEventReferences(event.content);
           await this.createContentNotification({
             type: NotificationType.MENTION,
-            title: 'Mentioned you',
+            title: $localize`:@@notifications.type.mentioned-you:Mentioned you`,
             message: this.truncateContentPreview(resolvedMessage),
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
@@ -862,12 +892,12 @@ export class ContentNotificationService implements OnDestroy {
           continue;
         }
 
-        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const eTag = event.tags.find((tag) => tag[0] === 'e');
         const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
         const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
         const repostMessage = repostedOwnNote
-          ? 'Reposted your note'
-          : 'Reposted a note mentioning you';
+          ? $localize`:@@notifications.type.reposted-your-note:Reposted your note`
+          : $localize`:@@notifications.type.reposted-mentioned-note:Reposted a note mentioning you`;
 
         await this.createContentNotification({
           type: NotificationType.REPOST,
@@ -879,6 +909,10 @@ export class ContentNotificationService implements OnDestroy {
           kind: 6,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
+          metadata: {
+            relatedToOwnNote: repostedOwnNote,
+            relatedToMentionedNote: !repostedOwnNote,
+          },
         });
       }
     } catch (error) {
@@ -915,23 +949,27 @@ export class ContentNotificationService implements OnDestroy {
 
         // Only include events that have a reply marker
         const hasReplyTag = event.tags.some(
-          tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
+          (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
         );
 
         if (hasReplyTag) {
           const replyToTag = event.tags.find(
-            tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
+            (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
           );
           const repliedToEventAuthorPubkey = await this.getEventAuthorPubkey(replyToTag?.[1]);
           const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
           const resolvedMessage = await this.resolveEventReferences(event.content);
-          const replyMessage = this.truncateContentPreview(resolvedMessage) || (repliedToOwnNote
-            ? 'Replied to your note'
-            : 'Replied to a note mentioning you');
+          const replyMessage =
+            this.truncateContentPreview(resolvedMessage) ||
+            (repliedToOwnNote
+              ? $localize`:@@notifications.type.replied-your-note:Replied to your note`
+              : $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`);
 
           await this.createContentNotification({
             type: NotificationType.REPLY,
-            title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
+            title: repliedToOwnNote
+              ? $localize`:@@notifications.type.replied-your-note:Replied to your note`
+              : $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`,
             message: replyMessage,
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
@@ -941,6 +979,8 @@ export class ContentNotificationService implements OnDestroy {
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
+              relatedToOwnNote: repliedToOwnNote,
+              relatedToMentionedNote: !repliedToOwnNote,
             },
           });
         }
@@ -979,21 +1019,21 @@ export class ContentNotificationService implements OnDestroy {
 
         // Convert '+' to heart emoji for better display, otherwise use the actual reaction
         const rawContent = event.content || '+';
-        const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
+        const reactionContent = !rawContent || rawContent === '+' ? '❤️' : rawContent;
 
         // Extract custom emoji URL from tags (NIP-30)
         // Custom emojis have content in :shortcode: format and an emoji tag with the URL
         let customEmojiUrl: string | undefined;
         if (rawContent.startsWith(':') && rawContent.endsWith(':')) {
           const shortcode = rawContent.slice(1, -1); // Remove colons
-          const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+          const emojiTag = event.tags.find((tag) => tag[0] === 'emoji' && tag[1] === shortcode);
           if (emojiTag?.[2]) {
             customEmojiUrl = emojiTag[2];
           }
         }
 
         // Extract the event being reacted to from the 'e' tag
-        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const eTag = event.tags.find((tag) => tag[0] === 'e');
         const reactedEventId = eTag?.[1];
 
         // Try to fetch the original event content to show in the notification
@@ -1013,9 +1053,8 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             reactedEventAuthorPubkey = reactedEvent?.pubkey;
-            reactedEventMentionsRecipient = reactedEvent?.tags.some(
-              tag => tag[0] === 'p' && tag[1] === pubkey
-            ) ?? false;
+            reactedEventMentionsRecipient =
+              reactedEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey) ?? false;
 
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
@@ -1038,11 +1077,13 @@ export class ContentNotificationService implements OnDestroy {
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: reactedToOwnNote
-            ? `Reacted ${reactionContent} to your note`
-            : `Reacted ${reactionContent} to a note mentioning you`,
-          message: reactedEventContent || (reactedToOwnNote
-            ? 'Reacted to your note'
-            : 'Reacted to a note mentioning you'),
+            ? $localize`:@@notifications.type.reaction.your-note:Reacted ${reactionContent}:reaction: to your note`
+            : $localize`:@@notifications.type.reaction.mentioned-note:Reacted ${reactionContent}:reaction: to a note mentioning you`,
+          message:
+            reactedEventContent ||
+            (reactedToOwnNote
+              ? $localize`:@@notifications.message.reaction.your-note:Reacted to your note`
+              : $localize`:@@notifications.message.reaction.mentioned-note:Reacted to a note mentioning you`),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId, // Use the event being reacted to, not the reaction event
@@ -1052,6 +1093,8 @@ export class ContentNotificationService implements OnDestroy {
             reactionContent,
             reactionEventId: event.id, // Store the reaction event ID for reference
             customEmojiUrl, // Store custom emoji URL for NIP-30 emojis
+            relatedToOwnNote: reactedToOwnNote,
+            relatedToMentionedNote: reactedToMentionedNote,
           },
         });
       }
@@ -1083,7 +1126,7 @@ export class ContentNotificationService implements OnDestroy {
         }
 
         // Extract the zap sender's pubkey from the description tag (zap request)
-        const descriptionTag = event.tags.find(tag => tag[0] === 'description');
+        const descriptionTag = event.tags.find((tag) => tag[0] === 'description');
         let zapperPubkey = event.pubkey; // Fallback to LNURL service pubkey
         let zapRequestEventId: string | undefined;
         let zapContent: string | undefined;
@@ -1111,7 +1154,7 @@ export class ContentNotificationService implements OnDestroy {
         }
 
         // Extract zap amount from bolt11 tag if available
-        const bolt11Tag = event.tags.find(tag => tag[0] === 'bolt11');
+        const bolt11Tag = event.tags.find((tag) => tag[0] === 'bolt11');
         let zapAmount = 0;
 
         if (bolt11Tag && bolt11Tag[1]) {
@@ -1125,7 +1168,8 @@ export class ContentNotificationService implements OnDestroy {
             this.logger.warn('Failed to parse bolt11 amount from zap receipt', error);
             // Fallback: try to get amount from the zap request
             try {
-              const zapRequest = descriptionTag && descriptionTag[1] ? JSON.parse(descriptionTag[1]) : null;
+              const zapRequest =
+                descriptionTag && descriptionTag[1] ? JSON.parse(descriptionTag[1]) : null;
               if (zapRequest) {
                 const amountTag = zapRequest.tags?.find((t: string[]) => t[0] === 'amount');
                 if (amountTag && amountTag[1]) {
@@ -1145,7 +1189,7 @@ export class ContentNotificationService implements OnDestroy {
 
         await this.createContentNotification({
           type: NotificationType.ZAP,
-          title: 'Zapped you',
+          title: $localize`:@@notifications.type.zapped-you:Zapped you`,
           message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
           authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
           recipientPubkey: pubkey, // The account that received this zap
@@ -1184,6 +1228,8 @@ export class ContentNotificationService implements OnDestroy {
       reactionContent?: string;
       reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
       customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
+      relatedToOwnNote?: boolean; // Whether the notification targets the user's own note
+      relatedToMentionedNote?: boolean; // Whether the notification targets a note mentioning the user
       relayHints?: string[];
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
@@ -1197,7 +1243,10 @@ export class ContentNotificationService implements OnDestroy {
     // Don't create or store notifications from muted users at all
     // Skip this check for FOLLOWER_SUMMARY since authorPubkey is just the first follower
     const mutedAccounts = this.accountState.mutedAccounts();
-    if (data.type !== NotificationType.FOLLOWER_SUMMARY && mutedAccounts.includes(data.authorPubkey)) {
+    if (
+      data.type !== NotificationType.FOLLOWER_SUMMARY &&
+      mutedAccounts.includes(data.authorPubkey)
+    ) {
       this.logger.debug(`Skipping notification from muted account: ${data.authorPubkey}`);
       return;
     }
@@ -1231,16 +1280,22 @@ export class ContentNotificationService implements OnDestroy {
     // This prevents re-parsed events from marking already-read notifications as unread
 
     // First check in-memory notifications (fastest)
-    const existingInMemory = this.notificationService.notifications().find(n => n.id === notificationId);
+    const existingInMemory = this.notificationService
+      .notifications()
+      .find((n) => n.id === notificationId);
     if (existingInMemory) {
-      this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in memory)`);
+      this.logger.debug(
+        `Skipping duplicate notification: ${notificationId} (already exists in memory)`,
+      );
       return;
     }
 
     // Also check storage as a fallback (in case notification was cleared from memory but still in storage)
     const existingInStorage = await this.database.getNotification(notificationId);
     if (existingInStorage) {
-      this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in storage)`);
+      this.logger.debug(
+        `Skipping duplicate notification: ${notificationId} (already exists in storage)`,
+      );
       return;
     }
 
@@ -1292,7 +1347,9 @@ export class ContentNotificationService implements OnDestroy {
   private async getRelayHintsForAuthor(pubkey: string): Promise<string[] | undefined> {
     try {
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
-      const relays = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(pubkey));
+      const relays = this.utilities.getShareRelayHints(
+        this.userRelayService.getRelaysForPubkey(pubkey),
+      );
       return relays.length > 0 ? relays : undefined;
     } catch (error) {
       this.logger.debug('Failed to resolve relay hints for notification author', error);
@@ -1313,7 +1370,9 @@ export class ContentNotificationService implements OnDestroy {
       }
 
       const timestamp = this.accountLocalState.getNotificationLastCheck(pubkey);
-      this.logger.info(`[getLastCheckTimestamp] Loaded last check timestamp for account ${pubkey.slice(0, 8)}: ${timestamp} (${new Date(timestamp * 1000).toISOString()})`);
+      this.logger.info(
+        `[getLastCheckTimestamp] Loaded last check timestamp for account ${pubkey.slice(0, 8)}: ${timestamp} (${new Date(timestamp * 1000).toISOString()})`,
+      );
       return timestamp;
     } catch (error) {
       this.logger.error('Failed to get last check timestamp', error);
@@ -1334,7 +1393,9 @@ export class ContentNotificationService implements OnDestroy {
       }
 
       this.accountLocalState.setNotificationLastCheck(pubkey, timestamp);
-      this.logger.info(`[updateLastCheckTimestamp] Updated last check timestamp for account ${pubkey.slice(0, 8)} to ${timestamp} (${new Date(timestamp * 1000).toISOString()})`);
+      this.logger.info(
+        `[updateLastCheckTimestamp] Updated last check timestamp for account ${pubkey.slice(0, 8)} to ${timestamp} (${new Date(timestamp * 1000).toISOString()})`,
+      );
     } catch (error) {
       this.logger.error('Failed to update last check timestamp', error);
     }
@@ -1371,7 +1432,7 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.info(`Refreshing notifications for the last ${days} days`);
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      let since = now - (days * 24 * 60 * 60);
+      let since = now - days * 24 * 60 * 60;
 
       // Respect the clear floor: after the user clears all notifications, a
       // refresh must not backfill anything older than the clear time. To load
@@ -1381,7 +1442,9 @@ export class ContentNotificationService implements OnDestroy {
         since = Math.max(since, clearedAt);
       }
 
-      this.logger.debug(`Fetching notifications from ${new Date(since * 1000).toISOString()} to now`);
+      this.logger.debug(
+        `Fetching notifications from ${new Date(since * 1000).toISOString()} to now`,
+      );
 
       // Check for all notification types in parallel
       await Promise.all([
@@ -1423,7 +1486,9 @@ export class ContentNotificationService implements OnDestroy {
     this.isChecking.set(true);
 
     try {
-      this.logger.info(`Loading older notifications from ${new Date(since * 1000).toISOString()} to ${new Date(until * 1000).toISOString()}`);
+      this.logger.info(
+        `Loading older notifications from ${new Date(since * 1000).toISOString()} to ${new Date(until * 1000).toISOString()}`,
+      );
 
       // Check for all notification types in parallel with the specific time range
       await Promise.all([
@@ -1446,7 +1511,11 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for new followers within a specific time range
    */
-  private async checkForNewFollowersInRange(pubkey: string, since: number, until: number): Promise<void> {
+  private async checkForNewFollowersInRange(
+    pubkey: string,
+    since: number,
+    until: number,
+  ): Promise<void> {
     try {
       const events = await this.accountRelay.getMany({
         kinds: [kinds.Contacts],
@@ -1467,7 +1536,11 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for mentions within a specific time range
    */
-  private async checkForMentionsInRange(pubkey: string, since: number, until: number): Promise<void> {
+  private async checkForMentionsInRange(
+    pubkey: string,
+    since: number,
+    until: number,
+  ): Promise<void> {
     try {
       const events = await this.accountRelay.getMany({
         kinds: [kinds.ShortTextNote],
@@ -1481,13 +1554,15 @@ export class ContentNotificationService implements OnDestroy {
         if (event.pubkey === pubkey) continue;
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
-        const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        const isReply = event.tags.some(
+          (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
+        );
         if (isReply) continue;
 
         const resolvedMessage = await this.resolveEventReferences(event.content);
         await this.createContentNotification({
           type: NotificationType.MENTION,
-          title: 'Mentioned you',
+          title: $localize`:@@notifications.type.mentioned-you:Mentioned you`,
           message: this.truncateContentPreview(resolvedMessage),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
@@ -1505,7 +1580,11 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for reposts within a specific time range
    */
-  private async checkForRepostsInRange(pubkey: string, since: number, until: number): Promise<void> {
+  private async checkForRepostsInRange(
+    pubkey: string,
+    since: number,
+    until: number,
+  ): Promise<void> {
     try {
       const events = await this.accountRelay.getMany({
         kinds: [kinds.Repost, 16],
@@ -1519,12 +1598,12 @@ export class ContentNotificationService implements OnDestroy {
         if (event.pubkey === pubkey) continue;
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
-        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const eTag = event.tags.find((tag) => tag[0] === 'e');
         const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
         const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
         const repostMessage = repostedOwnNote
-          ? 'Reposted your note'
-          : 'Reposted a note mentioning you';
+          ? $localize`:@@notifications.type.reposted-your-note:Reposted your note`
+          : $localize`:@@notifications.type.reposted-mentioned-note:Reposted a note mentioning you`;
 
         await this.createContentNotification({
           type: NotificationType.REPOST,
@@ -1536,6 +1615,10 @@ export class ContentNotificationService implements OnDestroy {
           kind: event.kind,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
+          metadata: {
+            relatedToOwnNote: repostedOwnNote,
+            relatedToMentionedNote: !repostedOwnNote,
+          },
         });
       }
     } catch (error) {
@@ -1546,7 +1629,11 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for replies within a specific time range
    */
-  private async checkForRepliesInRange(pubkey: string, since: number, until: number): Promise<void> {
+  private async checkForRepliesInRange(
+    pubkey: string,
+    since: number,
+    until: number,
+  ): Promise<void> {
     try {
       const events = await this.accountRelay.getMany({
         kinds: [kinds.ShortTextNote],
@@ -1560,20 +1647,29 @@ export class ContentNotificationService implements OnDestroy {
         if (event.pubkey === pubkey) continue;
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
-        const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        const isReply = event.tags.some(
+          (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
+        );
         if (!isReply) continue;
 
-        const replyToTag = event.tags.find(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        const replyToTag = event.tags.find(
+          (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
+        );
         const repliedToEventAuthorPubkey = await this.getEventAuthorPubkey(replyToTag?.[1]);
         const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
 
         const resolvedMessage = await this.resolveEventReferences(event.content);
-        const replyMessage = this.truncateContentPreview(resolvedMessage) || (repliedToOwnNote
-          ? 'Replied to your note'
-          : 'Replied to a note mentioning you');
+        const replyMessage =
+          this.truncateContentPreview(resolvedMessage) ||
+          (repliedToOwnNote
+            ? $localize`:@@notifications.type.replied-your-note:Replied to your note`
+            : $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`);
+
         await this.createContentNotification({
           type: NotificationType.REPLY,
-          title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
+          title: repliedToOwnNote
+            ? $localize`:@@notifications.type.replied-your-note:Replied to your note`
+            : $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`,
           message: replyMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
@@ -1581,6 +1677,10 @@ export class ContentNotificationService implements OnDestroy {
           kind: 1,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
+          metadata: {
+            relatedToOwnNote: repliedToOwnNote,
+            relatedToMentionedNote: !repliedToOwnNote,
+          },
         });
       }
     } catch (error) {
@@ -1591,7 +1691,11 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for reactions within a specific time range
    */
-  private async checkForReactionsInRange(pubkey: string, since: number, until: number): Promise<void> {
+  private async checkForReactionsInRange(
+    pubkey: string,
+    since: number,
+    until: number,
+  ): Promise<void> {
     try {
       const events = await this.accountRelay.getMany({
         kinds: [kinds.Reaction],
@@ -1605,17 +1709,17 @@ export class ContentNotificationService implements OnDestroy {
         if (event.pubkey === pubkey) continue;
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
-        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const eTag = event.tags.find((tag) => tag[0] === 'e');
         const reactedEventId = eTag?.[1];
         const rawContent = event.content || '+';
-        const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
+        const reactionContent = !rawContent || rawContent === '+' ? '❤️' : rawContent;
 
         // Extract custom emoji URL from tags (NIP-30)
         // Custom emojis have content in :shortcode: format and an emoji tag with the URL
         let customEmojiUrl: string | undefined;
         if (rawContent.startsWith(':') && rawContent.endsWith(':')) {
           const shortcode = rawContent.slice(1, -1); // Remove colons
-          const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+          const emojiTag = event.tags.find((tag) => tag[0] === 'emoji' && tag[1] === shortcode);
           if (emojiTag?.[2]) {
             customEmojiUrl = emojiTag[2];
           }
@@ -1638,9 +1742,8 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             reactedEventAuthorPubkey = reactedEvent?.pubkey;
-            reactedEventMentionsRecipient = reactedEvent?.tags.some(
-              tag => tag[0] === 'p' && tag[1] === pubkey
-            ) ?? false;
+            reactedEventMentionsRecipient =
+              reactedEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey) ?? false;
 
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
@@ -1663,11 +1766,13 @@ export class ContentNotificationService implements OnDestroy {
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: reactedToOwnNote
-            ? `Reacted ${reactionContent} to your note`
-            : `Reacted ${reactionContent} to a note mentioning you`,
-          message: reactedEventContent || (reactedToOwnNote
-            ? 'Reacted to your note'
-            : 'Reacted to a note mentioning you'),
+            ? $localize`:@@notifications.type.reaction.your-note:Reacted ${reactionContent}:reaction: to your note`
+            : $localize`:@@notifications.type.reaction.mentioned-note:Reacted ${reactionContent}:reaction: to a note mentioning you`,
+          message:
+            reactedEventContent ||
+            (reactedToOwnNote
+              ? $localize`:@@notifications.message.reaction.your-note:Reacted to your note`
+              : $localize`:@@notifications.message.reaction.mentioned-note:Reacted to a note mentioning you`),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId || event.id,
@@ -1678,6 +1783,8 @@ export class ContentNotificationService implements OnDestroy {
             reactionContent,
             reactionEventId: event.id,
             customEmojiUrl, // Store custom emoji URL for NIP-30 emojis
+            relatedToOwnNote: reactedToOwnNote,
+            relatedToMentionedNote: reactedToMentionedNote,
           },
         });
       }
@@ -1704,7 +1811,7 @@ export class ContentNotificationService implements OnDestroy {
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         // Parse the zap request from the description tag
-        const descriptionTag = event.tags.find(tag => tag[0] === 'description');
+        const descriptionTag = event.tags.find((tag) => tag[0] === 'description');
         let zapperPubkey = event.pubkey;
         let zapContent = '';
         let zapRequestEventId: string | undefined;
@@ -1731,7 +1838,7 @@ export class ContentNotificationService implements OnDestroy {
         if (zapperPubkey === pubkey) continue;
 
         // Extract zap amount from bolt11 tag
-        const bolt11Tag = event.tags.find(tag => tag[0] === 'bolt11');
+        const bolt11Tag = event.tags.find((tag) => tag[0] === 'bolt11');
         let zapAmount = 0;
 
         if (bolt11Tag && bolt11Tag[1]) {
@@ -1747,7 +1854,7 @@ export class ContentNotificationService implements OnDestroy {
 
         await this.createContentNotification({
           type: NotificationType.ZAP,
-          title: 'Zapped you',
+          title: $localize`:@@notifications.type.zapped-you:Zapped you`,
           message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
           authorPubkey: zapperPubkey,
           recipientPubkey: pubkey,

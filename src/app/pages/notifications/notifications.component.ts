@@ -109,6 +109,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private trustService = inject(TrustService);
   private userRelayService = inject(UserRelayService);
+  readonly filterTooltipLabel = $localize`:@@notifications.filter.tooltip:Filter`;
+  private readonly closeActionLabel = $localize`:@@common.close:Close`;
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport)
@@ -608,7 +610,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   newNotificationCount = computed(() => {
     const contentNotifs = this.contentNotifications();
     const clearedAt = this.clearedAtTimestamp();
-    return contentNotifs.filter((n) => !n.read && this.isNewerThanReadWatermark(n, clearedAt)).length;
+    return contentNotifs.filter((n) => !n.read && this.isNewerThanReadWatermark(n, clearedAt))
+      .length;
   });
 
   async ngOnInit(): Promise<void> {
@@ -863,18 +866,26 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     try {
       await this.contentNotificationService.refreshRecentNotifications(this.REFRESH_LOOKBACK_DAYS);
-      this.snackBar.open('Notifications refreshed', 'Close', {
-        duration: 2000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
+      this.snackBar.open(
+        $localize`:@@notifications.refresh.success:Notifications refreshed`,
+        this.closeActionLabel,
+        {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        },
+      );
     } catch (error) {
       this.logger.error('Failed to refresh notifications:', error);
-      this.snackBar.open('Failed to refresh notifications', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
+      this.snackBar.open(
+        $localize`:@@notifications.refresh.error:Failed to refresh notifications`,
+        this.closeActionLabel,
+        {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        },
+      );
     } finally {
       this.isRefreshing.set(false);
       // Resume periodic polling now that the manual refresh is done
@@ -911,7 +922,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(id: string): void {
-    const notification = this.notifications().find(n => n.id === id);
+    const notification = this.notifications().find((n) => n.id === id);
     if (
       notification &&
       !notification.read &&
@@ -965,13 +976,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) {
-      return 'Just now';
+      return $localize`:@@notifications.time.just-now.capitalized:Just now`;
     } else if (minutes < 60) {
-      return `${minutes}m ago`;
+      return `${minutes}m`;
     } else if (hours < 24) {
-      return `${hours}h ago`;
+      return `${hours}h`;
     } else if (days < 7) {
-      return `${days}d ago`;
+      return `${days}d`;
     } else {
       const date = new Date(timestamp);
       return date.toLocaleDateString('en-US', {
@@ -996,13 +1007,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const days = Math.floor(diff / 86400);
 
     if (diff < 60) {
-      return 'just now';
+      return $localize`:@@notifications.time.just-now:just now`;
     } else if (minutes < 60) {
-      return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+      return minutes === 1
+        ? $localize`:@@notifications.time.minute-ago:1 minute ago`
+        : $localize`:@@notifications.time.minutes-ago:${minutes}:count: minutes ago`;
     } else if (hours < 24) {
-      return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+      return hours === 1
+        ? $localize`:@@notifications.time.hour-ago:1 hour ago`
+        : $localize`:@@notifications.time.hours-ago:${hours}:count: hours ago`;
     } else {
-      return `${days} day${days === 1 ? '' : 's'} ago`;
+      return days === 1
+        ? $localize`:@@notifications.time.day-ago:1 day ago`
+        : $localize`:@@notifications.time.days-ago:${days}:count: days ago`;
     }
   }
 
@@ -1115,7 +1132,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     try {
       await this.userRelayService.ensureRelaysForPubkey(eventAuthor);
-      const relays = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(eventAuthor));
+      const relays = this.utilities.getShareRelayHints(
+        this.userRelayService.getRelaysForPubkey(eventAuthor),
+      );
       return relays.length > 0 ? relays : undefined;
     } catch (error) {
       this.logger.debug(
@@ -1231,19 +1250,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    */
   getNotificationTypeLabel(type: NotificationType): string {
     const labels: Record<NotificationType, string> = {
-      [NotificationType.NEW_FOLLOWER]: 'Followers',
-      [NotificationType.FOLLOWER_SUMMARY]: 'Followers',
-      [NotificationType.MENTION]: 'Mentions',
-      [NotificationType.REPOST]: 'Reposts',
-      [NotificationType.REPLY]: 'Replies',
-      [NotificationType.REACTION]: 'Reactions',
-      [NotificationType.ZAP]: 'Zaps',
-      [NotificationType.WALLET]: 'Wallet',
-      [NotificationType.RELAY_PUBLISHING]: 'Relay Publishing',
-      [NotificationType.GENERAL]: 'General',
-      [NotificationType.ERROR]: 'Errors',
-      [NotificationType.SUCCESS]: 'Success',
-      [NotificationType.WARNING]: 'Warnings',
+      [NotificationType.NEW_FOLLOWER]: $localize`:@@notifications.filter.followers:Followers`,
+      [NotificationType.FOLLOWER_SUMMARY]: $localize`:@@notifications.filter.followers:Followers`,
+      [NotificationType.MENTION]: $localize`:@@notifications.filter.mentions:Mentions`,
+      [NotificationType.REPOST]: $localize`:@@notifications.filter.reposts:Reposts`,
+      [NotificationType.REPLY]: $localize`:@@notifications.filter.replies:Replies`,
+      [NotificationType.REACTION]: $localize`:@@notifications.filter.reactions:Reactions`,
+      [NotificationType.ZAP]: $localize`:@@notifications.filter.zaps:Zaps`,
+      [NotificationType.WALLET]: $localize`:@@notifications.filter.wallet:Wallet`,
+      [NotificationType.RELAY_PUBLISHING]: $localize`:@@notifications.type.relay-publishing:Relay Publishing`,
+      [NotificationType.GENERAL]: $localize`:@@notifications.type.general:General`,
+      [NotificationType.ERROR]: $localize`:@@notifications.type.errors:Errors`,
+      [NotificationType.SUCCESS]: $localize`:@@notifications.type.success:Success`,
+      [NotificationType.WARNING]: $localize`:@@notifications.type.warnings:Warnings`,
     };
     return labels[type] || type;
   }
@@ -1292,9 +1311,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * - For custom emojis, remove only the shortcode while preserving context text
    */
   getFormattedNotificationTitle(notification: Notification): string {
-    if (!notification.title) return '';
-
-    let title = notification.title;
+    let title = this.getLocalizedNotificationTitle(notification);
+    if (!title) return '';
 
     // For custom reaction emojis, remove only the emoji token from title text.
     // The emoji image itself is rendered separately in the template.
@@ -1315,9 +1333,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         title = title.replace(/\s{2,}/g, ' ').trim();
       }
     }
-
-    // Replace 'Reacted +' with heart emoji
-    title = title.replace(/Reacted \+/g, 'Reacted ❤️');
 
     // Lowercase the first character since it comes after the username
     if (title.length > 0) {
@@ -1382,7 +1397,51 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         return reactionContent.slice(1, -1); // Remove colons
       }
     }
-    return 'custom emoji';
+    return $localize`:@@notifications.custom-emoji:custom emoji`;
+  }
+
+  getDisplayNotificationMessage(notification: Notification): string | undefined {
+    const message = notification.message;
+    if (!message || !this.isContentNotificationWithData(notification)) {
+      return message;
+    }
+
+    const contentNotif = notification as ContentNotification;
+    switch (contentNotif.type) {
+      case NotificationType.NEW_FOLLOWER:
+        return message === 'Someone started following you'
+          ? $localize`:@@notifications.message.new-follower:Someone started following you`
+          : message;
+      case NotificationType.FOLLOWER_SUMMARY: {
+        const followerCount = contentNotif.metadata?.followerCount;
+        if (typeof followerCount === 'number' && followerCount > 0) {
+          return followerCount === 1
+            ? $localize`:@@notifications.summary.single-follower:1 person is following you`
+            : $localize`:@@notifications.summary.multiple-followers:${followerCount}:count: people are following you`;
+        }
+        return message;
+      }
+      case NotificationType.REPOST:
+        return message === 'Reposted your note'
+          ? $localize`:@@notifications.type.reposted-your-note:Reposted your note`
+          : message === 'Reposted a note mentioning you'
+            ? $localize`:@@notifications.type.reposted-mentioned-note:Reposted a note mentioning you`
+            : message;
+      case NotificationType.REPLY:
+        return message === 'Replied to your note'
+          ? $localize`:@@notifications.type.replied-your-note:Replied to your note`
+          : message === 'Replied to a note mentioning you'
+            ? $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`
+            : message;
+      case NotificationType.REACTION:
+        return message === 'Reacted to your note'
+          ? $localize`:@@notifications.message.reaction.your-note:Reacted to your note`
+          : message === 'Reacted to a note mentioning you'
+            ? $localize`:@@notifications.message.reaction.mentioned-note:Reacted to a note mentioning you`
+            : message;
+      default:
+        return message;
+    }
   }
 
   /**
@@ -1411,11 +1470,15 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   copyNotificationData(notification: Notification): void {
     const data = JSON.stringify(notification, null, 2);
     this.clipboard.copy(data);
-    this.snackBar.open('Notification data copied to clipboard', 'Close', {
-      duration: 2000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom',
-    });
+    this.snackBar.open(
+      $localize`:@@notifications.copy-event-data.success:Notification data copied to clipboard`,
+      this.closeActionLabel,
+      {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      },
+    );
   }
 
   /**
@@ -1528,5 +1591,65 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    */
   onWotFilterLevelChanged(level: WotFilterLevel): void {
     this.wotFilterLevel.set(level);
+  }
+
+  private getLocalizedNotificationTitle(notification: Notification): string {
+    if (!notification.title) {
+      return '';
+    }
+
+    if (!this.isContentNotificationWithData(notification)) {
+      return notification.title;
+    }
+
+    const contentNotif = notification as ContentNotification;
+    switch (contentNotif.type) {
+      case NotificationType.NEW_FOLLOWER:
+        return $localize`:@@notifications.type.new-follower:New follower`;
+      case NotificationType.FOLLOWER_SUMMARY:
+        return $localize`:@@notifications.type.followers:Followers`;
+      case NotificationType.MENTION:
+        return $localize`:@@notifications.type.mentioned-you:Mentioned you`;
+      case NotificationType.REPOST:
+        return this.isMentionedTargetNotification(contentNotif)
+          ? $localize`:@@notifications.type.reposted-mentioned-note:Reposted a note mentioning you`
+          : $localize`:@@notifications.type.reposted-your-note:Reposted your note`;
+      case NotificationType.REPLY:
+        return this.isMentionedTargetNotification(contentNotif)
+          ? $localize`:@@notifications.type.replied-mentioned-note:Replied to a note mentioning you`
+          : $localize`:@@notifications.type.replied-your-note:Replied to your note`;
+      case NotificationType.REACTION: {
+        const reactionContent = this.getReactionContent(contentNotif);
+        return this.isMentionedTargetNotification(contentNotif)
+          ? $localize`:@@notifications.type.reaction.mentioned-note:Reacted ${reactionContent}:reaction: to a note mentioning you`
+          : $localize`:@@notifications.type.reaction.your-note:Reacted ${reactionContent}:reaction: to your note`;
+      }
+      case NotificationType.ZAP:
+        return $localize`:@@notifications.type.zapped-you:Zapped you`;
+      default:
+        return notification.title;
+    }
+  }
+
+  private isMentionedTargetNotification(notification: ContentNotification): boolean {
+    if (notification.metadata?.relatedToMentionedNote !== undefined) {
+      return notification.metadata.relatedToMentionedNote;
+    }
+
+    return notification.title?.toLowerCase().includes('mentioning you') ?? false;
+  }
+
+  private getReactionContent(notification: ContentNotification): string {
+    const metadataReaction = notification.metadata?.reactionContent;
+    if (metadataReaction) {
+      return metadataReaction === '+' ? '❤️' : metadataReaction;
+    }
+
+    const titleMatch = notification.title?.match(/^Reacted\s+(.+?)\s+to\s+/i);
+    if (titleMatch?.[1]) {
+      return titleMatch[1] === '+' ? '❤️' : titleMatch[1];
+    }
+
+    return '❤️';
   }
 }

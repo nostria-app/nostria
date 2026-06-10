@@ -27,7 +27,6 @@ export interface NotificationFilters {
  */
 interface FilterOption {
   type: NotificationType;
-  label: string;
   icon: string;
 }
 
@@ -35,13 +34,13 @@ interface FilterOption {
  * All available filter options for content notifications
  */
 const FILTER_OPTIONS: FilterOption[] = [
-  { type: NotificationType.NEW_FOLLOWER, label: 'Followers', icon: 'person_add' },
-  { type: NotificationType.MENTION, label: 'Mentions', icon: 'alternate_email' },
-  { type: NotificationType.REPOST, label: 'Reposts', icon: 'repeat' },
-  { type: NotificationType.REPLY, label: 'Replies', icon: 'reply' },
-  { type: NotificationType.REACTION, label: 'Reactions', icon: 'favorite' },
-  { type: NotificationType.ZAP, label: 'Zaps', icon: 'bolt' },
-  { type: NotificationType.WALLET, label: 'Wallet', icon: 'account_balance_wallet' },
+  { type: NotificationType.NEW_FOLLOWER, icon: 'person_add' },
+  { type: NotificationType.MENTION, icon: 'alternate_email' },
+  { type: NotificationType.REPOST, icon: 'repeat' },
+  { type: NotificationType.REPLY, icon: 'reply' },
+  { type: NotificationType.REACTION, icon: 'favorite' },
+  { type: NotificationType.ZAP, icon: 'bolt' },
+  { type: NotificationType.WALLET, icon: 'account_balance_wallet' },
 ];
 
 @Component({
@@ -56,9 +55,14 @@ const FILTER_OPTIONS: FilterOption[] = [
     MatDividerModule,
   ],
   template: `
-    <div class="filter-panel" role="dialog" aria-label="Filter options">
+    <div
+      class="filter-panel"
+      role="dialog"
+      aria-label="Filter options"
+      i18n-aria-label="@@notifications.filter.aria"
+    >
       <!-- Filter Options -->
-      <div class="section-label">Filters</div>
+      <div class="section-label" i18n="@@notifications.filter.sections.filters">Filters</div>
       <div class="filter-options">
         @for (option of filterOptions; track option.type) {
           <mat-checkbox
@@ -67,7 +71,7 @@ const FILTER_OPTIONS: FilterOption[] = [
           >
             <div class="filter-option-content">
               <mat-icon class="filter-icon">{{ option.icon }}</mat-icon>
-              <span>{{ option.label }}</span>
+              <span>{{ getFilterOptionLabel(option.type) }}</span>
             </div>
           </mat-checkbox>
         }
@@ -76,35 +80,47 @@ const FILTER_OPTIONS: FilterOption[] = [
       <mat-divider></mat-divider>
 
       <!-- View Options -->
-      <div class="section-label">View</div>
+      <div class="section-label" i18n="@@notifications.filter.sections.view">View</div>
       <div class="filter-options">
         <mat-checkbox [checked]="showUnreadOnly()" (change)="onUnreadOnlyChange($event.checked)">
           <div class="filter-option-content">
             <mat-icon class="filter-icon">mark_email_unread</mat-icon>
-            <span>Unread only</span>
+            <span i18n="@@notifications.filter.unread-only">Unread only</span>
           </div>
         </mat-checkbox>
       </div>
 
       <mat-divider></mat-divider>
 
-      <div class="section-label">Web of Trust</div>
+      <div class="section-label" i18n="@@notifications.filter.sections.wot">Web of Trust</div>
       <mat-button-toggle-group
         [value]="wotFilterLevel()"
         (valueChange)="onWotFilterLevelChange($event)"
         class="wot-toggle-group"
         hideSingleSelectionIndicator
         aria-label="Web of Trust filter level"
+        i18n-aria-label="@@notifications.filter.wot.aria"
       >
-        <mat-button-toggle value="off">Off</mat-button-toggle>
-        <mat-button-toggle value="low">Low</mat-button-toggle>
-        <mat-button-toggle value="medium">Medium</mat-button-toggle>
-        <mat-button-toggle value="high">High</mat-button-toggle>
+        <mat-button-toggle value="off" i18n="@@notifications.filter.wot.off">Off</mat-button-toggle>
+        <mat-button-toggle value="low" i18n="@@notifications.filter.wot.low">Low</mat-button-toggle>
+        <mat-button-toggle value="medium" i18n="@@notifications.filter.wot.medium"
+          >Medium</mat-button-toggle
+        >
+        <mat-button-toggle value="high" i18n="@@notifications.filter.wot.high"
+          >High</mat-button-toggle
+        >
       </mat-button-toggle-group>
 
       <!-- Actions Row -->
       <div class="actions-row">
-        <button mat-stroked-button class="action-btn" (click)="reset()">Reset All</button>
+        <button
+          mat-stroked-button
+          class="action-btn"
+          (click)="reset()"
+          i18n="@@notifications.filter.reset"
+        >
+          Reset All
+        </button>
       </div>
     </div>
   `,
@@ -189,6 +205,27 @@ export class NotificationsFilterPanelComponent {
 
   // Expose filter options
   filterOptions = FILTER_OPTIONS;
+
+  getFilterOptionLabel(type: NotificationType): string {
+    switch (type) {
+      case NotificationType.NEW_FOLLOWER:
+        return $localize`:@@notifications.filter.followers:Followers`;
+      case NotificationType.MENTION:
+        return $localize`:@@notifications.filter.mentions:Mentions`;
+      case NotificationType.REPOST:
+        return $localize`:@@notifications.filter.reposts:Reposts`;
+      case NotificationType.REPLY:
+        return $localize`:@@notifications.filter.replies:Replies`;
+      case NotificationType.REACTION:
+        return $localize`:@@notifications.filter.reactions:Reactions`;
+      case NotificationType.ZAP:
+        return $localize`:@@notifications.filter.zaps:Zaps`;
+      case NotificationType.WALLET:
+        return $localize`:@@notifications.filter.wallet:Wallet`;
+      default:
+        return type;
+    }
+  }
 
   /**
    * Handle filter checkbox change
