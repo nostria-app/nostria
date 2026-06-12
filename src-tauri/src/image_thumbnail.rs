@@ -20,11 +20,12 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Read;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use base64::Engine as _;
 use image::ImageDecoder;
-use tauri::{Manager, Wry};
+use tauri::{Manager, UriSchemeResponder, Wry};
 
 /// Maximum number of bytes to download for a single source image before giving up.
 /// Guards against pathologically large originals exhausting memory during decode.
@@ -37,6 +38,24 @@ const MAX_WIDTH: u32 = 4096;
 /// JPEG quality for generated thumbnails (0-100).
 const JPEG_QUALITY: u8 = 82;
 
+/// Keep native thumbnail work bounded. Android WebView can request many feed images at once,
+/// and spawning one OS thread per request can panic if the process hits its thread limit.
+#[cfg(target_os = "android")]
+const MAX_CONCURRENT_THUMBNAIL_JOBS: usize = 4;
+
+#[cfg(not(target_os = "android"))]
+const MAX_CONCURRENT_THUMBNAIL_JOBS: usize = 8;
+
+static ACTIVE_THUMBNAIL_JOBS: AtomicUsize = AtomicUsize::new(0);
+
+struct ActiveThumbnailJob;
+
+impl Drop for ActiveThumbnailJob {
+    fn drop(&mut self) {
+        ACTIVE_THUMBNAIL_JOBS.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
 /// Register the `thumbimg` asynchronous URI scheme protocol on the Tauri builder.
 ///
 /// Requests look like `thumbimg://localhost/<base64url(originalUrl)>?w=1080`
@@ -46,24 +65,57 @@ pub fn register(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> {
         let app = ctx.app_handle().clone();
         let uri = request.uri().clone();
 
+        let active_jobs = ACTIVE_THUMBNAIL_JOBS.fetch_add(1, Ordering::AcqRel) + 1;
+        if active_jobs > MAX_CONCURRENT_THUMBNAIL_JOBS {
+            ACTIVE_THUMBNAIL_JOBS.fetch_sub(1, Ordering::AcqRel);
+            respond(responder, 429, "text/plain", b"thumbnail busy".to_vec());
+            return;
+        }
+
         // The download + decode + resize work is blocking and CPU/IO heavy, so run it off the
-        // main thread and respond asynchronously.
-        std::thread::spawn(move || {
-            let (status, content_type, body) = serve(&app, uri.path(), uri.query());
+        // main thread and respond asynchronously. Use Builder::spawn so thread exhaustion is
+        // reported as an error instead of panicking across Android's JNI request callback.
+        let spawn_result = std::thread::Builder::new()
+            .name("nostria-thumbimg".to_string())
+            .spawn(move || {
+                let _active_job = ActiveThumbnailJob;
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    serve(&app, uri.path(), uri.query())
+                }));
 
-            let response = tauri::http::Response::builder()
-                .status(status)
-                .header(tauri::http::header::CONTENT_TYPE, content_type)
-                .header(tauri::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                .header(tauri::http::header::CACHE_CONTROL, "max-age=604800")
-                .body(Cow::<'static, [u8]>::Owned(body))
-                .unwrap_or_else(|_| {
-                    tauri::http::Response::new(Cow::<'static, [u8]>::Owned(Vec::new()))
-                });
+                match result {
+                    Ok((status, content_type, body)) => {
+                        respond(responder, status, &content_type, body);
+                    }
+                    Err(_) => {
+                        respond(responder, 500, "text/plain", b"thumbnail panicked".to_vec());
+                    }
+                }
+            });
 
-            responder.respond(response);
-        });
+        if let Err(error) = spawn_result {
+            ACTIVE_THUMBNAIL_JOBS.fetch_sub(1, Ordering::AcqRel);
+            eprintln!("failed to spawn thumbnail worker: {error}");
+        }
     })
+}
+
+fn respond(responder: UriSchemeResponder, status: u16, content_type: &str, body: Vec<u8>) {
+    let cache_control = if status == 200 {
+        "max-age=604800"
+    } else {
+        "no-store"
+    };
+
+    let response = tauri::http::Response::builder()
+        .status(status)
+        .header(tauri::http::header::CONTENT_TYPE, content_type)
+        .header(tauri::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .header(tauri::http::header::CACHE_CONTROL, cache_control)
+        .body(Cow::<'static, [u8]>::Owned(body))
+        .unwrap_or_else(|_| tauri::http::Response::new(Cow::<'static, [u8]>::Owned(Vec::new())));
+
+    responder.respond(response);
 }
 
 /// Resolve a thumbnail request into an HTTP status, content type, and body bytes.
@@ -91,7 +143,10 @@ fn serve(app: &tauri::AppHandle, path: &str, query: Option<&str>) -> (u16, Strin
             (200, "image/jpeg".to_string(), bytes)
         }
         // Unknown/animated/vector formats are passed through untouched so they still render.
-        Ok(ThumbnailResult::Passthrough { bytes, content_type }) => (200, content_type, bytes),
+        Ok(ThumbnailResult::Passthrough {
+            bytes,
+            content_type,
+        }) => (200, content_type, bytes),
         // On failure return an error status; the frontend <img> onerror falls back to the
         // original URL, so a thumbnailing failure never hides an image.
         Err(_) => (502, "text/plain".to_string(), b"thumbnail failed".to_vec()),
@@ -131,7 +186,10 @@ fn decode_request(path: &str, query: Option<&str>) -> Option<(String, u32)> {
 
 enum ThumbnailResult {
     Jpeg(Vec<u8>),
-    Passthrough { bytes: Vec<u8>, content_type: String },
+    Passthrough {
+        bytes: Vec<u8>,
+        content_type: String,
+    },
 }
 
 /// Download the original image and produce a bounded-width JPEG thumbnail.
@@ -182,8 +240,8 @@ fn resize_to_jpeg(bytes: &[u8], max_width: u32) -> Option<Vec<u8>> {
 
     let (current_width, current_height) = (img.width(), img.height());
     let output = if current_width > max_width {
-        let new_height = ((current_height as u64 * max_width as u64) / current_width as u64)
-            .max(1) as u32;
+        let new_height =
+            ((current_height as u64 * max_width as u64) / current_width as u64).max(1) as u32;
         img.resize_exact(max_width, new_height, image::imageops::FilterType::Triangle)
     } else {
         // Smaller than the bound — keep as-is (no upscaling), still re-encoded as JPEG.
