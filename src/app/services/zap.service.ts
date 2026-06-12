@@ -13,6 +13,7 @@ import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { NostrRecord } from '../interfaces';
 import { NwcService } from './nwc.service';
+import { DatabaseService } from './database.service';
 
 interface LnurlPayResponse {
   callback: string;
@@ -69,6 +70,7 @@ export class ZapService {
   private zapMetrics = inject(ZapMetricsService);
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
+  private database = inject(DatabaseService);
 
   // Cache for LNURL pay endpoints (bounded to avoid unbounded growth over long sessions)
   private lnurlCache = new Map<string, LnurlPayResponse>();
@@ -1213,20 +1215,83 @@ export class ZapService {
    * @param eventId The event to get zaps for
    * @param limit Optional limit on number of zap receipts to fetch (default: 100)
    */
-  async getZapsForEvent(eventId: string, limit = 100): Promise<Event[]> {
+  async getZapsForEvent(eventId: string, limit = 100, eventAddress?: string): Promise<Event[]> {
     try {
-      // Query for zap receipts (kind 9735) that reference this event
-      const zapReceipts = await this.accountRelay.getMany({
-        kinds: [9735],
-        '#e': [eventId],
-        limit,
-      });
+      const cachedReceipts = await this.getCachedZapsForEvent(eventId, eventAddress);
+      const relayReceiptsPromise = this.getRelayZapsForEvent(eventId, limit, eventAddress);
+
+      if (cachedReceipts.length > 0) {
+        relayReceiptsPromise.then(receipts => {
+          this.cacheZapReceipts(receipts);
+        }).catch(error => {
+          this.logger.debug('Background zap receipt refresh failed:', error);
+        });
+
+        return cachedReceipts.slice(0, limit);
+      }
+
+      const zapReceipts = await relayReceiptsPromise;
+      this.cacheZapReceipts(zapReceipts);
 
       return zapReceipts;
     } catch (error) {
       this.logger.error('Error fetching zaps for event:', error as Error);
       return [];
     }
+  }
+
+  private async getCachedZapsForEvent(eventId: string, eventAddress?: string): Promise<Event[]> {
+    const cachedById = new Map<string, Event>();
+    const eventIdReceipts = await this.database.getEventsByKindAndTagValue(9735, 'e', eventId);
+
+    for (const receipt of eventIdReceipts) {
+      cachedById.set(receipt.id, receipt);
+    }
+
+    if (eventAddress) {
+      const addressReceipts = await this.database.getEventsByKindAndTagValue(9735, 'a', eventAddress);
+      for (const receipt of addressReceipts) {
+        cachedById.set(receipt.id, receipt);
+      }
+    }
+
+    return Array.from(cachedById.values()).sort((a, b) => b.created_at - a.created_at);
+  }
+
+  private async getRelayZapsForEvent(eventId: string, limit: number, eventAddress?: string): Promise<Event[]> {
+    // Query for zap receipts (kind 9735) that reference this event
+    const eventIdReceipts = await this.accountRelay.getMany({
+      kinds: [9735],
+      '#e': [eventId],
+      limit,
+    });
+
+    if (!eventAddress) {
+      return eventIdReceipts;
+    }
+
+    const addressReceipts = await this.accountRelay.getMany({
+      kinds: [9735],
+      '#a': [eventAddress],
+      limit,
+    } as unknown as Parameters<typeof this.accountRelay.getMany>[0]);
+
+    const receiptsById = new Map<string, Event>();
+    for (const receipt of [...eventIdReceipts, ...addressReceipts]) {
+      receiptsById.set(receipt.id, receipt);
+    }
+
+    return Array.from(receiptsById.values()).sort((a, b) => b.created_at - a.created_at).slice(0, limit);
+  }
+
+  private cacheZapReceipts(receipts: Event[]): void {
+    if (receipts.length === 0) {
+      return;
+    }
+
+    this.database.saveInteractionEvents(receipts).catch(error => {
+      this.logger.debug('Failed to cache zap receipts:', error);
+    });
   }
 
   /**
@@ -1326,6 +1391,7 @@ export class ZapService {
       },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for event:', event);
+        this.cacheZapReceipts([event]);
         onZapReceived(event);
       }
     );
@@ -1372,6 +1438,7 @@ export class ZapService {
       },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for user:', event);
+        this.cacheZapReceipts([event]);
         onZapReceived(event);
       }
     );

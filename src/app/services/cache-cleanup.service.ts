@@ -103,6 +103,7 @@ export class CacheCleanupService {
 
       // Perform the cleanup
       await this.database.cleanupCachedEvents();
+      await this.database.cleanupInteractionEvents();
 
       // Get stats after cleanup
       const statsAfter = await this.database.getCachedEventsStats();

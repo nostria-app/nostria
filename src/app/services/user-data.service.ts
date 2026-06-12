@@ -51,11 +51,19 @@ export class UserDataService {
    * Save events to database in background (non-blocking)
    * Uses batch save for efficiency and shows toast on error
    */
-  private saveEventsInBackground(events: Event[], context: string): void {
+  private saveEventsInBackground(
+    events: Event[],
+    context: string,
+    options?: { interactionCache?: boolean }
+  ): void {
     if (events.length === 0) return;
 
     // Fire and forget - don't await
-    this.database.saveEvents(events).catch((error) => {
+    const savePromise = options?.interactionCache
+      ? this.database.saveInteractionEvents(events)
+      : this.database.saveEvents(events);
+
+    savePromise.catch((error) => {
       this.logger.error(`Background save failed for ${context}:`, error);
       this.snackBar.open(
         `Failed to cache ${events.length} events locally. They may need to be re-fetched.`,
@@ -786,12 +794,10 @@ export class UserDataService {
     const isReplaceable = this.utilities.shouldAlwaysFetchFromRelay(kind);
     const shouldReadDatabase = options?.save && !options?.invalidateCache && !isReplaceable;
 
-    const dbEventsPromise = shouldReadDatabase
-      ? this.database.getEventsByKindAndEventTag(kind, eventTag)
-      : Promise.resolve([] as Event[]);
+    const dbEvents = shouldReadDatabase
+      ? await this.database.getEventsByKindAndEventTag(kind, eventTag)
+      : [];
 
-    // Always fetch from relays to get potentially newer events.
-    // Run relay and database lookups in parallel so slow IndexedDB scans do not delay relay results.
     const relayEventsPromise = this.userRelayEx.getEventsByKindAndEventTag(
       pubkey,
       kind,
@@ -799,11 +805,28 @@ export class UserDataService {
       options?.includeAccountRelays
     );
 
-    const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
-
     if (dbEvents.length > 0) {
       this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
+      records = dbEvents.map((event) => this.toRecord(event));
+
+      if (options?.cache || options?.invalidateCache) {
+        this.cache.set(cacheKey, records, options);
+      }
+
+      if (options?.save) {
+        this.refreshTaggedEventsInBackground(
+          relayEventsPromise,
+          dbEvents,
+          cacheKey,
+          options,
+          `kind ${kind}`
+        );
+      }
+
+      return records;
     }
+
+    const relayEvents = await relayEventsPromise;
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -839,7 +862,7 @@ export class UserDataService {
       const dbEventIds = new Set(dbEvents.map(e => e.id));
       const newRelayEvents = relayEvents.filter(e => !dbEventIds.has(e.id));
       if (newRelayEvents.length > 0) {
-        this.saveEventsInBackground(newRelayEvents, `kind ${kind}`);
+        this.saveEventsInBackground(newRelayEvents, `kind ${kind}`, { interactionCache: true });
       }
     }
 
@@ -869,26 +892,14 @@ export class UserDataService {
 
     // Check if any of these kinds are replaceable
     const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
-    // Timeline/feed-mode lookups pass a `limit`. For those, skip the IndexedDB
-    // cursor scan: it is a full scan of the by-kind index filtered in-memory,
-    // which on long-lived accounts (10k+ text notes) can take 10+ seconds under
-    // concurrent write load. Feed first-paint needs sub-second interaction
-    // counts; the relay query is capped at 3.5s and the in-memory cache (5 min
-    // TTL) still serves repeated loads for the same event. For non-timeline
-    // callers (thread/detail views, no limit) we keep the DB scan so cached
-    // interactions are available offline.
-    const isTimelineLookup = options?.limit !== undefined;
     const shouldReadDatabase = options?.save
       && !options?.invalidateCache
-      && !hasReplaceableKind
-      && !isTimelineLookup;
+      && !hasReplaceableKind;
 
-    const dbEventsPromise = shouldReadDatabase
-      ? this.database.getEventsByKindsAndEventTag(kinds, eventTag)
-      : Promise.resolve([] as Event[]);
+    const dbEvents = shouldReadDatabase
+      ? await this.database.getEventsByKindsAndEventTag(kinds, eventTag)
+      : [];
 
-    // Always fetch from relays to get potentially newer events.
-    // Run relay and database lookups in parallel so slow IndexedDB scans do not block interaction counts.
     const relayEventsPromise = this.userRelayEx.getEventsByKindsAndEventTag(
       pubkey,
       kinds,
@@ -897,11 +908,28 @@ export class UserDataService {
       options?.limit
     );
 
-    const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
-
     if (dbEvents.length > 0) {
       this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
+      records = dbEvents.map((event) => this.toRecord(event));
+
+      if (options?.cache || options?.invalidateCache) {
+        this.cache.set(cacheKey, records, options);
+      }
+
+      if (options?.save) {
+        this.refreshTaggedEventsInBackground(
+          relayEventsPromise,
+          dbEvents,
+          cacheKey,
+          options,
+          `kinds [${kinds.join(',')}]`
+        );
+      }
+
+      return records;
     }
+
+    const relayEvents = await relayEventsPromise;
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -937,11 +965,46 @@ export class UserDataService {
       const dbEventIds = new Set(dbEvents.map(e => e.id));
       const newRelayEvents = relayEvents.filter(e => !dbEventIds.has(e.id));
       if (newRelayEvents.length > 0) {
-        this.saveEventsInBackground(newRelayEvents, `kinds [${kinds.join(',')}]`);
+        this.saveEventsInBackground(newRelayEvents, `kinds [${kinds.join(',')}]`, { interactionCache: true });
       }
     }
 
     return records;
+  }
+
+  private refreshTaggedEventsInBackground(
+    relayEventsPromise: Promise<Event[]>,
+    dbEvents: Event[],
+    cacheKey: string,
+    options: CacheOptions & DataOptions,
+    context: string,
+  ): void {
+    relayEventsPromise.then((relayEvents) => {
+      if (!relayEvents || relayEvents.length === 0) {
+        return;
+      }
+
+      const eventMap = new Map<string, Event>();
+      for (const event of dbEvents) {
+        eventMap.set(event.id, event);
+      }
+      for (const event of relayEvents) {
+        eventMap.set(event.id, event);
+      }
+
+      const mergedEvents = Array.from(eventMap.values());
+      const records = mergedEvents.map((event) => this.toRecord(event));
+
+      if (options.cache || options.invalidateCache) {
+        this.cache.set(cacheKey, records, options);
+      }
+
+      const dbEventIds = new Set(dbEvents.map(e => e.id));
+      const newRelayEvents = relayEvents.filter(e => !dbEventIds.has(e.id));
+      this.saveEventsInBackground(newRelayEvents, context, { interactionCache: true });
+    }).catch((error) => {
+      this.logger.debug(`Background refresh failed for ${context}:`, error);
+    });
   }
 
   /**

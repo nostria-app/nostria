@@ -1090,7 +1090,7 @@ export class EventService {
   async loadRepliesFromDb(eventId: string): Promise<Event[]> {
     try {
       // Load both NIP-10 replies (kind 1) and NIP-22 comments (kind 1111, 1244)
-      const dbEvents = await this.database.getEventsByKindsAndEventTag([kinds.ShortTextNote, 1111, 1244], eventId);
+      const dbEvents = await this.database.getEventsByKindsAndTagValue([kinds.ShortTextNote, 1111, 1244], ['e', 'E'], eventId);
       if (dbEvents.length === 0) return [];
 
       return dbEvents.filter((event: Event) => this.isReplyInThread(event, eventId));
@@ -1173,6 +1173,9 @@ export class EventService {
       }
 
       const comments = Array.from(seen.values());
+      this.database.saveInteractionEvents(comments).catch((error) => {
+        this.logger.debug('Failed to cache NIP-22 comments:', error);
+      });
       this.logger.info('Loaded NIP-22 comments for event:', eventId, 'count:', comments.length);
       return comments;
     } catch (error) {
@@ -2133,7 +2136,18 @@ export class EventService {
     // Fast path: check local DB for cached replies and yield them instantly
     // before any relay fetches begin. This makes previously-seen threads render
     // in milliseconds instead of waiting 5-10s for relay timeouts.
-    const dbReplies = await this.loadRepliesFromDb(targetEventId);
+    const fastReplyLookupIds = rootId && rootId !== targetEventId
+      ? [targetEventId, rootId]
+      : [targetEventId];
+    const dbRepliesById = new Map<string, Event>();
+    for (const lookupId of fastReplyLookupIds) {
+      const cachedReplies = await this.loadRepliesFromDb(lookupId);
+      for (const cachedReply of cachedReplies) {
+        dbRepliesById.set(cachedReply.id, cachedReply);
+      }
+    }
+
+    const dbReplies = Array.from(dbRepliesById.values());
     if (dbReplies.length > 0) {
       const excludeIds = new Set([event.id]);
       if (isRepost) excludeIds.add(targetEventId);

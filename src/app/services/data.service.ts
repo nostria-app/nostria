@@ -1447,8 +1447,7 @@ export class DataService implements OnDestroy {
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
-      const allEvents = await this.database.getEventsByKind(kind);
-      events = allEvents.filter(e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      events = await this.database.getEventsByKindAndEventTag(kind, eventTag);
     }
 
     if (events.length === 0) {
@@ -1476,10 +1475,8 @@ export class DataService implements OnDestroy {
     }
 
     if (options?.save && eventFromRelays) {
+      await this.database.saveInteractionEvents(events);
       for (const event of events) {
-        await this.database.saveEvent(event);
-        // Also save to new DatabaseService for Summary queries
-        await this.saveEventToDatabase(event);
         // Process relay hints when saving events from relays
         await this.processEventForRelayHints(event);
       }

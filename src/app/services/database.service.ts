@@ -361,7 +361,7 @@ export interface InfoRecord {
  */
 const SHARED_DB_NAME = 'nostria-shared';
 const ACCOUNT_DB_PREFIX = 'nostria-account-';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /** Legacy database names to delete during migration */
 const LEGACY_DB_NAMES = ['nostria-db', 'nostria'];
@@ -422,7 +422,17 @@ const EVENT_INDEXES = {
   BY_CREATED: 'by-created',
   BY_PUBKEY_KIND: 'by-pubkey-kind',
   BY_PUBKEY_KIND_DTAG: 'by-pubkey-kind-d-tag',
+  BY_KIND_TAG_REF: 'by-kind-tag-ref',
 } as const;
+
+type StoredEvent = Event & {
+  dTag?: string;
+  tagRefs?: string[];
+  kindTagRefs?: string[];
+  interactionCachedAt?: number;
+};
+
+const INTERACTION_CACHE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 /**
  * Raw IndexedDB database service for Nostria
@@ -442,6 +452,9 @@ export class DatabaseService {
 
   /** The pubkey of the currently opened account database */
   private currentAccountPubkey: string | null = null;
+
+  /** Database names already scheduled for post-open event index backfill */
+  private eventIndexBackfills = new Set<string>();
 
   /**
    * Extract the d-tag value from a parameterized replaceable event
@@ -757,13 +770,15 @@ export class DatabaseService {
         };
 
         this.logger.info('Shared database opened successfully');
+        this.scheduleEventIndexBackfill(this.sharedDb);
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         clearTimeout(timeout);
-        const db = (event.target as IDBOpenDBRequest).result;
-        this.createSharedSchema(db);
+        const request = event.target as IDBOpenDBRequest;
+        const db = request.result;
+        this.createSharedSchema(db, request.transaction);
       };
 
       request.onblocked = () => {
@@ -816,13 +831,15 @@ export class DatabaseService {
         };
 
         this.logger.info('Account database opened successfully');
+        this.scheduleEventIndexBackfill(this.accountDb);
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         clearTimeout(timeout);
-        const db = (event.target as IDBOpenDBRequest).result;
-        this.createAccountSchema(db);
+        const request = event.target as IDBOpenDBRequest;
+        const db = request.result;
+        this.createAccountSchema(db, request.transaction);
       };
 
       request.onblocked = () => {
@@ -838,16 +855,18 @@ export class DatabaseService {
    * Create schema for the shared database.
    * Stores: events (shared kinds), relays, observedRelays, pubkeyRelayMappings, badgeDefinitions
    */
-  private createSharedSchema(db: IDBDatabase): void {
+  private createSharedSchema(db: IDBDatabase, transaction: IDBTransaction | null): void {
     // Create events store (for shared event kinds: 0, 3, 10002)
+    let eventsStore: IDBObjectStore | null = null;
     if (!db.objectStoreNames.contains(STORES.EVENTS)) {
-      const eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
-      eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY, 'pubkey', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
+      eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
       this.logger.debug('Created shared events store');
+    } else if (transaction) {
+      eventsStore = transaction.objectStore(STORES.EVENTS);
+    }
+
+    if (eventsStore) {
+      this.ensureEventStoreIndexes(eventsStore);
     }
 
     // Create relays store
@@ -899,16 +918,18 @@ export class DatabaseService {
    * Create schema for a per-account database.
   * Stores: events (non-shared kinds), info, notifications, eventsCache, messages, aiChatHistory
    */
-  private createAccountSchema(db: IDBDatabase): void {
+  private createAccountSchema(db: IDBDatabase, transaction: IDBTransaction | null): void {
     // Create events store (for per-account event kinds)
+    let eventsStore: IDBObjectStore | null = null;
     if (!db.objectStoreNames.contains(STORES.EVENTS)) {
-      const eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
-      eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY, 'pubkey', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
-      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
+      eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
       this.logger.debug('Created account events store');
+    } else if (transaction) {
+      eventsStore = transaction.objectStore(STORES.EVENTS);
+    }
+
+    if (eventsStore) {
+      this.ensureEventStoreIndexes(eventsStore);
     }
 
     // Create info store
@@ -953,6 +974,187 @@ export class DatabaseService {
       aiChatHistoryStore.createIndex('by-updated', 'updatedAt', { unique: false });
       this.logger.debug('Created aiChatHistory store');
     }
+  }
+
+  private ensureEventStoreIndexes(eventsStore: IDBObjectStore): void {
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_KIND, 'kind');
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_PUBKEY, 'pubkey');
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_CREATED, 'created_at');
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind']);
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag']);
+    this.createIndexIfMissing(eventsStore, EVENT_INDEXES.BY_KIND_TAG_REF, 'kindTagRefs', { multiEntry: true });
+  }
+
+  private createIndexIfMissing(
+    store: IDBObjectStore,
+    name: string,
+    keyPath: string | string[],
+    options?: IDBIndexParameters
+  ): void {
+    if (!store.indexNames.contains(name)) {
+      store.createIndex(name, keyPath, { unique: false, ...options });
+    }
+  }
+
+  private scheduleEventIndexBackfill(db: IDBDatabase | null): void {
+    if (!db || this.eventIndexBackfills.has(db.name)) {
+      return;
+    }
+
+    this.eventIndexBackfills.add(db.name);
+    setTimeout(() => {
+      this.backfillEventIndexFields(db).catch(error => {
+        this.logger.warn(`Event index backfill failed for ${db.name}`, error);
+        this.eventIndexBackfills.delete(db.name);
+      });
+    }, 1000);
+  }
+
+  private async backfillEventIndexFields(db: IDBDatabase): Promise<void> {
+    const batchSize = 250;
+    let processed = 0;
+    let updated = 0;
+    let lastKey: IDBValidKey | undefined;
+
+    while (true) {
+      const result = await this.backfillEventIndexBatch(db, batchSize, lastKey);
+      processed += result.processed;
+      updated += result.updated;
+      lastKey = result.lastKey;
+
+      if (!result.hasMore) {
+        break;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    if (updated > 0) {
+      this.logger.info(`Backfilled ${updated}/${processed} event index rows for ${db.name}`);
+    }
+  }
+
+  private backfillEventIndexBatch(
+    db: IDBDatabase,
+    batchSize: number,
+    afterKey?: IDBValidKey
+  ): Promise<{ processed: number; updated: number; lastKey?: IDBValidKey; hasMore: boolean }> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const range = afterKey === undefined ? undefined : IDBKeyRange.lowerBound(afterKey, true);
+      const request = store.openCursor(range);
+      let processed = 0;
+      let updated = 0;
+      let lastKey: IDBValidKey | undefined;
+      let hasMore = false;
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          return;
+        }
+
+        if (processed >= batchSize) {
+          hasMore = true;
+          return;
+        }
+
+        const current = cursor.value as StoredEvent;
+        const normalized = this.normalizeEventForStorage({ ...current });
+        processed++;
+        lastKey = cursor.primaryKey;
+
+        if (
+          !this.arraysEqual(current.tagRefs, normalized.tagRefs) ||
+          !this.arraysEqual(current.kindTagRefs, normalized.kindTagRefs) ||
+          current.dTag !== normalized.dTag
+        ) {
+          updated++;
+          cursor.update(normalized);
+        }
+
+        cursor.continue();
+      };
+
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve({ processed, updated, lastKey, hasMore });
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  private normalizeEventForStorage(
+    event: StoredEvent,
+    options?: { markAsInteraction?: boolean }
+  ): StoredEvent {
+    if (!event.tags) {
+      event.tags = [];
+    }
+
+    if (event.kind >= 30000 && event.kind < 40000) {
+      const dTag = this.extractDTag(event);
+      if (dTag) {
+        event.dTag = dTag;
+      }
+    }
+
+    event.tagRefs = this.buildTagRefs(event);
+    event.kindTagRefs = this.buildKindTagRefs(event);
+
+    if (options?.markAsInteraction) {
+      event.interactionCachedAt = Math.floor(Date.now() / 1000);
+    }
+
+    return event;
+  }
+
+  private buildTagRefs(event: Event): string[] {
+    const refs = new Set<string>();
+
+    for (const tag of event.tags ?? []) {
+      const tagName = tag[0];
+      const tagValue = tag[1];
+      if (tagName && tagValue) {
+        refs.add(this.buildTagRef(tagName, tagValue));
+      }
+    }
+
+    return Array.from(refs);
+  }
+
+  private buildKindTagRefs(event: Event): string[] {
+    const refs = new Set<string>();
+
+    for (const tag of event.tags ?? []) {
+      const tagName = tag[0];
+      const tagValue = tag[1];
+      if (tagName && tagValue) {
+        refs.add(this.buildKindTagRef(event.kind, tagName, tagValue));
+      }
+    }
+
+    return Array.from(refs);
+  }
+
+  private buildTagRef(tagName: string, tagValue: string): string {
+    return `${tagName}:${tagValue}`;
+  }
+
+  private buildKindTagRef(kind: number, tagName: string, tagValue: string): string {
+    return `${kind}:${tagName}:${tagValue}`;
+  }
+
+  private arraysEqual(left: string[] | undefined, right: string[] | undefined): boolean {
+    if (left === right) {
+      return true;
+    }
+
+    if (!left || !right || left.length !== right.length) {
+      return false;
+    }
+
+    const leftSet = new Set(left);
+    return right.every(value => leftSet.has(value));
   }
 
   /**
@@ -1084,16 +1286,11 @@ export class DatabaseService {
    * Routes to shared DB for shared kinds (0, 3, 10002) or account DB for others.
    * Skips saving if the event has already expired (NIP-40)
    */
-  async saveEvent(event: Event & { dTag?: string }): Promise<void> {
+  async saveEvent(event: StoredEvent): Promise<void> {
     // Validate event structure
     if (!event || !event.id || typeof event.kind !== 'number') {
       this.logger.warn('Attempted to save malformed event:', event);
       return;
-    }
-
-    // Ensure tags array exists
-    if (!event.tags) {
-      event.tags = [];
     }
 
     // Don't save expired events
@@ -1102,18 +1299,12 @@ export class DatabaseService {
       return;
     }
 
-    // Extract and add dTag for parameterized replaceable events (kind 30000-39999)
-    if (event.kind >= 30000 && event.kind < 40000) {
-      const dTag = this.extractDTag(event);
-      if (dTag) {
-        event.dTag = dTag;
-      }
-    }
+    const storedEvent = this.normalizeEventForStorage(event);
 
-    const db = this.getDbForEventKind(event.kind);
+    const db = this.getDbForEventKind(storedEvent.kind);
     if (!db) {
       // Account DB not open (anonymous mode) and this is a per-account event — skip
-      this.logger.debug(`Skipping save for event kind ${event.kind} — no account database`);
+      this.logger.debug(`Skipping save for event kind ${storedEvent.kind} — no account database`);
       return;
     }
 
@@ -1121,7 +1312,7 @@ export class DatabaseService {
       const transaction = db.transaction(STORES.EVENTS, 'readwrite');
       const store = transaction.objectStore(STORES.EVENTS);
 
-      const request = store.put(event);
+      const request = store.put(storedEvent);
 
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -1139,7 +1330,7 @@ export class DatabaseService {
    * @param event The event to save
    * @returns true if the event was saved, false if a newer event already exists
    */
-  async saveReplaceableEvent(event: Event & { dTag?: string }): Promise<boolean> {
+  async saveReplaceableEvent(event: StoredEvent): Promise<boolean> {
     // Validate event structure
     if (!event || !event.id || typeof event.kind !== 'number' || !event.pubkey) {
       this.logger.warn('Attempted to save malformed replaceable event:', event);
@@ -1211,18 +1402,26 @@ export class DatabaseService {
    * Groups events by shared vs per-account and saves them respectively.
    * Filters out expired events (NIP-40) before saving.
    */
-  async saveEvents(events: (Event & { dTag?: string })[]): Promise<void> {
+  async saveEvents(events: StoredEvent[]): Promise<void> {
+    await this.saveEventsInternal(events);
+  }
+
+  async saveInteractionEvents(events: StoredEvent[]): Promise<void> {
+    await this.saveEventsInternal(events, { markAsInteraction: true });
+  }
+
+  private async saveEventsInternal(
+    events: StoredEvent[],
+    options?: { markAsInteraction?: boolean }
+  ): Promise<void> {
     // Filter out malformed and expired events
     const validEvents = events.filter(event => {
       if (!event || !event.id || typeof event.kind !== 'number') {
         this.logger.warn('Skipping malformed event in batch save:', event);
         return false;
       }
-      if (!event.tags) {
-        event.tags = [];
-      }
       return !this.isEventExpired(event);
-    });
+    }).map(event => this.normalizeEventForStorage(event, options));
 
     if (validEvents.length === 0) return;
 
@@ -1231,8 +1430,8 @@ export class DatabaseService {
     }
 
     // Group by destination database
-    const sharedEvents: (Event & { dTag?: string })[] = [];
-    const accountEvents: (Event & { dTag?: string })[] = [];
+    const sharedEvents: StoredEvent[] = [];
+    const accountEvents: StoredEvent[] = [];
 
     for (const event of validEvents) {
       if (SHARED_EVENT_KINDS.has(event.kind)) {
@@ -1437,34 +1636,7 @@ export class DatabaseService {
    * Filters out expired events (NIP-40).
    */
   async getEventsByKindAndEventTag(kind: number, eventTag: string): Promise<Event[]> {
-    const db = this.getDbForEventKind(kind);
-    if (!db) return [];
-
-    const events = await new Promise<Event[]>((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
-      const store = transaction.objectStore(STORES.EVENTS);
-      const index = store.index(EVENT_INDEXES.BY_KIND);
-
-      const results: Event[] = [];
-      const request = index.openCursor(IDBKeyRange.only(kind));
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          const eventData = cursor.value as Event;
-          if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
-            results.push(eventData);
-          }
-          cursor.continue();
-        } else {
-          resolve(results);
-        }
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-
-    return this.filterAndDeleteExpiredEvents(events);
+    return this.getEventsByKindAndTagValue(kind, 'e', eventTag);
   }
 
   /**
@@ -1473,72 +1645,76 @@ export class DatabaseService {
    * Filters out expired events (NIP-40).
    */
   async getEventsByKindAndPubkeyTag(kind: number, pubkey: string): Promise<Event[]> {
+    return this.getEventsByKindAndTagValue(kind, 'p', pubkey);
+  }
+
+  async getEventsByKindAndTagValue(
+    kind: number,
+    tagName: string,
+    tagValue: string
+  ): Promise<Event[]> {
     const db = this.getDbForEventKind(kind);
     if (!db) return [];
 
     const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
-      const index = store.index(EVENT_INDEXES.BY_KIND);
+      const index = store.index(EVENT_INDEXES.BY_KIND_TAG_REF);
+      const request = index.getAll(this.buildKindTagRef(kind, tagName, tagValue));
 
-      const results: Event[] = [];
-      const request = index.openCursor(IDBKeyRange.only(kind));
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          const eventData = cursor.value as Event;
-          if (eventData.tags?.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
-            results.push(eventData);
-          }
-          cursor.continue();
-        } else {
-          resolve(results);
-        }
-      };
-
+      request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
 
     return this.filterAndDeleteExpiredEvents(events);
   }
 
-  /**
-   * Get events by multiple kinds that have a specific e-tag.
-   * May need to query both databases if kinds span shared and per-account.
-   * Filters out expired events (NIP-40).
-   */
-  async getEventsByKindsAndEventTag(kinds: number[], eventTag: string): Promise<Event[]> {
+  async getEventsByKindsAndTagValue(
+    kinds: number[],
+    tagName: string | string[],
+    tagValue: string
+  ): Promise<Event[]> {
+    const tagNames = Array.isArray(tagName) ? tagName : [tagName];
+
     const queryDb = (db: IDBDatabase, kindsToQuery: number[]): Promise<Event[]> => {
-      const kindPromises = kindsToQuery.map(kind => {
-        return new Promise<Event[]>((resolve, reject) => {
-          const transaction = db.transaction(STORES.EVENTS, 'readonly');
-          const store = transaction.objectStore(STORES.EVENTS);
-          const index = store.index(EVENT_INDEXES.BY_KIND);
+      return new Promise<Event[]>((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index(EVENT_INDEXES.BY_KIND_TAG_REF);
 
-          const results: Event[] = [];
-          const request = index.openCursor(IDBKeyRange.only(kind));
+        const results: Event[] = [];
+        const refs = kindsToQuery.flatMap(kind =>
+          tagNames.map(name => this.buildKindTagRef(kind, name, tagValue))
+        );
 
-          request.onsuccess = (event) => {
-            const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-            if (cursor) {
-              const eventData = cursor.value as Event;
-              if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
-                results.push(eventData);
-              }
-              cursor.continue();
-            } else {
+        if (refs.length === 0) {
+          resolve([]);
+          return;
+        }
+
+        let completed = 0;
+
+        for (const ref of refs) {
+          const request = index.getAll(ref);
+
+          request.onsuccess = () => {
+            if (request.result) {
+              results.push(...request.result);
+            }
+
+            completed++;
+            if (completed === refs.length) {
               resolve(results);
             }
           };
 
           request.onerror = () => reject(request.error);
-        });
+        }
+
+        transaction.onerror = () => reject(transaction.error);
       });
-      return Promise.all(kindPromises).then(results => results.flat());
     };
 
-    // Split kinds by database
     const sharedKinds = kinds.filter(k => SHARED_EVENT_KINDS.has(k));
     const accountKinds = kinds.filter(k => !SHARED_EVENT_KINDS.has(k));
 
@@ -1551,9 +1727,23 @@ export class DatabaseService {
     }
 
     const allResults = await Promise.all(promises);
-    const events = allResults.flat();
+    const seen = new Set<string>();
+    const events = allResults.flat().filter(event => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    });
 
     return this.filterAndDeleteExpiredEvents(events);
+  }
+
+  /**
+   * Get events by multiple kinds that have a specific e-tag.
+   * May need to query both databases if kinds span shared and per-account.
+   * Filters out expired events (NIP-40).
+   */
+  async getEventsByKindsAndEventTag(kinds: number[], eventTag: string): Promise<Event[]> {
+    return this.getEventsByKindsAndTagValue(kinds, 'e', eventTag);
   }
 
   /**
@@ -3148,6 +3338,62 @@ export class DatabaseService {
       transaction.oncomplete = () => {
         this.logger.info('Cleaned up old cached events');
         resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async cleanupInteractionEvents(
+    maxAgeSeconds = INTERACTION_CACHE_MAX_AGE_SECONDS,
+    maxInteractionEvents = 10000
+  ): Promise<number> {
+    const db = this.getAccountDb();
+    if (!db) return 0;
+
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffTimestamp = now - maxAgeSeconds;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const request = store.openCursor();
+      let deletedCount = 0;
+      const remainingInteractions: { key: IDBValidKey; cachedAt: number }[] = [];
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          const overflow = Math.max(0, remainingInteractions.length - maxInteractionEvents);
+          if (overflow > 0) {
+            remainingInteractions.sort((a, b) => a.cachedAt - b.cachedAt);
+            for (const interaction of remainingInteractions.slice(0, overflow)) {
+              store.delete(interaction.key);
+              deletedCount++;
+            }
+          }
+          return;
+        }
+
+        const event = cursor.value as StoredEvent;
+        if (typeof event.interactionCachedAt === 'number') {
+          if (event.interactionCachedAt < cutoffTimestamp) {
+            cursor.delete();
+            deletedCount++;
+          } else {
+            remainingInteractions.push({
+              key: cursor.primaryKey,
+              cachedAt: event.interactionCachedAt,
+            });
+          }
+        }
+
+        cursor.continue();
+      };
+
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => {
+        this.logger.debug(`Cleaned up ${deletedCount} cached interaction events`);
+        resolve(deletedCount);
       };
       transaction.onerror = () => reject(transaction.error);
     });
