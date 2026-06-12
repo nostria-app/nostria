@@ -76,6 +76,11 @@
     <mat-icon>edit</mat-icon>
   </button>
 
+  <button mat-icon-button (click)="openShareListDialog()" [disabled]="!canShareSelectedList()"
+    [matTooltip]="shareListTooltip()" class="hide-small">
+    <mat-icon>share</mat-icon>
+  </button>
+
   <!-- Shortcuts menu (only when a list is selected) - hidden on small screens -->
   <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..."
     i18n-matTooltip="@@people.view-list-in" class="hide-small">
@@ -130,6 +135,10 @@
     <button mat-menu-item (click)="openEditListDialog()">
       <mat-icon>edit</mat-icon>
       <span i18n="@@people.edit-list">Edit List</span>
+    </button>
+    <button mat-menu-item (click)="openShareListDialog()" [disabled]="!canShareSelectedList()">
+      <mat-icon>share</mat-icon>
+      <span i18n="@@common.share">Share</span>
     </button>
     <mat-divider></mat-divider>
     <!-- View this list in... submenu -->

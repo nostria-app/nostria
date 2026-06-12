@@ -15,6 +15,7 @@ import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
 import { Subject, firstValueFrom } from 'rxjs';
+import { nip19 } from 'nostr-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
@@ -41,6 +42,9 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { TrustService } from '../../services/trust.service';
 import { DatabaseService } from '../../services/database.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
+import { PublicUrlService } from '../../services/public-url.service';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -94,6 +98,8 @@ export class PeopleComponent implements OnDestroy {
   private followSetsService = inject(FollowSetsService);
   private hoverCardService = inject(ProfileHoverCardService);
   private utilities = inject(UtilitiesService);
+  private userRelaysService = inject(UserRelaysService);
+  private publicUrl = inject(PublicUrlService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private trustService = inject(TrustService);
   private database = inject(DatabaseService);
@@ -199,6 +205,14 @@ export class PeopleComponent implements OnDestroy {
 
   isCachedListSelected = computed(() => this.selectedFollowSetDTag() === CACHED_PROFILES_D_TAG);
   canUseListActions = computed(() => this.selectedFollowSet() !== null && !this.isCachedListSelected());
+  canShareSelectedList = computed(() => {
+    const selectedSet = this.selectedFollowSet();
+    return selectedSet !== null && !this.isCachedListSelected() && !selectedSet.isPrivate;
+  });
+  shareListTooltip = computed(() => {
+    const selectedSet = this.selectedFollowSet();
+    return selectedSet?.isPrivate ? 'Private lists cannot be shared' : 'Share List';
+  });
 
   // Computed: Get the selected follow set reactively from the service
   // This ensures we always have the latest version with updated pubkeys
@@ -1024,6 +1038,64 @@ export class PeopleComponent implements OnDestroy {
       });
     } catch (error) {
       this.logger.error('[People] Failed to navigate to feed creation:', error);
+    }
+  }
+
+  /**
+   * Share the currently selected follow set using the app's standard share dialog.
+   */
+  async openShareListDialog(): Promise<void> {
+    const selectedSet = this.selectedFollowSet();
+    if (!selectedSet || this.isCachedListSelected()) {
+      this.logger.warn('[People] No shareable follow set selected');
+      return;
+    }
+
+    if (selectedSet.isPrivate) {
+      this.notificationService.notify('Private lists cannot be shared');
+      return;
+    }
+
+    const pubkey = selectedSet.event?.pubkey || this.accountState.pubkey();
+    if (!pubkey) {
+      this.notificationService.notify('Failed to share list');
+      return;
+    }
+
+    try {
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(pubkey)
+      );
+      const naddr = nip19.naddrEncode({
+        kind: selectedSet.event?.kind || 30000,
+        pubkey,
+        identifier: selectedSet.dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
+      const personCount = selectedSet.pubkeys.length;
+      const dialogData: ShareArticleDialogData = {
+        title: selectedSet.title,
+        summary: `Follow set with ${personCount} ${personCount === 1 ? 'person' : 'people'}.`,
+        url: this.publicUrl.build(`/a/${naddr}`),
+        eventId: selectedSet.event?.id || selectedSet.id,
+        pubkey,
+        identifier: selectedSet.dTag,
+        kind: selectedSet.event?.kind || 30000,
+        encodedId: naddr,
+        naddr,
+        event: selectedSet.event,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: 'Share',
+        showCloseButton: true,
+        data: dialogData,
+        width: '560px',
+        maxWidth: 'min(560px, calc(100vw - 24px))',
+      });
+    } catch (error) {
+      this.logger.error('[People] Failed to share follow set:', error);
+      this.notificationService.notify('Failed to share list');
     }
   }
 

@@ -20,6 +20,9 @@ import { TwoColumnLayoutService } from '../../services/two-column-layout.service
 import { TrustService } from '../../services/trust.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatDialog } from '@angular/material/dialog';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
+import { PublicUrlService } from '../../services/public-url.service';
 
 describe('PeopleComponent', () => {
   let component: PeopleComponent;
@@ -89,6 +92,12 @@ describe('PeopleComponent', () => {
           },
         },
         {
+          provide: CustomDialogService,
+          useValue: {
+            open: vi.fn(() => ({ afterClosed$: of({ result: undefined }) })),
+          },
+        },
+        {
           provide: Followset,
           useValue: {
             fetchStarterPacks: vi.fn().mockResolvedValue([]),
@@ -126,7 +135,21 @@ describe('PeopleComponent', () => {
         },
         {
           provide: UtilitiesService,
-          useValue: {},
+          useValue: {
+            getShareRelayHints: vi.fn().mockReturnValue([]),
+          },
+        },
+        {
+          provide: UserRelaysService,
+          useValue: {
+            getUserRelaysForPublishing: vi.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: PublicUrlService,
+          useValue: {
+            build: vi.fn((path: string) => `https://nostria.app${path}`),
+          },
         },
         {
           provide: TwoColumnLayoutService,
