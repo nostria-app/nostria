@@ -625,6 +625,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       this.clearedAtTimestamp.set(this.accountLocalState.getNotificationClearedAt(pubkey));
     }
 
+    this.contentNotificationService.reconcileRecentNotifications().catch((error) => {
+      this.logger.error('[Notifications] Failed to reconcile recent notifications', error);
+    });
+
     // Handle auxiliary outlet navigation changes while this list component stays mounted.
     this.routerNavigationSubscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {

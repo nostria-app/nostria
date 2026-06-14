@@ -166,6 +166,10 @@ export interface ContentNotification extends Notification {
     content?: string; // For mentions/replies, the text content
     reactionContent?: string; // For reactions, the emoji/content
     reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
+    replyEventId?: string; // For replies, the reply event ID (kind 1)
+    repliedToEventId?: string; // For replies, the event being replied to
+    repostEventId?: string; // For reposts, the repost event ID (kind 6/16)
+    repostedEventId?: string; // For reposts, the event being reposted
     customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
     relatedToOwnNote?: boolean; // Whether the notification targets the user's own note
     relatedToMentionedNote?: boolean; // Whether the notification targets a note mentioning the user

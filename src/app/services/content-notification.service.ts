@@ -26,6 +26,8 @@ const NOTIFICATION_QUERY_LIMITS = {
   ZAPS: 500, // Zap receipts (often the highest volume, some relays reject limit >500)
 };
 
+const MAX_NOTIFICATION_QUERY_PAGES = 20;
+
 /**
  * Service for managing content notifications (social interactions)
  * These are notifications about follows, mentions, reposts, replies, reactions, and zaps
@@ -53,8 +55,13 @@ export class ContentNotificationService implements OnDestroy {
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MIN_TIME_BETWEEN_CHECKS_MS = 30 * 1000; // 30 seconds minimum between checks
   private readonly OVERLAP_BUFFER_SECONDS = 60 * 60; // 1 hour overlap to catch events missed due to relay delays
+  private readonly RECENT_RECONCILE_DAYS = 7;
+  private readonly RECENT_RECONCILE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
   private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+  private queuedReconcileTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private lastCheckTime = 0;
+  private lastRecentReconcileByPubkey = new Map<string, number>();
+  private forcedRecentReconcileDaysByPubkey = new Map<string, number>();
   private visibilityChangeHandler: (() => void) | null = null;
   private isPollingEnabled = false;
 
@@ -157,6 +164,10 @@ export class ContentNotificationService implements OnDestroy {
    */
   ngOnDestroy(): void {
     this.stopPolling();
+    if (this.queuedReconcileTimeoutId) {
+      clearTimeout(this.queuedReconcileTimeoutId);
+      this.queuedReconcileTimeoutId = null;
+    }
   }
 
   /**
@@ -471,6 +482,66 @@ export class ContentNotificationService implements OnDestroy {
     }
   }
 
+  async reconcileRecentNotifications(days = this.RECENT_RECONCILE_DAYS, force = false): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    const lastRun = this.lastRecentReconcileByPubkey.get(pubkey) ?? 0;
+    if (!force && nowMs - lastRun < this.RECENT_RECONCILE_INTERVAL_MS) {
+      return;
+    }
+
+    this.forcedRecentReconcileDaysByPubkey.set(pubkey, days);
+
+    if (this.isChecking()) {
+      this.scheduleQueuedRecentReconciliation();
+      return;
+    }
+
+    await this.checkForNewNotifications();
+  }
+
+  private scheduleQueuedRecentReconciliation(): void {
+    if (this.queuedReconcileTimeoutId) {
+      return;
+    }
+
+    this.queuedReconcileTimeoutId = setTimeout(() => {
+      this.queuedReconcileTimeoutId = null;
+
+      if (this.isChecking()) {
+        this.scheduleQueuedRecentReconciliation();
+        return;
+      }
+
+      this.checkForNewNotifications().catch((error) => {
+        this.logger.error('[RecentReconcile] Failed to run queued reconciliation', error);
+      });
+    }, 2000);
+  }
+
+  private getRecentReconcileDays(pubkey: string, nowMs: number): number | undefined {
+    const forcedDays = this.forcedRecentReconcileDaysByPubkey.get(pubkey);
+    if (forcedDays !== undefined) {
+      this.forcedRecentReconcileDaysByPubkey.delete(pubkey);
+      return forcedDays;
+    }
+
+    const lastRun = this.lastRecentReconcileByPubkey.get(pubkey) ?? 0;
+    if (nowMs - lastRun >= this.RECENT_RECONCILE_INTERVAL_MS) {
+      return this.RECENT_RECONCILE_DAYS;
+    }
+
+    return undefined;
+  }
+
+  private markRecentReconciled(pubkey: string, nowMs: number): void {
+    this.lastRecentReconcileByPubkey.set(pubkey, nowMs);
+  }
+
   /**
    * Check for new content notifications since last check
    * @param limitDays If provided, only fetch notifications from the last N days (for initial load)
@@ -494,7 +565,9 @@ export class ContentNotificationService implements OnDestroy {
       // CRITICAL: Always read from storage for the current account, not from in-memory signal
       // The signal is not account-specific and can be stale after account switches
       let since = await this.getLastCheckTimestamp();
-      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+      const nowMs = Date.now();
+      const now = Math.floor(nowMs / 1000); // Nostr uses seconds
+      const recentReconcileDays = this.getRecentReconcileDays(pubkey, nowMs);
 
       // Apply overlap buffer for returning checks to catch events missed due to relay delays.
       // Events can be missed if relays were slow to receive/index them, or if the relay
@@ -517,10 +590,20 @@ export class ContentNotificationService implements OnDestroy {
       // If limitDays is specified and is more restrictive, use it instead
       // This is useful for first-time users to avoid loading too much history
       if (limitDays !== undefined && limitDays > 0) {
-        const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);
+        const limitTimestamp = Math.floor(
+          (nowMs - limitDays * 24 * 60 * 60 * 1000) / 1000,
+        );
         since = Math.max(since, limitTimestamp);
         this.logger.info(
           `Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`,
+        );
+      }
+
+      if (recentReconcileDays !== undefined && recentReconcileDays > 0) {
+        const reconcileTimestamp = now - recentReconcileDays * 24 * 60 * 60;
+        since = Math.min(since, reconcileTimestamp);
+        this.logger.info(
+          `[RecentReconcile] Reconciling notifications for the last ${recentReconcileDays} days`,
         );
       }
 
@@ -549,6 +632,9 @@ export class ContentNotificationService implements OnDestroy {
       // Update the last check timestamp
       await this.updateLastCheckTimestamp(now);
       this._lastCheckTimestamp.set(now);
+      if (recentReconcileDays !== undefined) {
+        this.markRecentReconciled(pubkey, nowMs);
+      }
 
       this.logger.info('Completed checking for new content notifications');
     } catch (error) {
@@ -585,12 +671,15 @@ export class ContentNotificationService implements OnDestroy {
 
         this.logger.debug(`Checking for new followers since ${effectiveSince}`);
 
-        const events = await this.accountRelay.getMany({
-          kinds: [kinds.Contacts],
-          '#p': [pubkey],
-          since: effectiveSince,
-          limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
-        });
+        const events = await this.fetchNotificationEvents(
+          {
+            kinds: [kinds.Contacts],
+            '#p': [pubkey],
+            since: effectiveSince,
+          },
+          NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
+          'followers',
+        );
 
         this.logger.debug(`Found ${events.length} potential follow events`);
 
@@ -611,6 +700,80 @@ export class ContentNotificationService implements OnDestroy {
 
   private eventShowsFollower(event: Event, pubkey: string): boolean {
     return event.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
+  }
+
+  private sortEventsNewestFirst(events: Event[]): Event[] {
+    return [...events].sort((left, right) => {
+      if (right.created_at !== left.created_at) {
+        return right.created_at - left.created_at;
+      }
+
+      return right.id.localeCompare(left.id);
+    });
+  }
+
+  private async fetchNotificationEvents(
+    filter: Filter,
+    limit: number,
+    context: string,
+  ): Promise<Event[]> {
+    const eventsById = new Map<string, Event>();
+    const since = filter.since;
+    let until = filter.until;
+
+    for (let page = 0; page < MAX_NOTIFICATION_QUERY_PAGES; page++) {
+      const pageFilter: Filter = {
+        ...filter,
+        limit,
+        ...(until !== undefined ? { until } : {}),
+      };
+
+      const batch = await this.accountRelay.getMany(pageFilter);
+      if (batch.length === 0) {
+        break;
+      }
+
+      let oldestTimestamp = Number.POSITIVE_INFINITY;
+      let newEventsInBatch = 0;
+
+      for (const event of batch) {
+        if (since !== undefined && event.created_at < since) {
+          continue;
+        }
+
+        if (filter.until !== undefined && event.created_at > filter.until) {
+          continue;
+        }
+
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+
+        if (!eventsById.has(event.id)) {
+          eventsById.set(event.id, event);
+          newEventsInBatch++;
+        }
+      }
+
+      this.logger.debug(
+        `[NotificationFetch] ${context} page ${page + 1}: ${batch.length} relay events, ${newEventsInBatch} new unique`,
+      );
+
+      if (
+        !Number.isFinite(oldestTimestamp) ||
+        newEventsInBatch === 0 ||
+        newEventsInBatch < limit ||
+        (since !== undefined && oldestTimestamp <= since)
+      ) {
+        break;
+      }
+
+      if (until !== undefined && oldestTimestamp >= until) {
+        until -= 1;
+      } else {
+        until = oldestTimestamp;
+      }
+    }
+
+    return this.sortEventsNewestFirst([...eventsById.values()]);
   }
 
   private async hasHistoricalFollowEvent(pubkey: string, event: Event): Promise<boolean> {
@@ -818,12 +981,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.debug(`Checking for mentions since ${since}`);
 
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.ShortTextNote],
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.MENTIONS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.ShortTextNote],
+          '#p': [pubkey],
+          since,
+        },
+        NOTIFICATION_QUERY_LIMITS.MENTIONS,
+        'mentions',
+      );
 
       this.logger.debug(`Found ${events.length} potential mention events`);
 
@@ -872,12 +1038,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.debug(`Checking for reposts since ${since}`);
 
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Repost],
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.REPOSTS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.Repost, 16],
+          '#p': [pubkey],
+          since,
+        },
+        NOTIFICATION_QUERY_LIMITS.REPOSTS,
+        'reposts',
+      );
 
       this.logger.debug(`Found ${events.length} repost events`);
 
@@ -906,10 +1075,12 @@ export class ContentNotificationService implements OnDestroy {
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: event.id,
-          kind: 6,
+          kind: event.kind,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
+            repostEventId: event.id,
+            repostedEventId: eTag?.[1],
             relatedToOwnNote: repostedOwnNote,
             relatedToMentionedNote: !repostedOwnNote,
           },
@@ -927,12 +1098,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.debug(`Checking for replies since ${since}`);
 
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.ShortTextNote],
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.REPLIES,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.ShortTextNote],
+          '#p': [pubkey],
+          since,
+        },
+        NOTIFICATION_QUERY_LIMITS.REPLIES,
+        'replies',
+      );
 
       this.logger.debug(`Found ${events.length} potential reply events`);
 
@@ -979,6 +1153,8 @@ export class ContentNotificationService implements OnDestroy {
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
+              replyEventId: event.id,
+              repliedToEventId: replyToTag?.[1],
               relatedToOwnNote: repliedToOwnNote,
               relatedToMentionedNote: !repliedToOwnNote,
             },
@@ -997,12 +1173,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.debug(`Checking for reactions since ${since}`);
 
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Reaction],
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.REACTIONS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.Reaction],
+          '#p': [pubkey],
+          since,
+        },
+        NOTIFICATION_QUERY_LIMITS.REACTIONS,
+        'reactions',
+      );
 
       this.logger.debug(`Found ${events.length} reaction events`);
 
@@ -1110,12 +1289,15 @@ export class ContentNotificationService implements OnDestroy {
     try {
       this.logger.debug(`Checking for zaps since ${since}`);
 
-      const events = await this.accountRelay.getMany({
-        kinds: [9735], // Zap receipt
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.ZAPS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [9735], // Zap receipt
+          '#p': [pubkey],
+          since,
+        },
+        NOTIFICATION_QUERY_LIMITS.ZAPS,
+        'zaps',
+      );
 
       this.logger.debug(`Found ${events.length} zap events`);
 
@@ -1227,6 +1409,10 @@ export class ContentNotificationService implements OnDestroy {
       content?: string;
       reactionContent?: string;
       reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
+      replyEventId?: string; // For replies, the reply event ID (kind 1)
+      repliedToEventId?: string; // For replies, the event being replied to
+      repostEventId?: string; // For reposts, the repost event ID (kind 6/16)
+      repostedEventId?: string; // For reposts, the event being reposted
       customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
       relatedToOwnNote?: boolean; // Whether the notification targets the user's own note
       relatedToMentionedNote?: boolean; // Whether the notification targets a note mentioning the user
@@ -1517,13 +1703,16 @@ export class ContentNotificationService implements OnDestroy {
     until: number,
   ): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Contacts],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.Contacts],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
+        'followers-in-range',
+      );
 
       for (const event of events) {
         await this.processFollowerEvent(pubkey, event);
@@ -1542,13 +1731,16 @@ export class ContentNotificationService implements OnDestroy {
     until: number,
   ): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.ShortTextNote],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.MENTIONS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.ShortTextNote],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.MENTIONS,
+        'mentions-in-range',
+      );
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
@@ -1586,13 +1778,16 @@ export class ContentNotificationService implements OnDestroy {
     until: number,
   ): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Repost, 16],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.REPOSTS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.Repost, 16],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.REPOSTS,
+        'reposts-in-range',
+      );
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
@@ -1611,11 +1806,13 @@ export class ContentNotificationService implements OnDestroy {
           message: repostMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
-          eventId: eTag?.[1] || event.id,
+          eventId: event.id,
           kind: event.kind,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
+            repostEventId: event.id,
+            repostedEventId: eTag?.[1],
             relatedToOwnNote: repostedOwnNote,
             relatedToMentionedNote: !repostedOwnNote,
           },
@@ -1635,13 +1832,16 @@ export class ContentNotificationService implements OnDestroy {
     until: number,
   ): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.ShortTextNote],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.REPLIES,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.ShortTextNote],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.REPLIES,
+        'replies-in-range',
+      );
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
@@ -1673,11 +1873,13 @@ export class ContentNotificationService implements OnDestroy {
           message: replyMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
-          eventId: replyToTag?.[1] || event.id,
+          eventId: event.id,
           kind: 1,
           sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
+            replyEventId: event.id,
+            repliedToEventId: replyToTag?.[1],
             relatedToOwnNote: repliedToOwnNote,
             relatedToMentionedNote: !repliedToOwnNote,
           },
@@ -1697,13 +1899,16 @@ export class ContentNotificationService implements OnDestroy {
     until: number,
   ): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Reaction],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.REACTIONS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [kinds.Reaction],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.REACTIONS,
+        'reactions-in-range',
+      );
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
@@ -1798,13 +2003,16 @@ export class ContentNotificationService implements OnDestroy {
    */
   private async checkForZapsInRange(pubkey: string, since: number, until: number): Promise<void> {
     try {
-      const events = await this.accountRelay.getMany({
-        kinds: [9735],
-        '#p': [pubkey],
-        since,
-        until,
-        limit: NOTIFICATION_QUERY_LIMITS.ZAPS,
-      });
+      const events = await this.fetchNotificationEvents(
+        {
+          kinds: [9735],
+          '#p': [pubkey],
+          since,
+          until,
+        },
+        NOTIFICATION_QUERY_LIMITS.ZAPS,
+        'zaps-in-range',
+      );
 
       for (const event of events) {
         // Skip events with too many tagged accounts (spam prevention)

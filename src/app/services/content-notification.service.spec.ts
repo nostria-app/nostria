@@ -599,6 +599,74 @@ describe('ContentNotificationService', () => {
     });
   });
 
+  describe('reply notification identity', () => {
+    it('should create separate notifications for multiple replies to the same note', async () => {
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
+
+      const now = Math.floor(Date.now() / 1000);
+      const replyEvents = [
+        {
+          id: 'reply-1',
+          pubkey: TEST_PUBKEY_B,
+          kind: kinds.ShortTextNote,
+          created_at: now,
+          content: 'first reply',
+          tags: [
+            ['e', 'parent-note', '', 'reply'],
+            ['p', TEST_PUBKEY_A],
+          ],
+          sig: '',
+        },
+        {
+          id: 'reply-2',
+          pubkey: 'cccc'.repeat(16),
+          kind: kinds.ShortTextNote,
+          created_at: now - 1,
+          content: 'second reply',
+          tags: [
+            ['e', 'parent-note', '', 'reply'],
+            ['p', TEST_PUBKEY_A],
+          ],
+          sig: '',
+        },
+      ];
+
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
+        if (filter.kinds?.includes(kinds.ShortTextNote)) {
+          return replyEvents as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      mockDatabase.getEventById.mockImplementation((eventId: string) => {
+        if (eventId === 'parent-note') {
+          return Promise.resolve({
+            id: 'parent-note',
+            pubkey: TEST_PUBKEY_A,
+            content: 'parent',
+            tags: [],
+            kind: kinds.ShortTextNote,
+            created_at: now - 100,
+            sig: '',
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      const notificationIds = vi
+        .mocked(mockNotificationService.addNotification)
+        .mock.calls.map(([notification]) => (notification as { id: string }).id);
+
+      expect(notificationIds).toContain('content-reply-reply-1');
+      expect(notificationIds).toContain('content-reply-reply-2');
+    });
+  });
+
   describe('reaction fallback message', () => {
     it('should create "mentioning you" reaction notification when reacted note mentions the current account', async () => {
       mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
