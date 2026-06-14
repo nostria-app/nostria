@@ -9,6 +9,8 @@ import {
   OnDestroy,
   OnInit,
   DestroyRef,
+  EffectRef,
+  Injector,
   afterNextRender,
   input,
   output,
@@ -277,6 +279,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Inline mode state
   isExpanded = signal(false);
   private elementRef = inject(ElementRef);
+  private injector = inject(Injector);
   private materialDialogRef = inject(MatDialogRef<NoteEditorDialogComponent, NoteEditorDialogResult>, { optional: true });
   private materialDialogData = inject<NoteEditorDialogData | null>(MAT_DIALOG_DATA, { optional: true });
 
@@ -379,6 +382,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private pendingMenuOpenTimeout: ReturnType<typeof setTimeout> | null = null;
   private viewportHeightBaseline = 0;
   private editorBridgeReady = signal(false);
+  private contentEditorBridgeEffect?: EffectRef;
   private draggedInlineMediaToken: string | null = null;
 
   // Signals for reactive state
@@ -1381,6 +1385,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnDestroy() {
     this.editorBridgeReady.set(false);
+    this.contentEditorBridgeEffect?.destroy();
+    this.contentEditorBridgeEffect = undefined;
 
     if (this.textareaRefreshFrame !== null) {
       cancelAnimationFrame(this.textareaRefreshFrame);
@@ -3112,7 +3118,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.writeEditorValue(editor, this.content());
     this.editorBridgeReady.set(true);
 
-    effect(() => {
+    if (this.contentEditorBridgeEffect) {
+      return;
+    }
+
+    this.contentEditorBridgeEffect = effect(() => {
       const content = this.content();
       const mediaReferences = this.mediaMetadata()
         .map(media => `${this.getMediaContentReference(media)}|${this.getMediaThumbnailUrl(media)}|${media.pendingUpload ? 'pending' : 'ready'}`)
@@ -3135,7 +3145,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
 
       this.writeEditorValue(editor, content);
-    }, { allowSignalWrites: true });
+    }, { allowSignalWrites: true, injector: this.injector });
   }
 
   private restoreEditorAfterViewToggle(): void {
