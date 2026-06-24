@@ -75,7 +75,7 @@
         }}</span>
     </button>
 
-    <div class="action-item zap-action" matTooltip="Zap">
+    <div class="action-item zap-action" matTooltip="Zap" (pointerdown)="onFeaturePointerDown()">
       <app-zap-button [event]="event()" [recipientPubkey]="event().pubkey"></app-zap-button>
     </div>
 

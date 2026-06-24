@@ -206,6 +206,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   async quickFollow(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    await this.exitFullscreenForFeature();
 
     if (!this.canQuickFollow() || this.followInProgress()) {
       return;
@@ -233,6 +234,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   async toggleBookmark(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    await this.exitFullscreenForFeature();
 
     const clipEvent = this.event();
     await this.userRelaysService.ensureRelaysForPubkey(clipEvent.pubkey);
@@ -252,15 +254,21 @@ export class ClipsVideoCardComponent implements OnDestroy {
     });
   }
 
-  openAuthorProfile(event: MouseEvent): void {
+  async openAuthorProfile(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    await this.exitFullscreenForFeature();
     this.layout.openProfile(this.event().pubkey);
   }
 
-  onComments(event: MouseEvent): void {
+  async onComments(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    await this.exitFullscreenForFeature();
     void this.refreshInteractionCounts(true);
     this.commentsClick.emit();
+  }
+
+  onFeaturePointerDown(): void {
+    void this.exitFullscreenForFeature();
   }
 
   onVideoEnded(): void {
@@ -326,6 +334,25 @@ export class ClipsVideoCardComponent implements OnDestroy {
     this.isFullscreen.set(false);
   };
 
+  private async exitFullscreenForFeature(): Promise<void> {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    if (this.fullscreenFallback()) {
+      this.fullscreenFallback.set(false);
+      this.isFullscreen.set(false);
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      await exitFullscreen();
+      return;
+    }
+
+    this.isFullscreen.set(false);
+  }
+
   onReactionChanged(): void {
     void this.refreshInteractionCounts(true);
     setTimeout(() => {
@@ -335,6 +362,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   async onShare(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    await this.exitFullscreenForFeature();
 
     try {
       const clipEvent = this.event();
