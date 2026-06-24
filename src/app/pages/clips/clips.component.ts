@@ -358,6 +358,23 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.advanceByKeyboard(mode, 1);
   }
 
+  onClipVideoEnded(mode: SwipeMode, clip: Event): void {
+    if (this.loading() || this.commentsOpen() || this.showSettingsDialog()) {
+      return;
+    }
+
+    if (this.selectedTabIndex() !== (mode === 'following' ? 1 : 2)) {
+      return;
+    }
+
+    const currentClip = mode === 'following' ? this.currentFollowingClip() : this.currentForYouClip();
+    if (currentClip?.id !== clip.id || !this.canNavigate(mode, 1)) {
+      return;
+    }
+
+    this.advanceByKeyboard(mode, 1);
+  }
+
   previousClip(mode: SwipeMode): void {
     this.advanceByKeyboard(mode, -1);
   }

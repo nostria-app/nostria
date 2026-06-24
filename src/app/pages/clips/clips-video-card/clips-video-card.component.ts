@@ -52,6 +52,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
   preload = input<'none' | 'metadata' | 'auto'>('metadata');
 
   commentsClick = output<void>();
+  videoEnded = output<void>();
 
   @ViewChild('clipCard') private clipCard?: ElementRef<HTMLElement>;
 
@@ -259,6 +260,12 @@ export class ClipsVideoCardComponent implements OnDestroy {
     event.stopPropagation();
     void this.refreshInteractionCounts(true);
     this.commentsClick.emit();
+  }
+
+  onVideoEnded(): void {
+    if (this.active()) {
+      this.videoEnded.emit();
+    }
   }
 
   onFullscreen(event: MouseEvent): void {

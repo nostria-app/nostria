@@ -1,8 +1,9 @@
 <div #clipCard class="clip-card" [class.fullscreen-fallback]="fullscreenFallback()">
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
-    [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="true" [preload]="preload()"
+    [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="false" [preload]="preload()"
     [objectFit]="objectFitMode()" [expectedDim]="videoDim()" [fillContainer]="true" [fullscreenContainer]="clipCard"
+    (videoEnded)="onVideoEnded()"
     [fullscreenDelegate]="fullscreenDelegate" [controlsConfig]="{
       showQuality: false,
       showPlaybackRate: false,
