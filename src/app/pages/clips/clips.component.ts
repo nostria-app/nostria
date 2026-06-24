@@ -153,6 +153,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
   private followingSwipeStack = viewChild<ElementRef<HTMLDivElement>>('followingSwipeStack');
   private forYouSwipeStack = viewChild<ElementRef<HTMLDivElement>>('forYouSwipeStack');
+  private followingClipCard = viewChild<ClipsVideoCardComponent>('followingClipCard');
+  private forYouClipCard = viewChild<ClipsVideoCardComponent>('forYouClipCard');
   private prefetchedInteractionIds = new Set<string>();
   private interactionPrefetchInFlight = new Set<string>();
   private interactionLastPrefetchedAt = new Map<string, number>();
@@ -605,6 +607,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     const key = event.key.toLowerCase();
 
+    if (key === 'f') {
+      event.preventDefault();
+      this.toggleCurrentClipFullscreen(mode);
+      return;
+    }
+
     if (event.key === 'ArrowDown' || key === 'j') {
       event.preventDefault();
       this.advanceByKeyboard(mode, 1);
@@ -615,6 +623,11 @@ export class ClipsComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.advanceByKeyboard(mode, -1);
     }
+  }
+
+  private toggleCurrentClipFullscreen(mode: SwipeMode): void {
+    const card = mode === 'following' ? this.followingClipCard() : this.forYouClipCard();
+    card?.toggleFullscreen();
   }
 
   getCardTransform(mode: SwipeMode): string {

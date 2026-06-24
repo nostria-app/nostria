@@ -72,6 +72,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   objectFit = input<'contain' | 'cover'>('contain');
   expectedDim = input<string>('');
   fillContainer = input<boolean>(false);
+  fullscreenContainer = input<Element | null | undefined>(undefined);
+  fullscreenDelegate = input<(() => void) | undefined>(undefined);
   controlsConfig = input<VideoControlsConfig | undefined>(undefined);
   /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
   inFeedsPanel = input<boolean>(false);
@@ -721,8 +723,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  async toggleFullscreen(): Promise<void> {
-    const container = this.videoElement?.nativeElement?.parentElement;
+  async toggleFullscreen(containerOverride?: Element | null): Promise<void> {
+    const delegate = this.fullscreenDelegate();
+    if (delegate && !containerOverride) {
+      delegate();
+      return;
+    }
+
+    const container = containerOverride ?? this.fullscreenContainer() ?? this.videoElement?.nativeElement?.parentElement;
     const video = this.videoElement?.nativeElement;
     if (!container && !video) return;
 

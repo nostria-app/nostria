@@ -18,6 +18,11 @@
   &.fill-container {
     height: 100%;
   }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .video-element {
@@ -110,6 +115,11 @@ app-video-controls {
   left: 0;
   right: 0;
   bottom: 0;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 // Fullscreen styles - remove height constraints

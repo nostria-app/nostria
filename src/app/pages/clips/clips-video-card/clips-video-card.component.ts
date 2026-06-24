@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, OnDestroy, output, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, input, OnDestroy, output, signal, ChangeDetectionStrategy, ViewChild, ElementRef, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,6 +24,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrRecord } from '../../../interfaces';
+import { exitFullscreen, requestFullscreen } from '../../../utils/fullscreen';
 
 const CLIP_KINDS = [22, 34236];
 const INTERACTION_REFRESH_MIN_INTERVAL_MS = 1200;
@@ -51,6 +53,8 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   commentsClick = output<void>();
 
+  @ViewChild('clipCard') private clipCard?: ElementRef<HTMLElement>;
+
   bookmark = inject(BookmarkService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
@@ -64,6 +68,8 @@ export class ClipsVideoCardComponent implements OnDestroy {
   private data = inject(DataService);
   private settings = inject(SettingsService);
   private imageCache = inject(ImageCacheService);
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
   private interactionsRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private lastInteractionEventId: string | null = null;
   private interactionRefreshInFlight = new Map<string, Promise<void>>();
@@ -75,6 +81,10 @@ export class ClipsVideoCardComponent implements OnDestroy {
   private liveComments = signal<number | null>(null);
   private profileRecord = signal<NostrRecord | null>(null);
   private followInProgress = signal(false);
+  isFullscreen = signal(false);
+  fullscreenFallback = signal(false);
+
+  readonly fullscreenDelegate = () => this.toggleFullscreen();
 
   objectFitMode = computed<'cover' | 'contain'>(() => this.layout.isHandset() ? 'cover' : 'contain');
 
@@ -155,6 +165,11 @@ export class ClipsVideoCardComponent implements OnDestroy {
   sharesCount = computed(() => this.getNumericTag('reposts'));
 
   constructor() {
+    if (this.isBrowser) {
+      document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+      document.addEventListener('keydown', this.handleFullscreenKeyDown);
+    }
+
     effect(() => {
       const clipEvent = this.event();
       const isActive = this.active();
@@ -207,6 +222,11 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopInteractionsRefreshTimer();
+
+    if (this.isBrowser) {
+      document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+      document.removeEventListener('keydown', this.handleFullscreenKeyDown);
+    }
   }
 
   async toggleBookmark(event: MouseEvent): Promise<void> {
@@ -240,6 +260,57 @@ export class ClipsVideoCardComponent implements OnDestroy {
     void this.refreshInteractionCounts(true);
     this.commentsClick.emit();
   }
+
+  onFullscreen(event: MouseEvent): void {
+    event.stopPropagation();
+    this.toggleFullscreen();
+  }
+
+  toggleFullscreen(): void {
+    void this.toggleClipFullscreen();
+  }
+
+  private async toggleClipFullscreen(): Promise<void> {
+    const card = this.clipCard?.nativeElement;
+    if (!card || !this.isBrowser) {
+      return;
+    }
+
+    if (this.fullscreenFallback()) {
+      this.fullscreenFallback.set(false);
+      this.isFullscreen.set(false);
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      await exitFullscreen();
+      return;
+    }
+
+    const enteredNativeFullscreen = await requestFullscreen(card, undefined);
+    if (enteredNativeFullscreen) {
+      this.isFullscreen.set(true);
+      return;
+    }
+
+    this.fullscreenFallback.set(true);
+    this.isFullscreen.set(true);
+  }
+
+  private handleFullscreenChange = () => {
+    const card = this.clipCard?.nativeElement;
+    const active = !!card && document.fullscreenElement === card;
+    this.isFullscreen.set(active || this.fullscreenFallback());
+  };
+
+  private handleFullscreenKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !this.fullscreenFallback()) {
+      return;
+    }
+
+    this.fullscreenFallback.set(false);
+    this.isFullscreen.set(false);
+  };
 
   onReactionChanged(): void {
     void this.refreshInteractionCounts(true);

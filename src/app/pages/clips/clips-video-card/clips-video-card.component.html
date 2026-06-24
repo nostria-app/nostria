@@ -1,8 +1,9 @@
-<div class="clip-card">
+<div #clipCard class="clip-card" [class.fullscreen-fallback]="fullscreenFallback()">
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
     [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="true" [preload]="preload()"
-    [objectFit]="objectFitMode()" [expectedDim]="videoDim()" [fillContainer]="true" [controlsConfig]="{
+    [objectFit]="objectFitMode()" [expectedDim]="videoDim()" [fillContainer]="true" [fullscreenContainer]="clipCard"
+    [fullscreenDelegate]="fullscreenDelegate" [controlsConfig]="{
       showQuality: false,
       showPlaybackRate: false,
       showCast: false,
@@ -37,7 +38,7 @@
     }
   </div>
 
-  <div class="clip-actions">
+  <div class="clip-actions" (click)="$event.stopPropagation()">
     <div class="action-item author-avatar-action">
       <button class="author-avatar-button" (click)="openAuthorProfile($event)" aria-label="Open author profile">
         @if (authorAvatar()) {
@@ -80,5 +81,13 @@
       [matTooltip]="bookmark.getBookmarkTooltip(event().id)">
       <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
     </button>
+
+    @if (videoUrl()) {
+    <button mat-icon-button class="action-item" (click)="onFullscreen($event)"
+      [matTooltip]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'"
+      [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'">
+      <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+    </button>
+    }
   </div>
 </div>
