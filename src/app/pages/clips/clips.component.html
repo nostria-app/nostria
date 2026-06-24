@@ -147,16 +147,19 @@
         }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
           [style.transform]="getCardTransform('following')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
+          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1" preloadMode="auto"
             (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('following') && getSwipePreviewClip('following'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('following')"
           [style.transform]="getSwipePreviewTransform('following')">
-          <app-clips-video-card [event]="previewClip" [active]="false" />
+          <app-clips-video-card [event]="previewClip" [active]="false" preloadMode="auto" />
         </div>
         }
       </div>
+      @for (preloadUrl of getClipPreloadUrls('following'); track preloadUrl) {
+      <video class="clip-media-preloader" [src]="preloadUrl" muted playsinline preload="auto" aria-hidden="true"></video>
+      }
       <div class="desktop-nav-buttons">
         @if (!isAtLatest('following')) {
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Jump to latest" matTooltip="Jump to latest"
@@ -204,16 +207,19 @@
         }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getCardTransform('foryou')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
+          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2" preloadMode="auto"
             (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('foryou') && getSwipePreviewClip('foryou'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getSwipePreviewTransform('foryou')">
-          <app-clips-video-card [event]="previewClip" [active]="false" />
+          <app-clips-video-card [event]="previewClip" [active]="false" preloadMode="auto" />
         </div>
         }
       </div>
+      @for (preloadUrl of getClipPreloadUrls('foryou'); track preloadUrl) {
+      <video class="clip-media-preloader" [src]="preloadUrl" muted playsinline preload="auto" aria-hidden="true"></video>
+      }
       <div class="desktop-nav-buttons">
         @if (!isAtLatest('foryou')) {
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Jump to latest" matTooltip="Jump to latest"

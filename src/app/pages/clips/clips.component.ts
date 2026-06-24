@@ -277,8 +277,44 @@ export class ClipsComponent implements OnInit, OnDestroy {
     return parsed['image'] || '';
   }
 
+  getClipPreloadUrls(mode: SwipeMode): string[] {
+    const clips = mode === 'following' ? this.followingClips() : this.forYouClips();
+    if (clips.length === 0) {
+      return [];
+    }
+
+    const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();
+    const preloadIndexes = [currentIndex + 1, currentIndex - 1, currentIndex + 2];
+    const urls: string[] = [];
+    const seenUrls = new Set<string>();
+
+    for (const index of preloadIndexes) {
+      const clip = clips[index];
+      if (!clip) {
+        continue;
+      }
+
+      const url = this.getClipVideoUrl(clip);
+      if (!url || seenUrls.has(url)) {
+        continue;
+      }
+
+      seenUrls.add(url);
+      urls.push(url);
+    }
+
+    return urls;
+  }
+
   getClipTitle(event: Event): string {
     return event.tags.find(tag => tag[0] === 'title')?.[1] || 'Clip';
+  }
+
+  private getClipVideoUrl(event: Event): string {
+    const imetaTag = event.tags.find(tag => tag[0] === 'imeta');
+    if (!imetaTag) return '';
+    const parsed = this.utilities.parseImetaTag(imetaTag, true);
+    return parsed['url'] || '';
   }
 
   async goHome(): Promise<void> {

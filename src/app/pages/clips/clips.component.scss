@@ -230,6 +230,16 @@
   pointer-events: none;
 }
 
+.clip-media-preloader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  inset: auto;
+  overflow: hidden;
+}
+
 .swipe-position {
   position: absolute;
   top: 1rem;

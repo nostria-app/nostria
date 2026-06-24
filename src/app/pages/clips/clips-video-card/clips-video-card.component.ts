@@ -47,6 +47,7 @@ const INTERACTION_REFRESH_INTERVAL_MS = 15000;
 export class ClipsVideoCardComponent implements OnDestroy {
   event = input.required<Event>();
   active = input<boolean>(true);
+  preloadMode = input<'none' | 'metadata' | 'auto'>('metadata');
 
   commentsClick = output<void>();
 

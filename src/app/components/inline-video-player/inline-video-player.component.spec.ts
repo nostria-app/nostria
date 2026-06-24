@@ -49,6 +49,24 @@ describe('InlineVideoPlayerComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should use metadata preload by default', () => {
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+    expect(component.effectivePreload()).toBe('metadata');
+    expect(video.getAttribute('preload')).toBe('metadata');
+  });
+
+  it('should allow overriding preload mode', async () => {
+    fixture.componentRef.setInput('preload', 'auto');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+    expect(component.effectivePreload()).toBe('auto');
+    expect(video.getAttribute('preload')).toBe('auto');
+  });
+
   describe('visibility-aware IntersectionObserver', () => {
     it('should not report as in viewport when parent has visibility:hidden', async () => {
       // Access the private isInViewport signal through component behavior
