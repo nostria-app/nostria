@@ -93,6 +93,30 @@
     color: rgba(255, 255, 255, 0.9);
   }
 
+  .error-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .retry-button {
+    --mdc-outlined-button-label-text-color: var(--mat-sys-inverse-on-surface);
+    --mdc-outlined-button-outline-color: var(--mat-sys-outline);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: currentColor;
+    }
+
+    span {
+      color: currentColor;
+    }
+  }
+
   .open-link {
     color: var(--mat-sys-primary, #FDA100);
     text-decoration: none;

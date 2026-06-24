@@ -727,6 +727,23 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  retryVideoLoad(event?: MouseEvent): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const video = this.videoElement?.nativeElement;
+    this.resetLoadFailureState();
+    this.hasPlayedOnce.set(false);
+    this.wasAutoPlayed.set(false);
+    this.userPausedByInteraction.set(false);
+
+    if (!video) {
+      return;
+    }
+
+    video.load();
+  }
+
   onVideoPointerDown(event: PointerEvent): void {
     if (event.pointerType !== 'touch' && event.pointerType !== 'pen') {
       return;
