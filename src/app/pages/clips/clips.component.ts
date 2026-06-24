@@ -70,6 +70,7 @@ const SWIPE_TAIL_DELTA_PX = 6;
 const SWIPE_REVERSAL_CANCEL_PX = 20;
 const SWIPE_PREVIEW_GAP_PX = 18;
 const SWIPE_COMPLETION_ANIMATION_MS = 220;
+const AUTO_ADVANCE_AFTER_BACK_NAVIGATION_COOLDOWN_MS = 1200;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,6 +143,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouMaxOffset = 0;
   private followingLastOffset = 0;
   private forYouLastOffset = 0;
+  private lastBackwardNavigationAt: Record<SwipeMode, number> = {
+    following: 0,
+    foryou: 0,
+  };
   private lastWheelNavigationAt = 0;
   private pendingFollowingRestoreEventId: string | null = null;
   private followingRestoreApplied = false;
@@ -371,6 +376,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.shouldSuppressAutoAdvanceAfterBackwardNavigation(mode)) {
+      return;
+    }
+
     if (this.selectedTabIndex() !== (mode === 'following' ? 1 : 2)) {
       return;
     }
@@ -567,6 +576,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
         this.forYouDragOffset.set(0);
       }
 
+      this.trackManualNavigation(mode, delta);
       this.swipeCompletionTimer = null;
     }, SWIPE_COMPLETION_ANIMATION_MS);
   }
@@ -1094,6 +1104,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.trackManualNavigation(mode, delta);
+
     if (mode === 'following') {
       this.followingAnimating.set(true);
       this.followingDragOffset.set(0);
@@ -1129,6 +1141,17 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     return false;
+  }
+
+  private trackManualNavigation(mode: SwipeMode, delta: number): void {
+    if (delta < 0) {
+      this.lastBackwardNavigationAt[mode] = Date.now();
+    }
+  }
+
+  private shouldSuppressAutoAdvanceAfterBackwardNavigation(mode: SwipeMode): boolean {
+    const lastBackwardAt = this.lastBackwardNavigationAt[mode];
+    return Date.now() - lastBackwardAt < AUTO_ADVANCE_AFTER_BACK_NAVIGATION_COOLDOWN_MS;
   }
 
   private extractRelaysFromRelaySet(event: Event): string[] {
