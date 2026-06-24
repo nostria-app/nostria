@@ -53,6 +53,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
   commentsClick = output<void>();
   videoEnded = output<void>();
+  videoLoadFailed = output<void>();
 
   @ViewChild('clipCard') private clipCard?: ElementRef<HTMLElement>;
 
@@ -265,6 +266,12 @@ export class ClipsVideoCardComponent implements OnDestroy {
   onVideoEnded(): void {
     if (this.active()) {
       this.videoEnded.emit();
+    }
+  }
+
+  onVideoError(): void {
+    if (this.active()) {
+      this.videoLoadFailed.emit();
     }
   }
 

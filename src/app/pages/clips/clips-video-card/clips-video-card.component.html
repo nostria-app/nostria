@@ -4,6 +4,7 @@
     [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="false" [preload]="preload()"
     [objectFit]="objectFitMode()" [expectedDim]="videoDim()" [fillContainer]="true" [fullscreenContainer]="clipCard"
     (videoEnded)="onVideoEnded()"
+    (videoError)="onVideoError()"
     [fullscreenDelegate]="fullscreenDelegate" [controlsConfig]="{
       showQuality: false,
       showPlaybackRate: false,

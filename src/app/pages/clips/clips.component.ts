@@ -359,6 +359,14 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   onClipVideoEnded(mode: SwipeMode, clip: Event): void {
+    this.advanceFromCurrentClip(mode, clip);
+  }
+
+  onClipVideoLoadFailed(mode: SwipeMode, clip: Event): void {
+    this.advanceFromCurrentClip(mode, clip);
+  }
+
+  private advanceFromCurrentClip(mode: SwipeMode, clip: Event): void {
     if (this.loading() || this.commentsOpen() || this.showSettingsDialog()) {
       return;
     }
