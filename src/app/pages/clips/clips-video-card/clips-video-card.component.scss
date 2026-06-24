@@ -159,19 +159,38 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   z-index: 35;
   pointer-events: auto;
+  overflow: visible;
 }
 
 .action-item {
-  width: 2.75rem;
-  min-height: 2.75rem;
+  width: 3rem;
+  min-height: 3.15rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.22rem;
   color: var(--mat-sys-on-surface);
+  overflow: visible;
+
+  &.mat-mdc-icon-button {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    padding: 0 !important;
+    border-radius: 0;
+  }
+
+  mat-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.5rem;
+    overflow: visible;
+  }
 
   .action-count {
     font-size: 0.72rem;
