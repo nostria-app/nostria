@@ -214,6 +214,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
     return clips[index] || null;
   });
 
+  followingPreloadClips = computed(() => this.getAdjacentPreloadClips(this.followingClips(), this.followingIndex()));
+  forYouPreloadClips = computed(() => this.getAdjacentPreloadClips(this.forYouClips(), this.forYouIndex()));
+
   async ngOnInit(): Promise<void> {
     this.pendingFollowingRestoreEventId = this.accountLocalState.getClipsLastFollowingEventId(this.getAccountKey()) || null;
     this.pendingForYouRestoreEventId = this.accountLocalState.getClipsLastForYouEventId(this.getAccountKey()) || null;
@@ -275,6 +278,22 @@ export class ClipsComponent implements OnInit, OnDestroy {
     if (!imetaTag) return '';
     const parsed = this.utilities.parseImetaTag(imetaTag, true);
     return parsed['image'] || '';
+  }
+
+  getClipVideoUrl(event: Event): string {
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+
+    for (const imetaTag of imetaTags) {
+      const parsed = this.utilities.parseImetaTag(imetaTag, true);
+      const mimeType = parsed['m'] || '';
+      const url = parsed['url'] || '';
+
+      if (url && (!mimeType || mimeType.startsWith('video/'))) {
+        return url;
+      }
+    }
+
+    return '';
   }
 
   getClipTitle(event: Event): string {
@@ -1007,6 +1026,28 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private resetExploreLimit(): void {
     this.exploreLimit.set(EXPLORE_PAGE_SIZE);
     this.refreshExploreAutoLoadObserver();
+  }
+
+  private getAdjacentPreloadClips(clips: Event[], currentIndex: number): Event[] {
+    if (clips.length <= 1) {
+      return [];
+    }
+
+    const candidateIndexes = [currentIndex + 1, currentIndex - 1, currentIndex + 2];
+    const seen = new Set<string>();
+    const candidates: Event[] = [];
+
+    for (const index of candidateIndexes) {
+      const clip = clips[index];
+      if (!clip || seen.has(clip.id) || !this.getClipVideoUrl(clip)) {
+        continue;
+      }
+
+      seen.add(clip.id);
+      candidates.push(clip);
+    }
+
+    return candidates;
   }
 
   private advanceByKeyboard(mode: SwipeMode, delta: number): void {

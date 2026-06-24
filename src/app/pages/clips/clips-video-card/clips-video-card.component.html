@@ -1,8 +1,8 @@
 <div class="clip-card">
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
-    [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="true" [objectFit]="objectFitMode()"
-    [expectedDim]="videoDim()" [fillContainer]="true" [controlsConfig]="{
+    [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="true" [preload]="preload()"
+    [objectFit]="objectFitMode()" [expectedDim]="videoDim()" [fillContainer]="true" [controlsConfig]="{
       showQuality: false,
       showPlaybackRate: false,
       showCast: false,

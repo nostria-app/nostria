@@ -148,13 +148,18 @@
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
           [style.transform]="getCardTransform('following')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
-            (commentsClick)="openComments(clip)" />
+            preload="auto" (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('following') && getSwipePreviewClip('following'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('following')"
           [style.transform]="getSwipePreviewTransform('following')">
-          <app-clips-video-card [event]="previewClip" [active]="false" />
+          <app-clips-video-card [event]="previewClip" [active]="false" preload="auto" />
         </div>
+        }
+      </div>
+      <div class="clip-preloaders" aria-hidden="true">
+        @for (preloadClip of followingPreloadClips(); track preloadClip.id) {
+        <video class="clip-preloader" [src]="getClipVideoUrl(preloadClip)" preload="auto" [muted]="true" playsinline></video>
         }
       </div>
       <div class="desktop-nav-buttons">
@@ -205,13 +210,18 @@
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getCardTransform('foryou')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
-            (commentsClick)="openComments(clip)" />
+            preload="auto" (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('foryou') && getSwipePreviewClip('foryou'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getSwipePreviewTransform('foryou')">
-          <app-clips-video-card [event]="previewClip" [active]="false" />
+          <app-clips-video-card [event]="previewClip" [active]="false" preload="auto" />
         </div>
+        }
+      </div>
+      <div class="clip-preloaders" aria-hidden="true">
+        @for (preloadClip of forYouPreloadClips(); track preloadClip.id) {
+        <video class="clip-preloader" [src]="getClipVideoUrl(preloadClip)" preload="auto" [muted]="true" playsinline></video>
         }
       </div>
       <div class="desktop-nav-buttons">
