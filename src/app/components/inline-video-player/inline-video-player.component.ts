@@ -35,7 +35,6 @@ const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
 };
 
 const VIDEO_LOAD_RETRY_DELAYS_MS = [900, 1800];
-
 type VideoPreloadMode = 'none' | 'metadata' | 'auto';
 
 @Component({
