@@ -5,6 +5,7 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { InlineVideoPlayerComponent } from './inline-video-player.component';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 describe('InlineVideoPlayerComponent', () => {
   let component: InlineVideoPlayerComponent;
@@ -32,6 +33,7 @@ describe('InlineVideoPlayerComponent', () => {
         { provide: VideoPlaybackService, useValue: mockVideoPlayback },
         { provide: CastService, useValue: {} },
         { provide: OverlayContainer, useValue: { getContainerElement: () => document.createElement('div') } },
+        { provide: UtilitiesService, useValue: { extractThumbnailFromVideo: vi.fn().mockResolvedValue({ objectUrl: '' }) } },
       ],
     }).compileComponents();
 
@@ -158,6 +160,135 @@ describe('InlineVideoPlayerComponent', () => {
       const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
 
       expect(video.getAttribute('preload')).toBe('auto');
+    });
+  });
+
+  describe('load retry scheduling', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should schedule a retry timer on first video error', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      video.dispatchEvent(new Event('error'));
+      await fixture.whenStable();
+
+      expect(component['loadRetryTimer']).not.toBeNull();
+      expect(component['loadRetryCount']).toBe(1);
+      expect(component.hasError()).toBe(false);
+    });
+
+    it('should clear retry timer and reset count when canplay fires', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Trigger an error so a retry is scheduled
+      video.dispatchEvent(new Event('error'));
+      await fixture.whenStable();
+      expect(component['loadRetryTimer']).not.toBeNull();
+
+      // canplay should clear the timer and reset the count
+      video.dispatchEvent(new Event('canplay'));
+      await fixture.whenStable();
+
+      expect(component['loadRetryTimer']).toBeNull();
+      expect(component['loadRetryCount']).toBe(0);
+    });
+
+    it('should set hasError after all retries are exhausted', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Exhaust scheduled retries (VIDEO_LOAD_RETRY_DELAYS_MS has 2 entries)
+      video.dispatchEvent(new Event('error')); // schedules retry 1
+      await fixture.whenStable();
+      vi.runAllTimers(); // fire retry 1 → video.load() → triggers another error
+      video.dispatchEvent(new Event('error')); // schedules retry 2
+      await fixture.whenStable();
+      vi.runAllTimers(); // fire retry 2 → video.load() → triggers another error
+      video.dispatchEvent(new Event('error')); // no retries left → blob fallback → then error
+      await fixture.whenStable();
+
+      expect(component.hasError()).toBe(true);
+    });
+  });
+
+  describe('retryVideoLoad - manual retry', () => {
+    it('should reset error and retry state', async () => {
+      // Manually put component into error state
+      component['hasError'].set(true);
+      component['loadRetryCount'] = 2;
+      component['hasTriedBlobFallback'] = true;
+      await fixture.whenStable();
+
+      component.retryVideoLoad();
+      await fixture.whenStable();
+
+      expect(component.hasError()).toBe(false);
+      expect(component['loadRetryCount']).toBe(0);
+      expect(component['hasTriedBlobFallback']).toBe(false);
+    });
+
+    it('should reset playback state signals', async () => {
+      component['hasPlayedOnce'].set(true);
+      component['wasAutoPlayed'].set(true);
+      component['userPausedByInteraction'].set(true);
+
+      component.retryVideoLoad();
+      await fixture.whenStable();
+
+      expect(component.hasPlayedOnce()).toBe(false);
+      expect(component['wasAutoPlayed']()).toBe(false);
+      expect(component['userPausedByInteraction']()).toBe(false);
+    });
+
+    it('should clear an active retry timer', async () => {
+      vi.useFakeTimers();
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
+      video.dispatchEvent(new Event('error')); // schedules timer
+      await fixture.whenStable();
+      expect(component['loadRetryTimer']).not.toBeNull();
+
+      component.retryVideoLoad();
+      await fixture.whenStable();
+
+      expect(component['loadRetryTimer']).toBeNull();
+      vi.useRealTimers();
+    });
+  });
+
+  describe('fullscreen delegate', () => {
+    it('should invoke the delegate instead of native fullscreen when set', async () => {
+      const delegate = vi.fn();
+      fixture.componentRef.setInput('fullscreenDelegate', delegate);
+      await fixture.whenStable();
+
+      await component.toggleFullscreen();
+
+      expect(delegate).toHaveBeenCalledOnce();
+    });
+
+    it('should not invoke the delegate when a containerOverride is provided', async () => {
+      const delegate = vi.fn();
+      fixture.componentRef.setInput('fullscreenDelegate', delegate);
+      await fixture.whenStable();
+
+      const container = document.createElement('div');
+      await component.toggleFullscreen(container);
+
+      expect(delegate).not.toHaveBeenCalled();
+    });
+
+    it('should not invoke the delegate when none is set', async () => {
+      // No fullscreenDelegate input set – toggleFullscreen should not throw
+      await expect(component.toggleFullscreen()).resolves.not.toThrow();
     });
   });
 });
