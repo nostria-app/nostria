@@ -70,6 +70,7 @@ const SWIPE_TAIL_DELTA_PX = 6;
 const SWIPE_REVERSAL_CANCEL_PX = 20;
 const SWIPE_PREVIEW_GAP_PX = 18;
 const SWIPE_COMPLETION_ANIMATION_MS = 220;
+const AUTO_ADVANCE_AFTER_BACK_NAVIGATION_COOLDOWN_MS = 1200;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,6 +143,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouMaxOffset = 0;
   private followingLastOffset = 0;
   private forYouLastOffset = 0;
+  private lastBackwardNavigationAt: Record<SwipeMode, number> = {
+    following: 0,
+    foryou: 0,
+  };
   private lastWheelNavigationAt = 0;
   private pendingFollowingRestoreEventId: string | null = null;
   private followingRestoreApplied = false;
@@ -153,6 +158,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
   private followingSwipeStack = viewChild<ElementRef<HTMLDivElement>>('followingSwipeStack');
   private forYouSwipeStack = viewChild<ElementRef<HTMLDivElement>>('forYouSwipeStack');
+  private followingClipCard = viewChild<ClipsVideoCardComponent>('followingClipCard');
+  private forYouClipCard = viewChild<ClipsVideoCardComponent>('forYouClipCard');
   private prefetchedInteractionIds = new Set<string>();
   private interactionPrefetchInFlight = new Set<string>();
   private interactionLastPrefetchedAt = new Map<string, number>();
@@ -356,6 +363,35 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.advanceByKeyboard(mode, 1);
   }
 
+  onClipVideoEnded(mode: SwipeMode, clip: Event): void {
+    this.advanceFromCurrentClip(mode, clip);
+  }
+
+  onClipVideoLoadFailed(mode: SwipeMode, clip: Event): void {
+    this.advanceFromCurrentClip(mode, clip);
+  }
+
+  private advanceFromCurrentClip(mode: SwipeMode, clip: Event): void {
+    if (this.loading() || this.commentsOpen() || this.showSettingsDialog()) {
+      return;
+    }
+
+    if (this.shouldSuppressAutoAdvanceAfterBackwardNavigation(mode)) {
+      return;
+    }
+
+    if (this.selectedTabIndex() !== (mode === 'following' ? 1 : 2)) {
+      return;
+    }
+
+    const currentClip = mode === 'following' ? this.currentFollowingClip() : this.currentForYouClip();
+    if (currentClip?.id !== clip.id || !this.canNavigate(mode, 1)) {
+      return;
+    }
+
+    this.advanceByKeyboard(mode, 1);
+  }
+
   previousClip(mode: SwipeMode): void {
     this.advanceByKeyboard(mode, -1);
   }
@@ -540,6 +576,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
         this.forYouDragOffset.set(0);
       }
 
+      this.trackManualNavigation(mode, delta);
       this.swipeCompletionTimer = null;
     }, SWIPE_COMPLETION_ANIMATION_MS);
   }
@@ -605,6 +642,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     const key = event.key.toLowerCase();
 
+    if (key === 'f') {
+      event.preventDefault();
+      this.toggleCurrentClipFullscreen(mode);
+      return;
+    }
+
     if (event.key === 'ArrowDown' || key === 'j') {
       event.preventDefault();
       this.advanceByKeyboard(mode, 1);
@@ -615,6 +658,11 @@ export class ClipsComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.advanceByKeyboard(mode, -1);
     }
+  }
+
+  private toggleCurrentClipFullscreen(mode: SwipeMode): void {
+    const card = mode === 'following' ? this.followingClipCard() : this.forYouClipCard();
+    card?.toggleFullscreen();
   }
 
   getCardTransform(mode: SwipeMode): string {
@@ -1056,6 +1104,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.trackManualNavigation(mode, delta);
+
     if (mode === 'following') {
       this.followingAnimating.set(true);
       this.followingDragOffset.set(0);
@@ -1091,6 +1141,17 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     return false;
+  }
+
+  private trackManualNavigation(mode: SwipeMode, delta: number): void {
+    if (delta < 0) {
+      this.lastBackwardNavigationAt[mode] = Date.now();
+    }
+  }
+
+  private shouldSuppressAutoAdvanceAfterBackwardNavigation(mode: SwipeMode): boolean {
+    const lastBackwardAt = this.lastBackwardNavigationAt[mode];
+    return Date.now() - lastBackwardAt < AUTO_ADVANCE_AFTER_BACK_NAVIGATION_COOLDOWN_MS;
   }
 
   private extractRelaysFromRelaySet(event: Event): string[] {
