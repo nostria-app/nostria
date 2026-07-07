@@ -230,6 +230,20 @@
   pointer-events: none;
 }
 
+.clip-preloaders {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.clip-preloader {
+  width: 1px;
+  height: 1px;
+}
+
 .swipe-position {
   position: absolute;
   top: 1rem;

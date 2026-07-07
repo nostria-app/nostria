@@ -34,6 +34,8 @@ const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
   showDownload: true,
 };
 
+type VideoPreloadMode = 'none' | 'metadata' | 'auto';
+
 @Component({
   selector: 'app-inline-video-player',
   imports: [
@@ -64,6 +66,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   autoplay = input<boolean>(false);
   muted = input<boolean>(false);
   loop = input<boolean>(false);
+  preload = input<VideoPreloadMode>('metadata');
   blurred = input<boolean>(false);
   ignoreGlobalMutePreference = input<boolean>(false);
   objectFit = input<'contain' | 'cover'>('contain');
@@ -120,7 +123,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   effectivePoster = computed(() => this.poster() || this.generatedPoster() || undefined);
 
-  effectivePreload = computed<'metadata'>(() => 'metadata');
+  effectivePreload = computed<VideoPreloadMode>(() => this.preload());
 
   effectiveControlsConfig = computed<VideoControlsConfig>(() => ({
     ...DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG,

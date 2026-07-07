@@ -143,4 +143,21 @@ describe('InlineVideoPlayerComponent', () => {
       expect(component.toggleMute).toBeDefined();
     });
   });
+
+  describe('preload mode', () => {
+    it('should default to metadata preload', () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+      expect(video.getAttribute('preload')).toBe('metadata');
+    });
+
+    it('should allow eager preload for clip playback', () => {
+      fixture.componentRef.setInput('preload', 'auto');
+      fixture.detectChanges();
+
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+      expect(video.getAttribute('preload')).toBe('auto');
+    });
+  });
 });
