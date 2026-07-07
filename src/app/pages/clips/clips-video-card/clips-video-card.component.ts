@@ -167,10 +167,18 @@ export class ClipsVideoCardComponent implements OnDestroy {
   sharesCount = computed(() => this.getNumericTag('reposts'));
 
   constructor() {
-    if (this.isBrowser) {
+    effect((onCleanup) => {
+      if (!this.isBrowser || !this.active()) {
+        return;
+      }
+
       document.addEventListener('fullscreenchange', this.handleFullscreenChange);
       document.addEventListener('keydown', this.handleFullscreenKeyDown);
-    }
+      onCleanup(() => {
+        document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+        document.removeEventListener('keydown', this.handleFullscreenKeyDown);
+      });
+    });
 
     effect(() => {
       const clipEvent = this.event();
