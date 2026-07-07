@@ -15,9 +15,15 @@
   <div class="error-overlay">
     <mat-icon>error_outline</mat-icon>
     <span>Video failed to load</span>
-    <a [href]="src()" target="_blank" rel="noopener noreferrer" class="open-link">
-      Open in new tab
-    </a>
+    <div class="error-actions">
+      <button mat-stroked-button type="button" class="retry-button" (click)="retryVideoLoad($event)">
+        <mat-icon>refresh</mat-icon>
+        <span>Retry</span>
+      </button>
+      <a [href]="src()" target="_blank" rel="noopener noreferrer" class="open-link">
+        Open in new tab
+      </a>
+    </div>
   </div>
   }
 

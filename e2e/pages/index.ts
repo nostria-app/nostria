@@ -26,7 +26,7 @@ export class HomePage extends BasePage {
     this.createNoteButton = page.locator('button[aria-label*="Create"], button:has-text("Create"), [data-testid="create-note"]');
     this.loadingIndicator = page.locator('mat-spinner, mat-progress-bar, .loading');
     this.toolbar = page.locator('mat-toolbar, .toolbar, header');
-    this.menuButton = page.locator('button[aria-label*="menu"], .menu-button, [data-testid="menu"]');
+    this.menuButton = page.getByLabel('Toggle menu');
   }
 
   async goto(): Promise<void> {
@@ -57,6 +57,10 @@ export class HomePage extends BasePage {
   }
 
   async openMenu(): Promise<void> {
+    if (await this.page.getByLabel('Close menu').isVisible().catch(() => false)) {
+      return;
+    }
+
     await this.menuButton.click();
   }
 

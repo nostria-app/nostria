@@ -18,6 +18,11 @@
   &.fill-container {
     height: 100%;
   }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .video-element {
@@ -88,6 +93,30 @@
     color: rgba(255, 255, 255, 0.9);
   }
 
+  .error-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .retry-button {
+    --mdc-outlined-button-label-text-color: var(--mat-sys-inverse-on-surface);
+    --mdc-outlined-button-outline-color: var(--mat-sys-outline);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: currentColor;
+    }
+
+    span {
+      color: currentColor;
+    }
+  }
+
   .open-link {
     color: var(--mat-sys-primary, #FDA100);
     text-decoration: none;
@@ -110,6 +139,11 @@ app-video-controls {
   left: 0;
   right: 0;
   bottom: 0;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 // Fullscreen styles - remove height constraints
