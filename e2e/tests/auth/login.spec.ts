@@ -131,6 +131,7 @@ test.describe('Login Flow @auth @smoke', () => {
     // Try entering an invalid nsec
     const nsecInput = page.locator('.nsec-input input, input[type="password"], input[placeholder*="nsec"]');
     if (await nsecInput.isVisible().catch(() => false)) {
+      await nsecInput.click();
       await nsecInput.fill('nsec1invalidkeydata');
       await page.waitForTimeout(500);
 

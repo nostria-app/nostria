@@ -34,6 +34,7 @@ const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
   showDownload: true,
 };
 
+const VIDEO_LOAD_RETRY_DELAYS_MS = [900, 1800];
 type VideoPreloadMode = 'none' | 'metadata' | 'auto';
 
 @Component({
@@ -72,6 +73,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   objectFit = input<'contain' | 'cover'>('contain');
   expectedDim = input<string>('');
   fillContainer = input<boolean>(false);
+  fullscreenContainer = input<Element | null | undefined>(undefined);
+  fullscreenDelegate = input<(() => void) | undefined>(undefined);
   controlsConfig = input<VideoControlsConfig | undefined>(undefined);
   /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
   inFeedsPanel = input<boolean>(false);
@@ -115,6 +118,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Fallback blob URL when QUIC protocol fails
   private blobUrl = signal<string | null>(null);
   private hasTriedBlobFallback = false;
+  private loadRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private loadRetryCount = 0;
+  private lastInputSrc = '';
 
   // Computed source - use blob URL if available, otherwise original src
   effectiveSrc = computed(() => this.blobUrl() ?? this.src());
@@ -182,7 +188,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   constructor() {
     effect(() => {
       // Re-attach listeners when effective source changes
+      const inputSrc = this.src();
       const currentSrc = this.effectiveSrc();
+
+      if (inputSrc !== this.lastInputSrc) {
+        this.lastInputSrc = inputSrc;
+        this.resetLoadFailureState();
+      }
 
       if (currentSrc !== this.posterFallbackAttemptedForSrc) {
         this.posterFallbackAttemptedForSrc = null;
@@ -197,6 +209,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.currentTime.set(0);
         this.duration.set(0);
         this.buffered.set(0);
+        this.hasError.set(false);
+        this.isReady.set(false);
         this.needsRotationCorrection.set(false);
         this.isPortraitVideo.set(false);
         this.wasAutoPlayed.set(false);
@@ -316,6 +330,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.cleanupVideoListeners();
     this.clearAutoHideTimer();
+    this.clearLoadRetryTimer();
 
     // Clean up IntersectionObserver
     if (this.intersectionObserver) {
@@ -420,6 +435,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     const onCanPlay = () => {
       this.isReady.set(true);
       this.hasError.set(false);
+      this.loadRetryCount = 0;
+      this.clearLoadRetryTimer();
       this.videoCanPlay.emit();
 
       const currentSource = this.effectiveSrc();
@@ -437,17 +454,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         });
       }
     };
-    const onError = (e: Event) => {
-      // Try blob fallback on network errors (like QUIC protocol errors)
-      // This fetches the video without range requests, bypassing QUIC issues
-      if (!this.hasTriedBlobFallback && this.src()) {
-        this.hasTriedBlobFallback = true;
-        this.tryBlobFallback();
-      } else {
-        this.hasError.set(true);
-        this.videoError.emit(e as ErrorEvent);
-      }
-    };
+    const onError = (e: Event) => this.handleVideoLoadError(e, video);
 
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
@@ -541,14 +548,89 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private handleVideoLoadError(event: Event, video: HTMLVideoElement): void {
+    if (this.scheduleVideoLoadRetry(video)) {
+      return;
+    }
+
+    // Try blob fallback on network errors (like QUIC protocol errors).
+    // This fetches the video without range requests, bypassing QUIC issues.
+    if (!this.hasTriedBlobFallback && this.src()) {
+      this.hasTriedBlobFallback = true;
+      void this.tryBlobFallback(event);
+      return;
+    }
+
+    this.failVideoLoad(event);
+  }
+
+  private scheduleVideoLoadRetry(video: HTMLVideoElement): boolean {
+    if (this.loadRetryCount >= VIDEO_LOAD_RETRY_DELAYS_MS.length) {
+      return false;
+    }
+
+    const delay = VIDEO_LOAD_RETRY_DELAYS_MS[this.loadRetryCount] ?? VIDEO_LOAD_RETRY_DELAYS_MS[0];
+    this.loadRetryCount += 1;
+    this.hasError.set(false);
+    this.clearLoadRetryTimer();
+
+    this.loadRetryTimer = setTimeout(() => {
+      this.loadRetryTimer = null;
+
+      if (this.hasError() || !this.effectiveSrc()) {
+        return;
+      }
+
+      try {
+        video.load();
+      } catch (error) {
+        this.failVideoLoad(error instanceof Event ? error : new Event('error'));
+      }
+    }, delay);
+
+    return true;
+  }
+
+  private clearLoadRetryTimer(): void {
+    if (!this.loadRetryTimer) {
+      return;
+    }
+
+    clearTimeout(this.loadRetryTimer);
+    this.loadRetryTimer = null;
+  }
+
+  private resetLoadFailureState(): void {
+    this.clearLoadRetryTimer();
+    this.loadRetryCount = 0;
+    this.hasTriedBlobFallback = false;
+    this.hasError.set(false);
+    this.isReady.set(false);
+
+    const blob = this.blobUrl();
+    if (blob) {
+      URL.revokeObjectURL(blob);
+      this.blobUrl.set(null);
+    }
+  }
+
+  private failVideoLoad(event: Event): void {
+    this.clearLoadRetryTimer();
+    this.hasError.set(true);
+    this.videoError.emit(event as ErrorEvent);
+  }
+
   /**
    * Fallback for QUIC protocol errors.
    * Fetches the video as a blob without range requests, which bypasses
    * QUIC/HTTP3 issues that can occur with partial content (206) responses.
    */
-  private async tryBlobFallback(): Promise<void> {
+  private async tryBlobFallback(errorEvent: Event): Promise<void> {
     const url = this.src();
-    if (!url || !isPlatformBrowser(this.platformId)) return;
+    if (!url || !isPlatformBrowser(this.platformId)) {
+      this.failVideoLoad(errorEvent);
+      return;
+    }
 
     try {
       const response = await fetch(url, {
@@ -570,9 +652,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       // The video element will automatically update due to effectiveSrc() change
       // Reset error state since we're retrying
       this.hasError.set(false);
+      this.loadRetryCount = 0;
     } catch {
       // Blob fallback also failed, show error state
-      this.hasError.set(true);
+      this.failVideoLoad(errorEvent);
     }
   }
 
@@ -641,6 +724,23 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.userPausedByInteraction.set(true);
       video.pause();
     }
+  }
+
+  retryVideoLoad(event?: MouseEvent): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const video = this.videoElement?.nativeElement;
+    this.resetLoadFailureState();
+    this.hasPlayedOnce.set(false);
+    this.wasAutoPlayed.set(false);
+    this.userPausedByInteraction.set(false);
+
+    if (!video) {
+      return;
+    }
+
+    video.load();
   }
 
   onVideoPointerDown(event: PointerEvent): void {
@@ -721,8 +821,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  async toggleFullscreen(): Promise<void> {
-    const container = this.videoElement?.nativeElement?.parentElement;
+  async toggleFullscreen(containerOverride?: Element | null): Promise<void> {
+    const delegate = this.fullscreenDelegate();
+    if (delegate && !containerOverride) {
+      delegate();
+      return;
+    }
+
+    const container = containerOverride ?? this.fullscreenContainer() ?? this.videoElement?.nativeElement?.parentElement;
     const video = this.videoElement?.nativeElement;
     if (!container && !video) return;
 

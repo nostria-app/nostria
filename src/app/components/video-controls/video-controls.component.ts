@@ -248,7 +248,6 @@ export class VideoControlsComponent implements OnDestroy {
     // Watch for video element changes and attach event listeners
     effect(() => {
       const video = this.videoElement();
-      console.log('[VideoControls] videoElement changed:', !!video, video?.src);
       this.cleanupVideoListeners();
       this.hasPlayedOnce.set(false); // Reset when video element changes
 

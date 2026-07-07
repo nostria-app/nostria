@@ -147,8 +147,9 @@
         }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
           [style.transform]="getCardTransform('following')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
-            preload="auto" (commentsClick)="openComments(clip)" />
+          <app-clips-video-card #followingClipCard [event]="clip" [active]="selectedTabIndex() === 1"
+            preload="auto" (commentsClick)="openComments(clip)" (videoEnded)="onClipVideoEnded('following', clip)"
+            (videoLoadFailed)="onClipVideoLoadFailed('following', clip)" />
         </div>
         @if (hasSwipePreview('following') && getSwipePreviewClip('following'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('following')"
@@ -209,8 +210,9 @@
         }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getCardTransform('foryou')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
-            preload="auto" (commentsClick)="openComments(clip)" />
+          <app-clips-video-card #forYouClipCard [event]="clip" [active]="selectedTabIndex() === 2"
+            preload="auto" (commentsClick)="openComments(clip)" (videoEnded)="onClipVideoEnded('foryou', clip)"
+            (videoLoadFailed)="onClipVideoLoadFailed('foryou', clip)" />
         </div>
         @if (hasSwipePreview('foryou') && getSwipePreviewClip('foryou'); as previewClip) {
         <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('foryou')"
