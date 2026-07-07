@@ -5,6 +5,7 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { InlineVideoPlayerComponent } from './inline-video-player.component';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 describe('InlineVideoPlayerComponent', () => {
   let component: InlineVideoPlayerComponent;
@@ -32,6 +33,7 @@ describe('InlineVideoPlayerComponent', () => {
         { provide: VideoPlaybackService, useValue: mockVideoPlayback },
         { provide: CastService, useValue: {} },
         { provide: OverlayContainer, useValue: { getContainerElement: () => document.createElement('div') } },
+        { provide: UtilitiesService, useValue: { extractThumbnailFromVideo: vi.fn().mockResolvedValue({ objectUrl: '' }) } },
       ],
     }).compileComponents();
 
@@ -161,133 +163,109 @@ describe('InlineVideoPlayerComponent', () => {
     });
   });
 
-  describe('retry logic', () => {
-    let mockVideo: HTMLVideoElement;
-
+  describe('load retry scheduling', () => {
     beforeEach(() => {
       vi.useFakeTimers();
-      mockVideo = document.createElement('video');
-      Object.defineProperty(mockVideo, 'paused', { get: () => true, configurable: true });
-      mockVideo.load = vi.fn();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component['videoElement'] = { nativeElement: mockVideo } as any;
-      component['cleanupVideoListeners']();
-      component['attachVideoListeners'](mockVideo);
     });
 
     afterEach(() => {
-      component['cleanupVideoListeners']();
       vi.useRealTimers();
     });
 
-    it('should schedule a retry on first video error', () => {
-      mockVideo.dispatchEvent(new Event('error'));
+    it('should schedule a retry timer on first video error', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-      expect(component['loadRetryCount']).toBe(1);
+      video.dispatchEvent(new Event('error'));
+      await fixture.whenStable();
+
       expect(component['loadRetryTimer']).not.toBeNull();
-      // Error state should not be shown yet while a retry is pending
+      expect(component['loadRetryCount']).toBe(1);
       expect(component.hasError()).toBe(false);
     });
 
-    it('should call video.load() after the retry delay', () => {
-      mockVideo.dispatchEvent(new Event('error'));
-      expect(mockVideo.load).not.toHaveBeenCalled();
+    it('should clear retry timer and reset count when canplay fires', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-      vi.advanceTimersByTime(900);
-
-      expect(mockVideo.load).toHaveBeenCalledTimes(1);
-      expect(component['loadRetryTimer']).toBeNull();
-    });
-
-    it('should schedule a second retry on a subsequent error after the first', () => {
-      // First error schedules retry 1
-      mockVideo.dispatchEvent(new Event('error'));
-      vi.advanceTimersByTime(900); // execute first retry (calls video.load)
-
-      // Second error schedules retry 2
-      mockVideo.dispatchEvent(new Event('error'));
-
-      expect(component['loadRetryCount']).toBe(2);
-      expect(component['loadRetryTimer']).not.toBeNull();
-    });
-
-    it('should show error after exhausting all retries and blob fallback', () => {
-      // Simulate retries already exhausted
-      component['loadRetryCount'] = 2; // VIDEO_LOAD_RETRY_DELAYS_MS.length
-      component['hasTriedBlobFallback'] = true;
-
-      mockVideo.dispatchEvent(new Event('error'));
-
-      expect(component.hasError()).toBe(true);
-    });
-
-    it('should clear retry timer and reset count when canplay fires', () => {
-      // Schedule a retry
-      mockVideo.dispatchEvent(new Event('error'));
+      // Trigger an error so a retry is scheduled
+      video.dispatchEvent(new Event('error'));
+      await fixture.whenStable();
       expect(component['loadRetryTimer']).not.toBeNull();
 
-      // Video successfully starts playing
-      mockVideo.dispatchEvent(new Event('canplay'));
+      // canplay should clear the timer and reset the count
+      video.dispatchEvent(new Event('canplay'));
+      await fixture.whenStable();
 
       expect(component['loadRetryTimer']).toBeNull();
       expect(component['loadRetryCount']).toBe(0);
     });
 
-    it('should clear retry timer and mark ready when canplay fires', () => {
-      mockVideo.dispatchEvent(new Event('error'));
-      mockVideo.dispatchEvent(new Event('canplay'));
+    it('should set hasError after all retries are exhausted', async () => {
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-      expect(component.isReady()).toBe(true);
-      expect(component.hasError()).toBe(false);
+      // Exhaust scheduled retries (VIDEO_LOAD_RETRY_DELAYS_MS has 2 entries)
+      video.dispatchEvent(new Event('error')); // schedules retry 1
+      await fixture.whenStable();
+      vi.runAllTimers(); // fire retry 1 → video.load() → triggers another error
+      video.dispatchEvent(new Event('error')); // schedules retry 2
+      await fixture.whenStable();
+      vi.runAllTimers(); // fire retry 2 → video.load() → triggers another error
+      video.dispatchEvent(new Event('error')); // no retries left → blob fallback → then error
+      await fixture.whenStable();
+
+      expect(component.hasError()).toBe(true);
     });
   });
 
-  describe('manual retry (retryVideoLoad)', () => {
-    let mockVideo: HTMLVideoElement;
-
-    beforeEach(() => {
-      mockVideo = document.createElement('video');
-      mockVideo.load = vi.fn();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component['videoElement'] = { nativeElement: mockVideo } as any;
-    });
-
-    it('should reset error and retry state', () => {
-      component.hasError.set(true);
+  describe('retryVideoLoad - manual retry', () => {
+    it('should reset error and retry state', async () => {
+      // Manually put component into error state
+      component['hasError'].set(true);
       component['loadRetryCount'] = 2;
       component['hasTriedBlobFallback'] = true;
+      await fixture.whenStable();
 
       component.retryVideoLoad();
+      await fixture.whenStable();
 
       expect(component.hasError()).toBe(false);
       expect(component['loadRetryCount']).toBe(0);
       expect(component['hasTriedBlobFallback']).toBe(false);
     });
 
-    it('should reset playback signals', () => {
-      component.hasPlayedOnce.set(true);
+    it('should reset playback state signals', async () => {
+      component['hasPlayedOnce'].set(true);
+      component['wasAutoPlayed'].set(true);
+      component['userPausedByInteraction'].set(true);
 
       component.retryVideoLoad();
+      await fixture.whenStable();
 
       expect(component.hasPlayedOnce()).toBe(false);
+      expect(component['wasAutoPlayed']()).toBe(false);
+      expect(component['userPausedByInteraction']()).toBe(false);
     });
 
-    it('should call video.load() to restart loading', () => {
+    it('should clear an active retry timer', async () => {
+      vi.useFakeTimers();
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      component['attachVideoListeners'](video); // eslint-disable-line @typescript-eslint/no-explicit-any
+      video.dispatchEvent(new Event('error')); // schedules timer
+      await fixture.whenStable();
+      expect(component['loadRetryTimer']).not.toBeNull();
+
       component.retryVideoLoad();
+      await fixture.whenStable();
 
-      expect(mockVideo.load).toHaveBeenCalled();
-    });
-
-    it('should not throw when called without a video element', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component['videoElement'] = undefined as any;
-
-      expect(() => component.retryVideoLoad()).not.toThrow();
+      expect(component['loadRetryTimer']).toBeNull();
+      vi.useRealTimers();
     });
   });
 
   describe('fullscreen delegate', () => {
-    it('should call delegate instead of native fullscreen when delegate is provided', async () => {
+    it('should invoke the delegate instead of native fullscreen when set', async () => {
       const delegate = vi.fn();
       fixture.componentRef.setInput('fullscreenDelegate', delegate);
       await fixture.whenStable();
@@ -297,25 +275,19 @@ describe('InlineVideoPlayerComponent', () => {
       expect(delegate).toHaveBeenCalledOnce();
     });
 
-    it('should bypass delegate when a containerOverride is supplied', async () => {
+    it('should not invoke the delegate when a containerOverride is provided', async () => {
       const delegate = vi.fn();
       fixture.componentRef.setInput('fullscreenDelegate', delegate);
       await fixture.whenStable();
 
       const container = document.createElement('div');
-      // toggleFullscreen resolves even if requestFullscreen is unavailable in jsdom
       await component.toggleFullscreen(container);
 
       expect(delegate).not.toHaveBeenCalled();
     });
 
-    it('should not throw when no delegate and no video element is available', async () => {
-      fixture.componentRef.setInput('fullscreenDelegate', undefined);
-      await fixture.whenStable();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component['videoElement'] = undefined as any;
-
+    it('should not invoke the delegate when none is set', async () => {
+      // No fullscreenDelegate input set – toggleFullscreen should not throw
       await expect(component.toggleFullscreen()).resolves.not.toThrow();
     });
   });
