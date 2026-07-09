@@ -104,7 +104,7 @@ Added wallet section to settings menu:
 - ✅ TypeScript compilation successful
 - ✅ Build successful
 - ✅ Lint warnings fixed
-- ✅ Follows Angular 21 best practices
+- ✅ Follows Angular 22 best practices
 - ✅ Uses standalone components
 - ✅ Implements OnPush change detection
 - ✅ Uses signals for reactive state

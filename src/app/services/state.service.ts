@@ -295,11 +295,15 @@ export class StateService implements NostriaService {
       return;
     }
 
-    const TIMEOUT_MS = 60000;
+    // Keep background verification short so a ignored extension popup cannot block
+    // user-facing signEvent for a full minute (or leave a hanging getPublicKey).
+    const TIMEOUT_MS = 8000;
     try {
       // Route pubkey verification through NostrService so extension requests are
       // serialized with signing/NIP-98 prompts instead of racing each other.
-      const extensionPubkey = await this.nostr.getExtensionPublicKey(TIMEOUT_MS);
+      const extensionPubkey = await this.nostr.getExtensionPublicKey(TIMEOUT_MS, {
+        background: true,
+      });
 
       if (!extensionPubkey) {
         this.logger.warn('[StateService] Extension returned empty pubkey');

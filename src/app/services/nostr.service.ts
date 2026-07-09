@@ -7,6 +7,8 @@ import {
   getPublicKey,
   UnsignedEvent,
   getEventHash,
+  verifyEvent,
+  finalizeEvent,
 } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98, nip04, nip44 } from 'nostr-tools';
@@ -14,7 +16,6 @@ import { LoggerService } from './logger.service';
 import { NostrEventData, UserMetadata } from './database.service';
 import { DatabaseService } from './database.service';
 import { kinds, SimplePool } from 'nostr-tools';
-import { finalizeEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 import { NostrTagKey } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
@@ -940,26 +941,21 @@ export class NostrService implements NostriaService {
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
   }
 
-  /**
-    * Queue extension signing requests to prevent concurrent extension prompts.
-    * This serializes signing operations so only one extension interaction runs at a time.
-   */
+  /** Queue NIP-07 sign requests so only one extension prompt runs at a time. */
   private queueExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
     return new Promise((resolve, reject) => {
       this.extensionSigningQueue.push({ event, resolve, reject });
-      this.logger.debug(`[Extension Signing] Queued signing request, queue length: ${this.extensionSigningQueue.length}`);
+      this.logger.debug('[Extension Signing] Queued', {
+        queueLength: this.extensionSigningQueue.length,
+        busy: this.isExtensionSigning,
+      });
 
-      // Start processing if not already processing
       if (!this.isExtensionSigning) {
-        this.processExtensionSigningQueue();
+        void this.processExtensionSigningQueue();
       }
     });
   }
 
-  /**
-   * Process the extension signing queue one request at a time.
-    * Ensures only one browser extension signing interaction runs at a time.
-   */
   private async processExtensionSigningQueue(): Promise<void> {
     if (this.isExtensionSigning || this.extensionSigningQueue.length === 0) {
       return;
@@ -967,29 +963,25 @@ export class NostrService implements NostriaService {
 
     this.isExtensionSigning = true;
 
-    while (this.extensionSigningQueue.length > 0) {
-      const request = this.extensionSigningQueue.shift()!;
-
-      try {
-        this.logger.debug('[Extension Signing] Processing queue item, calling performExtensionSigning');
-        const signedEvent = await this.performExtensionSigning(request.event);
-        this.logger.debug('[Extension Signing] performExtensionSigning returned', { eventId: signedEvent?.id });
-        request.resolve(signedEvent);
-        this.logger.debug('[Extension Signing] Request resolved successfully');
-      } catch (error) {
-        this.logger.error('[Extension Signing] Error during signing', error);
-        request.reject(error instanceof Error ? error : new Error(String(error)));
+    try {
+      while (this.extensionSigningQueue.length > 0) {
+        const request = this.extensionSigningQueue.shift()!;
+        try {
+          request.resolve(await this.performExtensionSigning(request.event));
+        } catch (error) {
+          this.logger.error('[Extension Signing] Failed', error);
+          request.reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+    } finally {
+      this.isExtensionSigning = false;
+      if (this.extensionSigningQueue.length > 0) {
+        void this.processExtensionSigningQueue();
       }
     }
-
-    this.isExtensionSigning = false;
   }
 
-  /**
-   * Perform the actual extension signing.
-   */
   private async performExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
-    // Wait for window.nostr to be available (extensions inject it asynchronously)
     if (!window.nostr) {
       await this.utilities.waitForNostrExtension();
     }
@@ -1000,51 +992,119 @@ export class NostrService implements NostriaService {
       );
     }
 
-    // Create EventTemplate WITHOUT pubkey for NIP-07 extensions.
-    // Extensions will add the pubkey themselves. Preserve created_at if already set
-    // (important for PoW). For PoW events, we need to include the pre-calculated ID.
-    const eventTemplate: any = {
+    const expectedPubkey =
+      ('pubkey' in event && typeof event.pubkey === 'string' && event.pubkey)
+        ? event.pubkey
+        : this.accountState.pubkey();
+
+    // NIP-07 template: only created_at, kind, tags, content.
+    // Never pre-fill id/pubkey — older extension builds can short-circuit without a prompt.
+    const eventTemplate: EventTemplate = {
       kind: event.kind,
       created_at: event.created_at ?? this.currentDate(),
-      tags: event.tags,
+      tags: event.tags.map(tag => [...tag]),
       content: event.content,
     };
 
-    // If this is a mined PoW event (has nonce tag and pubkey), include the ID
-    const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
-    if (hasNonceTag && 'pubkey' in event) {
-      // Calculate and include the event ID for PoW events
-      const { getEventHash } = await import('nostr-tools');
-      eventTemplate.id = getEventHash(event as UnsignedEvent);
-      eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
+    const nonceTag = eventTemplate.tags.find(tag => tag[0] === 'nonce');
+    const nonceDifficulty = nonceTag?.[2] ? parseInt(nonceTag[2], 10) : 0;
+
+    // Let the UI settle after PoW mining before requesting the extension prompt.
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    this.setExtensionSigningUiActive(true);
+    try {
+      const signed = await this.runExclusiveExtensionInteraction(() => {
+        this.logger.debug('[Extension Signing] signEvent', { kind: eventTemplate.kind });
+
+        return new Promise<Event>((resolve, reject) => {
+          window.nostr!.signEvent(eventTemplate).then(
+            result => this.ngZone.run(() => resolve(result as Event)),
+            (err: Error) => this.ngZone.run(() => reject(err))
+          );
+        });
+      }, { acquireTimeoutMs: 15000 });
+
+      this.assertValidExtensionSignedEvent(signed, {
+        template: eventTemplate,
+        expectedPubkey,
+        nonceDifficulty,
+      });
+
+      return signed;
+    } finally {
+      this.setExtensionSigningUiActive(false);
+    }
+  }
+
+  /** Drop custom-dialog z-index while an extension prompt may be on screen. */
+  private setExtensionSigningUiActive(active: boolean): void {
+    if (!this.isBrowser) {
+      return;
     }
 
-    const extensionResult = await this.runExclusiveExtensionInteraction(() => {
-      // Start the actual extension request only after we own the interaction lock.
-      // Previously the Promise was created before acquiring the lock, so the browser
-      // extension could receive signEvent() concurrently with a queued getPublicKey().
-      this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
+    document.documentElement.classList.toggle('nostria-extension-signing', active);
+  }
 
-      return new Promise<Event>((resolve, reject) => {
-        window.nostr!.signEvent(eventTemplate).then(
-          (result) => {
-            this.ngZone.run(() => {
-              this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
-              resolve(result as Event);
-            });
-          },
-          (err: Error) => {
-            this.ngZone.run(() => {
-              this.logger.error('[Extension Signing] Extension signEvent threw error', err);
-              reject(err);
-            });
-          }
+  private assertValidExtensionSignedEvent(
+    signed: Event,
+    context: {
+      template: EventTemplate;
+      expectedPubkey: string;
+      nonceDifficulty: number;
+    }
+  ): void {
+    if (!signed?.sig || !signed.id || !signed.pubkey) {
+      throw new Error(
+        'Extension returned an incomplete signature. Approve the request in your Nostr extension and try again.'
+      );
+    }
+
+    if (context.expectedPubkey && signed.pubkey !== context.expectedPubkey) {
+      throw new Error(
+        'Your Nostr extension signed with a different account than the one active in Nostria.'
+      );
+    }
+
+    // PoW (and general correctness): extension must not rewrite mined fields.
+    if (
+      signed.kind !== context.template.kind ||
+      signed.content !== context.template.content ||
+      signed.created_at !== context.template.created_at ||
+      JSON.stringify(signed.tags) !== JSON.stringify(context.template.tags)
+    ) {
+      throw new Error(
+        'Extension changed the event while signing. That invalidates Proof-of-Work — try again or disable PoW.'
+      );
+    }
+
+    if (!verifyEvent(signed)) {
+      throw new Error('Extension returned an invalid signature. Please try again.');
+    }
+
+    if (context.nonceDifficulty > 0) {
+      const difficulty = this.countLeadingZeroBits(signed.id);
+      if (difficulty < context.nonceDifficulty) {
+        throw new Error(
+          `Proof-of-Work was lost after signing (got ${difficulty} bits, need ${context.nonceDifficulty}).`
         );
-      });
-    });
+      }
+    }
+  }
 
-    this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
-    return extensionResult as Event;
+  /** NIP-13 leading zero bits in a hex event id. */
+  private countLeadingZeroBits(hex: string): number {
+    let count = 0;
+    for (const char of hex) {
+      const nibble = parseInt(char, 16);
+      if (nibble === 0) {
+        count += 4;
+      } else {
+        count += Math.clz32(nibble) - 28;
+        break;
+      }
+    }
+    return count;
   }
 
   async signEvent(event: EventTemplate | UnsignedEvent) {
@@ -1093,7 +1153,15 @@ export class NostrService implements NostriaService {
     return newUser;
   }
 
-  async getExtensionPublicKey(timeoutMs = 60000): Promise<string> {
+  async getExtensionPublicKey(
+    timeoutMs = 60000,
+    options?: { background?: boolean }
+  ): Promise<string> {
+    // Background checks must not take the exclusive lock (blocks signEvent).
+    if (options?.background && (this.isExtensionSigning || this.extensionSigningQueue.length > 0)) {
+      throw new Error('Skipped background extension pubkey check while signing is in progress');
+    }
+
     if (!window.nostr) {
       this.logger.info('Extension not immediately available, waiting...');
       const extensionAvailable = await this.utilities.waitForNostrExtension();
@@ -1105,8 +1173,11 @@ export class NostrService implements NostriaService {
       this.logger.info('Extension became available');
     }
 
-    return this.runExclusiveExtensionInteraction(async () => {
-      this.logger.debug('Requesting public key from extension');
+    const requestPubkey = async (): Promise<string> => {
+      this.logger.debug('Requesting public key from extension', {
+        background: !!options?.background,
+        timeoutMs,
+      });
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -1124,7 +1195,13 @@ export class NostrService implements NostriaService {
       }
 
       return pubkey;
-    });
+    };
+
+    if (options?.background) {
+      return requestPubkey();
+    }
+
+    return this.runExclusiveExtensionInteraction(requestPubkey);
   }
 
   private async sign(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
@@ -1136,10 +1213,14 @@ export class NostrService implements NostriaService {
 
     // Some event kinds have strict tag expectations, so skip automatic tag injection for them.
     const AUTO_TAG_EXCLUDED_KINDS = [kinds.Contacts, kinds.RelayList, kinds.Seal];
+    // PoW (NIP-13) events are mined against a fixed tag set + created_at. Adding tags here
+    // would change the event id and invalidate the mined proof-of-work.
+    const isPowEvent = event.tags.some(tag => tag[0] === 'nonce');
 
     // Apply global event expiration if enabled and no expiration tag already exists
     const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);
     if (
+      !isPowEvent &&
       globalExpiration !== null &&
       !AUTO_TAG_EXCLUDED_KINDS.includes(event.kind) &&
       !event.tags.some(tag => tag[0] === 'expiration')
@@ -1156,6 +1237,7 @@ export class NostrService implements NostriaService {
     // Skip for HTTP auth tokens (NIP-98 kind 27235, Blossom kind 24242) which are not published to relays.
     const AUTH_EVENT_KINDS = [27235, 24242];
     if (
+      !isPowEvent &&
       this.settings.addClientTag() &&
       !AUTO_TAG_EXCLUDED_KINDS.includes(event.kind) &&
       !AUTH_EVENT_KINDS.includes(event.kind) &&
@@ -1395,6 +1477,44 @@ export class NostrService implements NostriaService {
     };
 
     return event;
+  }
+
+  /**
+   * Tags that sign() would auto-inject (client, global expiration).
+   * Call this before PoW mining so the mined event already includes them —
+   * adding tags after mining invalidates NIP-13 proof-of-work.
+   */
+  appendAutoPublishTags(tags: string[][], kind: number): string[][] {
+    const currentUser = this.accountState.account();
+    if (!currentUser) {
+      return tags.map(tag => [...tag]);
+    }
+
+    const AUTO_TAG_EXCLUDED_KINDS = [kinds.Contacts, kinds.RelayList, kinds.Seal];
+    const AUTH_EVENT_KINDS = [27235, 24242];
+    const nextTags = tags.map(tag => [...tag]);
+
+    if (
+      !AUTO_TAG_EXCLUDED_KINDS.includes(kind) &&
+      !nextTags.some(tag => tag[0] === 'expiration')
+    ) {
+      const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);
+      if (globalExpiration !== null) {
+        const expirationTimestamp = Math.floor(Date.now() / 1000) + (globalExpiration * 3600);
+        nextTags.push(['expiration', expirationTimestamp.toString()]);
+      }
+    }
+
+    if (
+      this.settings.addClientTag() &&
+      !AUTO_TAG_EXCLUDED_KINDS.includes(kind) &&
+      !AUTH_EVENT_KINDS.includes(kind) &&
+      !nextTags.some(tag => tag[0] === 'client')
+    ) {
+      nextTags.push(['client', 'nostria']);
+    }
+
+    return nextTags;
   }
 
   /**
@@ -2543,7 +2663,14 @@ export class NostrService implements NostriaService {
     }
   }
 
-  private async runExclusiveExtensionInteraction<T>(operation: () => Promise<T>): Promise<T> {
+  /**
+   * Serialize interactive NIP-07 prompts (signEvent / login getPublicKey).
+   * Background pubkey verification does not use this queue.
+   */
+  private async runExclusiveExtensionInteraction<T>(
+    operation: () => Promise<T>,
+    options?: { acquireTimeoutMs?: number }
+  ): Promise<T> {
     const previous = this.extensionInteractionQueue;
     let release!: () => void;
 
@@ -2551,7 +2678,24 @@ export class NostrService implements NostriaService {
       release = resolve;
     });
 
-    await previous.catch(() => undefined);
+    const acquireTimeoutMs = options?.acquireTimeoutMs;
+    if (acquireTimeoutMs != null && acquireTimeoutMs > 0) {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = await Promise.race([
+        previous.catch(() => undefined).then(() => false as const),
+        new Promise<true>(resolve => {
+          timeoutId = setTimeout(() => resolve(true), acquireTimeoutMs);
+        }),
+      ]);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+      if (timedOut) {
+        this.logger.warn(`[Extension] Interaction queue stuck >${acquireTimeoutMs}ms, continuing`);
+      }
+    } else {
+      await previous.catch(() => undefined);
+    }
 
     try {
       return await operation();

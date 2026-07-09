@@ -1914,6 +1914,12 @@ app-media-queue {
   }
 }
 
+// While NIP-07 signEvent is pending, keep custom dialogs under extension overlays
+:root.nostria-extension-signing #custom-dialog-container,
+:root.nostria-extension-signing .custom-dialog-portal-host {
+  z-index: 9000 !important;
+}
+
 // Profile hover card glass effect - dark mode
 // Must be in global styles because component uses ViewEncapsulation.None
 // and CDK overlay is outside the Angular component tree

@@ -682,9 +682,12 @@
     @if (!showAdvancedOptions()) {
     <div class="right-actions">
       @if (powEnabled() && isPowMining()) {
-      <div class="pow-progress-indicator">
-        <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
-        <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+      <div class="pow-mining-chip"
+        [matTooltip]="'Mining proof-of-work: best ' + powDifficulty() + ' / target ' + powTargetDifficulty() + ' bits · ' + (powAttempts() | number) + ' attempts'"
+        role="status" aria-live="polite">
+        <mat-progress-spinner class="pow-chip-spinner" diameter="14" strokeWidth="2" mode="determinate"
+          [value]="powProgressPercentage()"></mat-progress-spinner>
+        <span class="pow-chip-label">{{ powDifficulty() }}/{{ powTargetDifficulty() }}</span>
       </div>
       }
 
@@ -694,10 +697,15 @@
 
       <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
         class="publish-button" [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
-        @if (isPublishing()) {
+        @if (isPowMining()) {
         <ng-container>
-          <mat-icon class="spinning">hourglass_empty</mat-icon>
-          {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
+          <mat-spinner diameter="16" class="publish-inline-spinner"></mat-spinner>
+          Mining…
+        </ng-container>
+        } @else if (isPublishing()) {
+        <ng-container>
+          <mat-spinner diameter="16" class="publish-inline-spinner"></mat-spinner>
+          {{ inlineMode() ? 'Sending…' : 'Publishing…' }}
         </ng-container>
         } @else {
         <ng-container>

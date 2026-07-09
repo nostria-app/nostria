@@ -70,7 +70,7 @@ IMPORTANT: Make sure that in the UI for users, you don't call things for "events
 
 | Technology             | Purpose                                   |
 | ---------------------- | ----------------------------------------- |
-| **Angular 21+**        | Core framework with standalone components |
+| **Angular 22+**        | Core framework with standalone components |
 | **Angular Material 3** | UI component library                      |
 | **TypeScript**         | Type-safe development                     |
 | **Signals**            | Reactive state management                 |

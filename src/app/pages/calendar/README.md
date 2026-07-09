@@ -147,7 +147,7 @@ The component includes demo events for testing and demonstration:
 
 ## Dependencies
 
-- **Angular 20**: Latest Angular with signals and new control flow
+- **Angular 22**: Latest Angular with signals and new control flow
 - **Angular Material**: Complete Material Design component library
 - **nostr-tools**: Nostr protocol implementation
 - **date-fns**: Optional for advanced date formatting

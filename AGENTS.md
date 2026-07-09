@@ -2,7 +2,7 @@
 
 > Guidelines for AI coding agents working in the Nostria codebase.
 
-**Tech Stack:** Angular 21+, TypeScript (strict), Angular Material 3, SCSS, Playwright (E2E), Karma/Jasmine (unit)
+**Tech Stack:** Angular 22+, TypeScript (strict), Angular Material 3, SCSS, Playwright (E2E), Karma/Jasmine (unit)
 
 **App URL:** https://nostria.app | **Protocol:** Nostr (nostr-tools library)
 

@@ -150,14 +150,18 @@ export class PowService {
         }
       }
 
-      // Final progress update
-      this.progress.set({
+      // Final progress update — always notify callers so UI leaves "Mining..." state
+      const finalProgress: PowProgress = {
         difficulty: bestDifficulty,
         nonce: nonce,
         attempts: attempts,
         isRunning: false,
         bestEvent: bestEvent,
-      });
+      };
+      this.progress.set(finalProgress);
+      if (onProgress) {
+        onProgress(finalProgress);
+      }
 
       if (bestEvent) {
         return {
@@ -171,7 +175,14 @@ export class PowService {
       return null;
     } catch (error) {
       console.error('Error during PoW mining:', error);
-      this.progress.update(p => ({ ...p, isRunning: false }));
+      const failedProgress: PowProgress = {
+        ...this.progress(),
+        isRunning: false,
+      };
+      this.progress.set(failedProgress);
+      if (onProgress) {
+        onProgress(failedProgress);
+      }
       return null;
     }
   }

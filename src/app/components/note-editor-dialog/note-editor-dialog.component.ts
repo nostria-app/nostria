@@ -27,7 +27,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DecimalPipe } from '@angular/common';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -228,6 +230,7 @@ interface ComposerReferencePreview {
   selector: 'app-note-editor-dialog',
   imports: [
     NgTemplateOutlet,
+    DecimalPipe,
     FormsModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -236,6 +239,7 @@ interface ComposerReferencePreview {
     MatInputModule,
     MatChipsModule,
     MatProgressBarModule,
+    MatProgressSpinnerModule,
     MatTooltipModule,
     MatDatepickerModule,
     MatNativeDateModule,
@@ -1928,7 +1932,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         duration: 5000,
       });
     } finally {
-      console.log('[NoteEditorDialog] Finally block - resetting isPublishing and publishInitiated');
       this.isPublishing.set(false);
       this.publishInitiated.set(false);
     }
@@ -2118,12 +2121,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const result = await this.nostrService.signAndPublish(unsignedEvent);
 
-    console.log('[NoteEditorDialog] Edit publish result:', {
-      success: result.success,
-      hasEvent: !!result.event,
-      eventId: result.event?.id
-    });
-
     if (result.event) {
       publishedEventId = result.event.id;
     }
@@ -2146,14 +2143,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // If PoW is enabled, ensure we have a mined event
     if (this.powEnabled()) {
+      // Include auto-publish tags (client, expiration) BEFORE mining so sign()
+      // does not mutate the event afterward and invalidate NIP-13 PoW.
+      const tagsForMining = this.nostrService.appendAutoPublishTags(finalTags, 1);
+
       // If we don't have a mined event yet, or content has changed, mine it now
       if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
         // Build the base event for mining
-        const baseEvent = this.nostrService.createEvent(1, contentToPublish, finalTags);
+        const baseEvent = this.nostrService.createEvent(1, contentToPublish, tagsForMining);
 
-        // Start mining
-        this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
-
+        // Start mining (footer shows compact progress — no snackbar spam)
         const result = await this.powService.mineEvent(
           baseEvent,
           this.powTargetDifficulty(),
@@ -2174,6 +2173,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         } else {
           throw new Error('Failed to mine Proof-of-Work');
         }
+
+        // Brief yield so mining UI settles before the extension prompt.
+        await new Promise<void>(resolve => setTimeout(resolve, 50));
       } else {
         // Use existing mined event
         eventToSign = this.powMinedEvent()!;
@@ -2258,6 +2260,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     let result;
 
     try {
+      if (this.accountState.account()?.source === 'extension') {
+        this.snackBar.open(
+          'Approve the signing request in your Nostr browser extension…',
+          undefined,
+          { duration: 6000 }
+        );
+      }
+
       result = await this.nostrService.signAndPublish(eventToSign);
     } catch (error) {
       if (preparedXPost) {
@@ -2266,12 +2276,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       throw error;
     }
-
-    console.log('[NoteEditorDialog] Publish result:', {
-      success: result.success,
-      hasEvent: !!result.event,
-      eventId: result.event?.id
-    });
 
     // Store the event ID for matching in the subscription
     if (result.event) {
@@ -6526,13 +6530,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     try {
-      // Build the base event
-      const tags = this.buildTags();
+      // Build the base event — include auto tags before mining so publish does not
+      // mutate tags later and invalidate the proof-of-work.
+      const tags = this.nostrService.appendAutoPublishTags(this.buildTags(), 1);
       const contentToPublish = this.processContentForPublishing(this.content().trim());
       const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
-
-      // Start mining
-      this.snackBar.open('Starting Proof-of-Work mining...', 'Close', { duration: 2000 });
 
       const result = await this.powService.mineEvent(
         baseEvent,
