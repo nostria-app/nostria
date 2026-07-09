@@ -34,7 +34,18 @@
           </button>
 
           <mat-menu #feedMenu="matMenu" class="feed-selector-menu">
-            @for (feed of feeds(); track feed.id) {
+            <!-- Built-in feeds first: For You, Following, Trending -->
+            @for (feed of primaryFeeds(); track feed.id) {
+            <button mat-menu-item (click)="selectFeed(feed.id)"
+              [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
+              <mat-icon>{{ feed.icon }}</mat-icon>
+              <span>{{ feed.label }}</span>
+            </button>
+            }
+            @if (primaryFeeds().length > 0 && customFeeds().length > 0) {
+            <mat-divider></mat-divider>
+            }
+            @for (feed of customFeeds(); track feed.id) {
             <button mat-menu-item (click)="selectFeed(feed.id)"
               [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
               <mat-icon>{{ feed.icon }}</mat-icon>

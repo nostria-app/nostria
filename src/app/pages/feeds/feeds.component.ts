@@ -811,6 +811,26 @@ export class FeedsComponent implements OnDestroy {
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
   currentScrollableFeed = computed(() => this.dynamicFeed() || this.activeFeed());
 
+  /** Built-in feeds always shown first in the selector (fixed order). */
+  private readonly primaryFeedIds = [
+    'default-feed-for-you',
+    'default-feed-following',
+    'default-feed-trending',
+  ] as const;
+
+  primaryFeeds = computed(() => {
+    const feeds = this.feeds();
+    return this.primaryFeedIds
+      .map(id => feeds.find(f => f.id === id))
+      .filter((f): f is FeedConfig => !!f);
+  });
+
+  /** User-created / non-primary feeds, preserving their configured order. */
+  customFeeds = computed(() => {
+    const primaryIds = new Set<string>(this.primaryFeedIds);
+    return this.feeds().filter(f => !primaryIds.has(f.id));
+  });
+
   feedViewReady = computed(() => {
     if (!this.app.initialized() || !this.feedService.feedsLoaded() || !this.activeFeed()) {
       return false;

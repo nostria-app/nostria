@@ -398,6 +398,10 @@ app-user-profile {
       max-height: 500px;
       margin-top: 8px;
 
+      .mat-divider {
+        margin: 8px 0;
+      }
+
       .mat-mdc-menu-item {
         position: relative;
         display: flex;
