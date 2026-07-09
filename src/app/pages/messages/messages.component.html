@@ -24,9 +24,8 @@
   </div>
   } @else {
   <div class="messages-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
-    <!-- Panel Header -->
+    <!-- Panel Header (title omitted — bottom nav already labels Messages) -->
     <div class="panel-header">
-      <h2 class="panel-title title-font">Messages</h2>
       <span class="panel-header-spacer"></span>
       @if (messaging.isLoading()) {
       <mat-spinner diameter="20" matTooltip="Loading messages..."></mat-spinner>
@@ -40,6 +39,13 @@
       <button mat-icon-button (click)="startNewChat()" matTooltip="New chat">
         <mat-icon>edit</mat-icon>
       </button>
+      @if (hasChats()) {
+      <button mat-icon-button (click)="markAllChatsAsRead()" matTooltip="Mark all as read"
+        i18n-matTooltip="@@messages.mark-all-read.tooltip" aria-label="Mark all as read"
+        i18n-aria-label="@@messages.mark-all-read.aria">
+        <mat-icon>done_all</mat-icon>
+      </button>
+      }
       <button mat-icon-button [matMenuTriggerFor]="messagesMenu" matTooltip="More options">
         <mat-icon>more_vert</mat-icon>
       </button>
@@ -60,10 +66,6 @@
             'Disable Message Sounds' }}</span>
         </button>
         <mat-divider></mat-divider>
-        <button mat-menu-item (click)="markAllChatsAsRead()">
-          <mat-icon>done_all</mat-icon>
-          <span>Mark All as Read</span>
-        </button>
         <button mat-menu-item (click)="openManageInbox()">
           <mat-icon>inbox</mat-icon>
           <span>Manage Inbox</span>
