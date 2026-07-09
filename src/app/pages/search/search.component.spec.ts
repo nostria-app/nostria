@@ -49,6 +49,8 @@ describe('SearchComponent', () => {
             openProfile: vi.fn(),
             openGenericEvent: vi.fn(),
             toast: vi.fn(),
+            leftPanelScrolledToBottom: signal(false),
+            leftPanelScrollReady: signal(false),
           },
         },
         {
@@ -352,4 +354,89 @@ describe('SearchComponent', () => {
       expect(component.isSearching()).toBe(false);
     });
   });
+
+  describe('render windowing', () => {
+    function makeNote(id: string, createdAt = 1700000000): SearchResultItemLike {
+      return {
+        event: {
+          id,
+          pubkey: 'pub',
+          kind: 1,
+          created_at: createdAt,
+          content: `note ${id}`,
+          tags: [],
+          sig: 'sig',
+        },
+        source: 'relay' as const,
+        type: 'note' as const,
+      };
+    }
+
+    it('should only expose the initial render window of notes', () => {
+      const notes = Array.from({ length: 40 }, (_, i) => makeNote(`n${i}`, 1700000000 + i));
+      component.noteResults.set(notes as never[]);
+
+      expect(component.noteCount()).toBe(40);
+      expect(component.visibleNotes().length).toBe(12);
+      expect(component.hasMoreNotesToRender()).toBe(true);
+    });
+
+    it('should expand the note window by batch size on load more', () => {
+      const notes = Array.from({ length: 40 }, (_, i) => makeNote(`n${i}`, 1700000000 + i));
+      component.noteResults.set(notes as never[]);
+
+      component.loadMoreNotes();
+      expect(component.visibleNotes().length).toBe(24);
+
+      component.loadMoreNotes();
+      expect(component.visibleNotes().length).toBe(36);
+
+      component.loadMoreNotes();
+      expect(component.visibleNotes().length).toBe(40);
+      expect(component.hasMoreNotesToRender()).toBe(false);
+    });
+
+    it('should reset render windows when a new search starts', async () => {
+      const notes = Array.from({ length: 40 }, (_, i) => makeNote(`n${i}`, 1700000000 + i));
+      component.noteResults.set(notes as never[]);
+      component.loadMoreNotes();
+      expect(component.visibleNotes().length).toBe(24);
+
+      component.searchQuery.set('fresh');
+      await component.performSearch();
+
+      // After search, results are cleared (mocks return empty) and windows reset
+      expect(component.noteRenderCount()).toBe(12);
+      expect(component.profileRenderCount()).toBe(12);
+      expect(component.articleRenderCount()).toBe(12);
+    });
+
+    it('should load more for the active dedicated tab only', () => {
+      const notes = Array.from({ length: 30 }, (_, i) => makeNote(`n${i}`, 1700000000 + i));
+      component.noteResults.set(notes as never[]);
+
+      component.selectedTabIndex.set(0); // All tab — no expansion
+      component.loadMoreForActiveTab();
+      expect(component.visibleNotes().length).toBe(12);
+
+      component.selectedTabIndex.set(2); // Notes tab
+      component.loadMoreForActiveTab();
+      expect(component.visibleNotes().length).toBe(24);
+    });
+  });
 });
+
+// Lightweight shape used only in tests (avoids importing private interface)
+interface SearchResultItemLike {
+  event: {
+    id: string;
+    pubkey: string;
+    kind: number;
+    created_at: number;
+    content: string;
+    tags: string[][];
+    sig: string;
+  };
+  source: 'local' | 'relay';
+  type: 'profile' | 'note' | 'article';
+}

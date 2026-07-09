@@ -340,6 +340,23 @@
   gap: 16px;
 }
 
+.load-more-section {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 8px;
+}
+
+.load-more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  .load-more-remaining {
+    opacity: 0.7;
+    font-size: 0.85em;
+  }
+}
+
 .articles-list,
 .articles-grid {
   display: grid;

@@ -1,4 +1,14 @@
-import { Component, OnInit, OnDestroy, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  computed,
+  inject,
+  signal,
+  effect,
+  untracked,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -43,6 +53,15 @@ interface SearchResultItem {
   source: 'local' | 'relay';
   type: 'profile' | 'note' | 'article';
 }
+
+/** How many items each dedicated tab shows initially (Feeds-style virtual window). */
+const INITIAL_RENDER_COUNT = 12;
+/** How many additional items to reveal per "Show more" / scroll batch. */
+const RENDER_BATCH_SIZE = 12;
+/** Preview counts on the All tab (keep light). */
+const ALL_TAB_PROFILE_PREVIEW = 6;
+const ALL_TAB_NOTE_PREVIEW = 5;
+const ALL_TAB_ARTICLE_PREVIEW = 3;
 
 @Component({
   selector: 'app-search',
@@ -93,10 +112,20 @@ export class SearchComponent implements OnInit, OnDestroy {
   private searchStartTime = 0;
   private elapsedTimerHandle: ReturnType<typeof setInterval> | null = null;
 
-  // Results
+  // Results (full match sets kept in memory; only a window is rendered)
   profileResults = signal<SearchResultItem[]>([]);
   noteResults = signal<SearchResultItem[]>([]);
   articleResults = signal<SearchResultItem[]>([]);
+
+  // Virtual render windows — only this many DOM nodes are created at a time
+  profileRenderCount = signal(INITIAL_RENDER_COUNT);
+  noteRenderCount = signal(INITIAL_RENDER_COUNT);
+  articleRenderCount = signal(INITIAL_RENDER_COUNT);
+
+  // Preview sizes exposed for the All tab template
+  readonly allTabProfilePreview = ALL_TAB_PROFILE_PREVIEW;
+  readonly allTabNotePreview = ALL_TAB_NOTE_PREVIEW;
+  readonly allTabArticlePreview = ALL_TAB_ARTICLE_PREVIEW;
 
   // Computed counts
   totalResults = computed(() =>
@@ -125,7 +154,49 @@ export class SearchComponent implements OnInit, OnDestroy {
     });
   });
 
-  // Tab index
+  /** Notes sorted newest-first (local + relay may arrive out of order). */
+  sortedNoteResults = computed(() =>
+    [...this.noteResults()].sort((a, b) => b.event.created_at - a.event.created_at)
+  );
+
+  /** Articles sorted newest-first. */
+  sortedArticleResults = computed(() =>
+    [...this.articleResults()].sort((a, b) => b.event.created_at - a.event.created_at)
+  );
+
+  // Visible slices for dedicated tabs
+  visibleProfiles = computed(() =>
+    this.sortedProfileResults().slice(0, this.profileRenderCount())
+  );
+  visibleNotes = computed(() =>
+    this.sortedNoteResults().slice(0, this.noteRenderCount())
+  );
+  visibleArticles = computed(() =>
+    this.sortedArticleResults().slice(0, this.articleRenderCount())
+  );
+
+  // All-tab previews
+  allTabProfiles = computed(() =>
+    this.sortedProfileResults().slice(0, ALL_TAB_PROFILE_PREVIEW)
+  );
+  allTabNotes = computed(() =>
+    this.sortedNoteResults().slice(0, ALL_TAB_NOTE_PREVIEW)
+  );
+  allTabArticles = computed(() =>
+    this.sortedArticleResults().slice(0, ALL_TAB_ARTICLE_PREVIEW)
+  );
+
+  hasMoreProfilesToRender = computed(
+    () => this.profileRenderCount() < this.sortedProfileResults().length
+  );
+  hasMoreNotesToRender = computed(
+    () => this.noteRenderCount() < this.sortedNoteResults().length
+  );
+  hasMoreArticlesToRender = computed(
+    () => this.articleRenderCount() < this.sortedArticleResults().length
+  );
+
+  // Tab index: 0=All, 1=Profiles, 2=Notes, 3=Articles
   selectedTabIndex = signal(0);
 
   // Search options
@@ -134,8 +205,63 @@ export class SearchComponent implements OnInit, OnDestroy {
     maxResults: 100,
   };
 
+  private lastLoadMoreTime = 0;
+  private readonly LOAD_MORE_COOLDOWN_MS = 250;
+  private wasScrolledToBottom = false;
+
+  /**
+   * Expand the render window for whichever dedicated tab is active.
+   * No-op on the All tab (previews are fixed and link to dedicated tabs).
+   * Class-field arrow so the constructor scroll effect can call it safely.
+   */
+  readonly loadMoreForActiveTab = (): void => {
+    const now = Date.now();
+    if (now - this.lastLoadMoreTime < this.LOAD_MORE_COOLDOWN_MS) {
+      return;
+    }
+
+    const tab = this.selectedTabIndex();
+    let expanded = false;
+
+    if (tab === 1 && this.hasMoreProfilesToRender()) {
+      this.profileRenderCount.update(count =>
+        Math.min(count + RENDER_BATCH_SIZE, this.sortedProfileResults().length)
+      );
+      expanded = true;
+    } else if (tab === 2 && this.hasMoreNotesToRender()) {
+      this.noteRenderCount.update(count =>
+        Math.min(count + RENDER_BATCH_SIZE, this.sortedNoteResults().length)
+      );
+      expanded = true;
+    } else if (tab === 3 && this.hasMoreArticlesToRender()) {
+      this.articleRenderCount.update(count =>
+        Math.min(count + RENDER_BATCH_SIZE, this.sortedArticleResults().length)
+      );
+      expanded = true;
+    }
+
+    if (expanded) {
+      this.lastLoadMoreTime = now;
+    }
+  };
+
   constructor() {
     this.followingService.activate();
+
+    // Expand the active tab's render window when the user scrolls to the bottom
+    // of the left panel (search lives there), matching Feeds/profile behavior.
+    effect(() => {
+      const isAtBottom = this.layout.leftPanelScrolledToBottom();
+      const isReady = this.layout.leftPanelScrollReady();
+      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
+      this.wasScrolledToBottom = isAtBottom;
+
+      if (!justScrolledToBottom) {
+        return;
+      }
+
+      untracked(() => this.loadMoreForActiveTab());
+    });
   }
 
   ngOnInit() {
@@ -247,10 +373,11 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.hasSearched.set(true);
     this.updateQueryParams();
 
-    // Clear previous results
+    // Clear previous results and reset virtual windows
     this.profileResults.set([]);
     this.noteResults.set([]);
     this.articleResults.set([]);
+    this.resetRenderWindows();
 
     try {
       const source = this.searchSource();
@@ -319,34 +446,30 @@ export class SearchComponent implements OnInit, OnDestroy {
     if (kindFilter) {
       const localEvents = await this.searchLocalEvents(query, kindFilter, isHashtagSearch);
 
-      // Categorize results based on kind
+      // Batch-categorize results (avoid N signal updates for N events)
+      const profiles: SearchResultItem[] = [];
+      const notes: SearchResultItem[] = [];
+      const articles: SearchResultItem[] = [];
+
       for (const event of localEvents) {
         if (event.kind === 0) {
-          this.profileResults.update(current => [...current, {
-            event,
-            source: 'local' as const,
-            type: 'profile' as const,
-          }]);
-        } else if (event.kind === kinds.ShortTextNote) {
-          this.noteResults.update(current => [...current, {
-            event,
-            source: 'local' as const,
-            type: 'note' as const,
-          }]);
+          profiles.push({ event, source: 'local', type: 'profile' });
         } else if (event.kind === kinds.LongFormArticle) {
-          this.articleResults.update(current => [...current, {
-            event,
-            source: 'local' as const,
-            type: 'article' as const,
-          }]);
+          articles.push({ event, source: 'local', type: 'article' });
         } else {
-          // For other kinds (like 30030), add to notes tab
-          this.noteResults.update(current => [...current, {
-            event,
-            source: 'local' as const,
-            type: 'note' as const,
-          }]);
+          // Short text notes and other kinds (e.g. 30030) go to the notes tab
+          notes.push({ event, source: 'local', type: 'note' });
         }
+      }
+
+      if (profiles.length) {
+        this.profileResults.update(current => [...current, ...profiles]);
+      }
+      if (notes.length) {
+        this.noteResults.update(current => [...current, ...notes]);
+      }
+      if (articles.length) {
+        this.articleResults.update(current => [...current, ...articles]);
       }
       return;
     }
@@ -362,7 +485,9 @@ export class SearchComponent implements OnInit, OnDestroy {
         type: 'profile' as const,
       }));
 
-      this.profileResults.update(current => [...current, ...profileItems]);
+      if (profileItems.length) {
+        this.profileResults.update(current => [...current, ...profileItems]);
+      }
     }
 
     // Search notes locally by content or tags
@@ -374,7 +499,9 @@ export class SearchComponent implements OnInit, OnDestroy {
         type: 'note' as const,
       }));
 
-      this.noteResults.update(current => [...current, ...noteItems]);
+      if (noteItems.length) {
+        this.noteResults.update(current => [...current, ...noteItems]);
+      }
     }
 
     // Search articles locally
@@ -386,7 +513,9 @@ export class SearchComponent implements OnInit, OnDestroy {
         type: 'article' as const,
       }));
 
-      this.articleResults.update(current => [...current, ...articleItems]);
+      if (articleItems.length) {
+        this.articleResults.update(current => [...current, ...articleItems]);
+      }
     }
   }
 
@@ -599,6 +728,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.profileResults.set([]);
     this.noteResults.set([]);
     this.articleResults.set([]);
+    this.resetRenderWindows();
     this.hasSearched.set(false);
     this.searchProgress.set(null);
 
@@ -607,6 +737,42 @@ export class SearchComponent implements OnInit, OnDestroy {
       queryParams: {},
       replaceUrl: true,
     });
+  }
+
+  /**
+   * Reset virtual render windows so a new search starts light.
+   */
+  private resetRenderWindows(): void {
+    this.profileRenderCount.set(INITIAL_RENDER_COUNT);
+    this.noteRenderCount.set(INITIAL_RENDER_COUNT);
+    this.articleRenderCount.set(INITIAL_RENDER_COUNT);
+  }
+
+  loadMoreProfiles(): void {
+    if (!this.hasMoreProfilesToRender()) {
+      return;
+    }
+    this.profileRenderCount.update(count =>
+      Math.min(count + RENDER_BATCH_SIZE, this.sortedProfileResults().length)
+    );
+  }
+
+  loadMoreNotes(): void {
+    if (!this.hasMoreNotesToRender()) {
+      return;
+    }
+    this.noteRenderCount.update(count =>
+      Math.min(count + RENDER_BATCH_SIZE, this.sortedNoteResults().length)
+    );
+  }
+
+  loadMoreArticles(): void {
+    if (!this.hasMoreArticlesToRender()) {
+      return;
+    }
+    this.articleRenderCount.update(count =>
+      Math.min(count + RENDER_BATCH_SIZE, this.sortedArticleResults().length)
+    );
   }
 
   getProfileData(event: Event): NostrRecord['data'] | null {
@@ -636,7 +802,8 @@ export class SearchComponent implements OnInit, OnDestroy {
     return imageTag?.[1] || null;
   }
 
-  trackByEventId(index: number, item: SearchResultItem): string {
-    return `${item.source}-${item.event.id}-${index}`;
+  trackByEventId(_index: number, item: SearchResultItem): string {
+    // Prefer stable event id so expanding the render window reuses DOM nodes
+    return item.event.id || `${item.source}-${item.event.pubkey}-${item.event.created_at}`;
   }
 }

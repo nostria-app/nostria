@@ -117,11 +117,11 @@
             Profiles ({{ profileCount() }})
           </h3>
           <div class="profiles-grid">
-            @for (item of sortedProfileResults().slice(0, 6); track trackByEventId($index, item)) {
+            @for (item of allTabProfiles(); track trackByEventId($index, item)) {
             <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
             }
           </div>
-          @if (sortedProfileResults().length > 6) {
+          @if (profileCount() > allTabProfilePreview) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(1)">
             View all {{ profileCount() }} profiles
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>
@@ -129,18 +129,18 @@
           }
           }
 
-          @if (noteResults().length > 0) {
+          @if (noteCount() > 0) {
           <mat-divider></mat-divider>
           <h3 class="section-title">
             <mat-icon>chat_bubble</mat-icon>
             Notes ({{ noteCount() }})
           </h3>
           <div class="notes-list">
-            @for (item of noteResults().slice(0, 5); track trackByEventId($index, item)) {
+            @for (item of allTabNotes(); track trackByEventId($index, item)) {
             <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
             }
           </div>
-          @if (noteResults().length > 5) {
+          @if (noteCount() > allTabNotePreview) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(2)">
             View all {{ noteCount() }} notes
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>
@@ -148,18 +148,18 @@
           }
           }
 
-          @if (articleResults().length > 0) {
+          @if (articleCount() > 0) {
           <mat-divider></mat-divider>
           <h3 class="section-title">
             <mat-icon>article</mat-icon>
             Articles ({{ articleCount() }})
           </h3>
           <div class="articles-list">
-            @for (item of articleResults().slice(0, 3); track trackByEventId($index, item)) {
+            @for (item of allTabArticles(); track trackByEventId($index, item)) {
             <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
             }
           </div>
-          @if (articleResults().length > 3) {
+          @if (articleCount() > allTabArticlePreview) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(3)">
             View all {{ articleCount() }} articles
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>
@@ -175,17 +175,26 @@
           <span>Profiles ({{ profileCount() }})</span>
         </ng-template>
         <div class="tab-content">
-          @if (sortedProfileResults().length === 0) {
+          @if (profileCount() === 0) {
           <div class="empty-tab">
             <mat-icon>person_off</mat-icon>
             <p>No profiles found</p>
           </div>
           } @else {
           <div class="profiles-grid full">
-            @for (item of sortedProfileResults(); track trackByEventId($index, item)) {
+            @for (item of visibleProfiles(); track trackByEventId($index, item)) {
             <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
             }
           </div>
+          @if (hasMoreProfilesToRender()) {
+          <div class="load-more-section">
+            <button mat-stroked-button type="button" class="load-more-button" (click)="loadMoreProfiles()">
+              <mat-icon>expand_more</mat-icon>
+              Show more profiles
+              <span class="load-more-remaining">({{ profileCount() - visibleProfiles().length }} remaining)</span>
+            </button>
+          </div>
+          }
           }
         </div>
       </mat-tab>
@@ -196,17 +205,26 @@
           <span>Notes ({{ noteCount() }})</span>
         </ng-template>
         <div class="tab-content">
-          @if (noteResults().length === 0) {
+          @if (noteCount() === 0) {
           <div class="empty-tab">
             <mat-icon>speaker_notes_off</mat-icon>
             <p>No notes found</p>
           </div>
           } @else {
           <div class="notes-list">
-            @for (item of noteResults(); track trackByEventId($index, item)) {
+            @for (item of visibleNotes(); track trackByEventId($index, item)) {
             <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
             }
           </div>
+          @if (hasMoreNotesToRender()) {
+          <div class="load-more-section">
+            <button mat-stroked-button type="button" class="load-more-button" (click)="loadMoreNotes()">
+              <mat-icon>expand_more</mat-icon>
+              Show more notes
+              <span class="load-more-remaining">({{ noteCount() - visibleNotes().length }} remaining)</span>
+            </button>
+          </div>
+          }
           }
         </div>
       </mat-tab>
@@ -217,17 +235,26 @@
           <span>Articles ({{ articleCount() }})</span>
         </ng-template>
         <div class="tab-content">
-          @if (articleResults().length === 0) {
+          @if (articleCount() === 0) {
           <div class="empty-tab">
             <mat-icon>article</mat-icon>
             <p>No articles found</p>
           </div>
           } @else {
           <div class="articles-grid">
-            @for (item of articleResults(); track trackByEventId($index, item)) {
+            @for (item of visibleArticles(); track trackByEventId($index, item)) {
             <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
             }
           </div>
+          @if (hasMoreArticlesToRender()) {
+          <div class="load-more-section">
+            <button mat-stroked-button type="button" class="load-more-button" (click)="loadMoreArticles()">
+              <mat-icon>expand_more</mat-icon>
+              Show more articles
+              <span class="load-more-remaining">({{ articleCount() - visibleArticles().length }} remaining)</span>
+            </button>
+          </div>
+          }
           }
         </div>
       </mat-tab>
