@@ -8,6 +8,7 @@ import {
   runInInjectionContext,
   computed,
   signal,
+  untracked,
   PLATFORM_ID,
   DOCUMENT,
   OnInit,
@@ -400,9 +401,11 @@ export class App implements OnInit, OnDestroy {
   // Signal to track if accounts list is expanded in sidenav
   accountsExpanded = signal(false);
 
-  // Lazy-mount feeds component only when first needed to reduce initial render cost.
-  // Once mounted, keep it mounted to preserve existing feed state behavior.
+  // Mount feeds once and keep it mounted so the panel stays warm in the background.
+  // Eager warm-up runs after app init (idle) so /f is instant even if the user
+  // first opens another route. Still mounts immediately when navigating to /f.
   feedsMounted = signal(false);
+  private feedsWarmMountScheduled = false;
 
   // Lazy-mount search results only when search is first used.
   // Keep mounted afterward to preserve interaction behavior and state.
@@ -960,10 +963,38 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
-    // Mount feeds component lazily when the feeds panel is first shown.
+    // Mount feeds for always-on background warm-up.
+    // - Immediate when user is on /f
+    // - Otherwise after app init + account contacts are ready, deferred via idle
+    //   so the active route paints first and feed load does not race bootstrap
+    // Once mounted, keep mounted (visibility toggles via CSS) for instant return.
     effect(() => {
-      if (this.panelNav.showFeeds() && !this.feedsMounted()) {
+      if (this.feedsMounted()) {
+        return;
+      }
+
+      if (this.panelNav.showFeeds()) {
         this.feedsMounted.set(true);
+        return;
+      }
+
+      // Wait until app services are ready. For authenticated users, also wait
+      // until following list has finished loading so following feeds do not
+      // complete empty during warm-up.
+      const appReady = this.app.initialized() && this.app.isBrowser();
+      const accountReady =
+        !this.app.authenticated() || this.accountState.followingListLoaded();
+
+      if (appReady && accountReady && !this.feedsWarmMountScheduled) {
+        this.feedsWarmMountScheduled = true;
+        untracked(() => {
+          this.deferStartupTask('mount-feeds', () => {
+            if (!this.feedsMounted()) {
+              this.feedsMounted.set(true);
+              this.logger.debug('[App] Eager-mounted feeds for background warm-up');
+            }
+          });
+        });
       }
     });
 

@@ -142,6 +142,8 @@ export class FeedsCollectionService {
 
         // Pre-warm cached events for the saved feed so IndexedDB read
         // overlaps with the rest of initialization for faster first render.
+        // Do not call setActiveFeed here — that can start subscriptions before
+        // following list / account relays are ready and leave the feed empty.
         if (savedFeedId) {
           this.feedService.preWarmCachedEvents(savedFeedId);
         }

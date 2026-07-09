@@ -3,12 +3,13 @@ import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from 
 
 /**
  * Custom route reuse strategy.
- * 
+ *
  * This strategy does NOT detach/cache routes.
  * It only controls when Angular can reuse the current component instance.
- * 
- * Note: FeedsComponent is embedded directly in app.html (not routed), so it
- * stays alive regardless of this strategy.
+ *
+ * Note: FeedsComponent is embedded directly in app.html (not routed) and is
+ * eager-warmed after app init so /f stays always-on in the background.
+ * This strategy does not affect FeedsComponent lifetime.
  */
 @Service()
 export class CustomReuseStrategy implements RouteReuseStrategy {

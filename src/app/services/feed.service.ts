@@ -258,6 +258,11 @@ export class FeedService {
   // before the full subscription pipeline starts, keyed by `${pubkey}::${feedId}`
   private preWarmedCache = new Map<string, Promise<Event[]>>();
 
+  // Following feeds that returned early because contacts were not ready yet
+  private feedsWaitingForFollowing = new Set<string>();
+  // Track following-feed retries so recovery runs at most once per feed/account
+  private followingFeedRetried = new Set<string>();
+
   // Public computed signals
   // Append Trending feed at the end ONLY after feeds have been loaded from storage
   // This prevents Trending from being auto-selected during startup when it's temporarily the only feed
@@ -320,6 +325,8 @@ export class FeedService {
           if (!isFirstTimeUser && storedFeeds && storedFeeds.length > 0) {
             this.logger.debug(`🚀 [FeedService] FAST PATH: Loading ${storedFeeds.length} local feeds immediately for returning user`);
             loadingForPubkey = pubkey;
+            this.followingFeedRetried.clear();
+            this.feedsWaitingForFollowing.clear();
             this._hasInitialContent.set(false);
             this.appState.feedHasInitialContent.set(false);
             await this.loadFeedsLocal(pubkey, storedFeeds);
@@ -347,6 +354,8 @@ export class FeedService {
 
           this.logger.debug(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
           loadingForPubkey = pubkey;
+          this.followingFeedRetried.clear();
+          this.feedsWaitingForFollowing.clear();
           // Reset signals before loading new feeds
           this._feedsLoaded.set(false);
           this._hasInitialContent.set(false);
@@ -366,6 +375,8 @@ export class FeedService {
 
           // Reset loading tracker so account-based loading can run immediately after login.
           loadingForPubkey = null;
+          this.followingFeedRetried.clear();
+          this.feedsWaitingForFollowing.clear();
         });
       }
     });
@@ -413,6 +424,76 @@ export class FeedService {
         }
       });
     });
+
+    // If a following feed started before contacts finished loading, it can end up
+    // empty. Retry once the following list is available — but do not interrupt a
+    // normal in-progress fetch that already has contacts.
+    effect(() => {
+      const followingLoaded = this.accountState.followingListLoaded();
+      const followingCount = this.accountState.followingList().length;
+      const feedsPageActive = this._feedsPageActive();
+      const activeFeedId = this._activeFeedId();
+
+      if (!followingLoaded || !feedsPageActive || !activeFeedId) {
+        return;
+      }
+
+      untracked(() => {
+        const feedData = this.data.get(activeFeedId);
+        if (!feedData || feedData.feed.source !== 'following') {
+          return;
+        }
+
+        const hasEvents = feedData.events().length > 0;
+        const wasWaitingForContacts = this.feedsWaitingForFollowing.has(activeFeedId);
+        const completedEmpty =
+          feedData.initialLoadComplete &&
+          !hasEvents &&
+          !(feedData.isRefreshing?.() ?? false);
+
+        if (followingCount === 0) {
+          this.feedsWaitingForFollowing.delete(activeFeedId);
+          // List is truly empty — finalize empty state if still loading.
+          if (!feedData.initialLoadComplete) {
+            feedData.initialLoadComplete = true;
+            feedData.isRefreshing?.set(false);
+          }
+          return;
+        }
+
+        const shouldRetry =
+          !hasEvents &&
+          !this.followingFeedRetried.has(activeFeedId) &&
+          (wasWaitingForContacts || completedEmpty);
+
+        if (shouldRetry) {
+          this.followingFeedRetried.add(activeFeedId);
+          this.feedsWaitingForFollowing.delete(activeFeedId);
+          this.logger.info(
+            `Following list loaded with ${followingCount} contacts — retrying following feed ${activeFeedId}`
+          );
+          this.closeSubscription(feedData.subscription);
+          this.data.delete(activeFeedId);
+          this._feedData.update(map => {
+            const next = new Map(map);
+            next.delete(activeFeedId);
+            return next;
+          });
+          const feed = this.getFeedById(activeFeedId);
+          if (feed) {
+            void this.subscribeToFeed(feed);
+          }
+        }
+      });
+    });
+  }
+
+  private markFollowingFeedWaiting(feedId: string): void {
+    this.feedsWaitingForFollowing.add(feedId);
+  }
+
+  private clearFollowingFeedWaiting(feedId: string): void {
+    this.feedsWaitingForFollowing.delete(feedId);
   }
 
   /**
@@ -719,8 +800,26 @@ export class FeedService {
   /**
    * Set whether the Feeds page is currently active/mounted.
    * This controls whether subscriptions should be created or maintained.
+   *
+   * Idempotent for the "already active" case so a late component mount does not
+   * clear in-flight feed data. Transitioning false→true still (re)subscribes.
    */
   setFeedsPageActive(active: boolean): void {
+    if (this._feedsPageActive() === active) {
+      // If already active but the active feed has no data entry yet (e.g. feeds
+      // finished loading after the first activate), ensure we subscribe now.
+      if (active) {
+        const activeFeedId = this._activeFeedId();
+        if (activeFeedId && !this.data.has(activeFeedId)) {
+          this.logger.debug('Feeds page already active but feed has no data, subscribing');
+          void this.subscribe();
+        }
+      } else {
+        this.logger.debug(`Feeds page active state already ${active}, skipping`);
+      }
+      return;
+    }
+
     this._feedsPageActive.set(active);
     this.logger.debug(`Feeds page active state set to: ${active}`);
 
@@ -1636,9 +1735,20 @@ export class FeedService {
     try {
       const followingList = this.accountState.followingList();
 
-      // If following list is empty, return early
+      // If following list is empty, return early — but only mark "no results" once
+      // we know the list has finished loading. Otherwise warm-start can complete
+      // with zero events before contacts are available and stick on empty state.
       if (followingList.length === 0) {
+        if (!this.accountState.followingListLoaded()) {
+          this.logger.debug('Following list not loaded yet — keeping feed in loading state');
+          feedData.initialLoadComplete = false;
+          feedData.isRefreshing?.set(true);
+          this.markFollowingFeedWaiting(feedData.feed.id);
+          return;
+        }
+
         this.logger.debug('Following list is empty, no users to fetch from');
+        this.clearFollowingFeedWaiting(feedData.feed.id);
         feedData.initialLoadComplete = true;
         feedData.isRefreshing?.set(false);
         if (!this._hasInitialContent()) {
@@ -1647,6 +1757,8 @@ export class FeedService {
         }
         return;
       }
+
+      this.clearFollowingFeedWaiting(feedData.feed.id);
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
       const initialSinceTimestamp = this.getFollowingInitialLoadSinceTimestamp();
@@ -3947,8 +4059,10 @@ export class FeedService {
         this.preWarmCachedEvents(activeFeedId);
       }
 
-      // Subscribe if there's an active account and feeds page is active
-      if (this.accountState.account()) {
+      // Subscribe only if the feeds UI has already been activated (component mounted).
+      // Do NOT force-activate here — that races account bootstrap (following list, relays)
+      // and can mark feeds "complete" with zero events.
+      if (this.accountState.account() && this._feedsPageActive()) {
         await this.subscribe();
       }
     } catch (error) {
@@ -3958,6 +4072,9 @@ export class FeedService {
       // Error fallback to defaults — don't sync to relay settings to avoid
       // overwriting valid synced feeds with an empty/default set.
       this.saveFeeds({ syncToSettings: false, preserveBackup: true });
+      if (this.accountState.account() && this._feedsPageActive()) {
+        await this.subscribe();
+      }
     }
   }
 
@@ -4018,7 +4135,7 @@ export class FeedService {
           // because the default feeds contain no custom feeds worth publishing.
           this.saveFeeds({ syncToSettings: false, preserveBackup: true });
 
-          if (this.accountState.account()) {
+          if (this.accountState.account() && this._feedsPageActive()) {
             await this.subscribe();
           }
           return;
@@ -4030,7 +4147,7 @@ export class FeedService {
           this._feedsLoaded.set(true);
           this.saveFeeds({ syncToSettings: false, preserveBackup: true });
 
-          if (this.accountState.account()) {
+          if (this.accountState.account() && this._feedsPageActive()) {
             await this.subscribe();
           }
           return;
@@ -4050,8 +4167,7 @@ export class FeedService {
             this.saveFeeds({ syncToSettings: false, preserveBackup: true });
             this.logger.debug('Loaded feeds from synced settings for pubkey', pubkey, feedsFromSync);
 
-            // Only subscribe if there's an active account
-            if (this.accountState.account()) {
+            if (this.accountState.account() && this._feedsPageActive()) {
               await this.subscribe();
             }
             return;
@@ -4096,8 +4212,8 @@ export class FeedService {
       this.saveFeeds({ syncToSettings: false, preserveBackup: true });
     }
 
-    // Only subscribe if there's an active account
-    if (this.accountState.account()) {
+    // Subscribe only when feeds UI is already active (component mounted/warmed).
+    if (this.accountState.account() && this._feedsPageActive()) {
       await this.subscribe();
     }
   }
