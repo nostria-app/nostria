@@ -77,7 +77,7 @@
 
         <!-- Filter button with overlay panel - only for authenticated users -->
         @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
-        <app-filter-button [active]="hasActiveFilters()" tooltip="Filter content">
+        <app-filter-button [active]="hasActiveFilters()" tooltip="Filter content" title="Filter content">
           <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
             [mentionedMode]="listMentionedMode()" [currentListFilter]="currentListFilter()"
             (kindsChanged)="onKindsChanged($event)" (showRepliesChanged)="onShowRepliesChanged($event)"

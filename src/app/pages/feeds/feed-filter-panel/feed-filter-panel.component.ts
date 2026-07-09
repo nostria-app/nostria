@@ -247,6 +247,13 @@ function isStandardKindsSelection(kinds: number[]): boolean {
     </div>
   `,
   styles: [`
+    :host {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      max-height: inherit;
+    }
+
     .filter-panel {
       display: flex;
       flex-direction: row;
@@ -271,7 +278,9 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       min-width: 0;
       min-height: 0;
       overflow-y: auto;
+      overscroll-behavior: contain;
       padding-right: 0.25rem;
+      -webkit-overflow-scrolling: touch;
     }
 
     .combined-filter-divider {
@@ -560,14 +569,46 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       margin-right: 0.375rem;
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 720px) {
+      :host {
+        flex: 1 1 auto;
+        height: 100%;
+        max-height: 100%;
+        width: 100%;
+      }
+
       .filter-panel {
         flex-direction: column;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        min-height: 0;
+        border-radius: 0;
+        border: none;
+        gap: 0.75rem;
+        /* Header lives in filter-button; keep bottom safe-area for home indicator */
+        padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .filter-column {
+        flex: 0 0 auto;
+        overflow: visible;
+        min-height: auto;
+        padding-right: 0;
       }
 
       .combined-filter-divider {
         width: 100%;
         height: 1px;
+        margin: 0.25rem 0 0.75rem;
+      }
+
+      .single-action-row {
+        margin-top: 0.5rem;
       }
     }
   `]
