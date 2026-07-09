@@ -16,8 +16,9 @@ export class ThemeService {
   private readonly logger = inject(LoggerService);
   private localStorage = inject(LocalStorageService);
 
-  // Theme colors for PWA - clean neutral colors
-  private readonly LIGHT_THEME_COLOR = '#fafafa';
+  // Must match --mat-app-background-color in styles.scss and the pre-bootstrap
+  // splash colors in index.html (prevents a flash when Angular theme applies).
+  private readonly LIGHT_THEME_COLOR = '#efefef';
   private readonly DARK_THEME_COLOR = '#1a1a1a';
 
   /** When non-null, overrides the default theme-color meta tag value. */
@@ -174,7 +175,9 @@ export class ThemeService {
       this.document.documentElement.classList.remove('dark');
     }
 
-    this.document.body.style.backgroundColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
+    const bg = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
+    this.document.documentElement.style.backgroundColor = bg;
+    this.document.body.style.backgroundColor = bg;
     this.document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
     // Only update meta tags here if there's no active override

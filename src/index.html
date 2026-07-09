@@ -142,25 +142,45 @@
   <link rel="apple-touch-startup-image"
     media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
     href="/splash/apple-splash-2732-2048.png" />
+  <!-- Match styles.scss: light #efefef / dark #1a1a1a (--mat-app-background-color) -->
   <meta name="theme-color" content="#efefef" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#0a0a0a" id="theme-color-meta" />
+  <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#1a1a1a" id="theme-color-meta" />
+  <!-- Earliest paint: same as app surface so splash → Angular has no color jump -->
+  <style>
+    html,
+    body {
+      margin: 0;
+      background-color: #efefef;
+    }
+    @media (prefers-color-scheme: dark) {
+      html,
+      body {
+        background-color: #1a1a1a;
+      }
+    }
+  </style>
 </head>
 
 <body class="mat-typography">
   <script>
-    // Apply saved theme and text scale immediately to prevent flash
+    // Apply saved theme and text scale immediately to prevent flash.
+    // Colors MUST match --mat-app-background-color in styles.scss (light #efefef, dark #1a1a1a).
     (function () {
+      var LIGHT_BG = '#efefef';
+      var DARK_BG = '#1a1a1a';
       var theme = localStorage.getItem('nostria-theme');
       var isAutoTheme = theme === 'auto' || !theme;
       var isDark = theme === 'dark' || (isAutoTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.body.style.backgroundColor = isDark ? '#0a0a0a' : '#efefef';
+      var bg = isDark ? DARK_BG : LIGHT_BG;
+      document.documentElement.style.backgroundColor = bg;
+      document.body.style.backgroundColor = bg;
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
       document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
 
       var themeColorMeta = document.getElementById('theme-color-meta');
       if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', isDark ? '#0a0a0a' : '#efefef');
+        themeColorMeta.setAttribute('content', bg);
       }
 
       // Apply saved text scale immediately (accessibility)

@@ -82,6 +82,7 @@ describe('UserRelayService', () => {
           provide: AccountRelayService,
           useValue: {
             getRelayUrls: vi.fn().mockReturnValue(['wss://account-relay']),
+            isInitialized: vi.fn().mockReturnValue(true),
           },
         },
         {
@@ -139,5 +140,30 @@ describe('UserRelayService', () => {
     expect(ensureRelaysForPubkeyMock).not.toHaveBeenCalled();
     expect(getOptimalRelaysMock).not.toHaveBeenCalled();
     expect(poolQueryMock).toHaveBeenCalledWith(['wss://user-relay-a', 'wss://user-relay-b'], { authors: ['author-pubkey'], kinds: [1] });
+  });
+
+  it('falls back to account relays when the author has no outbox relays', async () => {
+    getRelaysForPubkeyMock.mockReturnValue([]);
+    poolQueryMock.mockResolvedValue([]);
+
+    await service.query('author-without-relays', { authors: ['author-without-relays'], kinds: [1] });
+
+    expect(ensureRelaysForPubkeyMock).toHaveBeenCalledWith('author-without-relays');
+    expect(poolQueryMock).toHaveBeenCalledWith(
+      ['wss://account-relay'],
+      { authors: ['author-without-relays'], kinds: [1] }
+    );
+  });
+
+  it('does not use account fallback when outbox relays are available', async () => {
+    getRelaysForPubkeyMock.mockReturnValue(['wss://user-relay-a']);
+    poolQueryMock.mockResolvedValue([]);
+
+    await service.query('author-pubkey', { authors: ['author-pubkey'], kinds: [1] });
+
+    expect(poolQueryMock).toHaveBeenCalledWith(
+      ['wss://user-relay-a'],
+      { authors: ['author-pubkey'], kinds: [1] }
+    );
   });
 });

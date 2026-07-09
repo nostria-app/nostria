@@ -1,4 +1,4 @@
-import { inject, signal, computed, Service } from '@angular/core';
+import { inject, signal, computed, Service, Injector } from '@angular/core';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
@@ -13,6 +13,8 @@ export class UserRelaysService {
   private readonly utilitiesService = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
+  /** Lazy AccountRelayService access — avoids circular DI with AccountRelayService. */
+  private readonly injector = inject(Injector);
 
   // High-performance cache with timestamp tracking
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
@@ -183,6 +185,28 @@ export class UserRelaysService {
   }
 
   /**
+   * Account relays used only as a last-resort read fallback when a profile has
+   * no kind 10002 / kind 3 / observed outbox relays. Not cached as the user's
+   * declared relay list (UI still shows "No relays found").
+   */
+  private getAccountRelayFallbackUrls(): string[] {
+    try {
+      // Lazy require/get to avoid circular dependency:
+      // AccountRelayService -> UserRelaysService -> AccountRelayService
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AccountRelayService } = require('./account-relay') as typeof import('./account-relay');
+      const accountRelay = this.injector.get(AccountRelayService);
+      if (!accountRelay?.isInitialized?.()) {
+        return [];
+      }
+      return (accountRelay.getRelayUrls() ?? []).filter((url: string) => !!url);
+    } catch (error) {
+      this.logger.debug('[UserRelaysService] Account relay fallback unavailable', error);
+      return [];
+    }
+  }
+
+  /**
    * Get optimal relays for a user's public key
    * This method ensures relays are discovered and cached
    * @param pubkey - The user's public key in hex format
@@ -198,7 +222,15 @@ export class UserRelaysService {
       return this.optimizeRelays(cached);
     }
 
-    // If still no relays, return empty array
+    // Last resort for reading: current account relays (outbox miss)
+    const accountFallback = this.getAccountRelayFallbackUrls();
+    if (accountFallback.length > 0) {
+      this.logger.info(
+        `[UserRelaysService] No outbox relays for ${pubkey.slice(0, 16)}...; falling back to ${accountFallback.length} account relay(s)`
+      );
+      return this.optimizeRelays(accountFallback);
+    }
+
     return [];
   }
 
@@ -209,10 +241,8 @@ export class UserRelaysService {
    * @returns Promise<string[]> - Array of optimal relay URLs for reading
    */
   async getUserRelaysForReading(pubkey: string, maxRelays = 3): Promise<string[]> {
-    // Ensure relays are discovered and cached
-    await this.ensureRelaysForPubkey(pubkey);
-
-    const allRelays = this.getRelaysForPubkey(pubkey);
+    // Prefer discovered outbox relays; fall back to account relays when empty
+    const allRelays = await this.getUserRelays(pubkey);
 
     if (allRelays.length === 0) {
       return [];

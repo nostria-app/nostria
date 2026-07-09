@@ -198,7 +198,7 @@ test.describe('Color Contrast @public @a11y', () => {
 
     console.log('Dark mode colors:', colors);
 
-    // The app background should be #0a0a0a (near-black)
+    // The app background should be #1a1a1a (matches --mat-app-background-color)
     expect(colors.bgColor).toBeTruthy();
 
     // The card surface (surface-container-low) should be different from the lowest surface

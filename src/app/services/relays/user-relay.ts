@@ -133,6 +133,42 @@ export class UserRelayService {
     return this.userRelaysService.getRelaysForPubkey(pubkey);
   }
 
+  /**
+   * Current account relays used only when outbox discovery finds nothing.
+   * Does not rewrite the target user's declared relay list.
+   */
+  private getAccountRelayFallbackUrls(): string[] {
+    try {
+      if (!this.accountRelay.isInitialized()) {
+        return [];
+      }
+      return this.accountRelay.getRelayUrls().filter(url => !!url);
+    } catch (error) {
+      this.logger.debug('[UserRelayService] Account relay fallback unavailable', error);
+      return [];
+    }
+  }
+
+  /**
+   * If outbox/discovery produced no relays, fall back to the logged-in account's
+   * relays so poorly-configured profiles still load (timeline, following, etc.).
+   */
+  private withAccountRelayFallback(relayUrls: string[], context: string): string[] {
+    if (relayUrls.length > 0) {
+      return relayUrls;
+    }
+
+    const accountUrls = this.getAccountRelayFallbackUrls();
+    if (accountUrls.length === 0) {
+      return [];
+    }
+
+    this.logger.info(
+      `[UserRelayService] No outbox relays for ${context}; falling back to ${accountUrls.length} account relay(s)`
+    );
+    return accountUrls;
+  }
+
   private async getRelayUrlsForPubkeys(pubkeys: string[], options: LookupOptions = {}): Promise<string[]> {
     const allRelayUrls = new Set<string>();
 
@@ -147,7 +183,9 @@ export class UserRelayService {
       relayUrls.forEach(url => allRelayUrls.add(url));
     }
 
-    const resolvedRelayUrls = Array.from(allRelayUrls);
+    const context = pubkeys.map(pk => pk.slice(0, 8)).join(',') || 'unknown';
+    const resolvedRelayUrls = this.withAccountRelayFallback(Array.from(allRelayUrls), context);
+
     return options.useFullRelaySet
       ? resolvedRelayUrls
       : this.getEffectiveRelayUrls(resolvedRelayUrls);
@@ -267,15 +305,8 @@ export class UserRelayService {
       return [];
     }
 
-    const allRelayUrls = new Set<string>();
-
-    for (const pk of validPubkeys) {
-      await this.ensureRelaysForPubkey(pk);
-      const relayUrls = this.getRelaysForPubkey(pk);
-      relayUrls.forEach(url => allRelayUrls.add(url));
-    }
-
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    // Reuse central resolution (outbox + account-relay fallback)
+    const relayUrls = await this.getRelayUrlsForPubkeys(validPubkeys);
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
@@ -333,10 +364,17 @@ export class UserRelayService {
     }
 
     // Include account relays for better discovery of interactions (replies, reactions, etc.)
-    if (includeAccountRelays) {
-      const accountRelayUrls = this.accountRelay.getRelayUrls();
+    // Always apply account-relay fallback when outbox is empty; optionally always merge.
+    if (includeAccountRelays || allRelayUrls.size === 0) {
+      const accountRelayUrls = this.getAccountRelayFallbackUrls();
       accountRelayUrls.forEach(url => allRelayUrls.add(url));
-      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
+      if (includeAccountRelays) {
+        this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
+      } else if (accountRelayUrls.length > 0) {
+        this.logger.info(
+          `[UserRelayService] No outbox relays for kind/tag query; falling back to ${accountRelayUrls.length} account relay(s)`
+        );
+      }
     }
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
@@ -387,10 +425,17 @@ export class UserRelayService {
     }
 
     // Include account relays for better discovery of interactions (replies, reactions, etc.)
-    if (includeAccountRelays) {
-      const accountRelayUrls = this.accountRelay.getRelayUrls();
+    // Always apply account-relay fallback when outbox is empty; optionally always merge.
+    if (includeAccountRelays || allRelayUrls.size === 0) {
+      const accountRelayUrls = this.getAccountRelayFallbackUrls();
       accountRelayUrls.forEach(url => allRelayUrls.add(url));
-      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
+      if (includeAccountRelays) {
+        this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
+      } else if (accountRelayUrls.length > 0) {
+        this.logger.info(
+          `[UserRelayService] No outbox relays for multi-kind/tag query; falling back to ${accountRelayUrls.length} account relay(s)`
+        );
+      }
     }
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
@@ -442,10 +487,16 @@ export class UserRelayService {
       relayUrls.forEach(url => allRelayUrls.add(url));
     }
 
-    if (includeAccountRelays) {
-      const accountRelayUrls = this.accountRelay.getRelayUrls();
+    if (includeAccountRelays || allRelayUrls.size === 0) {
+      const accountRelayUrls = this.getAccountRelayFallbackUrls();
       accountRelayUrls.forEach(url => allRelayUrls.add(url));
-      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for quote discovery`);
+      if (includeAccountRelays) {
+        this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for quote discovery`);
+      } else if (accountRelayUrls.length > 0) {
+        this.logger.info(
+          `[UserRelayService] No outbox relays for quote query; falling back to ${accountRelayUrls.length} account relay(s)`
+        );
+      }
     }
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
@@ -489,15 +540,8 @@ export class UserRelayService {
     const cacheKey = this.createTaggedEventCacheKey(validPubkeys, kind, tag);
 
     return this.getOrCreateLookup(this.taggedEventCache, this.inflightTaggedEventRequests, cacheKey, async () => {
-      const allRelayUrls = new Set<string>();
-
-      for (const pk of validPubkeys) {
-        await this.ensureRelaysForPubkey(pk);
-        const relayUrls = this.getRelaysForPubkey(pk);
-        relayUrls.forEach(url => allRelayUrls.add(url));
-      }
-
-      const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+      // Outbox first, then account relays when the author has no relay list
+      const relayUrls = await this.getRelayUrlsForPubkeys(validPubkeys);
 
       const filter = {
         authors: validPubkeys,
@@ -518,7 +562,7 @@ export class UserRelayService {
         filter['#d'] = [tag.value];
       }
 
-      // First try user's relays (prioritizing WRITE relays)
+      // First try user's outbox relays (or account-relay fallback when empty)
       if (relayUrls.length > 0) {
         const event = await this.pool.get(relayUrls, filter);
         if (event) {
