@@ -1339,11 +1339,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /**
+   * Toggle chat list search. When opening, focus the input immediately within the
+   * user gesture so iOS Safari opens the keyboard. The input stays in the DOM
+   * (hidden via CSS) so focus is available on the same click that reveals it.
+   */
   toggleSearch(): void {
-    this.showSearch.update(v => !v);
-    if (!this.showSearch()) {
+    if (this.showSearch()) {
+      this.showSearch.set(false);
       this.chatSearchQuery.set('');
+      this.chatSearchInput?.nativeElement?.blur();
+      return;
     }
+
+    // Focus first while still in the user-gesture context (iOS Safari requirement).
+    this.chatSearchInput?.nativeElement?.focus();
+    this.showSearch.set(true);
   }
 
   ngAfterViewInit(): void {

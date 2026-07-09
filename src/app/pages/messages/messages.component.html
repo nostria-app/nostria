@@ -82,15 +82,17 @@
       </mat-menu>
     </div>
 
-    @if (showSearch()) {
-    <div class="message-threads-header">
+    <!-- Always in DOM (hidden via CSS when closed) so iOS can focus within the button gesture -->
+    <div class="message-threads-header" [class.search-visible]="showSearch()"
+      [attr.aria-hidden]="!showSearch()">
       <input #chatSearchInput class="chat-search-input" type="text" placeholder="Search chats..."
-        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)" />
-      <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
+        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)"
+        autocomplete="off" name="chat-search" [tabindex]="showSearch() ? 0 : -1" />
+      <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search"
+        [tabindex]="showSearch() ? 0 : -1">
         <mat-icon>close</mat-icon>
       </button>
     </div>
-    }
     @if (encryption.pendingBunkerOperations() > 0 || encryption.isBunkerConnecting()) {
     <div class="remote-signer-status inline-status">
       <mat-icon class="rotating">sync</mat-icon>
