@@ -21,10 +21,10 @@
 
     <div class="limit-controls">
       <span>Rows: {{ limit() }}</span>
-      <button mat-button (click)="decreaseLimit()" [disabled]="limit() <= 10">
+      <button mat-icon-button (click)="decreaseLimit()" [disabled]="limit() <= 10" aria-label="Decrease row limit">
         <mat-icon>remove</mat-icon>
       </button>
-      <button mat-button (click)="increaseLimit()" [disabled]="limit() >= 200">
+      <button mat-icon-button (click)="increaseLimit()" [disabled]="limit() >= 200" aria-label="Increase row limit">
         <mat-icon>add</mat-icon>
       </button>
     </div>

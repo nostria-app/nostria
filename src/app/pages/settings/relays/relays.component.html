@@ -32,7 +32,7 @@
                 <mat-icon>auto_awesome</mat-icon>
                 <span i18n="@@settings.relays.quick-setup">Quick Setup</span>
                 @if (isSettingUpNostriaRelays()) {
-                <mat-icon class="spinning-icon">sync</mat-icon>
+                <mat-icon class="spinning-icon" iconPositionEnd>sync</mat-icon>
                 }
               </button>
 
@@ -140,7 +140,7 @@
                   (click)="$event.stopPropagation()">
                   <mat-icon>{{ getRelayModeIcon(relay) }}</mat-icon>
                   <span class="mode-label">{{ getRelayModeLabel(relay) }}</span>
-                  <mat-icon class="dropdown-arrow">arrow_drop_down</mat-icon>
+                  <mat-icon class="dropdown-arrow" iconPositionEnd>arrow_drop_down</mat-icon>
                 </button>
                 <mat-menu #relayModeMenu="matMenu">
                   <button mat-menu-item (click)="setRelayMode(relay, 'readwrite')">
@@ -285,7 +285,7 @@
         <mat-icon>network_check</mat-icon>
         <span i18n="@@settings.relays.find-closest">Find Best Discovery Relay</span>
         @if (isCheckingRelays()) {
-        <mat-icon class="spinning-icon">sync</mat-icon>
+        <mat-icon class="spinning-icon" iconPositionEnd>sync</mat-icon>
         }
       </button>
       <!-- <button mat-flat-button color="primary" class="add-button" (click)="discoveryRelayTest()">

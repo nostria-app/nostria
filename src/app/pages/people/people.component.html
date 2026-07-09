@@ -15,7 +15,7 @@
     @if (selectedFollowSet()) {
     <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
     }
-    <mat-icon class="selector-arrow">expand_more</mat-icon>
+    <mat-icon class="selector-arrow" iconPositionEnd>expand_more</mat-icon>
   </button>
 
   <mat-menu #followSetsMenu="matMenu" class="list-filter-menu" yPosition="below" [overlapTrigger]="false">

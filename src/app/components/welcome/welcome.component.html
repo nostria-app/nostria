@@ -86,7 +86,7 @@
         @if (currentWizardStep() === 1) {
           <button mat-flat-button class="action-btn primary-btn" (click)="nextStep()">
             <span>Get Started</span>
-            <mat-icon>arrow_forward</mat-icon>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </button>
         } @else if (currentWizardStep() === totalWizardSteps()) {
           <button mat-button class="action-btn back-btn" (click)="previousStep()">
@@ -95,7 +95,7 @@
           </button>
           <button mat-flat-button class="action-btn primary-btn" (click)="completeWizard()">
             <span>Start Using Nostria</span>
-            <mat-icon>rocket_launch</mat-icon>
+            <mat-icon iconPositionEnd>rocket_launch</mat-icon>
           </button>
         } @else {
           <button mat-button class="action-btn back-btn" (click)="previousStep()">
@@ -104,7 +104,7 @@
           </button>
           <button mat-flat-button class="action-btn primary-btn" (click)="nextStep()">
             <span>Continue</span>
-            <mat-icon>arrow_forward</mat-icon>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </button>
         }
       </div>

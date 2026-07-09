@@ -1623,19 +1623,6 @@ app-media-queue {
   color: rgb(52, 152, 219);
 }
 
-.mat-mdc-button.only-icon {
-  --mat-button-text-with-icon-horizontal-padding: 8px;
-  min-width: 40px;
-  padding: 0;
-
-  .mat-icon {
-    margin: 0;
-    height: 24px;
-    width: 24px;
-    font-size: 24px;
-  }
-}
-
 .mat-mdc-dialog-surface {
   max-height: 100%;
   height: 100%;

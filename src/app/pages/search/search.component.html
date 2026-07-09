@@ -124,7 +124,7 @@
           @if (sortedProfileResults().length > 6) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(1)">
             View all {{ profileCount() }} profiles
-            <mat-icon>arrow_forward</mat-icon>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </button>
           }
           }
@@ -143,7 +143,7 @@
           @if (noteResults().length > 5) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(2)">
             View all {{ noteCount() }} notes
-            <mat-icon>arrow_forward</mat-icon>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </button>
           }
           }
@@ -162,7 +162,7 @@
           @if (articleResults().length > 3) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(3)">
             View all {{ articleCount() }} articles
-            <mat-icon>arrow_forward</mat-icon>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           </button>
           }
           }

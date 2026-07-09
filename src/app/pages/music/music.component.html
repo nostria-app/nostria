@@ -166,7 +166,7 @@
         </h2>
         <button mat-button (click)="goToPlaylists()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
+          <mat-icon iconPositionEnd>arrow_forward</mat-icon>
         </button>
       </div>
       <div class="compact-playlists-grid compact-playlists-grid-single-row">
@@ -190,7 +190,7 @@
         @if (hasMoreListFilteredTracks()) {
         <button mat-button (click)="goToAllTracks()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
+          <mat-icon iconPositionEnd>arrow_forward</mat-icon>
         </button>
         }
       </div>
@@ -215,7 +215,7 @@
         @if (hasMoreListFilteredPlaylists()) {
         <button mat-button (click)="goToAllPlaylists()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
+          <mat-icon iconPositionEnd>arrow_forward</mat-icon>
         </button>
         }
       </div>
@@ -242,7 +242,7 @@
         @if (hasMoreArtists()) {
         <button mat-button (click)="goToAllArtists()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
+          <mat-icon iconPositionEnd>arrow_forward</mat-icon>
         </button>
         }
       </div>

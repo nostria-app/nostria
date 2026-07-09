@@ -710,7 +710,7 @@
       color: var(--mat-sys-on-surface);
       transition: background-color 0.15s ease;
 
-      // Override Material button centering
+      // Override Material button centering; grow label so trailing check stays right
       ::ng-deep .mat-mdc-button-persistent-ripple,
       ::ng-deep .mdc-button__label {
         justify-content: flex-start;
@@ -720,7 +720,8 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        width: 100%;
+        flex: 1;
+        min-width: 0;
       }
 
       &:hover {
@@ -741,12 +742,10 @@
       }
 
       .check-icon {
-        margin-left: auto;
         color: var(--mat-sys-primary);
       }
 
       span {
-        flex: 1;
         text-align: left;
       }
     }

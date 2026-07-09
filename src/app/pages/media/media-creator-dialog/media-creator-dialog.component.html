@@ -378,7 +378,7 @@
           <button mat-button [disabled]="selectedMediaIndex() === mediaFiles().length - 1"
             (click)="selectMedia(selectedMediaIndex() + 1)">
             <span i18n="@@media.creator.alt.next">Next</span>
-            <mat-icon>chevron_right</mat-icon>
+            <mat-icon iconPositionEnd>chevron_right</mat-icon>
           </button>
         </div>
         }
@@ -471,7 +471,7 @@
 
     @if (currentStep() < 3 && hasMedia()) { <button mat-flat-button (click)="goToNextStep()">
       <span i18n="@@media.creator.next">Next</span>
-      <mat-icon>arrow_forward</mat-icon>
+      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
       </button>
       }
 

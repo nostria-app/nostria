@@ -87,12 +87,12 @@
   <div class="recording-options">
     <div class="recording-options-main">
       <div class="aspect-ratio-buttons">
-        <button mat-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
-          matTooltip="Portrait (9:16)">
+        <button mat-icon-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
+          matTooltip="Portrait (9:16)" aria-label="Portrait (9:16)">
           <mat-icon>stay_current_portrait</mat-icon>
         </button>
-        <button mat-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
-          matTooltip="Landscape (16:9)">
+        <button mat-icon-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
+          matTooltip="Landscape (16:9)" aria-label="Landscape (16:9)">
           <mat-icon>stay_current_landscape</mat-icon>
         </button>
       </div>

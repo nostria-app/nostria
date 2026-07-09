@@ -151,7 +151,7 @@
           <mat-icon>history</mat-icon>
           <span>Since last visit</span>
           @if (selectedPreset() === null) {
-          <mat-icon class="check-icon">check</mat-icon>
+          <mat-icon class="check-icon" iconPositionEnd>check</mat-icon>
           }
         </button>
         <mat-divider></mat-divider>
@@ -160,7 +160,7 @@
           (click)="selectPreset(preset.hours)">
           <span>{{ preset.label }}</span>
           @if (selectedPreset() === preset.hours) {
-          <mat-icon class="check-icon">check</mat-icon>
+          <mat-icon class="check-icon" iconPositionEnd>check</mat-icon>
           }
         </button>
         }

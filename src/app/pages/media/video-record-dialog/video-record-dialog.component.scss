@@ -324,16 +324,9 @@
       padding: 2px;
 
       button {
-        min-width: 48px;
-        padding: 4px 8px;
-
         &.active {
           background-color: var(--mat-sys-primary-container);
           color: var(--mat-sys-on-primary-container);
-        }
-
-        mat-icon {
-          margin: 0;
         }
       }
     }

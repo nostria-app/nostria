@@ -62,7 +62,7 @@ type RelayMode = 'readwrite' | 'read' | 'write';
         <button mat-stroked-button [matMenuTriggerFor]="modeMenu" class="mode-button">
           <mat-icon>{{ modeIcon() }}</mat-icon>
           {{ modeLabel() }}
-          <mat-icon>arrow_drop_down</mat-icon>
+          <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
         </button>
         <mat-menu #modeMenu="matMenu">
           <button mat-menu-item (click)="setMode('readwrite')">

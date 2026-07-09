@@ -148,7 +148,7 @@ interface MusicGenreOption {
               class="genre-expand-button"
               (click)="toggleGenresExpanded()">
               <span>{{ genresExpanded() ? 'Show less' : 'Show ' + hiddenGenreCount() + ' more' }}</span>
-              <mat-icon>{{ genresExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <mat-icon iconPositionEnd>{{ genresExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
           }
         </div>
