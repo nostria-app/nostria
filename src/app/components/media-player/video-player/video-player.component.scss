@@ -378,13 +378,24 @@
   gap: 0;
 
   button.mat-mdc-icon-button {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-button-state-layer-size: 36px;
+    --mdc-icon-button-icon-size: 24px;
 
     .mat-mdc-button-touch-target {
       width: 36px;
       height: 36px;
+    }
+
+    mat-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 }
@@ -399,7 +410,12 @@
   &.mat-mdc-icon-button {
     width: 40px !important;
     height: 40px !important;
-    padding: 4px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-button-state-layer-size: 40px;
+    --mdc-icon-button-icon-size: 28px;
 
     .mat-mdc-button-touch-target {
       width: 40px !important;
@@ -411,6 +427,9 @@
     font-size: 28px;
     width: 28px;
     height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

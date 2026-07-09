@@ -72,8 +72,12 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 72px;
-  height: 72px;
+  width: 72px !important;
+  height: 72px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   background: rgba(0, 0, 0, 0.6);
   border: none;
   border-radius: 50%;
@@ -82,10 +86,17 @@
   pointer-events: auto;
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+  --mdc-icon-button-state-layer-size: 72px;
+  --mdc-icon-button-icon-size: 48px;
 
   &:hover {
     background: rgba(0, 0, 0, 0.8);
     transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  .mat-mdc-button-touch-target {
+    width: 72px;
+    height: 72px;
   }
 
   mat-icon {
@@ -93,6 +104,9 @@
     width: 48px;
     height: 48px;
     color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -249,14 +263,28 @@
   gap: 4px;
 }
 
-// Control buttons
+// Control buttons — flex-center icons when smaller than default mat-icon-button
 .control-btn {
   color: white !important;
-  width: 40px;
-  height: 40px;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  --mdc-icon-button-state-layer-size: 40px;
+  --mdc-icon-button-icon-size: 24px;
+
+  .mat-mdc-button-touch-target {
+    width: 40px;
+    height: 40px;
+  }
 
   mat-icon {
     color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &:hover {
@@ -264,8 +292,15 @@
   }
 
   @media (max-width: 480px) {
-    width: 36px;
-    height: 36px;
+    width: 36px !important;
+    height: 36px !important;
+    --mdc-icon-button-state-layer-size: 36px;
+    --mdc-icon-button-icon-size: 20px;
+
+    .mat-mdc-button-touch-target {
+      width: 36px;
+      height: 36px;
+    }
 
     mat-icon {
       font-size: 20px;
@@ -793,8 +828,15 @@
   }
 
   .center-play-btn {
-    width: 56px;
-    height: 56px;
+    width: 56px !important;
+    height: 56px !important;
+    --mdc-icon-button-state-layer-size: 56px;
+    --mdc-icon-button-icon-size: 36px;
+
+    .mat-mdc-button-touch-target {
+      width: 56px;
+      height: 56px;
+    }
 
     mat-icon {
       font-size: 36px;

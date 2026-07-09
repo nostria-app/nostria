@@ -320,8 +320,14 @@
     color: var(--mat-sys-on-surface);
     opacity: 0.8;
     transition: opacity 0.2s, transform 0.2s;
-    width: 44px;
-    height: 44px;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-button-state-layer-size: 44px;
+    --mdc-icon-button-icon-size: 28px;
 
     &:hover:not(:disabled) {
       opacity: 1;
@@ -336,13 +342,18 @@
       font-size: 28px;
       width: 28px;
       height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 
   .shuffle-btn,
   .repeat-btn {
-    width: 40px;
-    height: 40px;
+    width: 40px !important;
+    height: 40px !important;
+    --mdc-icon-button-state-layer-size: 40px;
+    --mdc-icon-button-icon-size: 22px;
 
     mat-icon {
       font-size: 22px;
@@ -357,16 +368,25 @@
   }
 
   .play-btn {
-    width: 56px;
-    height: 56px;
+    width: 56px !important;
+    height: 56px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     transition: transform 0.2s, box-shadow 0.2s;
+    --mdc-icon-button-state-layer-size: 56px;
+    --mdc-icon-button-icon-size: 32px;
 
     mat-icon {
       font-size: 32px;
       width: 32px;
       height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     &:hover {
