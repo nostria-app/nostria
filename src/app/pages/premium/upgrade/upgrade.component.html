@@ -344,7 +344,8 @@
       <div class="store-payment-container">
         <mat-icon class="store-icon">apple</mat-icon>
         <p>Your purchase will be processed through the App Store.</p>
-        <button mat-flat-button (click)="purchaseWithAppStore()" [disabled]="iap.purchasing()">
+        <button mat-flat-button (click)="purchaseWithAppStore()"
+          [disabled]="iap.purchasing() || !iap.appStoreAvailable()">
           @if (iap.purchasing()) {
           <span class="payment-button-content">
             <mat-spinner diameter="20"></mat-spinner>

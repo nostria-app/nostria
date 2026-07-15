@@ -247,5 +247,8 @@ extension ViewController: WKScriptMessageHandler {
         if message.name == "push-token" {
             handlePushToken()
         }
+        if #available(iOS 15.0, *), message.name == StoreKitBridge.messageHandlerName {
+            StoreKitBridge.shared.handle(message: message, webView: Nostria.webView)
+        }
   }
 }

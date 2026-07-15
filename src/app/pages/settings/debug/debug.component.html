@@ -51,13 +51,14 @@
   <div class="debug-section store-testing-section">
     <h3>Store Payments (Debug)</h3>
     <p class="setting-description">
-      Keep this off unless you are actively testing Play Store / App Store purchase flows.
-      When disabled, Premium checkout stays on Lightning/Zap.
+      Real native iOS/Android builds always use store billing.
+      This toggle only enables Play Store / App Store payment routing when you are
+      <strong>simulating</strong> a native platform in the browser above.
     </p>
 
     <mat-slide-toggle [ngModel]="platform.enableNativeStorePaymentsForDebug()"
       (ngModelChange)="setEnableNativeStorePaymentsForDebug($event)">
-      Enable Play Store / App Store payments
+      Enable store payments while simulating platform
     </mat-slide-toggle>
 
     <div class="setting-description store-status">

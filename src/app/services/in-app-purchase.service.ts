@@ -124,7 +124,22 @@ interface AppStorePurchaseResponse {
   transactionId?: string;
   originalTransactionId?: string;
   productId?: string;
+  /** StoreKit 2 JWS for server-side verification with Apple */
+  jwsRepresentation?: string;
   error?: string;
+  action?: string;
+  purchases?: Array<{
+    transactionId?: string;
+    originalTransactionId?: string;
+    productId?: string;
+  }>;
+}
+
+export interface VerifyStorePurchaseOptions {
+  productId?: string;
+  username?: string | null;
+  /** Preferred for App Store Server API verification */
+  jwsRepresentation?: string;
 }
 
 /**
@@ -240,11 +255,14 @@ export class InAppPurchaseService {
     this.appStorePurchaseResolve = null;
     this.purchasing.set(false);
 
-    if (response.success && response.transactionId) {
+    // Prefer JWS for backend verification; fall back to transaction id.
+    const purchaseToken = response.jwsRepresentation || response.transactionId;
+
+    if (response.success && purchaseToken) {
       resolve({
         success: true,
-        purchaseToken: response.transactionId,
-        orderId: response.originalTransactionId,
+        purchaseToken,
+        orderId: response.originalTransactionId || response.transactionId,
       });
     } else {
       resolve({
@@ -531,25 +549,33 @@ export class InAppPurchaseService {
    * The backend will validate the purchase token with the store
    * and activate the subscription.
    *
-   * @param purchaseToken The token from the store purchase
+   * @param purchaseToken The token from the store purchase (JWS preferred for App Store)
    * @param pubkey The user's public key
    * @param store Which store the purchase was from
+   * @param options Optional productId / username for account activation
    */
   async verifyPurchaseWithBackend(
     purchaseToken: string,
     pubkey: string,
-    store: 'play-store' | 'app-store'
+    store: 'play-store' | 'app-store',
+    options?: VerifyStorePurchaseOptions
   ): Promise<boolean> {
     try {
-      const response = await fetch(`${environment.backendUrl}account/verify-store-purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          purchaseToken,
-          pubkey,
-          store,
-        }),
-      });
+      const response = await fetch(
+        new URL('api/account/verify-store-purchase', environment.backendUrl).toString(),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            purchaseToken,
+            pubkey,
+            store,
+            productId: options?.productId,
+            username: options?.username || undefined,
+            jwsRepresentation: options?.jwsRepresentation,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

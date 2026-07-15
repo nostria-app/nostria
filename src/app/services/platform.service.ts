@@ -49,9 +49,10 @@ export class PlatformService {
   readonly simulatedAppContext = signal<AppContext | null>(null);
 
   /**
-   * Debug gate for native store billing flows.
-   * Disabled by default so premium checkout keeps Lightning as the active method
-   * unless explicitly enabled in Settings > Debug.
+   * Debug gate for *simulated* native store billing flows on web/PWA.
+   * Real native iOS/Android builds always use store billing (App Review / Play policy).
+   * Disabled by default so browser checkout keeps Lightning as the active method
+   * unless platform simulation is enabled in Settings > Debug.
    */
   readonly enableNativeStorePaymentsForDebug = signal(false);
 
@@ -76,18 +77,28 @@ export class PlatformService {
 
   /**
    * The recommended payment platform based on app context.
-   * - Native Android: Play Store billing
-   * - Native iOS: App Store / StoreKit
+   * - Real native Android: Play Store billing
+   * - Real native iOS: App Store / StoreKit (required by App Review guideline 3.1.1)
+   * - Simulated native (debug): store billing only when debug flag is enabled
    * - Web/PWA: Bitcoin Lightning
    */
   readonly paymentPlatform = computed<PaymentPlatform>(() => {
-    if (!this.enableNativeStorePaymentsForDebug()) {
+    const ctx = this.appContext();
+    const isSimulated = this.simulatedAppContext() !== null;
+
+    // Real native shells always route to the platform store.
+    if (!isSimulated) {
+      if (ctx === 'native-android') return 'play-store';
+      if (ctx === 'native-ios') return 'app-store';
       return 'bitcoin';
     }
 
-    const ctx = this.appContext();
-    if (ctx === 'native-android') return 'play-store';
-    if (ctx === 'native-ios') return 'app-store';
+    // Simulated context only enables store billing when explicitly testing.
+    if (this.enableNativeStorePaymentsForDebug()) {
+      if (ctx === 'native-android') return 'play-store';
+      if (ctx === 'native-ios') return 'app-store';
+    }
+
     return 'bitcoin';
   });
 
@@ -129,7 +140,8 @@ export class PlatformService {
    * Detection heuristics:
    * - Native Android: TWA (Trusted Web Activity) sets document.referrer to the Android package,
    *   or a custom query param / Android WebView user agent marker is present.
-   * - Native iOS: iOS Safari standalone mode in combination with iOS-specific signals.
+   * - Native iOS: App Store shell injects `__NOSTRIA_NATIVE_IOS__`, sets the
+   *   `app-platform` cookie, uses a PWAShell user agent, and exposes StoreKit handlers.
    * - PWA: display-mode standalone media query matches.
    */
   private detectAppContext(): void {
@@ -144,13 +156,42 @@ export class PlatformService {
 
     if (nativeParam === 'android' || this.detectTWA() || this.detectAndroidWebViewShell()) {
       this.isNativeAndroid.set(true);
-    } else if (nativeParam === 'ios' || (isStandalone && this.isIOS())) {
-      // On iOS, standalone + iOS means it's from the App Store wrapper or PWA.
-      // The native iOS app shell should set app_context=ios to distinguish from PWA.
-      if (nativeParam === 'ios') {
-        this.isNativeIOS.set(true);
-      }
+    } else if (nativeParam === 'ios' || this.detectIOSNativeShell()) {
+      this.isNativeIOS.set(true);
     }
+  }
+
+  /**
+   * Detect the iOS App Store WKWebView shell (packages/ios).
+   * Multiple signals are used because query params are not always present on navigation.
+   */
+  private detectIOSNativeShell(): boolean {
+    const win = window as unknown as {
+      __NOSTRIA_NATIVE_IOS__?: boolean;
+      __NOSTRIA_APP_CONTEXT__?: string;
+      webkit?: { messageHandlers?: { nostriaStoreKit?: unknown } };
+    };
+
+    if (win.__NOSTRIA_NATIVE_IOS__ === true || win.__NOSTRIA_APP_CONTEXT__ === 'ios') {
+      return true;
+    }
+
+    // Cookie set by packages/ios Settings.swift / WebView.swift
+    if (typeof document !== 'undefined' && document.cookie.includes('app-platform=iOS App Store')) {
+      return true;
+    }
+
+    // Custom UA suffix from packages/ios WebView.swift
+    if (/PWAShell/i.test(navigator.userAgent)) {
+      return true;
+    }
+
+    // StoreKit bridge registered by the native shell
+    if (win.webkit?.messageHandlers?.nostriaStoreKit) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

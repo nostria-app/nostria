@@ -14,6 +14,24 @@ func createWebView(container: UIView, WKSMH: WKScriptMessageHandler, WKND: WKNav
     userContentController.add(WKSMH, name: "push-permission-request")
     userContentController.add(WKSMH, name: "push-permission-state")
     userContentController.add(WKSMH, name: "push-token")
+    // StoreKit 2 bridge used by Angular InAppPurchaseService
+    if #available(iOS 15.0, *) {
+        userContentController.add(WKSMH, name: StoreKitBridge.messageHandlerName)
+    }
+
+    // Mark this WebView as the App Store native shell so the web app enables IAP.
+    let nativeContextScript = WKUserScript(
+        source: """
+        window.__NOSTRIA_NATIVE_IOS__ = true;
+        window.__NOSTRIA_APP_CONTEXT__ = 'ios';
+        try {
+          document.documentElement.setAttribute('data-nostria-app-context', 'ios');
+        } catch (e) {}
+        """,
+        injectionTime: .atDocumentStart,
+        forMainFrameOnly: true
+    )
+    userContentController.addUserScript(nativeContextScript)
 
     config.userContentController = userContentController
 

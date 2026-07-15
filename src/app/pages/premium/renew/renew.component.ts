@@ -125,13 +125,19 @@ export class RenewComponent implements OnDestroy {
   availablePaymentMethods = computed(() => {
     const methods: { key: 'lightning' | 'play-store' | 'app-store' | 'external'; label: string; icon: string; description: string; recommended: boolean }[] = [];
 
-    methods.push({
-      key: 'lightning',
-      label: 'Bitcoin Lightning',
-      icon: 'bolt',
-      description: 'Pay with Bitcoin via Lightning Network',
-      recommended: !this.platform.isNativeApp(),
-    });
+    // App Store builds must sell digital subscriptions via IAP only (App Review 3.1.1).
+    if (this.platform.canPayWithAppStore()) {
+      methods.push({
+        key: 'app-store',
+        label: 'App Store',
+        icon: 'apple',
+        description: this.iap.appStoreAvailable()
+          ? 'Pay through Apple App Store'
+          : 'App Store billing is loading…',
+        recommended: true,
+      });
+      return methods;
+    }
 
     if (this.platform.canPayWithPlayStore() && this.iap.playStoreAvailable()) {
       methods.push({
@@ -143,23 +149,23 @@ export class RenewComponent implements OnDestroy {
       });
     }
 
-    if (this.platform.canPayWithAppStore() && this.iap.appStoreAvailable()) {
+    methods.push({
+      key: 'lightning',
+      label: 'Bitcoin Lightning',
+      icon: 'bolt',
+      description: 'Pay with Bitcoin via Lightning Network',
+      recommended: !this.platform.isNativeApp(),
+    });
+
+    if (!this.platform.canPayWithPlayStore()) {
       methods.push({
-        key: 'app-store',
-        label: 'App Store',
-        icon: 'apple',
-        description: 'Pay through Apple App Store',
-        recommended: true,
+        key: 'external',
+        label: 'Pay in Browser',
+        icon: 'open_in_new',
+        description: 'Complete payment on nostria.app',
+        recommended: false,
       });
     }
-
-    methods.push({
-      key: 'external',
-      label: 'Pay in Browser',
-      icon: 'open_in_new',
-      description: 'Complete payment on nostria.app',
-      recommended: false,
-    });
 
     return methods;
   });
@@ -499,6 +505,15 @@ export class RenewComponent implements OnDestroy {
    * Initiate an App Store purchase for renewal (iOS native app).
    */
   async purchaseWithAppStore() {
+    if (!this.iap.appStoreAvailable()) {
+      this.snackBar.open(
+        'App Store billing is not ready yet. Please try again in a moment.',
+        'Close',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     const productId = this.iap.getPrimaryStoreSubscriptionProductId();
 
     const result = await this.iap.purchaseWithAppStore(productId);
@@ -506,7 +521,13 @@ export class RenewComponent implements OnDestroy {
       const verified = await this.iap.verifyPurchaseWithBackend(
         result.purchaseToken,
         this.accountState.pubkey(),
-        'app-store'
+        'app-store',
+        {
+          productId,
+          jwsRepresentation: result.purchaseToken.includes('.')
+            ? result.purchaseToken
+            : undefined,
+        }
       );
 
       if (verified) {
