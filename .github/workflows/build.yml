@@ -893,26 +893,6 @@ jobs:
           echo "Found IPA: $IPA_PATH"
           ls -lh "$IPA_PATH"
 
-      - name: Normalize App Store Connect private key
-        id: api-key
-        shell: bash
-        env:
-          APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          # Action expects PEM text; secrets sometimes store literal \n sequences.
-          KEY_FILE="$RUNNER_TEMP/AuthKey.p8"
-          printf '%s' "$APPLE_IAP_PRIVATE_KEY" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_FILE"
-          if ! grep -q 'BEGIN PRIVATE KEY' "$KEY_FILE"; then
-            echo 'APPLE_IAP_PRIVATE_KEY does not look like a PEM private key (.p8 contents).' >&2
-            exit 1
-          fi
-          {
-            echo 'pem<<EOF'
-            cat "$KEY_FILE"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
       - name: Upload IPA to App Store Connect (TestFlight)
         uses: apple-actions/upload-testflight-build@v4
         with:
@@ -920,7 +900,10 @@ jobs:
           app-type: ios
           issuer-id: ${{ secrets.APPLE_IAP_ISSUER_ID }}
           api-key-id: ${{ secrets.APPLE_IAP_KEY_ID }}
-          api-private-key: ${{ steps.api-key.outputs.pem }}
+          # Pass the .p8 PEM body directly (real newlines in the secret are fine).
+          # Do not pipe through GITHUB_OUTPUT heredocs — PEM often has no trailing
+          # newline, which breaks the closing delimiter ("Matching delimiter not found").
+          api-private-key: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
           # App Store Connect API (Linux-friendly). Avoids Transporter.app / altool -10814.
           backend: appstore-api
           # Don't block the pipeline on Apple's processing queue (can take a long time).
