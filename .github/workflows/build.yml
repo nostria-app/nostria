@@ -482,6 +482,27 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+          xcrun --sdk iphonesimulator --show-sdk-version
+
+      - name: Verify Swift compatibility stubs are in the Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+          STUB='src-tauri/gen/apple/Sources/nostria/SwiftCompatibilityStubs.c'
+          PBX='src-tauri/gen/apple/nostria.xcodeproj/project.pbxproj'
+          test -f "$STUB"
+          grep -q 'SwiftCompatibilityStubs.c in Sources' "$PBX"
+          grep -q 'swiftCompatibility56' "$STUB"
+          # nm check after a quick compile for arm64 simulator — must export the
+          # exact Darwin linker symbol (__swift_FORCE_LOAD_$_swiftCompatibility56).
+          SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+          clang -c "$STUB" -o /tmp/swift-stubs.o -isysroot "$SDK" -target arm64-apple-ios14.0-simulator
+          if ! nm /tmp/swift-stubs.o | grep -F '__swift_FORCE_LOAD_$_swiftCompatibility56'; then
+            echo 'Stub object does not export expected force-load symbol:' >&2
+            nm /tmp/swift-stubs.o >&2 || true
+            exit 1
+          fi
+          echo 'Swift compatibility stub symbols look correct.'
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

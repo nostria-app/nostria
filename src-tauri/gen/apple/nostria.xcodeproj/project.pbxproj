@@ -15,6 +15,7 @@
 		4D2A243C80CD9163230527AE /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BAB77AC9E82BE4A3167FA775 /* libapp.a */; };
 		51B28C0282E8F47C79CF8D67 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 22EE1060F5E5E70DCD95D5C0 /* main.mm */; };
 		A1B2C3D4E5F60718293A4B5C /* SwiftCompatibilityStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* SwiftCompatibilityStubs.c */; };
+		C3D4E5F60718293A4B5C6D7E /* Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D7E8F /* Empty.swift */; };
 		5918A3433D36CB5A89810978 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F11F804CE18A5989A6FBE59A /* WebKit.framework */; };
 		60617DF7E930C59783D4EF00 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 35A61F91C92B54C0FF93E181 /* assets */; };
 		6D5235E75E111FD0B608CC34 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 076DB74948983B77DC3E352D /* Assets.xcassets */; };
@@ -28,6 +29,7 @@
 		0B90A7713272FAAC1DBA3940 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		22EE1060F5E5E70DCD95D5C0 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* SwiftCompatibilityStubs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SwiftCompatibilityStubs.c; sourceTree = "<group>"; };
+		D4E5F60718293A4B5C6D7E8F /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Empty.swift; sourceTree = "<group>"; };
 		29667AFA1F1A514500814586 /* nostria_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = nostria_iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		35A61F91C92B54C0FF93E181 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		3C97C83F3B26A21181E25576 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -107,6 +109,7 @@
 			children = (
 				22EE1060F5E5E70DCD95D5C0 /* main.mm */,
 				B2C3D4E5F60718293A4B5C6D /* SwiftCompatibilityStubs.c */,
+				D4E5F60718293A4B5C6D7E8F /* Empty.swift */,
 				5113ED847FC583DA529E7D97 /* bindings */,
 			);
 			path = nostria;
@@ -252,6 +255,7 @@
 			files = (
 				51B28C0282E8F47C79CF8D67 /* main.mm in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* SwiftCompatibilityStubs.c in Sources */,
+				C3D4E5F60718293A4B5C6D7E /* Empty.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,9 +285,11 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.5/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.5/$(PLATFORM_NAME)";
+				OTHER_LDFLAGS = "$(inherited) -Wl,-u,__swift_FORCE_LOAD_$_swiftCompatibility56 -Wl,-u,__swift_FORCE_LOAD_$_swiftCompatibilityConcurrency";
 				PRODUCT_BUNDLE_IDENTIFIER = app.nostria;
 				PRODUCT_NAME = Nostria;
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
 			};
@@ -431,9 +437,11 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.5/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.5/$(PLATFORM_NAME)";
+				OTHER_LDFLAGS = "$(inherited) -Wl,-u,__swift_FORCE_LOAD_$_swiftCompatibility56 -Wl,-u,__swift_FORCE_LOAD_$_swiftCompatibilityConcurrency";
 				PRODUCT_BUNDLE_IDENTIFIER = app.nostria;
 				PRODUCT_NAME = Nostria;
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
 			};
