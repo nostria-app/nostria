@@ -5,15 +5,21 @@ When the **Build** workflow runs (push to `main` or manual `workflow_dispatch`),
 ## Job flow
 
 ```
-build-ios-verification (simulator, macOS)
-  → build-ios-signed-release (device IPA, macOS)
+build-ios-verification (simulator, macOS + Xcode 26 / iOS 26 SDK)
+  → build-ios-signed-release (device IPA, macOS + Xcode 26 / iOS 26 SDK)
     → publish-ios-testflight  (upload IPA via App Store Connect API on Linux)
     → publish-draft-release   (GitHub draft assets; parallel with TestFlight)
 ```
 
-Upload uses `apple-actions/upload-testflight-build@v4` with `backend: AppStoreAPI`.
-That avoids `xcrun iTMSTransporter` / Transporter.app (which fails on CI with OSStatus `-10814`
-when the Mac App Store Transporter app is not installed).
+**SDK requirement:** App Store Connect rejects IPAs built with SDKs older than iOS 26.
+CI selects Xcode 26 via `maxim-lobanov/setup-xcode` (`xcode-version: '26'`).
+
+**SwiftRs link stubs:** `Sources/nostria/SwiftCompatibilityStubs.c` defines
+`__swift_FORCE_LOAD_$_swiftCompatibility56` / `Concurrency` because Xcode 26 no longer
+ships those compatibility libs on all platforms.
+
+Upload uses `apple-actions/upload-testflight-build@v4` with `backend: appstore-api`.
+That avoids `xcrun iTMSTransporter` / Transporter.app (OSStatus `-10814` without Transporter.app).
 
 ## Secrets (nostria app repo)
 

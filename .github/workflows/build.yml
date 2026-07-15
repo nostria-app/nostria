@@ -464,9 +464,8 @@ jobs:
 
   build-ios-verification:
     name: iOS verification artifacts
-    # macos-15 + Xcode 16.x: Xcode 26 on macos-latest is missing Swift
-    # compatibility libraries (swiftCompatibility56 / Concurrency) required when
-    # linking Tauri's libapp.a SwiftRs objects for iOS simulator.
+    # App Store Connect requires the iOS 26 SDK (Xcode 26+).
+    # SwiftRs force-load symbols are satisfied by SwiftCompatibilityStubs.c.
     runs-on: macos-15
 
     steps:
@@ -476,10 +475,13 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.4'
+          # Prefer latest 26.x installed on the image (App Store SDK requirement).
+          xcode-version: '26'
 
       - name: Print selected Xcode
-        run: xcodebuild -version
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -560,7 +562,7 @@ jobs:
 
   build-ios-signed-release:
     name: iOS signed release artifacts
-    # Keep in lockstep with build-ios-verification (Swift compatibility libs).
+    # Must use Xcode 26+ so the IPA is built with the iOS 26 SDK (App Store rule).
     runs-on: macos-15
     needs: build-ios-verification
 
@@ -571,10 +573,12 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.4'
+          xcode-version: '26'
 
       - name: Print selected Xcode
-        run: xcodebuild -version
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
