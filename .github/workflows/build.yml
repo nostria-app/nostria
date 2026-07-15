@@ -840,9 +840,117 @@ jobs:
           path: artifacts/ios-signed/**
           if-no-files-found: error
 
+  publish-ios-testflight:
+    name: Publish iOS to TestFlight
+    runs-on: macos-15
+    needs:
+      - prepare-release
+      - build-ios-signed-release
+    if: needs.build-ios-signed-release.result == 'success'
+
+    steps:
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
+      - name: Validate App Store Connect API secrets
+        shell: bash
+        env:
+          APPLE_IAP_ISSUER_ID: ${{ secrets.APPLE_IAP_ISSUER_ID }}
+          APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}
+          APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for key in APPLE_IAP_ISSUER_ID APPLE_IAP_KEY_ID APPLE_IAP_PRIVATE_KEY; do
+            if [ -z "${!key}" ]; then
+              echo "Missing required secret: $key" >&2
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo 'These secrets power App Store Connect uploads (and IAP server API uses the same key format).' >&2
+            echo 'The API key must have App Manager or Admin access to upload builds.' >&2
+            exit 1
+          fi
+
+      - name: Download signed iOS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: nostria-ios-signed-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ios-signed
+
+      - name: Locate IPA
+        id: ipa
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA_PATH=$(find ios-signed -type f -name '*.ipa' | head -n 1 || true)
+          if [ -z "$IPA_PATH" ]; then
+            echo 'No .ipa found in signed iOS artifacts.' >&2
+            find ios-signed -type f | sort || true
+            exit 1
+          fi
+          echo "path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found IPA: $IPA_PATH"
+          ls -lh "$IPA_PATH"
+
+      - name: Upload IPA to App Store Connect (TestFlight)
+        shell: bash
+        env:
+          APPLE_IAP_ISSUER_ID: ${{ secrets.APPLE_IAP_ISSUER_ID }}
+          APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}
+          APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
+          IPA_PATH: ${{ steps.ipa.outputs.path }}
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # App Store Connect API keys are read from ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8
+          KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEY_DIR"
+          KEY_FILE="$KEY_DIR/AuthKey_${APPLE_IAP_KEY_ID}.p8"
+
+          # Support secrets stored with literal \n sequences or real newlines
+          printf '%s' "$APPLE_IAP_PRIVATE_KEY" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          if ! grep -q 'BEGIN PRIVATE KEY' "$KEY_FILE"; then
+            echo 'APPLE_IAP_PRIVATE_KEY does not look like a PEM private key (.p8 contents).' >&2
+            exit 1
+          fi
+
+          echo "Uploading Nostria v${VERSION} IPA to App Store Connect / TestFlight..."
+          echo "IPA: $IPA_PATH"
+          echo "Key ID: $APPLE_IAP_KEY_ID"
+          echo "Issuer: $APPLE_IAP_ISSUER_ID"
+
+          # Prefer Transporter when available; fall back to altool.
+          if xcrun --find iTMSTransporter >/dev/null 2>&1; then
+            xcrun iTMSTransporter \
+              -m upload \
+              -assetFile "$IPA_PATH" \
+              -apiKey "$APPLE_IAP_KEY_ID" \
+              -apiIssuer "$APPLE_IAP_ISSUER_ID" \
+              -v informational
+          else
+            xcrun altool \
+              --upload-app \
+              --type ios \
+              --file "$IPA_PATH" \
+              --apiKey "$APPLE_IAP_KEY_ID" \
+              --apiIssuer "$APPLE_IAP_ISSUER_ID"
+          fi
+
+          echo "Upload completed. Processing in App Store Connect usually takes a few minutes."
+          echo "Then enable the build for internal/external TestFlight groups in App Store Connect."
+
   publish-draft-release:
     name: Publish draft release assets
     runs-on: ubuntu-22.04
+    # Intentionally does not wait on TestFlight: GitHub release assets and
+    # App Store Connect upload run in parallel after the signed IPA is ready.
     needs:
       - prepare-release
       - build-desktop
