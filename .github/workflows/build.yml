@@ -842,18 +842,15 @@ jobs:
 
   publish-ios-testflight:
     name: Publish iOS to TestFlight
-    runs-on: macos-15
+    # App Store Connect API upload works on Linux (no Xcode/Transporter required).
+    # Avoids xcrun iTMSTransporter OSStatus -10814 on runners without Transporter.app.
+    runs-on: ubuntu-22.04
     needs:
       - prepare-release
       - build-ios-signed-release
     if: needs.build-ios-signed-release.result == 'success'
 
     steps:
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4'
-
       - name: Validate App Store Connect API secrets
         shell: bash
         env:
@@ -896,55 +893,39 @@ jobs:
           echo "Found IPA: $IPA_PATH"
           ls -lh "$IPA_PATH"
 
-      - name: Upload IPA to App Store Connect (TestFlight)
+      - name: Normalize App Store Connect private key
+        id: api-key
         shell: bash
         env:
-          APPLE_IAP_ISSUER_ID: ${{ secrets.APPLE_IAP_ISSUER_ID }}
-          APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}
           APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
-          IPA_PATH: ${{ steps.ipa.outputs.path }}
-          VERSION: ${{ needs.prepare-release.outputs.version }}
         run: |
           set -euo pipefail
-
-          # App Store Connect API keys are read from ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8
-          KEY_DIR="$HOME/.appstoreconnect/private_keys"
-          mkdir -p "$KEY_DIR"
-          KEY_FILE="$KEY_DIR/AuthKey_${APPLE_IAP_KEY_ID}.p8"
-
-          # Support secrets stored with literal \n sequences or real newlines
+          # Action expects PEM text; secrets sometimes store literal \n sequences.
+          KEY_FILE="$RUNNER_TEMP/AuthKey.p8"
           printf '%s' "$APPLE_IAP_PRIVATE_KEY" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_FILE"
-          chmod 600 "$KEY_FILE"
-
           if ! grep -q 'BEGIN PRIVATE KEY' "$KEY_FILE"; then
             echo 'APPLE_IAP_PRIVATE_KEY does not look like a PEM private key (.p8 contents).' >&2
             exit 1
           fi
+          {
+            echo 'pem<<EOF'
+            cat "$KEY_FILE"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
-          echo "Uploading Nostria v${VERSION} IPA to App Store Connect / TestFlight..."
-          echo "IPA: $IPA_PATH"
-          echo "Key ID: $APPLE_IAP_KEY_ID"
-          echo "Issuer: $APPLE_IAP_ISSUER_ID"
-
-          # Prefer Transporter when available; fall back to altool.
-          if xcrun --find iTMSTransporter >/dev/null 2>&1; then
-            xcrun iTMSTransporter \
-              -m upload \
-              -assetFile "$IPA_PATH" \
-              -apiKey "$APPLE_IAP_KEY_ID" \
-              -apiIssuer "$APPLE_IAP_ISSUER_ID" \
-              -v informational
-          else
-            xcrun altool \
-              --upload-app \
-              --type ios \
-              --file "$IPA_PATH" \
-              --apiKey "$APPLE_IAP_KEY_ID" \
-              --apiIssuer "$APPLE_IAP_ISSUER_ID"
-          fi
-
-          echo "Upload completed. Processing in App Store Connect usually takes a few minutes."
-          echo "Then enable the build for internal/external TestFlight groups in App Store Connect."
+      - name: Upload IPA to App Store Connect (TestFlight)
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: ${{ steps.ipa.outputs.path }}
+          app-type: ios
+          issuer-id: ${{ secrets.APPLE_IAP_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_IAP_KEY_ID }}
+          api-private-key: ${{ steps.api-key.outputs.pem }}
+          # App Store Connect API (Linux-friendly). Avoids Transporter.app / altool -10814.
+          backend: appstore-api
+          # Don't block the pipeline on Apple's processing queue (can take a long time).
+          wait-for-processing: 'false'
+          uses-non-exempt-encryption: 'false'
 
   publish-draft-release:
     name: Publish draft release assets

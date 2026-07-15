@@ -5,11 +5,15 @@ When the **Build** workflow runs (push to `main` or manual `workflow_dispatch`),
 ## Job flow
 
 ```
-build-ios-verification (simulator)
-  → build-ios-signed-release (device IPA)
-    → publish-ios-testflight  (upload IPA)
+build-ios-verification (simulator, macOS)
+  → build-ios-signed-release (device IPA, macOS)
+    → publish-ios-testflight  (upload IPA via App Store Connect API on Linux)
     → publish-draft-release   (GitHub draft assets; parallel with TestFlight)
 ```
+
+Upload uses `apple-actions/upload-testflight-build@v4` with `backend: AppStoreAPI`.
+That avoids `xcrun iTMSTransporter` / Transporter.app (which fails on CI with OSStatus `-10814`
+when the Mac App Store Transporter app is not installed).
 
 ## Secrets (nostria app repo)
 
