@@ -38,6 +38,14 @@ const BATCH_DELAY_MS = 500;
 const MAX_RELAY_SUBSCRIPTIONS = 3;
 const MAX_ADDITIONAL_RELAYS = 6;
 
+const CURATED_ANONYMOUS_ARTICLE_AUTHORS: string[] = [
+  '775954f7314112489a4a29ec692b72386fd60bcceb0308d423101ea979c57a80',
+  'b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc',
+  '2de0ffa0ac235ff45fa4ccb944cd3f33f79ff5d21fcf95f01f99516bb6bb72cc',
+  'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11',
+  '1ec454734dcbf6fe54901ce25c0c7c6bca5edd89443416761fadc321d38df139',
+];
+
 export function filterVisibleArticles(articles: Event[], isBlocked: (event: Event) => boolean): Event[] {
   return articles.filter(article => !isBlocked(article));
 }
@@ -307,7 +315,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
           this.showPublic.set(false);
         }
       } else {
-        // Anonymous users default to public view
+        // Anonymous users default to curated public view (to avoid spam)
         this.showFollowing.set(false);
         this.showPublic.set(true);
         this.selectedListFilter.set('public');
@@ -610,12 +618,18 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
    */
   private async loadCachedArticles(): Promise<void> {
     try {
-      const following = this.followingPubkeys();
+      let pubkeysToLoad = this.followingPubkeys();
+      const currentPubkey = this.currentPubkey();
 
-      if (following.length > 0) {
-        // Load articles from database for following users
+      if (pubkeysToLoad.length === 0 && !currentPubkey) {
+        // For anonymous users, preload from curated authors
+        pubkeysToLoad = [...CURATED_ANONYMOUS_ARTICLE_AUTHORS];
+      }
+
+      if (pubkeysToLoad.length > 0) {
+        // Load articles from database for following users (or curated for anon)
         const cachedArticles = await this.database.getEventsByPubkeyAndKind(
-          following,
+          pubkeysToLoad,
           kinds.LongFormArticle
         );
 
@@ -887,9 +901,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Start subscription for public articles
-   * Only called when user switches to public view
-   */
+    * Start subscription for public articles
+    * For anonymous users, this is limited to curated authors.
+    * Only called when user switches to public view
+    */
   private startPublicSubscription(): void {
     // Close existing public subscription
     if (this.publicSubscription) {
@@ -926,6 +941,11 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       kinds: [kinds.LongFormArticle],
       limit: 20,
     };
+
+    // For anonymous users, restrict to curated authors to avoid spam
+    if (!this.currentPubkey()) {
+      filter.authors = CURATED_ANONYMOUS_ARTICLE_AUTHORS;
+    }
 
     this.publicSubscription = this.pool.subscribe(
       allRelayUrls,
