@@ -208,6 +208,27 @@ export const routes: Routes = [
     title: 'Chats',
   },
   {
+    path: 'chats/servers',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
+  {
+    path: 'chats/servers/:slug',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
+  {
+    path: 'chats/servers/:slug/:groupId',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
+  {
     path: 'chats/:id',
     loadComponent: () =>
       import('./pages/chats/chats.component').then(m => m.ChatsComponent),

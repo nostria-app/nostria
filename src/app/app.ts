@@ -701,6 +701,31 @@ export class App implements OnInit, OnDestroy {
         };
       }
 
+      // For the Chats item, split public NIP-28 channels from NIP-29 servers
+      if (item.path === 'chats') {
+        const chatChildren: NavItem[] = [
+          {
+            path: '/chats',
+            label: $localize`:@@app.nav.chats.public:Public`,
+            icon: 'forum',
+            authenticated: false,
+          },
+          {
+            path: '/chats/servers',
+            label: $localize`:@@app.nav.chats.servers:Servers`,
+            icon: 'dns',
+            authenticated: false,
+          },
+        ];
+
+        return {
+          ...item,
+          expandable: true,
+          expanded: expandedItems['chats'] || false,
+          children: chatChildren,
+        };
+      }
+
       return item;
     }).filter(item => {
       // Filter out items that are not authenticated if user is not logged in

@@ -100,6 +100,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['chats', 'channels', 'public', 'rooms', 'chat']
     },
     {
+      id: 'nav-servers',
+      label: 'Open Servers',
+      icon: 'dns',
+      description: 'Relay-based groups (NIP-29)',
+      action: () => this.router.navigate(['/chats/servers']),
+      keywords: ['servers', 'groups', 'nip29', 'nip-29', 'discord', 'communities', 'voice']
+    },
+    {
       id: 'nav-notifications',
       label: 'Open Notifications',
       icon: 'notifications',

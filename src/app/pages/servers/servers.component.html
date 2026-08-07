@@ -1,0 +1,653 @@
+<div class="servers-page" [attr.data-pane]="mobilePane()">
+  <!-- ─────────────────────────── Server rail ─────────────────────────── -->
+  <nav class="server-rail" aria-label="Servers">
+    <div class="rail-scroll">
+      @for (server of servers(); track server.url) {
+      <button
+        type="button"
+        class="rail-item"
+        [class.active]="activeServer()?.url === server.url"
+        [class.suggested]="!server.added"
+        [matTooltip]="server.name"
+        matTooltipPosition="right"
+        (click)="selectServer(server)"
+      >
+        @if (server.icon) {
+        <img class="rail-avatar" [src]="server.icon" [alt]="server.name" loading="lazy" />
+        } @else {
+        <span class="rail-avatar rail-initials">{{ initials(server.name) }}</span>
+        }
+      </button>
+      }
+    </div>
+
+    <div class="rail-footer">
+      <button
+        type="button"
+        class="rail-item rail-add"
+        matTooltip="Add a server"
+        matTooltipPosition="right"
+        (click)="showAddServer.set(!showAddServer())"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ────────────────────────── Channel sidebar ──────────────────────── -->
+  <aside class="channel-sidebar" aria-label="Channels">
+    @if (showAddServer()) {
+    <div class="add-server-panel">
+      <h3 class="panel-title">Add a server</h3>
+      <p class="panel-hint">
+        Paste the address of a relay that hosts groups, or a <code>naddr</code> group invite.
+      </p>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Relay or naddr</mat-label>
+        <input
+          matInput
+          [ngModel]="newServerUrl()"
+          (ngModelChange)="newServerUrl.set($event)"
+          (keyup.enter)="addServer()"
+          placeholder="wss://groups.example.com"
+        />
+      </mat-form-field>
+
+      <div class="panel-actions">
+        <button mat-button type="button" (click)="showAddServer.set(false)">Cancel</button>
+        <button mat-flat-button type="button" (click)="addServer()">Add</button>
+      </div>
+
+      <mat-divider />
+
+      <h4 class="panel-subtitle">Suggested</h4>
+      @for (suggestion of suggestedServers; track suggestion) {
+      <button
+        type="button"
+        class="suggestion"
+        (click)="newServerUrl.set(suggestion); addServer()"
+      >
+        <mat-icon>dns</mat-icon>
+        <span>{{ suggestion }}</span>
+      </button>
+      }
+    </div>
+    } @else if (activeServer(); as server) {
+    <header class="sidebar-header">
+      <button type="button" class="sidebar-back" (click)="backToServers()" aria-label="Back to servers">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <div class="sidebar-title">
+        <span class="server-name">{{ server.name }}</span>
+        @if (server.description) {
+        <span class="server-description">{{ server.description }}</span>
+        }
+      </div>
+
+      <button mat-icon-button [matMenuTriggerFor]="serverMenu" aria-label="Server options">
+        <mat-icon>expand_more</mat-icon>
+      </button>
+
+      <mat-menu #serverMenu="matMenu">
+        <button mat-menu-item type="button" (click)="refreshServer()">
+          <mat-icon>refresh</mat-icon>
+          <span>Refresh channels</span>
+        </button>
+        <button mat-menu-item type="button" (click)="removeServer(server)">
+          <mat-icon>logout</mat-icon>
+          <span>Remove server</span>
+        </button>
+      </mat-menu>
+    </header>
+
+    <div class="channel-search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        placeholder="Search channels"
+        [ngModel]="channelFilter()"
+        (ngModelChange)="channelFilter.set($event)"
+        aria-label="Search channels"
+      />
+    </div>
+
+    <div class="channel-list">
+      @if (nip29.loadingServer() === server.url && channelTree().length === 0) {
+      <div class="sidebar-loading">
+        <mat-spinner diameter="24" />
+        <span>Loading channels…</span>
+      </div>
+      } @else if (channelTree().length === 0) {
+      <p class="sidebar-empty">
+        No groups found on this relay. It may require you to be a member before it lists them.
+      </p>
+      } @else { @for (node of channelTree(); track node.group.id) {
+      <ng-container
+        *ngTemplateOutlet="channelNode; context: { $implicit: node }"
+      ></ng-container>
+      } }
+    </div>
+    } @else {
+    <div class="sidebar-placeholder">
+      <mat-icon>dns</mat-icon>
+      <p>Pick a server on the left, or add your own.</p>
+    </div>
+    }
+  </aside>
+
+  <!-- Recursive channel tree template -->
+  <ng-template #channelNode let-node>
+    @if (node.children.length > 0) {
+    <div class="channel-category">
+      <button type="button" class="category-header" (click)="toggleCategory(node.group.id)">
+        <mat-icon class="category-caret">
+          {{ isCollapsed(node.group.id) ? 'chevron_right' : 'expand_more' }}
+        </mat-icon>
+        <span class="category-name">{{ node.group.name }}</span>
+      </button>
+
+      @if (!isCollapsed(node.group.id)) {
+      <button
+        type="button"
+        class="channel-item nested"
+        [class.active]="isActiveChannel(node.group)"
+        (click)="selectChannel(node.group)"
+      >
+        <mat-icon class="channel-icon">{{ channelIcon(node.group) }}</mat-icon>
+        <span class="channel-name">general</span>
+      </button>
+
+      @for (child of node.children; track child.group.id) {
+      <ng-container *ngTemplateOutlet="channelNode; context: { $implicit: child }"></ng-container>
+      } }
+    </div>
+    } @else {
+    <button
+      type="button"
+      class="channel-item"
+      [class.nested]="node.depth > 0"
+      [class.active]="isActiveChannel(node.group)"
+      (click)="selectChannel(node.group)"
+    >
+      <mat-icon class="channel-icon">{{ channelIcon(node.group) }}</mat-icon>
+      <span class="channel-name">{{ node.group.name }}</span>
+      @if (node.group.hasLivekit) {
+      <mat-icon class="channel-badge" matTooltip="Voice and video">graphic_eq</mat-icon>
+      }
+    </button>
+    }
+  </ng-template>
+
+  <!-- ───────────────────────────── Main pane ─────────────────────────── -->
+  <section class="channel-main">
+    @if (activeGroup(); as group) {
+    <header class="channel-header">
+      <button type="button" class="sidebar-back" (click)="backToChannels()" aria-label="Back to channels">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <mat-icon class="channel-icon">{{ channelIcon(group) }}</mat-icon>
+      <h2 class="channel-title">{{ group.name }}</h2>
+
+      @if (group.about) {
+      <span class="channel-topic">{{ group.about }}</span>
+      }
+
+      <span class="header-spacer"></span>
+
+      <div class="view-switch" role="tablist">
+        @if (supportsChat()) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="view() === 'chat'"
+          [class.active]="view() === 'chat'"
+          (click)="setView('chat')"
+        >
+          <mat-icon>chat</mat-icon>
+          <span>Chat</span>
+        </button>
+        } @if (supportsThreads()) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="view() === 'threads'"
+          [class.active]="view() === 'threads'"
+          (click)="setView('threads')"
+        >
+          <mat-icon>forum</mat-icon>
+          <span>Threads</span>
+        </button>
+        } @if (supportsVoice()) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="view() === 'voice'"
+          [class.active]="view() === 'voice'"
+          (click)="setView('voice')"
+        >
+          <mat-icon>graphic_eq</mat-icon>
+          <span>Voice</span>
+        </button>
+        }
+      </div>
+
+      <button
+        mat-icon-button
+        type="button"
+        [matTooltip]="isSaved() ? 'Remove from your groups' : 'Save to your groups'"
+        (click)="toggleSaved()"
+      >
+        <mat-icon>{{ isSaved() ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+      </button>
+
+      <button
+        mat-icon-button
+        type="button"
+        matTooltip="Toggle members"
+        (click)="toggleMembers()"
+      >
+        <mat-icon>group</mat-icon>
+      </button>
+
+      <button mat-icon-button [matMenuTriggerFor]="channelMenu" aria-label="Channel options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+
+      <mat-menu #channelMenu="matMenu">
+        <button mat-menu-item type="button" (click)="shareChannel()">
+          <mat-icon>link</mat-icon>
+          <span>Copy group reference</span>
+        </button>
+        @if (isMember()) {
+        <button mat-menu-item type="button" (click)="leave()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Leave group</span>
+        </button>
+        }
+      </mat-menu>
+    </header>
+
+    @if (view() === 'chat') {
+    <!-- Chat timeline -->
+    <div class="message-scroller" #messageScroller>
+      @if (nip29.loadingMessages() && messages().length === 0) {
+      <div class="center-state">
+        <mat-spinner diameter="32" />
+      </div>
+      } @else {
+      @if (hasMoreHistory() && messages().length > 0) {
+      <div class="load-more">
+        <button mat-button type="button" [disabled]="nip29.loadingMore()" (click)="loadOlder()">
+          @if (nip29.loadingMore()) { Loading… } @else { Load earlier messages }
+        </button>
+      </div>
+      }
+
+      @if (messages().length === 0) {
+      <div class="center-state channel-intro">
+        <mat-icon class="intro-icon">{{ channelIcon(group) }}</mat-icon>
+        <h3>Welcome to {{ group.name }}</h3>
+        <p>This is the beginning of the channel.</p>
+      </div>
+      }
+
+      @for (cluster of clusters(); track cluster.key) {
+      <article class="message-cluster">
+        <div class="cluster-avatar">
+          <app-user-profile [pubkey]="cluster.pubkey" view="icon" />
+        </div>
+
+        <div class="cluster-body">
+          <div class="cluster-header">
+            <app-profile-display-name [pubkey]="cluster.pubkey" />
+            @if (adminPubkeys().has(cluster.pubkey)) {
+            <span class="role-chip">{{ rolesFor(cluster.pubkey)[0] || 'admin' }}</span>
+            }
+            <time class="cluster-time" [attr.datetime]="cluster.createdAt">
+              {{ cluster.createdAt * 1000 | date: 'short' }}
+            </time>
+          </div>
+
+          @for (message of cluster.messages; track message.id) {
+          <div class="message-row">
+            @if (findMessage(message.replyTo); as parent) {
+            <div class="reply-preview">
+              <mat-icon>reply</mat-icon>
+              <app-profile-display-name [pubkey]="parent.pubkey" />
+              <span class="reply-text">{{ parent.content }}</span>
+            </div>
+            }
+
+            <div class="message-body">
+              <app-message-content
+                [content]="message.content"
+                [tags]="message.event.tags"
+                [authorPubkey]="message.pubkey"
+              />
+            </div>
+
+            <div class="message-actions">
+              <button
+                mat-icon-button
+                type="button"
+                matTooltip="Reply"
+                (click)="setReply(message)"
+              >
+                <mat-icon>reply</mat-icon>
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+      </article>
+      } }
+    </div>
+
+    <footer class="composer">
+      @if (replyingTo(); as reply) {
+      <div class="replying-banner">
+        <mat-icon>reply</mat-icon>
+        <span>Replying to <app-profile-display-name [pubkey]="reply.pubkey" /></span>
+        <button mat-icon-button type="button" (click)="cancelReply()" aria-label="Cancel reply">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+
+      @if (!pubkey()) {
+      <div class="composer-notice">Sign in to take part in this conversation.</div>
+      } @else if (!canPost()) {
+      <div class="composer-notice">
+        <span>Only members can post in this group.</span>
+        @if (!group.isClosed) {
+        <button mat-flat-button type="button" [disabled]="joining()" (click)="join()">
+          {{ joining() ? 'Requesting…' : 'Request to join' }}
+        </button>
+        } @else {
+        <span class="closed-hint">This group is closed — you need an invite code.</span>
+        }
+      </div>
+      } @else {
+      <div class="composer-input">
+        <textarea
+          rows="1"
+          [placeholder]="'Message ' + group.name"
+          [ngModel]="messageText()"
+          (ngModelChange)="messageText.set($event)"
+          (keydown)="onComposerKeydown($event)"
+          aria-label="Message"
+        ></textarea>
+
+        <button
+          mat-icon-button
+          type="button"
+          class="send-button"
+          [disabled]="!messageText().trim() || nip29.sending()"
+          (click)="sendMessage()"
+          aria-label="Send message"
+        >
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+      }
+    </footer>
+    } @else if (view() === 'threads') {
+    <!-- Threaded discussions (kind:11 roots with kind:1111 replies) -->
+    <div class="threads-pane">
+      @if (activeThread(); as thread) {
+      <div class="thread-detail">
+        <header class="thread-detail-header">
+          <button mat-icon-button type="button" (click)="closeThread()" aria-label="Back to threads">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <h3>{{ thread.subject || 'Thread' }}</h3>
+        </header>
+
+        <div class="thread-scroller">
+          <article class="thread-root">
+            <app-user-profile [pubkey]="thread.pubkey" view="icon" />
+            <div class="thread-root-body">
+              <div class="cluster-header">
+                <app-profile-display-name [pubkey]="thread.pubkey" />
+                <time class="cluster-time">{{ thread.createdAt | ago }}</time>
+              </div>
+              <app-message-content
+                [content]="thread.content"
+                [tags]="thread.event.tags"
+                [authorPubkey]="thread.pubkey"
+              />
+            </div>
+          </article>
+
+          <mat-divider />
+
+          @for (reply of threadReplies(); track reply.id) {
+          <article class="thread-reply">
+            <app-user-profile [pubkey]="reply.pubkey" view="icon" />
+            <div class="thread-root-body">
+              <div class="cluster-header">
+                <app-profile-display-name [pubkey]="reply.pubkey" />
+                <time class="cluster-time">{{ reply.createdAt | ago }}</time>
+              </div>
+              <app-message-content
+                [content]="reply.content"
+                [tags]="reply.event.tags"
+                [authorPubkey]="reply.pubkey"
+              />
+            </div>
+          </article>
+          } @empty {
+          <p class="sidebar-empty">No replies yet.</p>
+          }
+        </div>
+
+        @if (canPost()) {
+        <footer class="composer">
+          <div class="composer-input">
+            <textarea
+              rows="1"
+              placeholder="Reply to this thread"
+              [ngModel]="threadReplyText()"
+              (ngModelChange)="threadReplyText.set($event)"
+              aria-label="Thread reply"
+            ></textarea>
+            <button
+              mat-icon-button
+              type="button"
+              class="send-button"
+              [disabled]="!threadReplyText().trim() || nip29.sending()"
+              (click)="sendThreadReply()"
+              aria-label="Send reply"
+            >
+              <mat-icon>send</mat-icon>
+            </button>
+          </div>
+        </footer>
+        }
+      </div>
+      } @else {
+      <div class="thread-list">
+        @if (canPost()) {
+        <div class="thread-composer">
+          @if (composingThread()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input
+              matInput
+              [ngModel]="newThreadSubject()"
+              (ngModelChange)="newThreadSubject.set($event)"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>What is on your mind?</mat-label>
+            <textarea
+              matInput
+              rows="4"
+              [ngModel]="newThreadBody()"
+              (ngModelChange)="newThreadBody.set($event)"
+            ></textarea>
+          </mat-form-field>
+
+          <div class="panel-actions">
+            <button mat-button type="button" (click)="cancelThread()">Cancel</button>
+            <button
+              mat-flat-button
+              type="button"
+              [disabled]="!newThreadBody().trim() || nip29.sending()"
+              (click)="createThread()"
+            >
+              Post thread
+            </button>
+          </div>
+          } @else {
+          <button mat-flat-button type="button" (click)="startThread()">
+            <mat-icon>add</mat-icon>
+            New thread
+          </button>
+          }
+        </div>
+        }
+
+        @for (thread of threads(); track thread.id) {
+        <button type="button" class="thread-card" (click)="openThread(thread)">
+          <app-user-profile [pubkey]="thread.pubkey" view="icon" />
+          <div class="thread-card-body">
+            <span class="thread-title">{{ thread.subject || 'Untitled thread' }}</span>
+            <span class="thread-excerpt">{{ thread.content }}</span>
+            <span class="thread-meta">
+              <app-profile-display-name [pubkey]="thread.pubkey" />
+              · {{ thread.createdAt | ago }}
+            </span>
+          </div>
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        } @empty {
+        <p class="sidebar-empty">No threads in this channel yet.</p>
+        }
+      </div>
+      }
+    </div>
+    } @else {
+    <!-- LiveKit audio/video room -->
+    <div class="voice-pane">
+      <div class="voice-stage">
+        @for (participant of voiceParticipants(); track participant.identity) {
+        <div class="voice-tile" [class.speaking]="participant.isSpeaking">
+          @if (participant.pubkey) {
+          <app-user-profile [pubkey]="participant.pubkey" view="icon" />
+          <app-profile-display-name [pubkey]="participant.pubkey" />
+          } @else {
+          <mat-icon class="voice-anon">person</mat-icon>
+          <span>Guest</span>
+          }
+
+          @if (participant.isMuted) {
+          <mat-icon class="voice-muted">mic_off</mat-icon>
+          }
+        </div>
+        } @empty {
+        <div class="center-state">
+          <mat-icon class="intro-icon">graphic_eq</mat-icon>
+          <h3>{{ group.name }}</h3>
+          <p>
+            @if (details()?.livekitParticipants?.length) {
+            {{ details()?.livekitParticipants?.length }} people are in this room.
+            } @else { No one is here yet. }
+          </p>
+        </div>
+        }
+      </div>
+
+      <div class="voice-controls">
+        @if (voice.isConnected() && voice.activeRoomKey() === nip29.groupKey(group.relay, group.id)) {
+        <button
+          mat-icon-button
+          type="button"
+          [matTooltip]="voice.micEnabled() ? 'Mute' : 'Unmute'"
+          (click)="voice.toggleMicrophone()"
+        >
+          <mat-icon>{{ voice.micEnabled() ? 'mic' : 'mic_off' }}</mat-icon>
+        </button>
+
+        <button
+          mat-icon-button
+          type="button"
+          [matTooltip]="voice.cameraEnabled() ? 'Turn camera off' : 'Turn camera on'"
+          (click)="voice.toggleCamera()"
+        >
+          <mat-icon>{{ voice.cameraEnabled() ? 'videocam' : 'videocam_off' }}</mat-icon>
+        </button>
+
+        <button
+          mat-icon-button
+          type="button"
+          [matTooltip]="voice.screenShareEnabled() ? 'Stop sharing' : 'Share your screen'"
+          (click)="voice.toggleScreenShare()"
+        >
+          <mat-icon>{{ voice.screenShareEnabled() ? 'stop_screen_share' : 'screen_share' }}</mat-icon>
+        </button>
+
+        <button mat-flat-button class="leave-voice" type="button" (click)="leaveVoice()">
+          Disconnect
+        </button>
+        } @else {
+        <button
+          mat-flat-button
+          type="button"
+          [disabled]="voice.state() === 'connecting' || !pubkey()"
+          (click)="joinVoice()"
+        >
+          <mat-icon>headset_mic</mat-icon>
+          {{ voice.state() === 'connecting' ? 'Connecting…' : 'Join voice' }}
+        </button>
+        }
+      </div>
+    </div>
+    } } @else if (activeServer()) {
+    <div class="center-state">
+      <mat-icon class="intro-icon">tag</mat-icon>
+      <h3>Pick a channel</h3>
+      <p>Choose a channel from the list to start chatting.</p>
+    </div>
+    } @else {
+    <div class="center-state">
+      <mat-icon class="intro-icon">groups</mat-icon>
+      <h3>Servers</h3>
+      <p>
+        Servers are relays that host NIP-29 groups. Add one to see its channels, or open a
+        suggestion from the sidebar.
+      </p>
+    </div>
+    }
+  </section>
+
+  <!-- ───────────────────────────── Members ───────────────────────────── -->
+  @if (showMembers() && activeGroup()) {
+  <aside class="member-sidebar" aria-label="Members">
+    @if (admins().length > 0) {
+    <h4 class="member-heading">Admins — {{ admins().length }}</h4>
+    @for (admin of admins(); track admin.pubkey) {
+    <div class="member-row">
+      <app-user-profile [pubkey]="admin.pubkey" view="list" />
+      @if (admin.roles.length > 0) {
+      <span class="role-chip">{{ admin.roles[0] }}</span>
+      }
+    </div>
+    } }
+
+    @if (regularMembers().length > 0) {
+    <h4 class="member-heading">Members — {{ regularMembers().length }}</h4>
+    @for (member of regularMembers(); track member) {
+    <div class="member-row">
+      <app-user-profile [pubkey]="member" view="list" />
+    </div>
+    } } @else if (admins().length === 0) {
+    <p class="sidebar-empty">This relay does not publish a member list.</p>
+    }
+  </aside>
+  }
+</div>

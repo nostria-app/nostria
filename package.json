@@ -134,6 +134,7 @@
     "hls.js": "1.6.16",
     "html-to-image": "^1.11.13",
     "idb": "^8.0.3",
+    "livekit-client": "^2.21.0",
     "marked": "18.0.2",
     "material-symbols": "0.44.4",
     "mediabunny": "1.43.0",
