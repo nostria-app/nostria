@@ -168,6 +168,33 @@ export class ServersComponent implements OnInit, OnDestroy {
     return tree.filter(matches).map(prune);
   });
 
+  /**
+   * Channels on this server that the user has joined or saved (kind:10009).
+   * Surfaced above the relay's full catalogue so it is obvious which ones are
+   * "yours" — a NIP-29 relay lists every group it hosts, not just your own.
+   */
+  readonly savedChannels = computed<Nip29Group[]>(() => {
+    this.revision();
+    const server = this.activeServer();
+    if (!server) return [];
+
+    const ids = new Set(
+      this.groupsList
+        .entries()
+        .filter(entry => entry.relay === server.url)
+        .map(entry => entry.groupId)
+    );
+
+    return this.nip29
+      .getGroups(server.url)
+      .filter(group => ids.has(group.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  isSavedChannel(group: Nip29Group): boolean {
+    return this.groupsList.isSaved(group.relay, group.id);
+  }
+
   readonly activeGroup = computed<Nip29Group | undefined>(() => {
     this.revision();
     const server = this.activeServer();

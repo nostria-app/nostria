@@ -123,7 +123,27 @@
       <p class="sidebar-empty">
         No groups found on this relay. It may require you to be a member before it lists them.
       </p>
-      } @else { @for (node of channelTree(); track node.group.id) {
+      } @else {
+      @if (savedChannels().length > 0 && !channelFilter().trim()) {
+      <div class="channel-section">
+        <span class="section-label">Your channels</span>
+        @for (group of savedChannels(); track group.id) {
+        <button
+          type="button"
+          class="channel-item"
+          [class.active]="isActiveChannel(group)"
+          (click)="selectChannel(group)"
+        >
+          <mat-icon class="channel-icon">{{ channelIcon(group) }}</mat-icon>
+          <span class="channel-name">{{ group.name }}</span>
+        </button>
+        }
+      </div>
+
+      <span class="section-label">All channels</span>
+      }
+
+      @for (node of channelTree(); track node.group.id) {
       <ng-container
         *ngTemplateOutlet="channelNode; context: { $implicit: node }"
       ></ng-container>

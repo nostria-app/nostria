@@ -151,11 +151,32 @@ export class Nip29Service {
     // user joined on another client show up on their own.
     effect(() => {
       const relays = this.groupsList.relays();
+      const entries = this.groupsList.entries();
 
       untracked(() => {
         if (relays.length > 0) this.syncServersFromGroupsList();
+        if (entries.length > 0) void this.reconcileLoadedServers();
       });
     });
+  }
+
+  /**
+   * When the kind:10009 list changes while a server's channel list is already
+   * loaded, pull in any newly saved group that is not part of that list yet.
+   */
+  private async reconcileLoadedServers(): Promise<void> {
+    for (const [relayUrl, groups] of Object.entries(this.groupsByServer())) {
+      const known = new Set(groups.map(group => group.id));
+      const hasMissing = this.groupsList
+        .entries()
+        .some(entry => entry.relay === relayUrl && !known.has(entry.groupId));
+
+      if (!hasMissing) continue;
+
+      const complete = await this.includeSavedGroups(relayUrl, groups);
+      this.groupsByServer.update(state => ({ ...state, [relayUrl]: complete }));
+      this.writeGroupsCache(relayUrl, complete);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -423,8 +444,16 @@ export class Nip29Service {
     if (!force) {
       const cached = this.readGroupsCache(normalized);
       if (cached && Date.now() - cached.fetchedAt < GROUPS_TTL_MS) {
-        this.groupsByServer.update(state => ({ ...state, [normalized]: cached.groups }));
-        return cached.groups;
+        // Still reconcile against the saved list: a group joined since the
+        // cache was written would otherwise be missing until the TTL expired.
+        const complete = await this.includeSavedGroups(normalized, cached.groups);
+        this.groupsByServer.update(state => ({ ...state, [normalized]: complete }));
+
+        if (complete.length !== cached.groups.length) {
+          this.writeGroupsCache(normalized, complete);
+        }
+
+        return complete;
       }
       if (cached && !this.groupsByServer()[normalized]) {
         // Show stale data immediately, then refresh below.
@@ -446,9 +475,11 @@ export class Nip29Service {
           .map(event => this.parseGroupMetadata(normalized, event))
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        this.groupsByServer.update(state => ({ ...state, [normalized]: groups }));
-        this.writeGroupsCache(normalized, groups);
-        return groups;
+        const complete = await this.includeSavedGroups(normalized, groups);
+
+        this.groupsByServer.update(state => ({ ...state, [normalized]: complete }));
+        this.writeGroupsCache(normalized, complete);
+        return complete;
       } catch (error) {
         this.logger.error('[NIP-29] Failed to load groups', { relay: normalized, error });
         return this.getGroups(normalized);
@@ -456,6 +487,74 @@ export class Nip29Service {
         this.loadingServer.set(null);
       }
     });
+  }
+
+  /**
+   * Relays omit `hidden` and some `private` groups from the public kind:39000
+   * listing. Any group in the user's kind:10009 list that is missing from the
+   * listing is fetched explicitly, so groups joined on another client still
+   * show up in the sidebar. Costs one extra request, and only when needed.
+   */
+  private async includeSavedGroups(
+    relayUrl: string,
+    groups: Nip29Group[]
+  ): Promise<Nip29Group[]> {
+    const known = new Set(groups.map(group => group.id));
+    const missing = this.groupsList
+      .entries()
+      .filter(entry => entry.relay === relayUrl && !known.has(entry.groupId))
+      .map(entry => entry.groupId);
+
+    if (missing.length === 0) return groups;
+
+    try {
+      const events = await this.relayPool.query(
+        [relayUrl],
+        { kinds: [NIP29_KIND_METADATA], '#d': missing, limit: missing.length },
+        6000
+      );
+
+      const extra = events.map(event => this.parseGroupMetadata(relayUrl, event));
+      const resolved = new Set(extra.map(group => group.id));
+
+      // The relay may refuse to serve metadata for a hidden group. Fall back to
+      // a placeholder built from the list entry so the channel is still
+      // reachable rather than silently missing.
+      const placeholders = missing
+        .filter(id => !resolved.has(id))
+        .map(id => this.placeholderGroup(relayUrl, id));
+
+      return [...groups, ...extra, ...placeholders].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+    } catch (error) {
+      this.logger.debug('[NIP-29] Could not resolve saved groups', { relayUrl, error });
+      return groups;
+    }
+  }
+
+  /**
+   * Minimal group record for an id we know about but cannot read metadata for.
+   * Restrictions are left open because they are genuinely unknown — the relay
+   * is the authority and will reject anything that is not permitted.
+   */
+  private placeholderGroup(relayUrl: string, groupId: string): Nip29Group {
+    const saved = this.groupsList
+      .entries()
+      .find(entry => entry.relay === relayUrl && entry.groupId === groupId);
+
+    return {
+      relay: relayUrl,
+      id: groupId,
+      name: saved?.name || groupId,
+      isPrivate: false,
+      isRestricted: false,
+      isHidden: false,
+      isClosed: false,
+      hasLivekit: false,
+      children: [],
+      updatedAt: 0,
+    };
   }
 
   /**
@@ -491,6 +590,11 @@ export class Nip29Service {
         const metadataEvent = newestByKind.get(NIP29_KIND_METADATA);
         if (metadataEvent) {
           this.upsertGroup(this.parseGroupMetadata(normalized, metadataEvent));
+        } else if (!this.getGroup(normalized, groupId)) {
+          // kind:39000 is optional in NIP-29, and relays withhold it for hidden
+          // groups. Without a record here the channel would silently fall back
+          // to the "pick a channel" screen, so register a placeholder instead.
+          this.upsertGroup(this.placeholderGroup(normalized, groupId));
         }
 
         const details: Nip29GroupDetails = {

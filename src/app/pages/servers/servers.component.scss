@@ -208,6 +208,20 @@
   padding: 4px 8px 16px;
 }
 
+.section-label {
+  display: block;
+  padding: 12px 4px 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.channel-section {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
 .category-header {
   display: flex;
   align-items: center;
