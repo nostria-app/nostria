@@ -35,6 +35,12 @@ export class Nip29GroupsListService {
   /** Whether the initial load from IndexedDB has completed. */
   readonly initialized = signal(false);
 
+  /** Whether we have confirmed the newest list against the account relays. */
+  private loadedFromRelays = false;
+
+  /** De-duplicates concurrent relay refreshes. */
+  private refreshPromise: Promise<void> | null = null;
+
   /** Groups the user has chosen to remember being in. */
   readonly entries = computed<Nip29GroupsListEntry[]>(() => {
     const event = this.listEvent();
@@ -75,6 +81,8 @@ export class Nip29GroupsListService {
       } else {
         this.listEvent.set(null);
         this.initialized.set(false);
+        this.loadedFromRelays = false;
+        this.refreshPromise = null;
       }
     });
   }
@@ -83,13 +91,80 @@ export class Nip29GroupsListService {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
+    this.loadedFromRelays = false;
+
     try {
       const event = await this.database.getEventByPubkeyAndKind(pubkey, NIP29_KIND_GROUPS_LIST);
-      this.listEvent.set(event);
+      this.applyEvent(event);
     } catch (error) {
       this.logger.warn('[Nip29GroupsList] Failed to load cached list', error);
     } finally {
       this.initialized.set(true);
+    }
+
+    // The cached copy may be missing or stale (the account subscription uses a
+    // `since` filter, so an older list can never arrive through it). Pull the
+    // authoritative copy from the relays in the background.
+    void this.refreshFromRelays();
+  }
+
+  /**
+   * Fetch the newest kind:10009 from the account relays so we never publish on
+   * top of a list we have not seen. Safe to call repeatedly — concurrent calls
+   * share a single round-trip.
+   */
+  async refreshFromRelays(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      try {
+        const event = await this.accountRelay.getEventByPubkeyAndKind(
+          pubkey,
+          NIP29_KIND_GROUPS_LIST
+        );
+
+        if (event) {
+          this.applyEvent(event);
+          await this.database.saveEvent(event).catch(() => undefined);
+        }
+
+        this.loadedFromRelays = true;
+      } catch (error) {
+        this.logger.warn('[Nip29GroupsList] Failed to refresh list from relays', error);
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
+  /**
+   * Guarantee we hold the newest known list before mutating it. Without this a
+   * publish would replace a remote list we had never loaded, dropping every
+   * group the user had saved on another client.
+   */
+  private async ensureLoaded(): Promise<void> {
+    if (!this.initialized()) {
+      await this.initialize();
+      return;
+    }
+
+    if (!this.loadedFromRelays) {
+      await this.refreshFromRelays();
+    }
+  }
+
+  /** Keep whichever version is newer. */
+  private applyEvent(event: Event | null | undefined): void {
+    if (!event) return;
+
+    const current = this.listEvent();
+    if (!current || event.created_at >= current.created_at) {
+      this.listEvent.set(event);
     }
   }
 
@@ -98,10 +173,8 @@ export class Nip29GroupsListService {
    * already have. Called from the account metadata subscription.
    */
   updateFromEvent(event: Event): void {
-    const current = this.listEvent();
-    if (!current || event.created_at >= current.created_at) {
-      this.listEvent.set(event);
-    }
+    this.applyEvent(event);
+    this.loadedFromRelays = true;
   }
 
   isSaved(relay: string, groupId: string): boolean {
@@ -112,6 +185,8 @@ export class Nip29GroupsListService {
   async addGroup(relay: string, groupId: string, name?: string): Promise<void> {
     const normalized = this.normalizeRelay(relay);
     if (!normalized || !groupId) return;
+
+    await this.ensureLoaded();
     if (this.isSaved(normalized, groupId)) return;
 
     const tags = [...(this.listEvent()?.tags ?? [])];
@@ -124,6 +199,8 @@ export class Nip29GroupsListService {
 
   /** Remove a group from the remembered list. */
   async removeGroup(relay: string, groupId: string): Promise<void> {
+    await this.ensureLoaded();
+
     const existing = this.listEvent();
     if (!existing) return;
 
@@ -147,6 +224,8 @@ export class Nip29GroupsListService {
    * group migration or fork detected via an admin's kind:10009.
    */
   async moveGroup(groupId: string, fromRelay: string, toRelay: string): Promise<void> {
+    await this.ensureLoaded();
+
     const existing = this.listEvent();
     if (!existing) return;
 
@@ -175,6 +254,8 @@ export class Nip29GroupsListService {
 
     await this.database.saveEvent(signed);
     this.listEvent.set(signed);
+    // We just wrote the newest version, so no further reconciliation is needed.
+    this.loadedFromRelays = true;
 
     const publishPromises = await this.accountRelay.publish(signed);
     await this.layout.showPublishResults(publishPromises, 'Groups');

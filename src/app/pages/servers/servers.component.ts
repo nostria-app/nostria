@@ -310,8 +310,6 @@ export class ServersComponent implements OnInit, OnDestroy {
       const invite = params.get('invite');
       if (invite) this.inviteCode.set(invite);
     });
-
-    this.nip29.syncServersFromGroupsList();
   }
 
   ngOnDestroy(): void {

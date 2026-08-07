@@ -1,4 +1,4 @@
-import { computed, inject, PLATFORM_ID, Service, signal } from '@angular/core';
+import { computed, effect, inject, PLATFORM_ID, Service, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Event, Filter, UnsignedEvent } from 'nostr-tools';
 
@@ -145,6 +145,17 @@ export class Nip29Service {
 
   constructor() {
     this.restoreServers();
+
+    // The kind:10009 list arrives asynchronously (IndexedDB, then the relays).
+    // Merge its relay hints into the rail whenever it changes so servers the
+    // user joined on another client show up on their own.
+    effect(() => {
+      const relays = this.groupsList.relays();
+
+      untracked(() => {
+        if (relays.length > 0) this.syncServersFromGroupsList();
+      });
+    });
   }
 
   // ---------------------------------------------------------------------------
