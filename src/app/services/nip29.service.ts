@@ -132,6 +132,64 @@ export class Nip29Service {
   private activeSubscriptions: Closeable[] = [];
   private activeGroupKey: string | null = null;
 
+  /**
+   * The groups the user has joined, resolved to full records where metadata is
+   * known and to placeholders otherwise. These are the primary entities in the
+   * UI — a NIP-29 relay is just where a group happens to live.
+   */
+  readonly joinedGroups = computed<Nip29Group[]>(() => {
+    const byServer = this.groupsByServer();
+
+    return this.groupsList
+      .entries()
+      .map(entry => {
+        const group = (byServer[entry.relay] ?? []).find(item => item.id === entry.groupId);
+        return group ?? this.placeholderGroup(entry.relay, entry.groupId);
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  /**
+   * Resolve metadata for every saved group, batched into one request per relay.
+   * Called once when the groups list settles so the rail can show real names
+   * and icons instead of raw group ids.
+   */
+  async loadJoinedGroupMetadata(): Promise<void> {
+    const byRelay = new Map<string, string[]>();
+
+    for (const entry of this.groupsList.entries()) {
+      const known = this.getGroup(entry.relay, entry.groupId);
+      if (known && known.updatedAt > 0) continue;
+
+      byRelay.set(entry.relay, [...(byRelay.get(entry.relay) ?? []), entry.groupId]);
+    }
+
+    if (byRelay.size === 0) return;
+
+    await Promise.all(
+      [...byRelay.entries()].map(([relayUrl, ids]) =>
+        this.dedupe(`saved-meta:${relayUrl}:${ids.join(',')}`, async () => {
+          try {
+            const events = await this.relayPool.query(
+              [relayUrl],
+              { kinds: [NIP29_KIND_METADATA], '#d': ids, limit: ids.length },
+              8000
+            );
+
+            for (const event of events) {
+              this.upsertGroup(this.parseGroupMetadata(relayUrl, event));
+            }
+          } catch (error) {
+            this.logger.debug('[NIP-29] Failed to resolve joined group metadata', {
+              relayUrl,
+              error,
+            });
+          }
+        })
+      )
+    );
+  }
+
   /** Servers sorted for the Discord-style rail: saved first, then suggestions. */
   readonly serverRail = computed<Nip29Server[]>(() => {
     const savedRelays = new Set(this.groupsList.relays());
@@ -155,7 +213,10 @@ export class Nip29Service {
 
       untracked(() => {
         if (relays.length > 0) this.syncServersFromGroupsList();
-        if (entries.length > 0) void this.reconcileLoadedServers();
+        if (entries.length > 0) {
+          void this.reconcileLoadedServers();
+          void this.loadJoinedGroupMetadata();
+        }
       });
     });
   }

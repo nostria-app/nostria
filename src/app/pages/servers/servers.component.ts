@@ -64,8 +64,13 @@ interface MessageCluster {
 /** Which pane is visible on narrow screens. */
 type MobilePane = 'servers' | 'channels' | 'content';
 
-/** Which content view is active for the open channel. */
-type ChannelView = 'chat' | 'threads' | 'voice';
+/** Which content view is active for the open group. */
+type ChannelView = 'chat' | 'threads' | 'members' | 'voice';
+
+/** Remembers the last view used per group, so returning feels continuous. */
+const VIEW_STORAGE_KEY = 'nostria-nip29-last-view-v1';
+/** Remembers the last group opened, so the section resumes where you left it. */
+const LAST_GROUP_STORAGE_KEY = 'nostria-nip29-last-group-v1';
 
 @Component({
   selector: 'app-servers',
@@ -115,11 +120,13 @@ export class ServersComponent implements OnInit, OnDestroy {
   // -- UI state ---------------------------------------------------------------
   readonly mobilePane = signal<MobilePane>('servers');
   readonly view = signal<ChannelView>('chat');
-  readonly showMembers = signal(true);
   readonly showAddServer = signal(false);
   readonly newServerUrl = signal('');
   readonly collapsedCategories = signal<Set<string>>(new Set());
-  readonly channelFilter = signal('');
+
+  /** Relay whose full group catalogue is being browsed in the add panel. */
+  readonly browsingRelay = signal<string | null>(null);
+  readonly browseFilter = signal('');
 
   // -- Composer state ---------------------------------------------------------
   readonly messageText = signal('');
@@ -139,6 +146,12 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   readonly pubkey = computed(() => this.accountState.pubkey());
 
+  /** Primary rail entities: the groups the user has joined. */
+  readonly joinedGroups = computed<Nip29Group[]>(() => {
+    this.revision();
+    return this.nip29.joinedGroups();
+  });
+
   readonly servers = computed<Nip29Server[]>(() => this.nip29.serverRail());
 
   readonly activeServer = computed<Nip29Server | undefined>(() => {
@@ -146,52 +159,41 @@ export class ServersComponent implements OnInit, OnDestroy {
     return slug ? this.nip29.getServerBySlug(slug) : undefined;
   });
 
-  readonly channelTree = computed<Nip29GroupNode[]>(() => {
-    this.revision();
-    const server = this.activeServer();
-    if (!server) return [];
-
-    const tree = this.nip29.buildTree(server.url);
-    const filter = this.channelFilter().trim().toLowerCase();
-    if (!filter) return tree;
-
-    const matches = (node: Nip29GroupNode): boolean =>
-      node.group.name.toLowerCase().includes(filter) ||
-      node.group.id.toLowerCase().includes(filter) ||
-      node.children.some(matches);
-
-    const prune = (node: Nip29GroupNode): Nip29GroupNode => ({
-      ...node,
-      children: node.children.filter(matches).map(prune),
-    });
-
-    return tree.filter(matches).map(prune);
-  });
-
   /**
-   * Channels on this server that the user has joined or saved (kind:10009).
-   * Surfaced above the relay's full catalogue so it is obvious which ones are
-   * "yours" — a NIP-29 relay lists every group it hosts, not just your own.
+   * Subgroups of the open group. NIP-29 groups can nest, so a group may still
+   * act as a category containing further channels.
    */
-  readonly savedChannels = computed<Nip29Group[]>(() => {
+  readonly subGroups = computed<Nip29GroupNode[]>(() => {
     this.revision();
     const server = this.activeServer();
-    if (!server) return [];
-
-    const ids = new Set(
-      this.groupsList
-        .entries()
-        .filter(entry => entry.relay === server.url)
-        .map(entry => entry.groupId)
-    );
+    const group = this.activeGroup();
+    if (!server || !group) return [];
 
     return this.nip29
-      .getGroups(server.url)
-      .filter(group => ids.has(group.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .buildTree(server.url)
+      .filter(node => node.group.id === group.id)
+      .flatMap(node => node.children);
   });
 
-  isSavedChannel(group: Nip29Group): boolean {
+  /** Full catalogue of the relay being browsed in the add panel. */
+  readonly browsableGroups = computed<Nip29Group[]>(() => {
+    this.revision();
+    const relay = this.browsingRelay();
+    if (!relay) return [];
+
+    const filter = this.browseFilter().trim().toLowerCase();
+    const groups = this.nip29.getGroups(relay);
+
+    return filter
+      ? groups.filter(
+          group =>
+            group.name.toLowerCase().includes(filter) ||
+            group.id.toLowerCase().includes(filter)
+        )
+      : groups;
+  });
+
+  isJoined(group: Nip29Group): boolean {
     return this.groupsList.isSaved(group.relay, group.id);
   }
 
@@ -348,19 +350,28 @@ export class ServersComponent implements OnInit, OnDestroy {
   // Navigation
   // ---------------------------------------------------------------------------
 
-  selectServer(server: Nip29Server): void {
-    this.mobilePane.set('channels');
-    void this.router.navigate([...this.basePath(), server.slug]);
-  }
-
-  selectChannel(group: Nip29Group): void {
-    const server = this.activeServer();
-    if (!server) return;
-
+  /**
+   * Open a joined group. The view it was last left on is restored, so moving
+   * between groups resumes each conversation where it was.
+   */
+  selectGroup(group: Nip29Group): void {
     this.activeThread.set(null);
     this.replyingTo.set(null);
+    this.showAddServer.set(false);
     this.mobilePane.set('content');
-    void this.router.navigate([...this.basePath(), server.slug, group.id]);
+
+    const slug = this.nip29.serverSlug(group.relay);
+    void this.router.navigate([...this.basePath(), slug, group.id]);
+  }
+
+  /** Open the browse panel for a relay's full group catalogue. */
+  async browseServer(server: Nip29Server): Promise<void> {
+    this.showAddServer.set(true);
+    this.browsingRelay.set(server.url);
+    this.mobilePane.set('channels');
+
+    await this.nip29.loadGroups(server.url);
+    this.revision.update(value => value + 1);
   }
 
   /**
@@ -396,14 +407,61 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   setView(view: ChannelView): void {
     this.view.set(view);
+    this.mobilePane.set('content');
+    this.rememberView(view);
 
     if (view === 'threads') {
       void this.refreshThreads();
     }
   }
 
-  toggleMembers(): void {
-    this.showMembers.update(value => !value);
+  /** Persist the active view so re-opening this group returns to it. */
+  private rememberView(view: ChannelView): void {
+    const server = this.activeServer();
+    const id = this.groupId();
+    if (!server || !id) return;
+
+    const stored = this.readStore<Record<string, ChannelView>>(VIEW_STORAGE_KEY, {});
+    stored[this.nip29.groupKey(server.url, id)] = view;
+    this.writeStore(VIEW_STORAGE_KEY, stored);
+  }
+
+  private recallView(relayUrl: string, groupId: string): ChannelView | null {
+    const stored = this.readStore<Record<string, ChannelView>>(VIEW_STORAGE_KEY, {});
+    return stored[this.nip29.groupKey(relayUrl, groupId)] ?? null;
+  }
+
+  /** Remember the last group opened so the section resumes on return. */
+  private rememberGroupLocation(slug: string, groupId: string): void {
+    this.writeStore(LAST_GROUP_STORAGE_KEY, { slug, groupId });
+  }
+
+  private recallGroupLocation(): { slug: string; groupId: string } | null {
+    return this.readStore<{ slug: string; groupId: string } | null>(
+      LAST_GROUP_STORAGE_KEY,
+      null
+    );
+  }
+
+  private readStore<T>(key: string, fallback: T): T {
+    if (typeof localStorage === 'undefined') return fallback;
+
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private writeStore(key: string, value: unknown): void {
+    if (typeof localStorage === 'undefined') return;
+
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Storage is best-effort; losing the last view is not worth an error.
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -434,10 +492,10 @@ export class ServersComponent implements OnInit, OnDestroy {
     }
 
     this.newServerUrl.set('');
-    this.showAddServer.set(false);
 
+    // Stay in the discover panel and show what this relay hosts.
     const server = this.nip29.getServer(normalized);
-    if (server) this.selectServer(server);
+    if (server) await this.browseServer(server);
   }
 
   removeServer(server: Nip29Server): void {
@@ -831,6 +889,16 @@ export class ServersComponent implements OnInit, OnDestroy {
   private async syncRouteState(slug: string | null, groupId: string | null): Promise<void> {
     if (!slug) {
       this.nip29.closeSubscriptions();
+
+      // Resume where the user left off instead of showing an empty shell.
+      const last = this.recallGroupLocation();
+      if (last) {
+        void this.router.navigate([...this.basePath(), last.slug, last.groupId], {
+          replaceUrl: true,
+        });
+        return;
+      }
+
       this.mobilePane.set('servers');
       return;
     }
@@ -855,14 +923,15 @@ export class ServersComponent implements OnInit, OnDestroy {
 
     if (!groupId) {
       this.nip29.closeSubscriptions();
+      this.browsingRelay.set(server.url);
+      this.showAddServer.set(true);
       this.mobilePane.set('channels');
       return;
     }
 
     this.mobilePane.set('content');
-
-    const group = this.nip29.getGroup(server.url, groupId);
-    this.view.set(group?.hasLivekit && !this.supportsKind(NIP29_KIND_CHAT) ? 'voice' : 'chat');
+    this.showAddServer.set(false);
+    this.rememberGroupLocation(slug, groupId);
 
     try {
       await Promise.all([
@@ -875,5 +944,33 @@ export class ServersComponent implements OnInit, OnDestroy {
     }
 
     this.revision.update(value => value + 1);
+    this.view.set(this.resolveInitialView(server.url, groupId));
+  }
+
+  /**
+   * Restore the last view used for this group, falling back to the first one
+   * the group actually supports.
+   */
+  private resolveInitialView(relayUrl: string, groupId: string): ChannelView {
+    const remembered = this.recallView(relayUrl, groupId);
+    if (remembered && this.isViewAvailable(remembered)) return remembered;
+
+    if (this.supportsChat()) return 'chat';
+    if (this.supportsThreads()) return 'threads';
+    if (this.supportsVoice()) return 'voice';
+    return 'members';
+  }
+
+  private isViewAvailable(view: ChannelView): boolean {
+    switch (view) {
+      case 'chat':
+        return this.supportsChat();
+      case 'threads':
+        return this.supportsThreads();
+      case 'voice':
+        return this.supportsVoice();
+      case 'members':
+        return true;
+    }
   }
 }
