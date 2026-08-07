@@ -325,7 +325,7 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   selectServer(server: Nip29Server): void {
     this.mobilePane.set('channels');
-    void this.router.navigate(['/chats/servers', server.slug]);
+    void this.router.navigate([...this.basePath(), server.slug]);
   }
 
   selectChannel(group: Nip29Group): void {
@@ -335,7 +335,17 @@ export class ServersComponent implements OnInit, OnDestroy {
     this.activeThread.set(null);
     this.replyingTo.set(null);
     this.mobilePane.set('content');
-    void this.router.navigate(['/chats/servers', server.slug, group.id]);
+    void this.router.navigate([...this.basePath(), server.slug, group.id]);
+  }
+
+  /**
+   * The route prefix currently in use. Deep links opened through the short
+   * `/g/<relay>/<group>` form keep that form while navigating, and links opened
+   * from the Chats menu stay under `/chats/servers`.
+   */
+  private basePath(): string[] {
+    const url = this.router.url;
+    return url === '/g' || url.startsWith('/g/') ? ['/g'] : ['/chats/servers'];
   }
 
   backToServers(): void {
@@ -409,7 +419,7 @@ export class ServersComponent implements OnInit, OnDestroy {
     this.nip29.removeServer(server.url);
 
     if (this.activeServer()?.url === server.url) {
-      void this.router.navigate(['/chats/servers']);
+      void this.router.navigate(this.basePath());
     }
   }
 
@@ -446,7 +456,7 @@ export class ServersComponent implements OnInit, OnDestroy {
       this.showAddServer.set(false);
       this.mobilePane.set('content');
 
-      void this.router.navigate(['/chats/servers', server.slug, pointer.identifier], {
+      void this.router.navigate([...this.basePath(), server.slug, pointer.identifier], {
         queryParams: invite ? { invite } : {},
       });
     } catch (error) {
@@ -525,8 +535,25 @@ export class ServersComponent implements OnInit, OnDestroy {
     if (this.isSaved()) {
       await this.groupsList.removeGroup(server.url, group.id);
     } else {
+      // Saving a channel pins its relay to the server rail.
+      this.nip29.addServer(server.url);
       await this.groupsList.addGroup(server.url, group.id, group.name);
     }
+  }
+
+  /**
+   * Copy the short, shareable channel URL: `/g/<relay-host>/<group-id>`.
+   * Other NIP-29 clients use the same shape, so the link is recognisable.
+   */
+  copyChannelLink(): void {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const path = `/g/${server.slug}/${group.id}`;
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+
+    this.layout.copyToClipboard(`${origin}${path}`, 'channel link');
   }
 
   /** Copy a shareable `naddr` reference to the active channel. */
@@ -786,8 +813,9 @@ export class ServersComponent implements OnInit, OnDestroy {
     let server = this.nip29.getServerBySlug(slug);
 
     if (!server) {
-      // Deep link to a relay that is not in the rail yet.
-      const normalized = this.nip29.addServer(this.nip29.slugToRelayUrl(slug));
+      // Deep link to a relay that is not in the rail yet. It stays unpinned
+      // until the user joins or saves a channel on it.
+      const normalized = this.nip29.addServer(this.nip29.slugToRelayUrl(slug), false);
       server = normalized ? this.nip29.getServer(normalized) : undefined;
     }
 

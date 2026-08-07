@@ -257,8 +257,12 @@
       </button>
 
       <mat-menu #channelMenu="matMenu">
-        <button mat-menu-item type="button" (click)="shareChannel()">
+        <button mat-menu-item type="button" (click)="copyChannelLink()">
           <mat-icon>link</mat-icon>
+          <span>Copy channel link</span>
+        </button>
+        <button mat-menu-item type="button" (click)="shareChannel()">
+          <mat-icon>tag</mat-icon>
           <span>Copy group reference</span>
         </button>
         @if (isMember()) {

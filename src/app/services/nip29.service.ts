@@ -268,14 +268,20 @@ export class Nip29Service {
   // Servers
   // ---------------------------------------------------------------------------
 
-  /** Add a relay as a server. Returns the normalized URL, or null if invalid. */
-  addServer(relayUrl: string): string | null {
+  /**
+   * Add a relay as a server. Returns the normalized URL, or null if invalid.
+   *
+   * Deep links pass `markAsAdded: false` so simply opening someone's link does
+   * not permanently pin the server to the rail — that happens once the user
+   * joins or saves a channel on it.
+   */
+  addServer(relayUrl: string, markAsAdded = true): string | null {
     const normalized = this.normalize(relayUrl);
     if (!normalized) return null;
 
     const existing = this.getServer(normalized);
     if (existing) {
-      if (!existing.added) {
+      if (markAsAdded && !existing.added) {
         this.servers.update(servers =>
           servers.map(server => (server.url === normalized ? { ...server, added: true } : server))
         );
@@ -284,8 +290,9 @@ export class Nip29Service {
       return normalized;
     }
 
-    this.servers.update(servers => [...servers, this.createServer(normalized, true)]);
-    this.persistServers();
+    this.servers.update(servers => [...servers, this.createServer(normalized, markAsAdded)]);
+    if (markAsAdded) this.persistServers();
+
     return normalized;
   }
 
@@ -781,6 +788,9 @@ export class Nip29Service {
   }
 
   private async rememberGroup(relayUrl: string, groupId: string): Promise<void> {
+    // Joining a group pins its relay to the server rail.
+    this.addServer(relayUrl);
+
     if (!this.accountState.pubkey()) return;
     const group = this.getGroup(relayUrl, groupId);
     await this.groupsList.addGroup(relayUrl, groupId, group?.name).catch(error => {

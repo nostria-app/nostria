@@ -228,6 +228,29 @@ export const routes: Routes = [
     data: { isRoot: true },
     title: 'Servers',
   },
+  // Short, shareable aliases for NIP-29 groups: /g/<relay-host>/<group-id>.
+  // Other clients use the same shape (behind a hash), so links are portable.
+  {
+    path: 'g',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
+  {
+    path: 'g/:slug',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
+  {
+    path: 'g/:slug/:groupId',
+    loadComponent: () =>
+      import('./pages/servers/servers.component').then(m => m.ServersComponent),
+    data: { isRoot: true },
+    title: 'Servers',
+  },
   {
     path: 'chats/:id',
     loadComponent: () =>
