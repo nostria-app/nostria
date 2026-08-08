@@ -693,6 +693,19 @@
   }
 }
 
+.tile-groups {
+  background: linear-gradient(160deg, rgba(0, 137, 123, 0.14) 0%, transparent 100%);
+  border: 1px solid rgba(0, 137, 123, 0.18);
+
+  .tile-icon {
+    color: #00897b;
+  }
+
+  &:hover {
+    border-color: rgba(0, 137, 123, 0.45);
+  }
+}
+
 .tile-chats {
   background: linear-gradient(160deg, rgba(0, 150, 136, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(0, 150, 136, 0.15);
@@ -1888,6 +1901,20 @@
 
     &:hover {
       border-color: rgba(76, 175, 80, 0.6);
+    }
+  }
+
+  .tile-groups {
+    background: linear-gradient(160deg, rgba(0, 137, 123, 0.3) 0%, rgba(0, 137, 123, 0.07) 100%);
+    border-color: rgba(0, 137, 123, 0.42);
+
+    .tile-icon {
+      color: #4DB6AC;
+    }
+
+    &:hover {
+      border-color: rgba(0, 137, 123, 0.62);
+      box-shadow: 0 12px 32px rgba(0, 137, 123, 0.18);
     }
   }
 
