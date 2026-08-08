@@ -9,14 +9,15 @@
     <div
       #viewport
       class="cropper-viewport"
-      [style.aspect-ratio]="aspectRatio"
+      [style.--crop-aspect]="aspectRatio"
       tabindex="0"
       role="application"
-      [attr.aria-label]="'Drag to reposition, scroll or pinch to zoom'"
+      [attr.aria-label]="'Drag to reposition. Use the zoom slider, double click, or the scroll wheel to zoom.'"
       (pointerdown)="onPointerDown($event)"
       (pointermove)="onPointerMove($event)"
       (pointerup)="onPointerUp($event)"
       (pointercancel)="onPointerUp($event)"
+      (dblclick)="onDoubleClick($event)"
       (wheel)="onWheel($event)"
       (keydown)="onKeydown($event)"
     >
@@ -24,6 +25,8 @@
       <img
         class="cropper-image"
         [src]="url"
+        [style.width.px]="naturalWidth() || null"
+        [style.height.px]="naturalHeight() || null"
         [style.transform]="imageTransform()"
         alt="Image being cropped"
         draggable="false"
@@ -45,11 +48,9 @@
       }
     </div>
 
-    <p class="cropper-hint">Drag the image to reposition, scroll or pinch to zoom.</p>
-
     <div class="cropper-controls">
       <button mat-icon-button type="button" matTooltip="Zoom out" aria-label="Zoom out"
-        (click)="onZoomSliderChange(zoom() / 1.2)">
+        [disabled]="zoom() <= minZoom" (click)="zoomBy(1 / 1.2)">
         <mat-icon>zoom_out</mat-icon>
       </button>
 
@@ -59,7 +60,7 @@
       </mat-slider>
 
       <button mat-icon-button type="button" matTooltip="Zoom in" aria-label="Zoom in"
-        (click)="onZoomSliderChange(zoom() * 1.2)">
+        [disabled]="zoom() >= maxZoom" (click)="zoomBy(1.2)">
         <mat-icon>zoom_in</mat-icon>
       </button>
 
@@ -71,6 +72,8 @@
         <mat-icon>restart_alt</mat-icon>
       </button>
     </div>
+
+    <p class="cropper-hint">Drag to reposition. Zoom with the slider, double click, scroll wheel, or +/- keys.</p>
 
     @if (isAnimated) {
     <p class="cropper-warning">

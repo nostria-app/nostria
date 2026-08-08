@@ -80,8 +80,8 @@ export class ImageCropperDialogComponent implements OnDestroy {
   readonly error = signal<string | null>(null);
 
   /** Natural image size */
-  private readonly naturalWidth = signal(0);
-  private readonly naturalHeight = signal(0);
+  readonly naturalWidth = signal(0);
+  readonly naturalHeight = signal(0);
 
   /** Crop viewport size in CSS pixels */
   private readonly viewportWidth = signal(0);
@@ -265,6 +265,22 @@ export class ImageCropperDialogComponent implements OnDestroy {
 
   onZoomSliderChange(value: number): void {
     this.zoomAround(value, 0, 0);
+  }
+
+  /** Zoom in/out around the centre of the crop area by a multiplier */
+  zoomBy(factor: number): void {
+    this.zoomAround(this.zoom() * factor, 0, 0);
+  }
+
+  onDoubleClick(event: MouseEvent): void {
+    if (this.loading() || this.error()) return;
+    event.preventDefault();
+    const rect = this.viewportRef().nativeElement.getBoundingClientRect();
+    const cx = event.clientX - rect.left - rect.width / 2;
+    const cy = event.clientY - rect.top - rect.height / 2;
+    // Alt/shift double click zooms back out
+    const factor = event.altKey || event.shiftKey ? 1 / 1.5 : 1.5;
+    this.zoomAround(this.zoom() * factor, cx, cy);
   }
 
   private beginPinch(): void {
