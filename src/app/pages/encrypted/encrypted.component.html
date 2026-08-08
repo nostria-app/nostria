@@ -1,0 +1,801 @@
+<div class="encrypted-page" [attr.data-pane]="mobilePane()">
+  <!-- ─────────────────────── Community rail ─────────────────────── -->
+  <nav class="rail" aria-label="Encrypted communities">
+    <div class="rail-scroll">
+      @for (community of communities(); track community.communityId) {
+      <button
+        type="button"
+        class="rail-item"
+        [class.active]="activeCommunity()?.communityId === community.communityId"
+        [matTooltip]="displayName(community)"
+        matTooltipPosition="right"
+        (click)="selectCommunity(community)"
+      >
+        <span class="rail-avatar">{{ initials(displayName(community)) }}</span>
+      </button>
+      } @empty {
+      <p class="rail-empty">No communities</p>
+      }
+    </div>
+
+    <div class="rail-footer">
+      <button
+        type="button"
+        class="rail-item rail-add"
+        matTooltip="Sync communities from your other clients"
+        matTooltipPosition="right"
+        [disabled]="concord.syncing()"
+        (click)="syncMemberships()"
+      >
+        <mat-icon>{{ concord.syncing() ? 'hourglass_empty' : 'sync' }}</mat-icon>
+      </button>
+
+      <button
+        type="button"
+        class="rail-item rail-add"
+        matTooltip="Join with an invite"
+        matTooltipPosition="right"
+        (click)="openJoin()"
+      >
+        <mat-icon>key</mat-icon>
+      </button>
+
+      <button
+        type="button"
+        class="rail-item rail-add"
+        matTooltip="Create a community"
+        matTooltipPosition="right"
+        (click)="openCreate()"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─────────────────────── Channel sidebar ────────────────────── -->
+  <aside class="sidebar" aria-label="Channels">
+    @if (activeCommunity(); as community) {
+    <header class="sidebar-header">
+      <button type="button" class="back" (click)="backToCommunities()" aria-label="Back">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <div class="sidebar-title">
+        <span class="community-name">
+          <mat-icon class="lock-badge" matTooltip="End-to-end encrypted">lock</mat-icon>
+          {{ communityName() }}
+        </span>
+        @if (control()?.metadata?.description) {
+        <span class="community-desc">{{ control()?.metadata?.description }}</span>
+        }
+      </div>
+
+      <button mat-icon-button [matMenuTriggerFor]="communityMenu" aria-label="Community options">
+        <mat-icon>expand_more</mat-icon>
+      </button>
+
+      <mat-menu #communityMenu="matMenu">
+        <button mat-menu-item type="button" (click)="leave()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Leave community</span>
+        </button>
+      </mat-menu>
+    </header>
+
+    @if (isDissolved()) {
+    <p class="dissolved-notice">
+      <mat-icon>gavel</mat-icon>
+      This community was dissolved by its owner. History stays readable, but nothing new is
+      accepted.
+    </p>
+    }
+
+    <nav class="view-nav">
+      <button
+        type="button"
+        class="channel-item"
+        [class.active]="view() === 'members'"
+        (click)="setView('members')"
+      >
+        <mat-icon class="channel-icon">group</mat-icon>
+        <span class="channel-name">Members</span>
+        @if (members().length > 0) {
+        <span class="count">{{ members().length }}</span>
+        }
+      </button>
+      @if (isStaff()) {
+      <button
+        type="button"
+        class="channel-item"
+        [class.active]="view() === 'settings'"
+        (click)="openSettings()"
+      >
+        <mat-icon class="channel-icon">settings</mat-icon>
+        <span class="channel-name">Settings</span>
+      </button>
+      }
+    </nav>
+
+    <span class="section-label">
+      Channels
+      @if (isPublicCommunity()) {
+      <span class="visibility" matTooltip="A live invite link exists">public</span>
+      } @else {
+      <span class="visibility" matTooltip="No live invite links">private</span>
+      }
+    </span>
+
+    <div class="channel-list">
+      @if (concord.loadingCommunity() === community.communityId && channels().length === 0) {
+      <div class="loading"><mat-spinner diameter="22" /><span>Loading…</span></div>
+      } @for (channel of channels(); track channel.channelId) {
+      <button
+        type="button"
+        class="channel-item"
+        [class.active]="isActiveChannel(channel) && view() === 'chat'"
+        (click)="selectChannel(channel)"
+      >
+        <mat-icon class="channel-icon">{{ channelIcon(channel) }}</mat-icon>
+        <span class="channel-name">{{ channel.name }}</span>
+      </button>
+      } @empty {
+      <p class="empty">No channels you can read.</p>
+      }
+
+      @if (canManageChannels()) {
+      <div class="channel-create">
+        <input
+          type="text"
+          placeholder="New channel name"
+          [ngModel]="newChannelName()"
+          (ngModelChange)="newChannelName.set($event)"
+          (keyup.enter)="createChannel()"
+          aria-label="New channel name"
+        />
+        <button
+          mat-icon-button
+          type="button"
+          [matTooltip]="newChannelPrivate() ? 'Private channel' : 'Public channel'"
+          (click)="newChannelPrivate.set(!newChannelPrivate())"
+        >
+          <mat-icon>{{ newChannelPrivate() ? 'lock' : 'tag' }}</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          type="button"
+          matTooltip="Create"
+          [disabled]="!newChannelName().trim() || busy()"
+          (click)="createChannel()"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="placeholder">
+      <mat-icon>lock</mat-icon>
+      <p>Pick a community, or join one with an invite.</p>
+    </div>
+    }
+  </aside>
+
+  <!-- ───────────────────────── Main pane ────────────────────────── -->
+  <section class="main">
+    @if (showJoin()) {
+    <div class="join-pane">
+      <header class="main-header">
+        <button type="button" class="back" (click)="backToCommunities()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">key</mat-icon>
+        <h2 class="main-title">Join an encrypted community</h2>
+      </header>
+
+      <div class="join-body">
+        <p class="hint">
+          Paste a Concord invite link. The keys inside it are what make you a member — nothing is
+          published until you accept.
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Invite link</mat-label>
+          <input
+            matInput
+            [ngModel]="inviteLink()"
+            (ngModelChange)="inviteLink.set($event)"
+            (keyup.enter)="previewInvite()"
+            placeholder="https://…/invite/naddr1…#…"
+          />
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-button type="button" (click)="showJoin.set(false)">Cancel</button>
+          <button
+            mat-stroked-button
+            type="button"
+            [disabled]="!inviteLink().trim() || joining()"
+            (click)="previewInvite()"
+          >
+            {{ joining() ? 'Checking…' : 'Preview' }}
+          </button>
+        </div>
+
+        @if (preview(); as bundle) {
+        <div class="preview-card">
+          <div class="preview-head">
+            <span class="rail-avatar">{{ initials(bundle.name || 'Community') }}</span>
+            <div>
+              <h3>{{ bundle.name || 'Unnamed community' }}</h3>
+              <span class="verified">
+                <mat-icon>verified_user</mat-icon>
+                Owner proof verified
+              </span>
+            </div>
+          </div>
+
+          <dl class="preview-meta">
+            <dt>Owner</dt>
+            <dd><app-profile-display-name [pubkey]="bundle.owner" /></dd>
+            <dt>Channels granted</dt>
+            <dd>{{ bundle.channels.length || 'public channels only' }}</dd>
+            <dt>Relays</dt>
+            <dd>{{ bundle.relays.join(', ') }}</dd>
+          </dl>
+
+          <p class="hint">
+            Accepting stores this community's keys on this device and announces your arrival.
+          </p>
+
+          <div class="actions">
+            <button mat-flat-button type="button" [disabled]="joining()" (click)="acceptInvite()">
+              {{ joining() ? 'Joining…' : 'Accept and join' }}
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    } @else if (showCreate()) {
+    <div class="join-pane">
+      <header class="main-header">
+        <button type="button" class="back" (click)="backToCommunities()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">add_circle</mat-icon>
+        <h2 class="main-title">Create an encrypted community</h2>
+      </header>
+
+      <div class="join-body">
+        <p class="hint">
+          You become the owner. Ownership is permanent and cannot be transferred — the community's
+          identity is a cryptographic commitment to your key, so there is no succession if you lose
+          it.
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Name</mat-label>
+          <input
+            matInput
+            [ngModel]="newCommunityName()"
+            (ngModelChange)="newCommunityName.set($event)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea
+            matInput
+            rows="2"
+            [ngModel]="newCommunityDescription()"
+            (ngModelChange)="newCommunityDescription.set($event)"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Relays (one per line)</mat-label>
+          <textarea
+            matInput
+            rows="4"
+            [ngModel]="newCommunityRelays()"
+            (ngModelChange)="newCommunityRelays.set($event)"
+          ></textarea>
+        </mat-form-field>
+
+        <p class="hint">
+          Concord streams reverse NIP-59, so they only work on relays that don't enforce the
+          p-tag guard. The defaults above are known to work.
+        </p>
+
+        <div class="actions">
+          <button mat-button type="button" (click)="cancelCreate()">Cancel</button>
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="!newCommunityName().trim() || busy()"
+            (click)="createCommunity()"
+          >
+            {{ busy() ? 'Creating…' : 'Create community' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    } @else if (view() === 'settings' && activeCommunity()) {
+    <div class="members-pane">
+      <header class="main-header">
+        <button type="button" class="back" (click)="backToChannels()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">settings</mat-icon>
+        <h2 class="main-title">Settings</h2>
+      </header>
+
+      <div class="members-body">
+        @if (canManageMetadata()) {
+        <section class="admin-panel">
+          <h4>Community</h4>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Name</mat-label>
+            <input matInput [ngModel]="settingsName()" (ngModelChange)="settingsName.set($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              rows="2"
+              [ngModel]="settingsDescription()"
+              (ngModelChange)="settingsDescription.set($event)"
+            ></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Disappearing messages</mat-label>
+            <select
+              matNativeControl
+              [ngModel]="settingsTimer()"
+              (ngModelChange)="settingsTimer.set(+$event)"
+            >
+              <option [value]="0">Off</option>
+              <option [value]="86400">1 day</option>
+              <option [value]="604800">7 days</option>
+              <option [value]="2592000">30 days</option>
+              <option [value]="7776000">90 days</option>
+            </select>
+          </mat-form-field>
+
+          <p class="hint">
+            The timer applies to every channel and is not retroactive: a message keeps the expiry it
+            was sent under. Control and membership history never expire.
+          </p>
+
+          <div class="actions">
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="saveSettings()">
+              Save
+            </button>
+          </div>
+        </section>
+        }
+
+        <section class="admin-panel">
+          <h4>Calls</h4>
+
+          <p class="hint">
+            Concord calls run through a blind broker that mints SFU tokens without learning which
+            community a room belongs to. The protocol defines no default broker, so pick one you
+            trust — it sees your IP and connection timing, never your media.
+          </p>
+
+          <div class="admin-row">
+            <mat-form-field appearance="outline" class="grow">
+              <mat-label>Broker origin</mat-label>
+              <input
+                matInput
+                placeholder="https://broker.example"
+                [ngModel]="brokerInput()"
+                (ngModelChange)="brokerInput.set($event)"
+              />
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="saveBroker()">Save</button>
+          </div>
+        </section>
+
+        @if (canBan()) {
+        <section class="admin-panel">
+          <h4>Re-found</h4>
+
+          <p class="hint">
+            A ban silences a member instantly, but they keep every key they already hold.
+            Re-founding rotates the community key and hands it only to the members below, which is
+            the only step that actually revokes access.
+          </p>
+
+          <div class="actions start">
+            <button
+              mat-stroked-button
+              type="button"
+              class="danger"
+              [disabled]="refounding()"
+              (click)="refound()"
+            >
+              <mat-icon>autorenew</mat-icon>
+              {{ refounding() ? 'Re-founding…' : 'Re-found at a new epoch' }}
+            </button>
+          </div>
+        </section>
+        }
+
+        @if (canCreateInvite()) {
+        <section class="admin-panel">
+          <h4>Invites</h4>
+
+          <p class="hint">
+            A link's keys live in an encrypted bundle on relays; the link itself carries only a
+            locator and an unlock token, so it can be revoked without re-keying.
+          </p>
+
+          <div class="actions start">
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="mintInvite()">
+              <mat-icon>link</mat-icon>
+              Create invite link
+            </button>
+          </div>
+
+          @if (inviteResult(); as url) {
+          <div class="invite-result">
+            <code>{{ url }}</code>
+            <button mat-button type="button" (click)="copyInvite()">Copy</button>
+          </div>
+          }
+
+          <mat-divider />
+
+          <p class="hint">
+            Or hand the keys straight to someone. A direct invite cannot be revoked and never makes
+            the community public.
+          </p>
+
+          <div class="admin-row">
+            <mat-form-field appearance="outline" class="grow">
+              <mat-label>npub or hex key</mat-label>
+              <input
+                matInput
+                [ngModel]="directInvitePubkey()"
+                (ngModelChange)="directInvitePubkey.set($event)"
+              />
+            </mat-form-field>
+            <button
+              mat-flat-button
+              type="button"
+              [disabled]="!directInvitePubkey().trim() || busy()"
+              (click)="sendDirectInvite()"
+            >
+              Send
+            </button>
+          </div>
+        </section>
+        }
+
+        @if (roles().length > 0) {
+        <section class="admin-panel">
+          <h4>Roles</h4>
+          @for (role of roles(); track role.role_id) {
+          <div class="role-row">
+            <span class="chip">{{ role.name }}</span>
+            <span class="muted">position {{ role.position }}</span>
+          </div>
+          }
+        </section>
+        }
+
+        @if (bannedMembers().length > 0 && canBan()) {
+        <section class="admin-panel">
+          <h4>Banned</h4>
+          @for (banned of bannedMembers(); track banned) {
+          <div class="member-row">
+            <app-user-profile [pubkey]="banned" view="list" />
+            <button mat-button type="button" (click)="unban(banned)">Unban</button>
+          </div>
+          }
+        </section>
+        }
+
+        <section class="admin-panel">
+          <h4>Channels</h4>
+          @for (channel of channels(); track channel.channelId) {
+          <div class="member-row">
+            <mat-icon class="channel-icon">{{ channelIcon(channel) }}</mat-icon>
+            <span class="grow">{{ channel.name }}</span>
+            @if (canManageChannels()) {
+            <button mat-icon-button type="button" matTooltip="Delete" (click)="deleteChannel(channel)">
+              <mat-icon>delete</mat-icon>
+            </button>
+            }
+          </div>
+          }
+        </section>
+      </div>
+    </div>
+    } @else if (view() === 'members' && activeCommunity()) {
+    <div class="members-pane">
+      <header class="main-header">
+        <button type="button" class="back" (click)="backToChannels()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">group</mat-icon>
+        <h2 class="main-title">Members</h2>
+      </header>
+
+      <div class="members-body">
+        @for (member of members(); track member.pubkey) {
+        <div class="member-row">
+          <app-user-profile [pubkey]="member.pubkey" view="list" />
+          @if (member.pubkey === activeCommunity()?.owner) {
+          <span class="chip owner">owner</span>
+          } @else if (member.source === 'observed') {
+          <span class="chip" matTooltip="Seen publishing, but no Join was found">observed</span>
+          }
+
+          @if (member.pubkey !== activeCommunity()?.owner && member.pubkey !== pubkey()) {
+          <span class="grow"></span>
+          @if (canBan()) {
+          <button mat-icon-button type="button" matTooltip="Kick" (click)="kick(member.pubkey)">
+            <mat-icon>logout</mat-icon>
+          </button>
+          <button mat-icon-button type="button" matTooltip="Ban" (click)="ban(member.pubkey)">
+            <mat-icon>block</mat-icon>
+          </button>
+          }
+          }
+        </div>
+        } @empty {
+        <div class="center">
+          <mat-icon class="big-icon">group_off</mat-icon>
+          <p>No members found yet.</p>
+        </div>
+        }
+      </div>
+    </div>
+    } @else if (activeChannel(); as channel) {
+    <header class="main-header">
+      <button type="button" class="back" (click)="backToChannels()" aria-label="Back">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <mat-icon class="channel-icon">{{ channelIcon(channel) }}</mat-icon>
+      <h2 class="main-title">{{ channel.name }}</h2>
+
+      <span class="e2ee-badge" matTooltip="Messages are end-to-end encrypted">
+        <mat-icon>lock</mat-icon>
+        Encrypted
+      </span>
+
+      <span class="spacer"></span>
+
+      @if (inCall()) {
+      <button
+        mat-icon-button
+        type="button"
+        [matTooltip]="voice.micEnabled() ? 'Mute' : 'Unmute'"
+        (click)="voice.toggleMicrophone()"
+      >
+        <mat-icon>{{ voice.micEnabled() ? 'mic' : 'mic_off' }}</mat-icon>
+      </button>
+
+      <button
+        mat-icon-button
+        type="button"
+        [matTooltip]="voice.cameraEnabled() ? 'Turn camera off' : 'Turn camera on'"
+        (click)="voice.toggleCamera()"
+      >
+        <mat-icon>{{ voice.cameraEnabled() ? 'videocam' : 'videocam_off' }}</mat-icon>
+      </button>
+
+      <button mat-flat-button class="leave-call" type="button" (click)="leaveCall()">
+        Leave call
+      </button>
+      } @else {
+      <button
+        mat-icon-button
+        type="button"
+        matTooltip="Start or join a call"
+        [disabled]="voice.state() === 'connecting'"
+        (click)="joinCall()"
+      >
+        <mat-icon>call</mat-icon>
+      </button>
+      }
+
+      <button
+        mat-icon-button
+        type="button"
+        [matTooltip]="showMemberRail() ? 'Hide members' : 'Show members'"
+        (click)="showMemberRail.set(!showMemberRail())"
+      >
+        <mat-icon>group</mat-icon>
+      </button>
+    </header>
+
+    @if (inCall()) {
+    <div class="call-strip">
+      <mat-icon class="call-icon">graphic_eq</mat-icon>
+      <span class="call-label">In call</span>
+
+      <div class="call-participants">
+        @for (participant of voice.participants(); track participant.identity) {
+        <span class="call-chip" [class.speaking]="participant.isSpeaking">
+          @if (participant.pubkey) {
+          <app-profile-display-name [pubkey]="participant.pubkey" />
+          } @else {
+          <span matTooltip="Nobody's signed presence claims this identity">Unverified</span>
+          }
+          @if (participant.isMuted) {
+          <mat-icon class="call-muted">mic_off</mat-icon>
+          }
+        </span>
+        }
+      </div>
+
+      <span class="spacer"></span>
+      <span class="call-e2ee" matTooltip="Media is encrypted with per-sender keys the SFU never sees">
+        <mat-icon>lock</mat-icon>
+        E2EE
+      </span>
+    </div>
+    }
+
+    <div class="scroller" #scroller>
+      @if (concord.loadingMessages() && messages().length === 0) {
+      <div class="center"><mat-spinner diameter="30" /></div>
+      } @else if (messages().length === 0) {
+      <div class="center">
+        <mat-icon class="big-icon">{{ channelIcon(channel) }}</mat-icon>
+        <h3>#{{ channel.name }}</h3>
+        <p>This is the beginning of the channel. Only members can read what is written here.</p>
+      </div>
+      }
+
+      @for (cluster of clusters(); track cluster.key) {
+      <article class="cluster">
+        <div class="cluster-avatar">
+          <app-user-profile [pubkey]="cluster.pubkey" view="icon" />
+        </div>
+
+        <div class="cluster-body">
+          <div class="cluster-head">
+            <app-profile-display-name [pubkey]="cluster.pubkey" />
+            <time>{{ cluster.timestamp | date: 'short' }}</time>
+          </div>
+
+          @for (message of cluster.messages; track message.id) {
+          <div class="row">
+            @if (findMessage(message.parent); as parent) {
+            <div class="reply-preview">
+              <mat-icon>reply</mat-icon>
+              <app-profile-display-name [pubkey]="parent.pubkey" />
+              <span class="reply-text">{{ parent.content }}</span>
+            </div>
+            }
+
+            <div class="body">
+              <app-message-content
+                [content]="message.editedContent || message.content"
+                [tags]="message.rumor.tags"
+                [authorPubkey]="message.pubkey"
+              />
+              @if (message.editedContent) {
+              <span class="edited" matTooltip="Edited by the author">(edited)</span>
+              }
+            </div>
+
+            @if (reactionSummary(message).length > 0) {
+            <div class="reactions">
+              @for (reaction of reactionSummary(message); track reaction.emoji) {
+              <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
+                {{ reaction.emoji }} {{ reaction.count }}
+              </button>
+              }
+            </div>
+            }
+
+            <div class="row-actions">
+              <button mat-icon-button type="button" matTooltip="React" (click)="react(message, '👍')">
+                <mat-icon>add_reaction</mat-icon>
+              </button>
+              <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
+                <mat-icon>reply</mat-icon>
+              </button>
+              @if (canDelete(message)) {
+              <button
+                mat-icon-button
+                type="button"
+                matTooltip="Delete"
+                (click)="deleteMessage(message)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
+      </article>
+      }
+    </div>
+
+    <footer class="composer">
+      @if (replyingTo(); as reply) {
+      <div class="reply-banner">
+        <mat-icon>reply</mat-icon>
+        <span>Replying to <app-profile-display-name [pubkey]="reply.pubkey" /></span>
+        <button mat-icon-button type="button" (click)="cancelReply()" aria-label="Cancel reply">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+
+      @if (!pubkey()) {
+      <div class="notice">Sign in to take part in this conversation.</div>
+      } @else if (isDissolved()) {
+      <div class="notice">This community is dissolved and read-only.</div>
+      } @else {
+      <div class="composer-input">
+        <textarea
+          rows="1"
+          [placeholder]="'Message #' + channel.name"
+          [ngModel]="messageText()"
+          (ngModelChange)="messageText.set($event)"
+          (keydown)="onComposerKeydown($event)"
+          aria-label="Message"
+        ></textarea>
+
+        <button
+          mat-icon-button
+          type="button"
+          [disabled]="!messageText().trim() || concord.sending()"
+          (click)="send()"
+          aria-label="Send"
+        >
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+      <p class="composer-hint">
+        <mat-icon>lock</mat-icon>
+        Only members holding this channel's key can read your message.
+      </p>
+      }
+    </footer>
+    } @else {
+    <div class="center">
+      <mat-icon class="big-icon">lock</mat-icon>
+      <h3>Encrypted communities</h3>
+      <p>
+        Concord communities are end-to-end encrypted. Relays only ever see sealed blobs, and
+        membership is proven by holding the keys — not by a server's list.
+      </p>
+      <button mat-flat-button type="button" (click)="openJoin()">
+        <mat-icon>add</mat-icon>
+        Join with an invite
+      </button>
+    </div>
+    }
+  </section>
+
+  <!-- ───────────────────────── Member rail ──────────────────────── -->
+  @if (showMemberRail() && activeChannel() && !showJoin()) {
+  <aside class="member-rail" aria-label="Members">
+    <h4 class="member-heading">Members — {{ members().length }}</h4>
+    @for (member of members(); track member.pubkey) {
+    <div class="member-row">
+      <app-user-profile [pubkey]="member.pubkey" view="list" />
+      @if (member.pubkey === activeCommunity()?.owner) {
+      <span class="chip owner">owner</span>
+      }
+    </div>
+    } @empty {
+    <p class="empty">No members found.</p>
+    }
+  </aside>
+  }
+</div>

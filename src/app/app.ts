@@ -716,6 +716,12 @@ export class App implements OnInit, OnDestroy {
             icon: 'dns',
             authenticated: false,
           },
+          {
+            path: '/c',
+            label: $localize`:@@app.nav.chats.encrypted:Encrypted`,
+            icon: 'lock',
+            authenticated: false,
+          },
         ];
 
         return {

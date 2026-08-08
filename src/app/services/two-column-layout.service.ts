@@ -331,7 +331,7 @@ export class TwoColumnLayoutService {
     // - Home, music, streams, messages, bookmarks, articles, discover, people, calendar, and AI get wide mode (1400px)
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
-    const wideRoutes = ['streams', 'clips', 'music', 'messages', 'chats', 'g', 'collections/bookmarks', 'collections/web', 'collections/media', 'articles', 'discover', 'people', 'calendar', 'ai'];
+    const wideRoutes = ['streams', 'clips', 'music', 'messages', 'chats', 'g', 'c', 'collections/bookmarks', 'collections/web', 'collections/media', 'articles', 'discover', 'people', 'calendar', 'ai'];
     const narrowRouteOverrides = new Set(['music/offline', 'music/playlists']);
     const isWideRoute = !narrowRouteOverrides.has(cleanUrl)
       && (isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/')));

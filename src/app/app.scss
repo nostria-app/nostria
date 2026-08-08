@@ -1433,6 +1433,11 @@ mat-sidenav-content {
         padding-bottom: 0;
       }
 
+      // Concord's encrypted communities own theirs too.
+      &:has(app-encrypted) {
+        padding-bottom: 0;
+      }
+
       // AI hides the mobile bottom cube on handset routes, so panel-level
       // bottom spacing only creates unused empty space.
       &:has(app-ai) {
@@ -1533,6 +1538,7 @@ mat-sidenav-content {
   // Chats/servers/messages manage their own scrolling via .message-list
   &:has(app-chats),
   &:has(app-servers),
+  &:has(app-encrypted),
   &:has(app-messages) {
     overflow-y: hidden;
   }
