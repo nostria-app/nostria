@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStr
 
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -352,7 +353,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   // Handle file selection for profile image and banner
-  onFileSelected(event: Event, type: 'profile' | 'banner'): void {
+  async onFileSelected(event: Event, type: 'profile' | 'banner'): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
@@ -372,6 +373,11 @@ export class ProfileEditComponent implements OnInit {
         return;
       }
 
+      // Allow the user to crop / reposition before we keep the file
+      const cropped = await this.openImageCropper(file, type);
+      input.value = '';
+      if (!cropped) return;
+
       const reader = new FileReader();
       reader.onload = e => {
         const result = e.target?.result as string;
@@ -380,16 +386,46 @@ export class ProfileEditComponent implements OnInit {
           this.previewProfileImage.set(result);
           this.profileImageMode.set('upload');
           // Store the file for later upload
-          this.profile.update(p => ({ ...p, selectedProfileFile: file }));
+          this.profile.update(p => ({ ...p, selectedProfileFile: cropped }));
         } else {
           this.previewBanner.set(result);
           this.bannerMode.set('upload');
           // Store the file for later upload
-          this.profile.update(p => ({ ...p, selectedBannerFile: file }));
+          this.profile.update(p => ({ ...p, selectedBannerFile: cropped }));
         }
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(cropped);
     }
+  }
+
+  /**
+   * Opens the crop/reposition dialog and returns the resulting file,
+   * or undefined when the user cancels.
+   */
+  private async openImageCropper(file: File, type: 'profile' | 'banner'): Promise<File | undefined> {
+    const { ImageCropperDialogComponent } = await import(
+      '../../../components/image-cropper-dialog/image-cropper-dialog.component'
+    );
+    type ImageCropperResult = import('../../../components/image-cropper-dialog/image-cropper-dialog.component').ImageCropperResult;
+    type ImageCropperDialogData = import('../../../components/image-cropper-dialog/image-cropper-dialog.component').ImageCropperDialogData;
+
+    const data: ImageCropperDialogData =
+      type === 'profile'
+        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 1024 }
+        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 1920 };
+
+    const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'image-cropper-dialog-panel'],
+      width: '560px',
+      maxWidth: '95vw',
+      data,
+    });
+
+    const result = (await firstValueFrom(dialogRef.afterClosed())) as ImageCropperResult | undefined;
+    if (!result) return undefined;
+
+    URL.revokeObjectURL(result.previewUrl);
+    return result.file;
   }
 
   // Handle URL input for images

@@ -1,0 +1,92 @@
+<app-material-custom-dialog [title]="title" icon="crop" [showDefaultActions]="false">
+  <div dialog-content class="image-cropper-dialog">
+    @if (error()) {
+    <div class="cropper-error">
+      <mat-icon>broken_image</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+    } @else {
+    <div
+      #viewport
+      class="cropper-viewport"
+      [style.aspect-ratio]="aspectRatio"
+      tabindex="0"
+      role="application"
+      [attr.aria-label]="'Drag to reposition, scroll or pinch to zoom'"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+      (wheel)="onWheel($event)"
+      (keydown)="onKeydown($event)"
+    >
+      @if (imageUrl(); as url) {
+      <img
+        class="cropper-image"
+        [src]="url"
+        [style.transform]="imageTransform()"
+        alt="Image being cropped"
+        draggable="false"
+        (load)="onImageLoad($event)"
+        (error)="onImageError()"
+      />
+      }
+
+      @if (shape === 'circle') {
+      <div class="cropper-mask"></div>
+      } @else {
+      <div class="cropper-grid"></div>
+      }
+
+      @if (loading()) {
+      <div class="cropper-loading">
+        <mat-progress-spinner mode="indeterminate" diameter="40" />
+      </div>
+      }
+    </div>
+
+    <p class="cropper-hint">Drag the image to reposition, scroll or pinch to zoom.</p>
+
+    <div class="cropper-controls">
+      <button mat-icon-button type="button" matTooltip="Zoom out" aria-label="Zoom out"
+        (click)="onZoomSliderChange(zoom() / 1.2)">
+        <mat-icon>zoom_out</mat-icon>
+      </button>
+
+      <mat-slider class="zoom-slider" [min]="minZoom" [max]="maxZoom" [step]="0.01" [discrete]="false">
+        <input matSliderThumb aria-label="Zoom" [value]="zoom()"
+          (valueChange)="onZoomSliderChange($any($event))" />
+      </mat-slider>
+
+      <button mat-icon-button type="button" matTooltip="Zoom in" aria-label="Zoom in"
+        (click)="onZoomSliderChange(zoom() * 1.2)">
+        <mat-icon>zoom_in</mat-icon>
+      </button>
+
+      <button mat-icon-button type="button" matTooltip="Rotate 90°" aria-label="Rotate 90 degrees" (click)="rotate()">
+        <mat-icon>rotate_right</mat-icon>
+      </button>
+
+      <button mat-icon-button type="button" matTooltip="Reset" aria-label="Reset adjustments" (click)="reset()">
+        <mat-icon>restart_alt</mat-icon>
+      </button>
+    </div>
+
+    @if (isAnimated) {
+    <p class="cropper-warning">
+      <mat-icon>info</mat-icon>
+      <span>Cropping an animated image removes the animation. Use "Original" to keep it.</span>
+    </p>
+    } }
+  </div>
+
+  <div dialog-actions class="cropper-actions">
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+    <button mat-button type="button" (click)="useOriginal()">Use original</button>
+    <button mat-flat-button type="button" [disabled]="loading() || processing() || !!error()" (click)="apply()">
+      @if (processing()) {
+      <mat-progress-spinner mode="indeterminate" diameter="18" />
+      } @else { Apply }
+    </button>
+  </div>
+</app-material-custom-dialog>

@@ -1792,7 +1792,36 @@ export class ProfileHeaderComponent implements OnDestroy {
       return;
     }
 
-    this.uploadAndUpdateProfile(type, file);
+    void this.cropAndUpload(type, file);
+  }
+
+  /**
+   * Let the user crop / reposition the image, then upload it
+   */
+  private async cropAndUpload(type: 'profile' | 'banner', file: File): Promise<void> {
+    const { ImageCropperDialogComponent } = await import(
+      '../../../components/image-cropper-dialog/image-cropper-dialog.component'
+    );
+    type ImageCropperResult = import('../../../components/image-cropper-dialog/image-cropper-dialog.component').ImageCropperResult;
+    type ImageCropperDialogData = import('../../../components/image-cropper-dialog/image-cropper-dialog.component').ImageCropperDialogData;
+
+    const data: ImageCropperDialogData =
+      type === 'profile'
+        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 1024 }
+        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 1920 };
+
+    const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'image-cropper-dialog-panel'],
+      width: '560px',
+      maxWidth: '95vw',
+      data,
+    });
+
+    const result = (await firstValueFrom(dialogRef.afterClosed())) as ImageCropperResult | undefined;
+    if (!result) return;
+
+    URL.revokeObjectURL(result.previewUrl);
+    await this.uploadAndUpdateProfile(type, result.file);
   }
 
   /**
