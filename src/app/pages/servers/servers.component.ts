@@ -36,6 +36,7 @@ import {
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
+import { ImageInputComponent } from '../../components/image-input/image-input.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -94,6 +95,7 @@ const LAST_GROUP_STORAGE_KEY = 'nostria-nip29-last-group-v1';
     UserProfileComponent,
     ProfileDisplayNameComponent,
     MessageContentComponent,
+    ImageInputComponent,
     AgoPipe,
   ],
   templateUrl: './servers.component.html',
@@ -422,6 +424,7 @@ export class ServersComponent implements OnInit, OnDestroy {
     this.activeThread.set(null);
     this.replyingTo.set(null);
     this.showAddServer.set(false);
+    this.showCreateGroup.set(false);
     this.mobilePane.set('content');
 
     const slug = this.nip29.serverSlug(group.relay);
@@ -1345,6 +1348,7 @@ export class ServersComponent implements OnInit, OnDestroy {
 
     this.mobilePane.set('content');
     this.showAddServer.set(false);
+    this.showCreateGroup.set(false);
     this.rememberGroupLocation(slug, groupId);
 
     try {

@@ -101,11 +101,11 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     },
     {
       id: 'nav-servers',
-      label: 'Open Servers',
-      icon: 'dns',
+      label: 'Open Groups',
+      icon: 'groups',
       description: 'Relay-based groups (NIP-29)',
       action: () => this.router.navigate(['/chats/servers']),
-      keywords: ['servers', 'groups', 'nip29', 'nip-29', 'discord', 'communities', 'voice']
+      keywords: ['groups', 'servers', 'nip29', 'nip-29', 'discord', 'communities', 'voice', 'rooms']
     },
     {
       id: 'nav-notifications',

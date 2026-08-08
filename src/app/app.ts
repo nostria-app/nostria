@@ -712,7 +712,7 @@ export class App implements OnInit, OnDestroy {
           },
           {
             path: '/chats/servers',
-            label: $localize`:@@app.nav.chats.servers:Servers`,
+            label: $localize`:@@app.nav.chats.servers:Groups`,
             icon: 'dns',
             authenticated: false,
           },

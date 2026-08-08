@@ -1,0 +1,84 @@
+<div class="image-input">
+  <div class="image-input-row">
+    @if (value()) {
+    <img
+      class="preview"
+      [class.circle]="shape() === 'circle'"
+      [class.wide]="shape() === 'wide'"
+      [src]="value()"
+      [alt]="label()"
+      loading="lazy"
+    />
+    } @else {
+    <span
+      class="preview placeholder"
+      [class.circle]="shape() === 'circle'"
+      [class.wide]="shape() === 'wide'"
+    >
+      <mat-icon>image</mat-icon>
+    </span>
+    }
+
+    <div class="image-input-actions">
+      <span class="image-input-label">{{ label() }}</span>
+
+      <div class="image-input-buttons">
+        <input
+          #fileInput
+          type="file"
+          hidden
+          accept="image/*"
+          (change)="onFileSelected($event)"
+        />
+
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="uploading()"
+          [matMenuTriggerFor]="imageMenu"
+        >
+          @if (uploading()) {
+          <mat-spinner diameter="16" />
+          } @else {
+          <mat-icon>image</mat-icon>
+          }
+          <span>{{ uploading() ? 'Uploading…' : value() ? 'Change' : 'Set image' }}</span>
+        </button>
+
+        <mat-menu #imageMenu="matMenu">
+          <button mat-menu-item type="button" (click)="fileInput.click()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload</span>
+          </button>
+          <button mat-menu-item type="button" (click)="openMediaLibrary()">
+            <mat-icon>photo_library</mat-icon>
+            <span>Media library</span>
+          </button>
+          <button mat-menu-item type="button" (click)="showUrlInput.set(true)">
+            <mat-icon>link</mat-icon>
+            <span>Use a URL</span>
+          </button>
+        </mat-menu>
+
+        @if (value()) {
+        <button mat-icon-button type="button" matTooltip="Remove" (click)="clear()">
+          <mat-icon>close</mat-icon>
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (showUrlInput() || value()) {
+  <mat-form-field appearance="outline" class="url-field">
+    <mat-label>{{ label() }} URL</mat-label>
+    <input
+      matInput
+      type="url"
+      placeholder="https://example.com/image.png"
+      [ngModel]="value()"
+      (ngModelChange)="value.set($event)"
+    />
+  </mat-form-field>
+  }
+</div>

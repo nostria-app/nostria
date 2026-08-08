@@ -1,0 +1,67 @@
+:host {
+  display: block;
+}
+
+.image-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.image-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  &.circle {
+    border-radius: 50%;
+  }
+
+  &.wide {
+    width: 112px;
+    height: 56px;
+  }
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.image-input-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.image-input-label {
+  font-size: 0.78rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.image-input-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  mat-spinner {
+    margin-right: 6px;
+  }
+}
+
+.url-field {
+  width: 100%;
+  margin-top: 8px;
+}

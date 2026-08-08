@@ -290,14 +290,19 @@
           ></textarea>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Picture URL</mat-label>
-          <input
-            matInput
-            [ngModel]="newGroupPicture()"
-            (ngModelChange)="newGroupPicture.set($event)"
-          />
-        </mat-form-field>
+        <app-image-input
+          label="Group icon"
+          shape="square"
+          [value]="newGroupPicture()"
+          (valueChange)="newGroupPicture.set($event)"
+        />
+
+        <app-image-input
+          label="Banner"
+          shape="wide"
+          [value]="newGroupBanner()"
+          (valueChange)="newGroupBanner.set($event)"
+        />
 
         <h4 class="panel-subtitle">Access</h4>
 
@@ -352,24 +357,15 @@
               [ngModel]="newGroupId()"
               (ngModelChange)="newGroupId.set($event)"
             />
-            @if (groupIdError(); as error) {
-            <mat-hint class="field-error">{{ error }}</mat-hint>
-            } @else {
-            <mat-hint>
-              Becomes the group's permanent id and appears in its URL. Leave empty for a random
-              one.
-            </mat-hint>
-            }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Banner URL</mat-label>
-            <input
-              matInput
-              [ngModel]="newGroupBanner()"
-              (ngModelChange)="newGroupBanner.set($event)"
-            />
-          </mat-form-field>
+          @if (groupIdError(); as error) {
+          <p class="field-note field-error">{{ error }}</p>
+          } @else {
+          <p class="field-note">
+            Becomes the group's permanent id and appears in its URL. Leave empty for a random one.
+          </p>
+          }
         </div>
         }
 
@@ -912,23 +908,19 @@
           ></textarea>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Picture URL</mat-label>
-          <input
-            matInput
-            [ngModel]="newGroupPicture()"
-            (ngModelChange)="newGroupPicture.set($event)"
-          />
-        </mat-form-field>
+        <app-image-input
+          label="Group icon"
+          shape="square"
+          [value]="newGroupPicture()"
+          (valueChange)="newGroupPicture.set($event)"
+        />
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Banner URL</mat-label>
-          <input
-            matInput
-            [ngModel]="newGroupBanner()"
-            (ngModelChange)="newGroupBanner.set($event)"
-          />
-        </mat-form-field>
+        <app-image-input
+          label="Banner"
+          shape="wide"
+          [value]="newGroupBanner()"
+          (valueChange)="newGroupBanner.set($event)"
+        />
 
         <h4 class="panel-subtitle">Access</h4>
 
