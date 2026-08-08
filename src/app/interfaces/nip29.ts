@@ -42,7 +42,7 @@ export const NIP29_KIND_GROUPS_LIST = 10009;
 /** NIP-98 HTTP auth event kind, used for the LiveKit token endpoint. */
 export const NIP98_KIND_HTTP_AUTH = 27235;
 
-/** All relay-generated addressable kinds, fetched together in a single filter. */
+/** All relay-generated addressable kinds. */
 export const NIP29_ADDRESSABLE_KINDS = [
   NIP29_KIND_METADATA,
   NIP29_KIND_ADMINS,
@@ -51,6 +51,27 @@ export const NIP29_ADDRESSABLE_KINDS = [
   NIP29_KIND_LIVEKIT_PARTICIPANTS,
   NIP29_KIND_PINNED,
 ];
+
+/**
+ * The four state kinds every NIP-29 relay understands.
+ *
+ * These must be requested on their own. Some relay implementations answer a
+ * filter containing *any* kind they do not recognise with an empty result for
+ * the whole filter, so mixing these with the newer optional kinds below silently
+ * returns nothing — no metadata, no admins, no members.
+ */
+export const NIP29_CORE_STATE_KINDS = [
+  NIP29_KIND_METADATA,
+  NIP29_KIND_ADMINS,
+  NIP29_KIND_MEMBERS,
+  NIP29_KIND_ROLES,
+];
+
+/**
+ * Later additions to the spec. Requested separately and best-effort, because
+ * relays that predate them poison the entire filter (see above).
+ */
+export const NIP29_OPTIONAL_STATE_KINDS = [NIP29_KIND_LIVEKIT_PARTICIPANTS, NIP29_KIND_PINNED];
 
 /** A relay hosting NIP-29 groups. */
 export interface Nip29Server {

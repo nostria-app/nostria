@@ -251,13 +251,14 @@ export class ServersComponent implements OnInit, OnDestroy {
     return server && id ? this.nip29.getMembership(server.url, id) : 'unknown';
   });
 
-  readonly isMember = computed(() => this.membership() === 'member');
-
   readonly isAdmin = computed(() => {
     const server = this.activeServer();
     const id = this.groupId();
     return !!server && !!id && this.nip29.isAdmin(server.url, id, this.pubkey());
   });
+
+  /** Admins are members by definition, even if the relay never says so. */
+  readonly isMember = computed(() => this.membership() === 'member' || this.isAdmin());
 
   readonly isSaved = computed(() => {
     const server = this.activeServer();
@@ -1286,8 +1287,10 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   /** Turn a raw relay rejection message into something readable. */
   private humanizeRelayError(error: string): string {
-    if (error.startsWith('duplicate:')) return 'You are already a member of this group.';
-    if (error.startsWith('restricted:')) return `The relay refused the request: ${error.slice(11).trim()}`;
+    if (/\bduplicate:/.test(error)) return 'You are already a member of this group.';
+    if (/\brestricted:/.test(error)) {
+      return `The relay refused the request: ${error.split('restricted:')[1]?.trim() || error}`;
+    }
     if (error.includes('auth-required')) return 'This relay requires you to authenticate first.';
     return error;
   }

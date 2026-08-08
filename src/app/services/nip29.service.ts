@@ -10,7 +10,8 @@ import { AccountStateService } from './account-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { Nip29GroupsListService } from './nip29-groups-list.service';
 import {
-  NIP29_ADDRESSABLE_KINDS,
+  NIP29_CORE_STATE_KINDS,
+  NIP29_OPTIONAL_STATE_KINDS,
   NIP29_KIND_ADMINS,
   NIP29_KIND_CHAT,
   NIP29_KIND_DELETE_EVENT,
@@ -137,6 +138,9 @@ export class Nip29Service {
 
   /** Recently seen event ids per group, used for NIP-29 `previous` references. */
   private readonly timeline = new Map<string, string[]>();
+
+  /** Relays that answer empty for the optional state kinds, so we stop asking. */
+  private readonly optionalStateUnsupported = new Set<string>();
 
   /** Promise de-duplication for identical concurrent relay requests. */
   private readonly inflight = new Map<string, Promise<unknown>>();
@@ -651,10 +655,15 @@ export class Nip29Service {
       try {
         const events = await this.relayPool.query(
           [normalized],
-          { kinds: NIP29_ADDRESSABLE_KINDS, '#d': [groupId], limit: 20 },
+          { kinds: NIP29_CORE_STATE_KINDS, '#d': [groupId], limit: 20 },
           8000,
           AUTHED
         );
+
+        // The newer optional kinds go in their own request so a relay that does
+        // not know them cannot wipe out the core state above.
+        const optional = await this.queryOptionalState(normalized, groupId);
+        events.push(...optional);
 
         // Keep only the newest event per kind — these are addressable events.
         const newestByKind = new Map<number, Event>();
@@ -689,6 +698,7 @@ export class Nip29Service {
 
         this.detailsByGroup.update(state => ({ ...state, [key]: details }));
         this.resolveMembershipFromMembers(normalized, groupId, details.members);
+        this.resolveMembershipFromAdmins(normalized, groupId, details.admins);
 
         // kind:39002 is optional and many relays never publish it. Rebuild the
         // roster from the moderation log so the member list is not empty just
@@ -762,6 +772,34 @@ export class Nip29Service {
         });
       }
     });
+  }
+
+  /**
+   * Fetch the optional state kinds (LiveKit participants, pinned events).
+   *
+   * Relays that predate these kinds return an empty set for any filter that
+   * mentions them, so the attempt is isolated and remembered: once a relay
+   * comes back empty it is not asked again, keeping the extra round-trip to a
+   * single request per relay per session.
+   */
+  private async queryOptionalState(relayUrl: string, groupId: string): Promise<Event[]> {
+    if (this.optionalStateUnsupported.has(relayUrl)) return [];
+
+    try {
+      const events = await this.relayPool.query(
+        [relayUrl],
+        { kinds: NIP29_OPTIONAL_STATE_KINDS, '#d': [groupId], limit: 10 },
+        6000,
+        AUTHED
+      );
+
+      if (events.length === 0) this.optionalStateUnsupported.add(relayUrl);
+
+      return events;
+    } catch {
+      this.optionalStateUnsupported.add(relayUrl);
+      return [];
+    }
   }
 
   /**
@@ -1021,7 +1059,9 @@ export class Nip29Service {
 
     const error = await this.signAndSend(relayUrl, NIP29_KIND_JOIN_REQUEST, reason, tags);
 
-    if (error && error.startsWith('duplicate:')) {
+    // Relay errors reach us wrapped with the relay URL, so match anywhere in
+    // the string rather than only at the start.
+    if (error && /\bduplicate:/.test(error)) {
       // Already a member — treat as success.
       this.setMembership(relayUrl, groupId, 'member');
       await this.rememberGroup(relayUrl, groupId);
@@ -1031,6 +1071,10 @@ export class Nip29Service {
     if (!error) {
       this.setMembership(relayUrl, groupId, 'member');
       await this.rememberGroup(relayUrl, groupId);
+
+      // The relay answers a successful join with a kind:9000; refresh so the
+      // roster and admin list reflect it straight away.
+      await this.loadGroupDetails(relayUrl, groupId, true);
     }
 
     return error;
@@ -1394,16 +1438,30 @@ export class Nip29Service {
       }
     );
 
+    const handleState = (event: Event) => {
+      if (this.activeGroupKey !== key) return;
+      this.applyStateEvent(normalized, groupId, event);
+    };
+
+    // Core state only — including the optional kinds here would make relays
+    // that do not know them return nothing at all for this subscription.
     const stateSub = this.relayPool.subscribe(
       [normalized],
-      { kinds: NIP29_ADDRESSABLE_KINDS, '#d': [groupId] },
-      event => {
-        if (this.activeGroupKey !== key) return;
-        this.applyStateEvent(normalized, groupId, event);
-      }
+      { kinds: NIP29_CORE_STATE_KINDS, '#d': [groupId] },
+      handleState
     );
 
     this.activeSubscriptions = [contentSub, stateSub];
+
+    if (!this.optionalStateUnsupported.has(normalized)) {
+      this.activeSubscriptions.push(
+        this.relayPool.subscribe(
+          [normalized],
+          { kinds: NIP29_OPTIONAL_STATE_KINDS, '#d': [groupId] },
+          handleState
+        )
+      );
+    }
   }
 
   /** Tear down the live subscriptions for the previously open channel. */
@@ -1485,6 +1543,7 @@ export class Nip29Service {
     switch (event.kind) {
       case NIP29_KIND_ADMINS:
         next.admins = this.parseAdmins(event);
+        this.resolveMembershipFromAdmins(relayUrl, groupId, next.admins);
         break;
       case NIP29_KIND_MEMBERS:
         next.members = this.tagValues(event, 'p');
@@ -1705,6 +1764,12 @@ export class Nip29Service {
     const id = tag('d') ?? '';
     const supportedKindsTag = event.tags.find(entry => entry[0] === 'supported_kinds');
 
+    // Some relays advertise the inverse flags (`public`, `open`) instead of, or
+    // alongside, the spec's `private` and `closed`. Treat an explicit positive
+    // flag as authoritative so the badges do not lie.
+    const isPrivate = hasTag('public') ? false : hasTag('private');
+    const isClosed = hasTag('open') ? false : hasTag('closed');
+
     return {
       relay: this.normalize(relayUrl),
       id,
@@ -1712,10 +1777,10 @@ export class Nip29Service {
       picture: tag('picture'),
       banner: tag('banner'),
       about: tag('about'),
-      isPrivate: hasTag('private'),
+      isPrivate,
       isRestricted: hasTag('restricted'),
       isHidden: hasTag('hidden'),
-      isClosed: hasTag('closed'),
+      isClosed,
       hasLivekit: hasTag('livekit'),
       supportedKinds: supportedKindsTag
         ? supportedKindsTag
@@ -1801,6 +1866,24 @@ export class Nip29Service {
     if (!pubkey || members.length === 0) return;
 
     if (members.includes(pubkey)) {
+      this.setMembership(relayUrl, groupId, 'member');
+    }
+  }
+
+  /**
+   * Admins are members by definition. Relays commonly list a group's owner in
+   * kind:39001 without ever emitting a kind:9000 for them, so without this an
+   * admin looks like an outsider and is prompted to join their own group.
+   */
+  private resolveMembershipFromAdmins(
+    relayUrl: string,
+    groupId: string,
+    admins: Nip29Admin[]
+  ): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey || admins.length === 0) return;
+
+    if (admins.some(admin => admin.pubkey === pubkey)) {
       this.setMembership(relayUrl, groupId, 'member');
     }
   }
