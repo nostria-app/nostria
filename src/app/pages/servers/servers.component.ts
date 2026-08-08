@@ -138,16 +138,44 @@ export class ServersComponent implements OnInit, OnDestroy {
   // -- Admin state ------------------------------------------------------------
   readonly showCreateGroup = signal(false);
   readonly showGroupSettings = signal(false);
+  readonly showAdvanced = signal(false);
+  readonly newGroupId = signal('');
   readonly newGroupName = signal('');
   readonly newGroupAbout = signal('');
   readonly newGroupPicture = signal('');
+  readonly newGroupBanner = signal('');
   readonly newGroupPrivate = signal(false);
+  readonly newGroupRestricted = signal(false);
+  readonly newGroupHidden = signal(false);
   readonly newGroupClosed = signal(false);
+  readonly newGroupLivekit = signal(false);
   readonly newGroupRelay = signal('');
   readonly addMemberPubkey = signal('');
   readonly addMemberRoles = signal('');
   readonly inviteResult = signal<string | null>(null);
   readonly busy = signal(false);
+
+  /**
+   * Group identifiers become the `d` tag of the relay's kind:39000 and appear
+   * in URLs, so keep them to a conservative character set.
+   */
+  readonly groupIdError = computed<string | null>(() => {
+    const id = this.newGroupId().trim();
+    if (!id) return null;
+
+    if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
+      return 'Use only letters, numbers, dots, dashes and underscores.';
+    }
+
+    if (id.length > 64) return 'Keep the identifier under 64 characters.';
+
+    const relay = this.newGroupRelay();
+    if (relay && this.nip29.getGroup(relay, id)) {
+      return 'A group with this identifier already exists on this relay.';
+    }
+
+    return null;
+  });
 
   // -- Composer state ---------------------------------------------------------
   readonly messageText = signal('');
@@ -870,28 +898,39 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   cancelCreateGroup(): void {
     this.showCreateGroup.set(false);
+    this.showAdvanced.set(false);
+    this.newGroupId.set('');
     this.newGroupName.set('');
     this.newGroupAbout.set('');
     this.newGroupPicture.set('');
+    this.newGroupBanner.set('');
     this.newGroupPrivate.set(false);
+    this.newGroupRestricted.set(false);
+    this.newGroupHidden.set(false);
     this.newGroupClosed.set(false);
+    this.newGroupLivekit.set(false);
   }
 
   async createGroup(): Promise<void> {
     const relay = this.newGroupRelay().trim();
     const name = this.newGroupName().trim();
 
-    if (!relay || !name || this.busy()) return;
+    if (!relay || !name || this.busy() || this.groupIdError()) return;
 
     this.busy.set(true);
 
     try {
       const { groupId, error } = await this.nip29.createGroup(relay, {
+        id: this.newGroupId().trim() || undefined,
         name,
         about: this.newGroupAbout(),
         picture: this.newGroupPicture(),
+        banner: this.newGroupBanner(),
         isPrivate: this.newGroupPrivate(),
+        isRestricted: this.newGroupRestricted(),
+        isHidden: this.newGroupHidden(),
         isClosed: this.newGroupClosed(),
+        hasLivekit: this.newGroupLivekit(),
       });
 
       if (error) {
@@ -919,11 +958,16 @@ export class ServersComponent implements OnInit, OnDestroy {
     const group = this.activeGroup();
     if (!group) return;
 
+    this.newGroupId.set(group.id);
     this.newGroupName.set(group.name);
     this.newGroupAbout.set(group.about ?? '');
     this.newGroupPicture.set(group.picture ?? '');
+    this.newGroupBanner.set(group.banner ?? '');
     this.newGroupPrivate.set(group.isPrivate);
+    this.newGroupRestricted.set(group.isRestricted);
+    this.newGroupHidden.set(group.isHidden);
     this.newGroupClosed.set(group.isClosed);
+    this.newGroupLivekit.set(group.hasLivekit);
     this.showGroupSettings.set(true);
     this.setView('members');
   }
@@ -940,12 +984,12 @@ export class ServersComponent implements OnInit, OnDestroy {
         name: this.newGroupName(),
         about: this.newGroupAbout(),
         picture: this.newGroupPicture(),
-        banner: group.banner,
+        banner: this.newGroupBanner(),
         isPrivate: this.newGroupPrivate(),
-        isRestricted: group.isRestricted,
-        isHidden: group.isHidden,
+        isRestricted: this.newGroupRestricted(),
+        isHidden: this.newGroupHidden(),
         isClosed: this.newGroupClosed(),
-        hasLivekit: group.hasLivekit,
+        hasLivekit: this.newGroupLivekit(),
         supportedKinds: group.supportedKinds,
         parent: group.parent ?? null,
         children: group.children,

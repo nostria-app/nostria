@@ -299,25 +299,86 @@
           />
         </mat-form-field>
 
+        <h4 class="panel-subtitle">Access</h4>
+
         <div class="toggle-row">
           <mat-checkbox
             [checked]="newGroupPrivate()"
             (change)="newGroupPrivate.set($event.checked)"
           >
-            Private (only members can read)
+            Private
+            <span class="toggle-hint">Only members can read messages</span>
+          </mat-checkbox>
+
+          <mat-checkbox
+            [checked]="newGroupRestricted()"
+            (change)="newGroupRestricted.set($event.checked)"
+          >
+            Restricted
+            <span class="toggle-hint">Only members can post</span>
+          </mat-checkbox>
+
+          <mat-checkbox [checked]="newGroupHidden()" (change)="newGroupHidden.set($event.checked)">
+            Hidden
+            <span class="toggle-hint">Group metadata is hidden from non-members</span>
           </mat-checkbox>
 
           <mat-checkbox [checked]="newGroupClosed()" (change)="newGroupClosed.set($event.checked)">
-            Closed (invite only)
+            Closed
+            <span class="toggle-hint">Join requests are ignored without an invite code</span>
+          </mat-checkbox>
+
+          <mat-checkbox
+            [checked]="newGroupLivekit()"
+            (change)="newGroupLivekit.set($event.checked)"
+          >
+            Voice and video
+            <span class="toggle-hint">Enable a LiveKit room, if the relay supports it</span>
           </mat-checkbox>
         </div>
+
+        <button type="button" class="advanced-toggle" (click)="showAdvanced.set(!showAdvanced())">
+          <mat-icon>{{ showAdvanced() ? 'expand_more' : 'chevron_right' }}</mat-icon>
+          <span>Advanced</span>
+        </button>
+
+        @if (showAdvanced()) {
+        <div class="advanced-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Group identifier</mat-label>
+            <input
+              matInput
+              placeholder="Generated automatically"
+              [ngModel]="newGroupId()"
+              (ngModelChange)="newGroupId.set($event)"
+            />
+            @if (groupIdError(); as error) {
+            <mat-hint class="field-error">{{ error }}</mat-hint>
+            } @else {
+            <mat-hint>
+              Becomes the group's permanent id and appears in its URL. Leave empty for a random
+              one.
+            </mat-hint>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Banner URL</mat-label>
+            <input
+              matInput
+              [ngModel]="newGroupBanner()"
+              (ngModelChange)="newGroupBanner.set($event)"
+            />
+          </mat-form-field>
+        </div>
+        }
 
         <div class="panel-actions">
           <button mat-button type="button" (click)="cancelCreateGroup()">Cancel</button>
           <button
             mat-flat-button
             type="button"
-            [disabled]="!newGroupName().trim() || !newGroupRelay() || busy()"
+            [disabled]="!newGroupName().trim() || !newGroupRelay() || !!groupIdError() || busy()"
             (click)="createGroup()"
           >
             {{ busy() ? 'Creating…' : 'Create group' }}
@@ -860,18 +921,57 @@
           />
         </mat-form-field>
 
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Banner URL</mat-label>
+          <input
+            matInput
+            [ngModel]="newGroupBanner()"
+            (ngModelChange)="newGroupBanner.set($event)"
+          />
+        </mat-form-field>
+
+        <h4 class="panel-subtitle">Access</h4>
+
         <div class="toggle-row">
           <mat-checkbox
             [checked]="newGroupPrivate()"
             (change)="newGroupPrivate.set($event.checked)"
           >
-            Private (only members can read)
+            Private
+            <span class="toggle-hint">Only members can read messages</span>
+          </mat-checkbox>
+
+          <mat-checkbox
+            [checked]="newGroupRestricted()"
+            (change)="newGroupRestricted.set($event.checked)"
+          >
+            Restricted
+            <span class="toggle-hint">Only members can post</span>
+          </mat-checkbox>
+
+          <mat-checkbox [checked]="newGroupHidden()" (change)="newGroupHidden.set($event.checked)">
+            Hidden
+            <span class="toggle-hint">Group metadata is hidden from non-members</span>
           </mat-checkbox>
 
           <mat-checkbox [checked]="newGroupClosed()" (change)="newGroupClosed.set($event.checked)">
-            Closed (join requests ignored)
+            Closed
+            <span class="toggle-hint">Join requests are ignored without an invite code</span>
+          </mat-checkbox>
+
+          <mat-checkbox
+            [checked]="newGroupLivekit()"
+            (change)="newGroupLivekit.set($event.checked)"
+          >
+            Voice and video
+            <span class="toggle-hint">Enable a LiveKit room, if the relay supports it</span>
           </mat-checkbox>
         </div>
+
+        <p class="panel-hint">
+          Identifier: <code>{{ newGroupId() }}</code> — permanent, it cannot be changed after
+          creation.
+        </p>
 
         <div class="panel-actions">
           <button mat-button type="button" (click)="showGroupSettings.set(false)">Cancel</button>
