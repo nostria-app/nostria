@@ -761,9 +761,10 @@
             </div>
             }
 
+            @if (textFor(message); as text) {
             <div class="body">
               <app-message-content
-                [content]="message.editedContent || message.content"
+                [content]="text"
                 [tags]="message.rumor.tags"
                 [authorPubkey]="message.pubkey"
               />
@@ -771,6 +772,27 @@
               <span class="edited" matTooltip="Edited by the author">(edited)</span>
               }
             </div>
+            }
+
+            @if (attachmentsFor(message); as attachments) {
+            @if (attachments.length > 0) {
+            <div class="attachments">
+              @for (attachment of attachments; track attachment.src) {
+              @if (attachment.video) {
+              <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
+              } @else {
+              <img
+                class="attachment"
+                [src]="attachment.src"
+                [alt]="attachment.alt"
+                loading="lazy"
+                (click)="openAttachment(attachment.src, attachment.alt)"
+              />
+              }
+              }
+            </div>
+            }
+            }
 
             @for (preview of previewsFor(message); track preview.url) {
             <app-social-preview

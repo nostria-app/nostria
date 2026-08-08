@@ -1,6 +1,6 @@
 [package]
 name = "nostria"
-version = "4.1.52"
+version = "4.1.53"
 description = "Nostria is a Nostr client with installable desktop bundles"
 authors = ["Nostria Contributors"]
 edition = "2021"

@@ -31,6 +31,7 @@ import { nip19 } from 'nostr-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { SettingsService } from '../../services/settings.service';
@@ -1121,6 +1122,153 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       count: entry.count,
       url: entry.url,
     }));
+  }
+
+  /**
+   * Image and video attachments on a message.
+   *
+   * Clients disagree on how to describe these, so every shape seen in the wild
+   * is accepted: NIP-92 `imeta` tags, Nostria's flat `decryption-key` tags, and
+   * bare URLs in the content. Encrypted ones are decrypted before display,
+   * because the URL by itself serves ciphertext.
+   */
+  attachmentsFor(message: CordMessage): { src: string; alt: string; video: boolean }[] {
+    this.media.revision();
+    const sourceUrls: string[] = [];
+
+    const tags = message.rumor.tags;
+    const out: { src: string; alt: string; video: boolean }[] = [];
+    const seen = new Set<string>();
+
+    const add = (raw: {
+      url?: string;
+      mime?: string;
+      key?: string;
+      nonce?: string;
+      algorithm?: string;
+      alt?: string;
+    }) => {
+      if (!raw.url || seen.has(raw.url)) return;
+      seen.add(raw.url);
+      sourceUrls.push(raw.url);
+
+      const isVideo = (raw.mime ?? '').startsWith('video/');
+      const isImage = (raw.mime ?? '').startsWith('image/');
+
+      // With no declared mime, fall back to the extension.
+      const looksLikeMedia =
+        isImage || isVideo || /\.(png|jpe?g|gif|webp|avif|bmp|svg|mp4|webm|mov)(\?|$)/i.test(raw.url);
+
+      if (!looksLikeMedia) return;
+
+      const src = this.media.resolveAttachment({
+        url: raw.url,
+        key: raw.key,
+        nonce: raw.nonce,
+        algorithm: raw.algorithm,
+      });
+
+      // Still decrypting; it will appear once the blob resolves.
+      if (!src) return;
+
+      out.push({ src, alt: raw.alt ?? 'attachment', video: isVideo });
+    };
+
+    // NIP-92: one tag per file, "key value" pairs after the tag name.
+    for (const tag of tags) {
+      if (tag[0] !== 'imeta') continue;
+
+      const fields: Record<string, string> = {};
+      for (const pair of tag.slice(1)) {
+        const index = pair.indexOf(' ');
+        if (index > 0) fields[pair.slice(0, index)] = pair.slice(index + 1);
+      }
+
+      add({
+        url: fields['url'],
+        mime: fields['m'],
+        // Different clients spell these differently; accept the variants.
+        key: fields['decryption-key'] ?? fields['key'],
+        nonce: fields['decryption-nonce'] ?? fields['nonce'] ?? fields['iv'],
+        algorithm: fields['encryption-algorithm'] ?? fields['algo'],
+        alt: fields['alt'],
+      });
+    }
+
+    // Nostria's flat form: the content is the URL, the tags carry the key.
+    const flatKey = tags.find(tag => tag[0] === 'decryption-key')?.[1];
+    const flatNonce = tags.find(tag => tag[0] === 'decryption-nonce')?.[1];
+    const flatType = tags.find(tag => tag[0] === 'file-type')?.[1];
+
+    if (flatKey && flatNonce) {
+      const url = (message.content || '').trim();
+      if (/^https?:\/\/\S+$/.test(url)) {
+        add({
+          url,
+          mime: flatType,
+          key: flatKey,
+          nonce: flatNonce,
+          algorithm: tags.find(tag => tag[0] === 'encryption-algorithm')?.[1],
+          alt: tags.find(tag => tag[0] === 'alt')?.[1],
+        });
+      }
+    }
+
+    // Plain media URLs in the text, for the unencrypted case.
+    for (const match of (message.editedContent || message.content).matchAll(/https?:\/\/\S+/g)) {
+      add({ url: match[0].replace(/[),.]+$/, '') });
+    }
+
+    this.attachmentSources.set(message.id, sourceUrls);
+    return out;
+  }
+
+  /** Source URLs behind a message's attachments, for stripping from the text. */
+  private readonly attachmentSources = new Map<string, string[]>();
+
+  private attachmentUrls(message: CordMessage): string[] {
+    return this.attachmentSources.get(message.id) ?? [];
+  }
+
+  /**
+   * The message text with attachment URLs removed.
+   *
+   * The attachments are rendered separately above, so leaving their URLs in the
+   * text makes the shared content component render each image a second time —
+   * and for an encrypted one it renders a broken image, since that URL serves
+   * ciphertext.
+   */
+  textFor(message: CordMessage): string {
+    const raw = message.editedContent || message.content;
+    const attachments = this.attachmentsFor(message);
+    if (attachments.length === 0) return raw;
+
+    const urls = new Set(this.attachmentUrls(message));
+    let text = raw;
+
+    for (const url of urls) {
+      text = text.split(url).join('');
+    }
+
+    return text.trim();
+  }
+
+  /** Open an attachment in the app's media preview dialog. */
+  openAttachment(src: string, alt: string): void {
+    const mime = this.media.mimeFor(src);
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: src,
+        mediaType: mime.startsWith('video/') ? 'video' : 'image',
+        mediaTitle: alt || 'Attachment',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   /** Open Graph previews keyed by message id. */

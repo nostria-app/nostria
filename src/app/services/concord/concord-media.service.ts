@@ -29,6 +29,9 @@ export class ConcordMediaService {
   /** Resolved object URLs keyed by the pointer hash. */
   private readonly cache = new Map<string, string>();
 
+  /** Sniffed MIME type per resolved URL, for preview dialogs. */
+  private readonly mimeTypes = new Map<string, string>();
+
   /** Pointers already known to be unresolvable, so we stop refetching them. */
   private readonly failed = new Set<string>();
 
@@ -64,6 +67,33 @@ export class ConcordMediaService {
     return null;
   }
 
+  /**
+   * Resolve an attachment that carries its own encryption parameters.
+   *
+   * Chat attachments are uploaded as encrypted blobs and referenced by URL,
+   * with the key and nonce riding the event's tags — a different shape from the
+   * `{url,key,nonce,hash}` pointer a community icon uses, but the same problem:
+   * the URL alone serves ciphertext, so `<img src>` renders nothing.
+   */
+  resolveAttachment(attachment: {
+    url: string;
+    key?: string;
+    nonce?: string;
+    algorithm?: string;
+  }): string | null {
+    if (!attachment.url) return null;
+
+    // Unencrypted attachments are just URLs.
+    if (!attachment.key || !attachment.nonce) return attachment.url;
+
+    return this.resolve({
+      url: attachment.url,
+      key: attachment.key,
+      nonce: attachment.nonce,
+      hash: '',
+    });
+  }
+
   private async fetchAndDecrypt(pointer: CordBlobPointer, cacheKey: string): Promise<void> {
     if (!this.isBrowser) return;
 
@@ -93,10 +123,13 @@ export class ConcordMediaService {
         throw new Error('Blob hash does not match the pointer');
       }
 
-      const blob = new Blob([plaintext as BlobPart]);
+      // Without an explicit type the browser treats the blob as text/plain,
+      // which is why an object URL rendered as a wall of characters.
+      const blob = new Blob([plaintext as BlobPart], { type: sniffMimeType(plaintext) });
       const url = URL.createObjectURL(blob);
 
       this.cache.set(cacheKey, url);
+      this.mimeTypes.set(url, blob.type);
       this.failed.delete(cacheKey);
       this.revision.update(value => value + 1);
     } catch (error) {
@@ -158,6 +191,11 @@ export class ConcordMediaService {
     return null;
   }
 
+  /** The sniffed MIME type of a resolved object URL. */
+  mimeFor(url: string): string {
+    return this.mimeTypes.get(url) ?? '';
+  }
+
   /** Release object URLs, e.g. on sign-out. */
   clear(): void {
     for (const url of this.cache.values()) URL.revokeObjectURL(url);
@@ -169,6 +207,33 @@ export class ConcordMediaService {
 }
 
 /** Cheap sanity check that decrypted bytes really are an image. */
+/** Detect the media type from magic bytes, so the blob carries a real type. */
+function sniffMimeType(bytes: Uint8Array): string {
+  if (bytes.length < 12) return 'application/octet-stream';
+
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'image/png';
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return 'image/jpeg';
+  if (bytes[0] === 0x47 && bytes[1] === 0x49) return 'image/gif';
+  if (bytes[0] === 0x42 && bytes[1] === 0x4d) return 'image/bmp';
+
+  // RIFF containers: WEBP declares itself at offset 8.
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45) {
+    return 'image/webp';
+  }
+
+  // ISO base media (MP4/MOV) carries 'ftyp' at offset 4.
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    return 'video/mp4';
+  }
+
+  // Matroska / WebM.
+  if (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return 'video/webm';
+  }
+
+  return 'application/octet-stream';
+}
+
 function hasImageMagic(bytes: Uint8Array): boolean {
   if (bytes.length < 4) return false;
 

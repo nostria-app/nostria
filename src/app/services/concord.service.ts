@@ -549,11 +549,23 @@ export class ConcordService {
     try {
       const group = this.channelGroupKey(community, channel);
 
-      const wraps = await this.relayPool.query(
-        community.relays,
-        { kinds: [CORD_KIND_WRAP], authors: [group.pk], limit: MESSAGE_PAGE_SIZE },
-        10000
-      );
+      // Paint from the local cache first so the channel opens instantly.
+      await this.loadCachedMessages(communityId, channel);
+      if (this.activeChannelKey !== key) return;
+
+      const newest = this.getMessages(communityId, channel.channelId).at(-1);
+
+      const filter: Filter = {
+        kinds: [CORD_KIND_WRAP],
+        authors: [group.pk],
+        limit: MESSAGE_PAGE_SIZE,
+      };
+
+      // Ask only for the delta. The wrap's created_at is untweaked in Concord,
+      // so it can be compared directly; a small overlap absorbs clock skew.
+      if (newest) filter.since = Math.floor(newest.timestamp / 1000) - 60;
+
+      const wraps = await this.relayPool.query(community.relays, filter, 10000);
 
       if (this.activeChannelKey !== key) return;
 
@@ -600,7 +612,8 @@ export class ConcordService {
     communityId: string,
     channel: CordChannel,
     group: CordGroupKey,
-    wraps: Event[]
+    wraps: Event[],
+    options: { persist?: boolean } = {}
   ): void {
     const key = this.channelKey(communityId, channel.channelId);
     const control = this.getControl(communityId);
@@ -714,6 +727,141 @@ export class ConcordService {
       .sort((a, b) => a.timestamp - b.timestamp);
 
     this.messagesByChannel.update(current => ({ ...current, [key]: ordered }));
+
+    if (options.persist !== false) {
+      void this.persistRumors(channel.channelId, wraps, group);
+    }
+  }
+
+  /**
+   * Cache decrypted rumors locally so a channel opens instantly next time.
+   *
+   * Only the inner rumor is stored, never the wrap: the wrap is useless without
+   * the channel key, and the rumor is what the timeline renders. Rumors are
+   * unsigned by construction (the seal carries the signature), so they are
+   * stored with an empty `sig` and are never republished from here.
+   */
+  private async persistRumors(
+    channelId: string,
+    wraps: Event[],
+    group: CordGroupKey
+  ): Promise<void> {
+    const events: (Event & { dTag?: string })[] = [];
+
+    for (const wrap of wraps) {
+      try {
+        const { rumor } = openStreamEvent(group, wrap);
+
+        events.push({
+          id: rumor.id!,
+          kind: rumor.kind,
+          pubkey: rumor.pubkey,
+          content: rumor.content,
+          tags: rumor.tags,
+          created_at: rumor.created_at,
+          sig: '',
+        } as Event);
+      } catch {
+        // Not ours, or already reported by the caller.
+      }
+    }
+
+    if (events.length === 0) return;
+
+    try {
+      await this.database.saveEvents(events);
+    } catch (error) {
+      this.logger.debug('[Concord] Could not cache messages', { channelId, error });
+    }
+  }
+
+  /**
+   * Load a channel's cached history from IndexedDB.
+   *
+   * Cached rumors are rendered immediately, then the relay is asked only for
+   * what arrived since the newest one — the same delta discipline the NIP-29
+   * chat uses, so reopening a channel costs one small request rather than a
+   * full backfill.
+   */
+  private async loadCachedMessages(communityId: string, channel: CordChannel): Promise<void> {
+    const key = this.channelKey(communityId, channel.channelId);
+
+    try {
+      const cached = await this.database.getEventsByKindsAndTagValue(
+        [CORD_KIND_MESSAGE, CORD_KIND_REPLY, CORD_KIND_REACTION, CORD_KIND_DELETE, CORD_KIND_EDIT],
+        'channel',
+        channel.channelId
+      );
+
+      if (cached.length === 0) return;
+
+      const messages: CordMessage[] = [];
+      const edits = new Map<string, { content: string; at: number; author: string }>();
+      const deletes = new Map<string, string>();
+      const reactions: { target: string; reaction: CordReaction }[] = [];
+
+      for (const event of cached) {
+        // The binding still has to hold, even from our own cache.
+        if (tagValue(event.tags, 'channel') !== channel.channelId) continue;
+
+        const timestamp = eventTimestamp(event);
+        const rumor = event as unknown as CordRumor;
+
+        switch (event.kind) {
+          case CORD_KIND_MESSAGE:
+          case CORD_KIND_REPLY:
+            messages.push(this.toMessage(channel.channelId, rumor, event.pubkey, timestamp));
+            break;
+          case CORD_KIND_EDIT: {
+            const target = tagValue(event.tags, 'e');
+            if (target) edits.set(target, { content: event.content, at: timestamp, author: event.pubkey });
+            break;
+          }
+          case CORD_KIND_DELETE:
+            for (const target of tagValues(event.tags, 'e')) deletes.set(target, event.pubkey);
+            break;
+          case CORD_KIND_REACTION: {
+            const target = tagValue(event.tags, 'e');
+            if (target) {
+              const { emoji, url } = this.parseReaction(rumor);
+              reactions.push({ target, reaction: { emoji, pubkey: event.pubkey, timestamp, url } });
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+
+      const byId = new Map(messages.map(message => [message.id, message]));
+
+      for (const [target, edit] of edits) {
+        const message = byId.get(target);
+        if (message && message.pubkey === edit.author) {
+          message.editedContent = edit.content;
+          message.editedAt = edit.at;
+        }
+      }
+
+      for (const [target, author] of deletes) {
+        const message = byId.get(target);
+        if (message && message.pubkey === author) message.deleted = true;
+      }
+
+      for (const { target, reaction } of reactions) {
+        const message = byId.get(target);
+        if (!message) continue;
+        message.reactions = [...(message.reactions ?? []), reaction];
+      }
+
+      const ordered = [...byId.values()]
+        .filter(message => !message.deleted)
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+      this.messagesByChannel.update(current => ({ ...current, [key]: ordered }));
+    } catch (error) {
+      this.logger.debug('[Concord] No cached history available', { channelId: channel.channelId, error });
+    }
   }
 
   /**

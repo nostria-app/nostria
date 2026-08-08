@@ -1086,3 +1086,26 @@ img.rail-avatar {
   margin: 6px 0 2px;
   max-width: 460px;
 }
+
+// ─────────────────────────────── Attachments ───────────────────────────────
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 2px;
+}
+
+.attachment {
+  max-width: min(420px, 100%);
+  max-height: 320px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--mat-sys-surface-container-high);
+  cursor: zoom-in;
+  display: block;
+}
+
+video.attachment {
+  cursor: default;
+}
