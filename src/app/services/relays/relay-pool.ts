@@ -266,8 +266,17 @@ export class RelayPoolService {
 
   /**
    * Get event from relays
+   *
+   * @param options.auth Opt in to NIP-42 authentication for this read. Relays
+   * that gate content behind AUTH (for example NIP-29 private groups) return
+   * nothing without it, so callers that expect restricted data must set this.
    */
-  async get(relayUrls: string[], filter: Filter, timeoutMs = 5000): Promise<Event | null> {
+  async get(
+    relayUrls: string[],
+    filter: Filter,
+    timeoutMs = 5000,
+    options: { auth?: boolean } = {}
+  ): Promise<Event | null> {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'get');
 
     if (connectableRelayUrls.length === 0) {
@@ -309,7 +318,10 @@ export class RelayPoolService {
       });
 
       try {
-        let event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
+        let event = await this.#pool.get(filteredUrls, filter, {
+          maxWait: timeoutMs,
+          ...(options.auth ? { onauth: this.relayAuth.getAuthCallback() } : {}),
+        });
 
         // Filter event through centralized processor (expiration, deletion, muting)
         if (event && !this.eventProcessor.shouldAcceptEvent(event)) {
@@ -347,8 +359,17 @@ export class RelayPoolService {
 
   /**
  * Get events from relays
+ *
+ * @param options.auth Opt in to NIP-42 authentication for this read. Relays
+ * that gate content behind AUTH (for example NIP-29 private groups) return
+ * nothing without it, so callers that expect restricted data must set this.
  */
-  async query(relayUrls: string[], filter: Filter, timeoutMs = 5000): Promise<Event[]> {
+  async query(
+    relayUrls: string[],
+    filter: Filter,
+    timeoutMs = 5000,
+    options: { auth?: boolean } = {}
+  ): Promise<Event[]> {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'query');
 
     if (connectableRelayUrls.length === 0) {
@@ -390,7 +411,10 @@ export class RelayPoolService {
       });
 
       try {
-        let events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
+        let events = await this.#pool.querySync(filteredUrls, filter, {
+          maxWait: timeoutMs,
+          ...(options.auth ? { onauth: this.relayAuth.getAuthCallback() } : {}),
+        });
 
         // Filter events through centralized processor (expiration, deletion, muting)
         events = this.eventProcessor.filterEvents(events);

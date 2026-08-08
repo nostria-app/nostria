@@ -28,7 +28,17 @@
         class="rail-item rail-add"
         matTooltip="Discover groups"
         matTooltipPosition="right"
-        (click)="showAddServer.set(true); mobilePane.set('channels')"
+        (click)="loadDiscover()"
+      >
+        <mat-icon>explore</mat-icon>
+      </button>
+
+      <button
+        type="button"
+        class="rail-item rail-add"
+        matTooltip="Create a group"
+        matTooltipPosition="right"
+        (click)="openCreateGroup()"
       >
         <mat-icon>add</mat-icon>
       </button>
@@ -72,56 +82,37 @@
 
         <h4 class="panel-subtitle">Known relays</h4>
         @for (server of servers(); track server.url) {
-        <button
-          type="button"
-          class="suggestion"
-          [class.active]="browsingRelay() === server.url"
-          (click)="browseServer(server)"
-        >
-          <mat-icon>dns</mat-icon>
-          <span>{{ server.name }}</span>
-        </button>
-        }
-
-        @if (browsingRelay(); as relay) {
-        <mat-divider />
-
-        <h4 class="panel-subtitle">Groups on this relay</h4>
-
-        <div class="channel-search">
-          <mat-icon>search</mat-icon>
-          <input
-            type="search"
-            placeholder="Filter groups"
-            [ngModel]="browseFilter()"
-            (ngModelChange)="browseFilter.set($event)"
-            aria-label="Filter groups"
-          />
-        </div>
-
-        @if (nip29.loadingServer() === relay && browsableGroups().length === 0) {
-        <div class="sidebar-loading">
-          <mat-spinner diameter="24" />
-          <span>Loading groups…</span>
-        </div>
-        } @for (group of browsableGroups(); track group.id) {
-        <div class="browse-row">
-          <button type="button" class="browse-open" (click)="selectGroup(group)">
-            @if (group.picture) {
-            <img class="browse-avatar" [src]="group.picture" [alt]="group.name" loading="lazy" />
-            } @else {
-            <span class="browse-avatar browse-initials">{{ initials(group.name) }}</span>
-            }
-            <span class="channel-name">{{ group.name }}</span>
+        <div class="relay-row">
+          <button
+            type="button"
+            class="suggestion"
+            [class.active]="browsingRelay() === server.url"
+            (click)="browseServer(server)"
+          >
+            <mat-icon>dns</mat-icon>
+            <span>{{ server.name }}</span>
           </button>
 
-          @if (isJoined(group)) {
-          <mat-icon class="joined-check" matTooltip="Joined">check_circle</mat-icon>
+          @if (server.added) {
+          <button
+            mat-icon-button
+            class="member-action"
+            type="button"
+            matTooltip="Remove relay"
+            (click)="removeServer(server)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
           }
         </div>
-        } @empty {
-        <p class="sidebar-empty">No groups found on this relay.</p>
-        } }
+        }
+
+        <mat-divider />
+
+        <p class="panel-hint">
+          Groups from every relay listed here appear in the discover view on the right. Select a
+          relay to narrow it down.
+        </p>
       </div>
     </div>
     } @else if (activeGroup(); as group) {
@@ -258,7 +249,168 @@
 
   <!-- ───────────────────────────── Main pane ─────────────────────────────── -->
   <section class="channel-main">
-    @if (activeGroup(); as group) {
+    @if (showCreateGroup()) {
+    <!-- Create a new group (kind:9007 + kind:9002) -->
+    <div class="form-pane">
+      <header class="channel-header">
+        <button type="button" class="sidebar-back" (click)="backToServers()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">add_circle</mat-icon>
+        <h2 class="channel-title">Create a group</h2>
+      </header>
+
+      <div class="form-body">
+        <p class="panel-hint">
+          The relay you pick will host the group and enforce its rules. You must be allowed to
+          create groups there.
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Relay</mat-label>
+          <mat-select [value]="newGroupRelay()" (valueChange)="newGroupRelay.set($event)">
+            @for (server of servers(); track server.url) {
+            <mat-option [value]="server.url">{{ server.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Name</mat-label>
+          <input matInput [ngModel]="newGroupName()" (ngModelChange)="newGroupName.set($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>About</mat-label>
+          <textarea
+            matInput
+            rows="3"
+            [ngModel]="newGroupAbout()"
+            (ngModelChange)="newGroupAbout.set($event)"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Picture URL</mat-label>
+          <input
+            matInput
+            [ngModel]="newGroupPicture()"
+            (ngModelChange)="newGroupPicture.set($event)"
+          />
+        </mat-form-field>
+
+        <div class="toggle-row">
+          <mat-checkbox
+            [checked]="newGroupPrivate()"
+            (change)="newGroupPrivate.set($event.checked)"
+          >
+            Private (only members can read)
+          </mat-checkbox>
+
+          <mat-checkbox [checked]="newGroupClosed()" (change)="newGroupClosed.set($event.checked)">
+            Closed (invite only)
+          </mat-checkbox>
+        </div>
+
+        <div class="panel-actions">
+          <button mat-button type="button" (click)="cancelCreateGroup()">Cancel</button>
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="!newGroupName().trim() || !newGroupRelay() || busy()"
+            (click)="createGroup()"
+          >
+            {{ busy() ? 'Creating…' : 'Create group' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    } @else if (showAddServer()) {
+    <!-- Browse every public group on the known relays -->
+    <div class="discover-pane">
+      <header class="channel-header">
+        <button type="button" class="sidebar-back" (click)="backToServers()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon class="channel-icon">explore</mat-icon>
+        <h2 class="channel-title">Discover groups</h2>
+
+        <span class="header-spacer"></span>
+
+        <div class="channel-search header-search">
+          <mat-icon>search</mat-icon>
+          <input
+            type="search"
+            placeholder="Search groups"
+            [ngModel]="browseFilter()"
+            (ngModelChange)="browseFilter.set($event)"
+            aria-label="Search groups"
+          />
+        </div>
+
+        <button mat-icon-button type="button" matTooltip="Refresh" (click)="loadDiscover()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </header>
+
+      <div class="discover-body">
+        @if (browsingRelay(); as relay) {
+        <div class="discover-scope">
+          <span>Showing groups on {{ nip29.getServer(relay)?.name }}</span>
+          <button mat-button type="button" (click)="loadDiscover()">Show all relays</button>
+        </div>
+        }
+
+        @if (nip29.loadingServer() && discoverGroups().length === 0) {
+        <div class="center-state"><mat-spinner diameter="32" /></div>
+        }
+
+        <div class="discover-grid">
+          @for (group of discoverGroups(); track group.relay + group.id) {
+          <article class="discover-card">
+            <button type="button" class="discover-open" (click)="selectGroup(group)">
+              @if (group.picture) {
+              <img class="discover-avatar" [src]="group.picture" [alt]="group.name" loading="lazy" />
+              } @else {
+              <span class="discover-avatar discover-initials">{{ initials(group.name) }}</span>
+              }
+
+              <div class="discover-text">
+                <span class="discover-name">{{ group.name }}</span>
+                @if (group.about) {
+                <span class="discover-about">{{ group.about }}</span>
+                }
+                <span class="discover-relay">
+                  <mat-icon>dns</mat-icon>
+                  {{ relayNameFor(group) }}
+                  @if (group.isPrivate) {
+                  <mat-icon matTooltip="Private">lock</mat-icon>
+                  }
+                  @if (group.isClosed) {
+                  <mat-icon matTooltip="Invite only">key</mat-icon>
+                  }
+                  @if (group.hasLivekit) {
+                  <mat-icon matTooltip="Voice and video">graphic_eq</mat-icon>
+                  }
+                </span>
+              </div>
+            </button>
+
+            @if (isJoined(group)) {
+            <mat-icon class="joined-check" matTooltip="Joined">check_circle</mat-icon>
+            }
+          </article>
+          } @empty {
+          @if (!nip29.loadingServer()) {
+          <p class="sidebar-empty">
+            No groups found. Add a relay that hosts groups to see its catalogue.
+          </p>
+          }
+          }
+        </div>
+      </div>
+    </div>
+    } @else if (activeGroup(); as group) {
     <header class="channel-header">
       <button type="button" class="sidebar-back" (click)="backToChannels()" aria-label="Back">
         <mat-icon>arrow_back</mat-icon>
@@ -280,6 +432,16 @@
         {{ joining() ? 'Requesting…' : 'Join' }}
       </button>
       }
+
+      <button
+        mat-icon-button
+        type="button"
+        class="member-rail-toggle"
+        [matTooltip]="showMemberRail() ? 'Hide members' : 'Show members'"
+        (click)="showMemberRail.set(!showMemberRail())"
+      >
+        <mat-icon>group</mat-icon>
+      </button>
 
       <button mat-icon-button [matMenuTriggerFor]="channelMenu" aria-label="Group options">
         <mat-icon>more_vert</mat-icon>
@@ -305,6 +467,20 @@
 
     @if (view() === 'chat') {
     <!-- Chat timeline -->
+    @if (pinnedMessages().length > 0) {
+    <div class="pinned-bar">
+      <mat-icon>push_pin</mat-icon>
+      <div class="pinned-items">
+        @for (pin of pinnedMessages(); track pin.id) {
+        <span class="pinned-item">
+          <app-profile-display-name [pubkey]="pin.pubkey" />
+          <span class="pinned-text">{{ pin.content }}</span>
+        </span>
+        }
+      </div>
+    </div>
+    }
+
     <div class="message-scroller" #messageScroller>
       @if (nip29.loadingMessages() && messages().length === 0) {
       <div class="center-state">
@@ -370,6 +546,28 @@
               <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
                 <mat-icon>reply</mat-icon>
               </button>
+
+              @if (isAdmin()) {
+              <button
+                mat-icon-button
+                type="button"
+                [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'"
+                (click)="togglePin(message)"
+              >
+                <mat-icon>{{ isPinned(message) ? 'push_pin' : 'push_pin' }}</mat-icon>
+              </button>
+              }
+
+              @if (canDelete(message)) {
+              <button
+                mat-icon-button
+                type="button"
+                matTooltip="Delete"
+                (click)="deleteMessage(message)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+              }
             </div>
           </div>
           }
@@ -566,13 +764,142 @@
     } @else if (view() === 'members') {
     <!-- Member directory -->
     <div class="members-pane">
+      @if (isAdmin()) {
+      <section class="admin-panel">
+        <h4 class="member-heading">Moderation</h4>
+
+        <div class="admin-row">
+          <mat-form-field appearance="outline" class="grow">
+            <mat-label>Add member (npub or hex)</mat-label>
+            <input
+              matInput
+              [ngModel]="addMemberPubkey()"
+              (ngModelChange)="addMemberPubkey.set($event)"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="roles-field">
+            <mat-label>Roles</mat-label>
+            <input
+              matInput
+              placeholder="admin, moderator"
+              [ngModel]="addMemberRoles()"
+              (ngModelChange)="addMemberRoles.set($event)"
+            />
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="!addMemberPubkey().trim() || busy()"
+            (click)="addMember()"
+          >
+            Add
+          </button>
+        </div>
+
+        <div class="admin-actions">
+          <button mat-stroked-button type="button" (click)="openGroupSettings()">
+            <mat-icon>settings</mat-icon>
+            Group settings
+          </button>
+
+          <button mat-stroked-button type="button" (click)="generateInvite()">
+            <mat-icon>key</mat-icon>
+            Create invite
+          </button>
+
+          <button mat-stroked-button type="button" class="danger" (click)="deleteGroup()">
+            <mat-icon>delete_forever</mat-icon>
+            Delete group
+          </button>
+        </div>
+
+        @if (inviteResult(); as code) {
+        <div class="invite-result">
+          <code>{{ code }}</code>
+          <button mat-button type="button" (click)="copyInvite()">Copy invite link</button>
+        </div>
+        }
+
+        @if (availableRoles().length > 0) {
+        <p class="panel-hint">
+          Roles on this relay:
+          @for (role of availableRoles(); track role.name) {
+          <span class="role-chip">{{ role.name }}</span>
+          }
+        </p>
+        }
+      </section>
+
+      @if (showGroupSettings()) {
+      <section class="admin-panel">
+        <h4 class="member-heading">Group settings</h4>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Name</mat-label>
+          <input matInput [ngModel]="newGroupName()" (ngModelChange)="newGroupName.set($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>About</mat-label>
+          <textarea
+            matInput
+            rows="2"
+            [ngModel]="newGroupAbout()"
+            (ngModelChange)="newGroupAbout.set($event)"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Picture URL</mat-label>
+          <input
+            matInput
+            [ngModel]="newGroupPicture()"
+            (ngModelChange)="newGroupPicture.set($event)"
+          />
+        </mat-form-field>
+
+        <div class="toggle-row">
+          <mat-checkbox
+            [checked]="newGroupPrivate()"
+            (change)="newGroupPrivate.set($event.checked)"
+          >
+            Private (only members can read)
+          </mat-checkbox>
+
+          <mat-checkbox [checked]="newGroupClosed()" (change)="newGroupClosed.set($event.checked)">
+            Closed (join requests ignored)
+          </mat-checkbox>
+        </div>
+
+        <div class="panel-actions">
+          <button mat-button type="button" (click)="showGroupSettings.set(false)">Cancel</button>
+          <button mat-flat-button type="button" [disabled]="busy()" (click)="saveGroupSettings()">
+            Save
+          </button>
+        </div>
+      </section>
+      } }
+
       @if (admins().length > 0) {
       <h4 class="member-heading">Admins — {{ admins().length }}</h4>
       @for (admin of admins(); track admin.pubkey) {
       <div class="member-row">
         <app-user-profile [pubkey]="admin.pubkey" view="list" />
-        @if (admin.roles.length > 0) {
-        <span class="role-chip">{{ admin.roles[0] }}</span>
+        @for (role of admin.roles; track role) {
+        <span class="role-chip">{{ role }}</span>
+        }
+        @if (isAdmin()) {
+        <button
+          mat-icon-button
+          class="member-action"
+          type="button"
+          matTooltip="Remove"
+          (click)="removeMember(admin.pubkey)"
+        >
+          <mat-icon>person_remove</mat-icon>
+        </button>
         }
       </div>
       } }
@@ -582,6 +909,42 @@
       @for (member of regularMembers(); track member) {
       <div class="member-row">
         <app-user-profile [pubkey]="member" view="list" />
+        @if (isAdmin()) {
+        <button
+          mat-icon-button
+          class="member-action"
+          type="button"
+          [matMenuTriggerFor]="roleMenu"
+          matTooltip="Roles"
+        >
+          <mat-icon>shield</mat-icon>
+        </button>
+
+        <mat-menu #roleMenu="matMenu">
+          @for (role of availableRoles(); track role.name) {
+          <button mat-menu-item type="button" (click)="setRole(member, role.name)">
+            <span>{{ role.name }}</span>
+          </button>
+          } @empty {
+          <button mat-menu-item type="button" (click)="setRole(member, 'admin')">
+            <span>admin</span>
+          </button>
+          <button mat-menu-item type="button" (click)="setRole(member, 'moderator')">
+            <span>moderator</span>
+          </button>
+          }
+        </mat-menu>
+
+        <button
+          mat-icon-button
+          class="member-action"
+          type="button"
+          matTooltip="Remove"
+          (click)="removeMember(member)"
+        >
+          <mat-icon>person_remove</mat-icon>
+        </button>
+        }
       </div>
       } } @else if (admins().length === 0) {
       <div class="center-state">
@@ -675,11 +1038,37 @@
         Groups live on relays that host them. Pick one from the rail, or use the plus button to
         discover and join new ones.
       </p>
-      <button mat-flat-button type="button" (click)="showAddServer.set(true); mobilePane.set('channels')">
-        <mat-icon>add</mat-icon>
+      <button mat-flat-button type="button" (click)="loadDiscover()">
+        <mat-icon>explore</mat-icon>
         Discover groups
       </button>
     </div>
     }
   </section>
+
+  <!-- ─────────────────── Member rail (Discord-style, always on) ─────────────── -->
+  @if (showMemberRail() && activeGroup() && !showAddServer() && !showCreateGroup()) {
+  <aside class="member-sidebar" aria-label="Members">
+    @if (admins().length > 0) {
+    <h4 class="member-heading">Admins — {{ admins().length }}</h4>
+    @for (admin of admins(); track admin.pubkey) {
+    <div class="member-row">
+      <app-user-profile [pubkey]="admin.pubkey" view="list" />
+      @if (admin.roles.length > 0) {
+      <span class="role-chip">{{ admin.roles[0] }}</span>
+      }
+    </div>
+    } }
+
+    @if (regularMembers().length > 0) {
+    <h4 class="member-heading">Members — {{ regularMembers().length }}</h4>
+    @for (member of regularMembers(); track member) {
+    <div class="member-row">
+      <app-user-profile [pubkey]="member" view="list" />
+    </div>
+    } } @else if (admins().length === 0) {
+    <p class="sidebar-empty">No member list published.</p>
+    }
+  </aside>
+  }
 </div>

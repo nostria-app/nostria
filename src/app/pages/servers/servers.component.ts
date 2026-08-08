@@ -20,6 +20,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -84,6 +86,8 @@ const LAST_GROUP_STORAGE_KEY = 'nostria-nip29-last-group-v1';
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatCheckboxModule,
+    MatSelectModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
@@ -127,6 +131,23 @@ export class ServersComponent implements OnInit, OnDestroy {
   /** Relay whose full group catalogue is being browsed in the add panel. */
   readonly browsingRelay = signal<string | null>(null);
   readonly browseFilter = signal('');
+
+  /** Right-hand member list, Discord style. Independent of the Members view. */
+  readonly showMemberRail = signal(true);
+
+  // -- Admin state ------------------------------------------------------------
+  readonly showCreateGroup = signal(false);
+  readonly showGroupSettings = signal(false);
+  readonly newGroupName = signal('');
+  readonly newGroupAbout = signal('');
+  readonly newGroupPicture = signal('');
+  readonly newGroupPrivate = signal(false);
+  readonly newGroupClosed = signal(false);
+  readonly newGroupRelay = signal('');
+  readonly addMemberPubkey = signal('');
+  readonly addMemberRoles = signal('');
+  readonly inviteResult = signal<string | null>(null);
+  readonly busy = signal(false);
 
   // -- Composer state ---------------------------------------------------------
   readonly messageText = signal('');
@@ -173,24 +194,6 @@ export class ServersComponent implements OnInit, OnDestroy {
       .buildTree(server.url)
       .filter(node => node.group.id === group.id)
       .flatMap(node => node.children);
-  });
-
-  /** Full catalogue of the relay being browsed in the add panel. */
-  readonly browsableGroups = computed<Nip29Group[]>(() => {
-    this.revision();
-    const relay = this.browsingRelay();
-    if (!relay) return [];
-
-    const filter = this.browseFilter().trim().toLowerCase();
-    const groups = this.nip29.getGroups(relay);
-
-    return filter
-      ? groups.filter(
-          group =>
-            group.name.toLowerCase().includes(filter) ||
-            group.id.toLowerCase().includes(filter)
-        )
-      : groups;
   });
 
   isJoined(group: Nip29Group): boolean {
@@ -297,6 +300,39 @@ export class ServersComponent implements OnInit, OnDestroy {
     return this.members().filter(pubkey => !adminSet.has(pubkey));
   });
 
+  /** Every public group across all known relays, for the discover view. */
+  readonly discoverGroups = computed<Nip29Group[]>(() => {
+    this.revision();
+    const filter = this.browseFilter().trim().toLowerCase();
+    const relay = this.browsingRelay();
+
+    const relays = relay ? [relay] : this.servers().map(server => server.url);
+    const groups = relays.flatMap(url => this.nip29.getGroups(url)).filter(group => !group.isHidden);
+
+    const matched = filter
+      ? groups.filter(
+          group =>
+            group.name.toLowerCase().includes(filter) ||
+            group.id.toLowerCase().includes(filter) ||
+            (group.about ?? '').toLowerCase().includes(filter)
+        )
+      : groups;
+
+    return matched.sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  /** Pinned messages surfaced at the top of the chat. */
+  readonly pinnedMessages = computed<Nip29Message[]>(() => {
+    const pinned = this.details()?.pinned ?? [];
+    if (pinned.length === 0) return [];
+
+    const ids = new Set(pinned);
+    return this.messages().filter(message => ids.has(message.id));
+  });
+
+  /** Roles the relay advertises for this group (kind:39003). */
+  readonly availableRoles = computed(() => this.details()?.roles ?? []);
+
   readonly voiceParticipants = computed(() => this.voice.participants());
 
   readonly canPost = computed(() => {
@@ -364,11 +400,12 @@ export class ServersComponent implements OnInit, OnDestroy {
     void this.router.navigate([...this.basePath(), slug, group.id]);
   }
 
-  /** Open the browse panel for a relay's full group catalogue. */
+  /** Open the browse panel scoped to one relay's group catalogue. */
   async browseServer(server: Nip29Server): Promise<void> {
     this.showAddServer.set(true);
+    this.showCreateGroup.set(false);
     this.browsingRelay.set(server.url);
-    this.mobilePane.set('channels');
+    this.mobilePane.set('content');
 
     await this.nip29.loadGroups(server.url);
     this.revision.update(value => value + 1);
@@ -587,17 +624,12 @@ export class ServersComponent implements OnInit, OnDestroy {
     const group = this.activeGroup();
     if (!server || !group) return;
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: `Leave ${group.name}?`,
-        message: 'You can request to join again later, unless the group is closed.',
-        confirmText: 'Leave',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } satisfies ConfirmDialogData,
-    });
+    const confirmed = await this.confirm(
+      `Leave ${group.name}?`,
+      'You can request to join again later, unless the group is closed.',
+      'Leave'
+    );
 
-    const confirmed = await firstValueFrom(dialogRef.afterClosed());
     if (!confirmed) return;
 
     const error = await this.nip29.leaveGroup(server.url, group.id);
@@ -801,6 +833,344 @@ export class ServersComponent implements OnInit, OnDestroy {
     if (!server || !group) return;
 
     this.revision.update(value => value + 1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Discovery
+  // ---------------------------------------------------------------------------
+
+  /** Load the catalogue of every known relay so all public groups are listed. */
+  async loadDiscover(): Promise<void> {
+    this.browsingRelay.set(null);
+    this.showAddServer.set(true);
+    this.mobilePane.set('content');
+
+    // Sequential rather than parallel: one relay at a time keeps the request
+    // queue shallow when the user has many servers.
+    for (const server of this.servers()) {
+      await this.nip29.loadGroups(server.url);
+      this.revision.update(value => value + 1);
+    }
+  }
+
+  relayNameFor(group: Nip29Group): string {
+    return this.nip29.getServer(group.relay)?.name ?? group.relay;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Group management
+  // ---------------------------------------------------------------------------
+
+  openCreateGroup(): void {
+    this.showCreateGroup.set(true);
+    this.showAddServer.set(false);
+    this.mobilePane.set('content');
+    this.newGroupRelay.set(this.activeServer()?.url ?? this.servers()[0]?.url ?? '');
+  }
+
+  cancelCreateGroup(): void {
+    this.showCreateGroup.set(false);
+    this.newGroupName.set('');
+    this.newGroupAbout.set('');
+    this.newGroupPicture.set('');
+    this.newGroupPrivate.set(false);
+    this.newGroupClosed.set(false);
+  }
+
+  async createGroup(): Promise<void> {
+    const relay = this.newGroupRelay().trim();
+    const name = this.newGroupName().trim();
+
+    if (!relay || !name || this.busy()) return;
+
+    this.busy.set(true);
+
+    try {
+      const { groupId, error } = await this.nip29.createGroup(relay, {
+        name,
+        about: this.newGroupAbout(),
+        picture: this.newGroupPicture(),
+        isPrivate: this.newGroupPrivate(),
+        isClosed: this.newGroupClosed(),
+      });
+
+      if (error) {
+        this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+        if (!groupId) return;
+      }
+
+      if (groupId) {
+        await this.groupsList.addGroup(relay, groupId, name);
+        this.cancelCreateGroup();
+        this.revision.update(value => value + 1);
+
+        void this.router.navigate([
+          ...this.basePath(),
+          this.nip29.serverSlug(relay),
+          groupId,
+        ]);
+      }
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  openGroupSettings(): void {
+    const group = this.activeGroup();
+    if (!group) return;
+
+    this.newGroupName.set(group.name);
+    this.newGroupAbout.set(group.about ?? '');
+    this.newGroupPicture.set(group.picture ?? '');
+    this.newGroupPrivate.set(group.isPrivate);
+    this.newGroupClosed.set(group.isClosed);
+    this.showGroupSettings.set(true);
+    this.setView('members');
+  }
+
+  async saveGroupSettings(): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group || this.busy()) return;
+
+    this.busy.set(true);
+
+    try {
+      const error = await this.nip29.updateGroupMetadata(server.url, group.id, {
+        name: this.newGroupName(),
+        about: this.newGroupAbout(),
+        picture: this.newGroupPicture(),
+        banner: group.banner,
+        isPrivate: this.newGroupPrivate(),
+        isRestricted: group.isRestricted,
+        isHidden: group.isHidden,
+        isClosed: this.newGroupClosed(),
+        hasLivekit: group.hasLivekit,
+        supportedKinds: group.supportedKinds,
+        parent: group.parent ?? null,
+        children: group.children,
+      });
+
+      if (error) {
+        this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+      } else {
+        this.snackBar.open('Group updated', undefined, { duration: 3000 });
+        this.showGroupSettings.set(false);
+        this.revision.update(value => value + 1);
+      }
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async deleteGroup(): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const confirmed = await this.confirm(
+      `Delete ${group.name}?`,
+      'The relay will remove the group. Sub-groups become root groups. This cannot be undone.',
+      'Delete'
+    );
+
+    if (!confirmed) return;
+
+    const error = await this.nip29.deleteGroup(server.url, group.id);
+
+    if (error) {
+      this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+    } else {
+      this.snackBar.open('Group deleted', undefined, { duration: 3000 });
+      void this.router.navigate(this.basePath());
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Moderation
+  // ---------------------------------------------------------------------------
+
+  async addMember(): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    const input = this.addMemberPubkey().trim();
+
+    if (!server || !group || !input || this.busy()) return;
+
+    const pubkey = this.toHexPubkey(input);
+    if (!pubkey) {
+      this.snackBar.open('That is not a valid npub or hex public key', 'Dismiss', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    this.busy.set(true);
+
+    try {
+      const roles = this.addMemberRoles()
+        .split(',')
+        .map(role => role.trim())
+        .filter(Boolean);
+
+      const error = await this.nip29.putUser(server.url, group.id, pubkey, roles);
+
+      if (error) {
+        this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+      } else {
+        this.addMemberPubkey.set('');
+        this.addMemberRoles.set('');
+        this.revision.update(value => value + 1);
+      }
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async removeMember(pubkey: string): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const confirmed = await this.confirm(
+      'Remove this member?',
+      'They will lose access to the group until they are added again.',
+      'Remove'
+    );
+
+    if (!confirmed) return;
+
+    const error = await this.nip29.removeUser(server.url, group.id, pubkey);
+
+    if (error) {
+      this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+    } else {
+      this.revision.update(value => value + 1);
+    }
+  }
+
+  async setRole(pubkey: string, role: string): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const current = this.rolesFor(pubkey);
+    const roles = current.includes(role)
+      ? current.filter(entry => entry !== role)
+      : [...current, role];
+
+    const error = await this.nip29.putUser(server.url, group.id, pubkey, roles);
+
+    if (error) {
+      this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+    } else {
+      this.revision.update(value => value + 1);
+    }
+  }
+
+  /** Delete a message. Available to admins and to the message author. */
+  canDelete(message: Nip29Message): boolean {
+    return this.isAdmin() || message.pubkey === this.pubkey();
+  }
+
+  async deleteMessage(message: Nip29Message): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const confirmed = await this.confirm(
+      'Delete this message?',
+      'The relay will remove it for everyone in the group.',
+      'Delete'
+    );
+
+    if (!confirmed) return;
+
+    const error = await this.nip29.deleteGroupEvent(server.url, group.id, message.id);
+
+    if (error) {
+      this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+    } else {
+      this.revision.update(value => value + 1);
+    }
+  }
+
+  isPinned(message: Nip29Message): boolean {
+    return (this.details()?.pinned ?? []).includes(message.id);
+  }
+
+  async togglePin(message: Nip29Message): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const error = await this.nip29.togglePin(server.url, group.id, message.id);
+
+    if (error) {
+      this.snackBar.open(this.humanizeRelayError(error), 'Dismiss', { duration: 6000 });
+    } else {
+      this.revision.update(value => value + 1);
+    }
+  }
+
+  async generateInvite(): Promise<void> {
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!server || !group) return;
+
+    const { code, error } = await this.nip29.createInvite(server.url, group.id);
+
+    if (error || !code) {
+      this.snackBar.open(this.humanizeRelayError(error ?? 'Failed'), 'Dismiss', {
+        duration: 6000,
+      });
+      return;
+    }
+
+    this.inviteResult.set(code);
+  }
+
+  /** Copy a shareable invite link that carries the code. */
+  copyInvite(): void {
+    const code = this.inviteResult();
+    const server = this.activeServer();
+    const group = this.activeGroup();
+    if (!code || !server || !group) return;
+
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    const link = `${origin}/g/${server.slug}/${group.id}?invite=${encodeURIComponent(code)}`;
+
+    this.layout.copyToClipboard(link, 'invite link');
+  }
+
+  private toHexPubkey(value: string): string | null {
+    const trimmed = value.trim();
+
+    if (/^[0-9a-f]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+
+    try {
+      const decoded = nip19.decode(trimmed);
+      if (decoded.type === 'npub') return decoded.data;
+      if (decoded.type === 'nprofile') return decoded.data.pubkey;
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private async confirm(title: string, message: string, confirmText: string): Promise<boolean> {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title,
+        message,
+        confirmText,
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } satisfies ConfirmDialogData,
+    });
+
+    return !!(await firstValueFrom(dialogRef.afterClosed()));
   }
 
   // ---------------------------------------------------------------------------

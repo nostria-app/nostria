@@ -14,6 +14,11 @@ import {
   NIP29_KIND_ADMINS,
   NIP29_KIND_CHAT,
   NIP29_KIND_DELETE_EVENT,
+  NIP29_KIND_UPDATE_PIN_LIST,
+  NIP29_KIND_EDIT_METADATA,
+  NIP29_KIND_DELETE_GROUP,
+  NIP29_KIND_CREATE_INVITE,
+  NIP29_KIND_CREATE_GROUP,
   NIP29_KIND_JOIN_REQUEST,
   NIP29_KIND_LEAVE_REQUEST,
   NIP29_KIND_LIVEKIT_PARTICIPANTS,
@@ -29,6 +34,7 @@ import {
   Nip29Admin,
   Nip29Group,
   Nip29GroupDetails,
+  Nip29GroupMetadataInput,
   Nip29GroupNode,
   Nip29LivekitToken,
   Nip29Membership,
@@ -58,6 +64,13 @@ const MESSAGE_PAGE_SIZE = 100;
 const TIMELINE_WINDOW = 50;
 /** Number of `previous` references attached to outgoing events. */
 const TIMELINE_REFERENCE_COUNT = 3;
+
+/**
+ * NIP-29 relays gate private groups behind NIP-42 AUTH, so every read here
+ * opts in. Without this the relay answers with an empty set and the group
+ * looks empty rather than restricted.
+ */
+const AUTHED = { auth: true } as const;
 
 /**
  * Relays known to host NIP-29 groups, offered as suggestions when the user has
@@ -173,7 +186,8 @@ export class Nip29Service {
             const events = await this.relayPool.query(
               [relayUrl],
               { kinds: [NIP29_KIND_METADATA], '#d': ids, limit: ids.length },
-              8000
+              8000,
+              AUTHED
             );
 
             for (const event of events) {
@@ -529,7 +543,8 @@ export class Nip29Service {
         const events = await this.relayPool.query(
           [normalized],
           { kinds: [NIP29_KIND_METADATA], limit: 500 },
-          8000
+          8000,
+          AUTHED
         );
 
         const groups = events
@@ -572,7 +587,8 @@ export class Nip29Service {
       const events = await this.relayPool.query(
         [relayUrl],
         { kinds: [NIP29_KIND_METADATA], '#d': missing, limit: missing.length },
-        6000
+        6000,
+        AUTHED
       );
 
       const extra = events.map(event => this.parseGroupMetadata(relayUrl, event));
@@ -636,7 +652,8 @@ export class Nip29Service {
         const events = await this.relayPool.query(
           [normalized],
           { kinds: NIP29_ADDRESSABLE_KINDS, '#d': [groupId], limit: 20 },
-          8000
+          8000,
+          AUTHED
         );
 
         // Keep only the newest event per kind — these are addressable events.
@@ -672,10 +689,77 @@ export class Nip29Service {
 
         this.detailsByGroup.update(state => ({ ...state, [key]: details }));
         this.resolveMembershipFromMembers(normalized, groupId, details.members);
+
+        // kind:39002 is optional and many relays never publish it. Rebuild the
+        // roster from the moderation log so the member list is not empty just
+        // because the relay chose not to summarise it.
+        if (details.members.length === 0) {
+          void this.loadMembersFromModerationLog(normalized, groupId);
+        }
       } catch (error) {
         this.logger.error('[NIP-29] Failed to load group details', { key, error });
       } finally {
         this.loadingGroup.set(null);
+      }
+    });
+  }
+
+  /**
+   * Reconstruct the member roster from the canonical kind:9000 / kind:9001
+   * moderation sequence. NIP-29 states the group state can be fully rebuilt
+   * from these events, which is what clients do when a relay does not publish
+   * the optional kind:39002 summary.
+   */
+  async loadMembersFromModerationLog(relayUrl: string, groupId: string): Promise<void> {
+    const normalized = this.normalize(relayUrl);
+    const key = this.groupKey(normalized, groupId);
+
+    await this.dedupe(`roster:${key}`, async () => {
+      try {
+        const events = await this.relayPool.query(
+          [normalized],
+          {
+            kinds: [NIP29_KIND_PUT_USER, NIP29_KIND_REMOVE_USER],
+            '#h': [groupId],
+            limit: 1000,
+          },
+          8000,
+          AUTHED
+        );
+
+        if (events.length === 0) return;
+
+        // Replay oldest first so the newest action for each pubkey wins.
+        const ordered = [...events].sort((a, b) => a.created_at - b.created_at);
+        const roster = new Map<string, boolean>();
+
+        for (const event of ordered) {
+          const added = event.kind === NIP29_KIND_PUT_USER;
+          for (const pubkey of this.tagValues(event, 'p')) {
+            roster.set(pubkey, added);
+          }
+        }
+
+        const members = [...roster.entries()]
+          .filter(([, isMember]) => isMember)
+          .map(([pubkey]) => pubkey);
+
+        if (members.length === 0) return;
+
+        const current = this.detailsByGroup()[key];
+        if (!current) return;
+
+        this.detailsByGroup.update(state => ({
+          ...state,
+          [key]: { ...current, members },
+        }));
+
+        this.resolveMembershipFromMembers(normalized, groupId, members);
+      } catch (error) {
+        this.logger.debug('[NIP-29] Could not rebuild roster from moderation log', {
+          key,
+          error,
+        });
       }
     });
   }
@@ -707,7 +791,8 @@ export class Nip29Service {
             '#p': [pubkey],
             limit: 10,
           },
-          6000
+          6000,
+          AUTHED
         );
 
         if (events.length === 0) {
@@ -766,7 +851,7 @@ export class Nip29Service {
         filter.since = newest.createdAt - 60;
       }
 
-      const events = await this.relayPool.query([normalized], filter, 8000);
+      const events = await this.relayPool.query([normalized], filter, 8000, AUTHED);
       if (this.activeGroupKey !== key) return;
 
       this.ingest(normalized, groupId, events);
@@ -806,7 +891,8 @@ export class Nip29Service {
           until: oldest.createdAt - 1,
           limit: MESSAGE_PAGE_SIZE,
         },
-        8000
+        8000,
+        AUTHED
       );
 
       if (events.length < MESSAGE_PAGE_SIZE) {
@@ -838,7 +924,8 @@ export class Nip29Service {
         const events = await this.relayPool.query(
           [normalized],
           { kinds: [NIP29_KIND_THREAD_REPLY], '#E': [threadId], limit: 200 },
-          8000
+          8000,
+          AUTHED
         );
 
         if (events.length > 0) {
@@ -972,6 +1059,257 @@ export class Nip29Service {
     await this.groupsList.addGroup(relayUrl, groupId, group?.name).catch(error => {
       this.logger.warn('[NIP-29] Failed to update groups list', error);
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Group management and moderation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create a group on a relay. NIP-29 has no "create" payload, so this sends a
+   * kind:9007 to claim the id and then a kind:9002 to set the metadata. The
+   * relay generates the resulting kind:39000.
+   *
+   * @returns the new group id, or an error message.
+   */
+  async createGroup(
+    relayUrl: string,
+    metadata: Nip29GroupMetadataInput
+  ): Promise<{ groupId?: string; error?: string }> {
+    const normalized = this.normalize(relayUrl);
+    if (!normalized) return { error: 'Invalid relay URL' };
+
+    const groupId = metadata.id?.trim() || this.randomGroupId();
+
+    const createError = await this.signAndSend(normalized, NIP29_KIND_CREATE_GROUP, '', [
+      ['h', groupId],
+    ]);
+
+    if (createError) return { error: createError };
+
+    const metadataError = await this.updateGroupMetadata(normalized, groupId, metadata);
+    if (metadataError) return { groupId, error: metadataError };
+
+    // The relay needs a moment to emit kind:39000; refresh so the new group
+    // appears in the rail immediately.
+    await this.loadGroupDetails(normalized, groupId, true);
+    this.addServer(normalized);
+
+    return { groupId };
+  }
+
+  /**
+   * Edit group metadata with a kind:9002. NIP-29 requires the full `child`
+   * list on every edit, so callers must not drop existing children.
+   */
+  async updateGroupMetadata(
+    relayUrl: string,
+    groupId: string,
+    metadata: Nip29GroupMetadataInput
+  ): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+    const existing = this.getGroup(normalized, groupId);
+
+    const tags: string[][] = [['h', groupId]];
+
+    if (metadata.name?.trim()) tags.push(['name', metadata.name.trim()]);
+    if (metadata.about?.trim()) tags.push(['about', metadata.about.trim()]);
+    if (metadata.picture?.trim()) tags.push(['picture', metadata.picture.trim()]);
+    if (metadata.banner?.trim()) tags.push(['banner', metadata.banner.trim()]);
+
+    if (metadata.isPrivate) tags.push(['private']);
+    if (metadata.isRestricted) tags.push(['restricted']);
+    if (metadata.isHidden) tags.push(['hidden']);
+    if (metadata.isClosed) tags.push(['closed']);
+    if (metadata.hasLivekit) tags.push(['livekit']);
+
+    if (metadata.supportedKinds) {
+      tags.push(['supported_kinds', ...metadata.supportedKinds.map(String)]);
+    }
+
+    // Absence of `parent` promotes the group to a root, so only send it when
+    // a parent is actually wanted.
+    const parent = metadata.parent ?? existing?.parent;
+    if (parent && metadata.parent !== null) tags.push(['parent', parent]);
+
+    // Relays reject a kind:9002 that does not carry every child.
+    const children = metadata.children ?? existing?.children ?? [];
+    for (const child of children) tags.push(['child', child]);
+
+    const error = await this.signAndSend(normalized, NIP29_KIND_EDIT_METADATA, '', tags);
+    if (!error) await this.loadGroupDetails(normalized, groupId, true);
+
+    return error;
+  }
+
+  /** Delete a group (kind:9008). Its children are promoted to roots. */
+  async deleteGroup(relayUrl: string, groupId: string): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+    const error = await this.signAndSend(normalized, NIP29_KIND_DELETE_GROUP, '', [
+      ['h', groupId],
+    ]);
+
+    if (!error) {
+      this.groupsByServer.update(state => ({
+        ...state,
+        [normalized]: (state[normalized] ?? []).filter(group => group.id !== groupId),
+      }));
+      await this.groupsList.removeGroup(normalized, groupId).catch(() => undefined);
+    }
+
+    return error;
+  }
+
+  /**
+   * Add a user to the group or update their roles (kind:9000). Roles are
+   * relay-defined; pass the names advertised in kind:39003.
+   */
+  async putUser(
+    relayUrl: string,
+    groupId: string,
+    pubkey: string,
+    roles: string[] = [],
+    reason = ''
+  ): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+    const error = await this.signAndSend(normalized, NIP29_KIND_PUT_USER, reason, [
+      ['h', groupId],
+      ['p', pubkey, ...roles.filter(Boolean)],
+    ]);
+
+    if (!error) await this.loadGroupDetails(normalized, groupId, true);
+    return error;
+  }
+
+  /** Remove a user from the group (kind:9001). */
+  async removeUser(
+    relayUrl: string,
+    groupId: string,
+    pubkey: string,
+    reason = ''
+  ): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+    const error = await this.signAndSend(normalized, NIP29_KIND_REMOVE_USER, reason, [
+      ['h', groupId],
+      ['p', pubkey],
+    ]);
+
+    if (!error) await this.loadGroupDetails(normalized, groupId, true);
+    return error;
+  }
+
+  /** Delete a message from the group (kind:9005). */
+  async deleteGroupEvent(
+    relayUrl: string,
+    groupId: string,
+    eventId: string,
+    reason = ''
+  ): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+    const error = await this.signAndSend(normalized, NIP29_KIND_DELETE_EVENT, reason, [
+      ['h', groupId],
+      ['e', eventId],
+    ]);
+
+    if (!error) {
+      const key = this.groupKey(normalized, groupId);
+      this.messagesByGroup.update(state => ({
+        ...state,
+        [key]: (state[key] ?? []).filter(message => message.id !== eventId),
+      }));
+      this.threadsByGroup.update(state => ({
+        ...state,
+        [key]: (state[key] ?? []).filter(message => message.id !== eventId),
+      }));
+    }
+
+    return error;
+  }
+
+  /** Create an invite code that pre-authorises a join request (kind:9009). */
+  async createInvite(
+    relayUrl: string,
+    groupId: string,
+    code?: string
+  ): Promise<{ code?: string; error?: string }> {
+    const normalized = this.normalize(relayUrl);
+    const inviteCode = code?.trim() || this.randomInviteCode();
+
+    const error = await this.signAndSend(normalized, NIP29_KIND_CREATE_INVITE, '', [
+      ['h', groupId],
+      ['code', inviteCode],
+    ]);
+
+    return error ? { error } : { code: inviteCode };
+  }
+
+  /**
+   * Replace the pinned list (kind:9010). Pinning, unpinning and reordering are
+   * all expressed as a complete new list.
+   */
+  async updatePinList(
+    relayUrl: string,
+    groupId: string,
+    references: string[]
+  ): Promise<string | null> {
+    const normalized = this.normalize(relayUrl);
+
+    const tags: string[][] = [['h', groupId]];
+    for (const reference of references) {
+      // Addressable references use `a`, regular events use `e`.
+      tags.push([reference.includes(':') ? 'a' : 'e', reference]);
+    }
+
+    const error = await this.signAndSend(normalized, NIP29_KIND_UPDATE_PIN_LIST, '', tags);
+    if (!error) await this.loadGroupDetails(normalized, groupId, true);
+
+    return error;
+  }
+
+  /** Pin or unpin a single event, preserving the rest of the list order. */
+  async togglePin(relayUrl: string, groupId: string, eventId: string): Promise<string | null> {
+    const current = this.getDetails(relayUrl, groupId)?.pinned ?? [];
+    const next = current.includes(eventId)
+      ? current.filter(id => id !== eventId)
+      : [...current, eventId];
+
+    return this.updatePinList(relayUrl, groupId, next);
+  }
+
+  /** Reparent a group, or promote it to a root by passing `null`. */
+  async setGroupParent(
+    relayUrl: string,
+    groupId: string,
+    parent: string | null
+  ): Promise<string | null> {
+    const existing = this.getGroup(relayUrl, groupId);
+
+    return this.updateGroupMetadata(relayUrl, groupId, {
+      name: existing?.name,
+      about: existing?.about,
+      picture: existing?.picture,
+      banner: existing?.banner,
+      isPrivate: existing?.isPrivate,
+      isRestricted: existing?.isRestricted,
+      isHidden: existing?.isHidden,
+      isClosed: existing?.isClosed,
+      hasLivekit: existing?.hasLivekit,
+      supportedKinds: existing?.supportedKinds,
+      children: existing?.children,
+      parent,
+    });
+  }
+
+  private randomGroupId(): string {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  private randomInviteCode(): string {
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map(byte => byte.toString(36).padStart(2, '0')).join('').slice(0, 10);
   }
 
   // ---------------------------------------------------------------------------

@@ -170,6 +170,26 @@ export interface Nip29GroupNode {
   depth: number;
 }
 
+/** Fields accepted when creating or editing a group (kind:9002). */
+export interface Nip29GroupMetadataInput {
+  /** Desired group id. Generated when omitted. Only used on creation. */
+  id?: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  banner?: string;
+  isPrivate?: boolean;
+  isRestricted?: boolean;
+  isHidden?: boolean;
+  isClosed?: boolean;
+  hasLivekit?: boolean;
+  supportedKinds?: number[];
+  /** Parent group id. `null` promotes the group to a root. */
+  parent?: string | null;
+  /** Full ordered child list — relays reject edits that omit any child. */
+  children?: string[];
+}
+
 /** Result of requesting a LiveKit token from a relay. */
 export interface Nip29LivekitToken {
   token: string;

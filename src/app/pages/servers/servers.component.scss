@@ -12,7 +12,7 @@
 
 .servers-page {
   display: grid;
-  grid-template-columns: 72px 260px minmax(0, 1fr);
+  grid-template-columns: 72px 260px minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
   background: var(--mat-sys-surface);
@@ -497,6 +497,12 @@
   width: 100%;
 }
 
+.relay-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .suggestion {
   display: flex;
   align-items: center;
@@ -515,6 +521,11 @@
   &:hover {
     background: var(--mat-sys-surface-container-high);
     color: var(--mat-sys-on-surface);
+  }
+
+  &.active {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
   }
 }
 
@@ -987,6 +998,258 @@
 
 // ────────────────────────────────── Members ─────────────────────────────────
 
+// ───────────────────────────── Discover / forms ─────────────────────────────
+
+.discover-pane,
+.form-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.discover-body,
+.form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 32px;
+}
+
+.form-body {
+  max-width: 560px;
+}
+
+.discover-scope {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.header-search {
+  margin: 0 8px;
+  max-width: 260px;
+}
+
+.discover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.discover-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+  padding-right: 8px;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+}
+
+.discover-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 12px;
+  text-align: left;
+}
+
+.discover-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.discover-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 0.85rem;
+}
+
+.discover-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.discover-name {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-about {
+  font-size: 0.76rem;
+  color: var(--mat-sys-on-surface-variant);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.discover-relay {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// ───────────────────────────── Admin controls ───────────────────────────────
+
+.admin-panel {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.admin-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .grow {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .roles-field {
+    width: 180px;
+  }
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .danger {
+    color: var(--mat-sys-error);
+  }
+}
+
+.invite-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-high);
+
+  code {
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+}
+
+.toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 12px;
+}
+
+.member-action {
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ───────────────────────────── Pinned messages ──────────────────────────────
+
+.pinned-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  font-size: 0.78rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  > mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.pinned-items {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pinned-item {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.pinned-text {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+// ───────────────────────────── Member rail ──────────────────────────────────
+
+.member-sidebar {
+  width: 240px;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+  overflow-y: auto;
+  padding: 12px 8px;
+}
+
 .member-heading {
   margin: 12px 8px 6px;
   font-size: 0.7rem;
@@ -1008,6 +1271,12 @@
 }
 
 // ───────────────────────────────── Responsive ───────────────────────────────
+
+@media (max-width: 1200px) {
+  .member-sidebar {
+    display: none;
+  }
+}
 
 @media (max-width: 900px) {
   .servers-page {
@@ -1062,6 +1331,23 @@
 
   .channel-topic {
     display: none;
+  }
+
+  .header-search {
+    max-width: 140px;
+  }
+
+  .member-rail-toggle {
+    display: none;
+  }
+
+  .discover-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discover-body,
+  .form-body {
+    padding: 12px;
   }
 
   .view-switch button span {
