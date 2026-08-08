@@ -28,7 +28,7 @@ export interface ImageCropperDialogData {
   aspectRatio?: number;
   /** Dialog title */
   title?: string;
-  /** Maximum width of the produced image in pixels. Defaults to 1024. */
+  /** Maximum width of the produced image in pixels. Defaults to 2048. */
   maxOutputWidth?: number;
 }
 
@@ -43,6 +43,10 @@ export interface ImageCropperResult {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
+/** High quality — the upload pipeline may optimize further, so avoid stacking lossy passes here */
+const JPEG_QUALITY = 0.95;
+/** PNG output above this size is re-encoded as JPEG to keep uploads sane */
+const MAX_PNG_BYTES = 3 * 1024 * 1024;
 
 @Component({
   selector: 'app-image-cropper-dialog',
@@ -69,7 +73,7 @@ export class ImageCropperDialogComponent implements OnDestroy {
   readonly title = this.data.title ?? 'Adjust image';
   readonly shape = this.data.shape ?? 'circle';
   readonly aspectRatio = this.data.aspectRatio && this.data.aspectRatio > 0 ? this.data.aspectRatio : 1;
-  private readonly maxOutputWidth = this.data.maxOutputWidth ?? 1024;
+  private readonly maxOutputWidth = this.data.maxOutputWidth ?? 2048;
 
   /** Animated images cannot be cropped without losing the animation */
   readonly isAnimated = /gif|apng/i.test(this.data.file.type);
@@ -411,8 +415,19 @@ export class ImageCropperDialogComponent implements OnDestroy {
     ctx.restore();
 
     const type = this.data.file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    let blob = await this.encode(canvas, type);
+
+    // A lossless crop of a large photo saved as PNG can be enormous — fall back to JPEG.
+    if (type === 'image/png' && blob.size > MAX_PNG_BYTES) {
+      blob = await this.encode(canvas, 'image/jpeg');
+    }
+
+    return blob;
+  }
+
+  private async encode(canvas: HTMLCanvasElement, type: string): Promise<Blob> {
     const blob = await new Promise<Blob | null>(resolve =>
-      canvas.toBlob(resolve, type, type === 'image/jpeg' ? 0.92 : undefined)
+      canvas.toBlob(resolve, type, type === 'image/jpeg' ? JPEG_QUALITY : undefined)
     );
     if (!blob) throw new Error('Failed to encode image');
     return blob;

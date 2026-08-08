@@ -87,6 +87,8 @@ export class ProfileEditComponent implements OnInit {
   previewProfileImage = signal<string | null>(null);
   previewBanner = signal<string | null>(null);
   uploadOriginalImages = signal(false);
+  /** True when a selected image was produced by the cropper (already optimized) */
+  private hasCroppedImages = signal(false);
   nameWasNormalized = signal(false);
 
   // Media server availability
@@ -307,11 +309,13 @@ export class ProfileEditComponent implements OnInit {
         nip05: currentProfile.nip05 || '',
       };
 
-      // Create update options
+      // Create update options. Images produced by the cropper are already resized
+      // and encoded at high quality, so they skip the upload optimization pass to
+      // avoid a second lossy re-encode.
       const updateOptions: ProfileUpdateOptions = {
         profileData,
         externalIdentities: this.externalIdentities(),
-        uploadOriginalImages: this.uploadOriginalImages(),
+        uploadOriginalImages: this.uploadOriginalImages() || this.hasCroppedImages(),
       };
 
       // Add profile image file if selected
@@ -411,8 +415,8 @@ export class ProfileEditComponent implements OnInit {
 
     const data: ImageCropperDialogData =
       type === 'profile'
-        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 1024 }
-        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 1920 };
+        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 2048 }
+        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 2560 };
 
     const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
       panelClass: ['material-custom-dialog-panel', 'image-cropper-dialog-panel'],
@@ -425,6 +429,9 @@ export class ProfileEditComponent implements OnInit {
     if (!result) return undefined;
 
     URL.revokeObjectURL(result.previewUrl);
+    if (!result.usedOriginal) {
+      this.hasCroppedImages.set(true);
+    }
     return result.file;
   }
 

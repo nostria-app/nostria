@@ -1807,8 +1807,8 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     const data: ImageCropperDialogData =
       type === 'profile'
-        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 1024 }
-        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 1920 };
+        ? { file, shape: 'circle', aspectRatio: 1, title: 'Adjust profile picture', maxOutputWidth: 2048 }
+        : { file, shape: 'rect', aspectRatio: 3, title: 'Adjust banner', maxOutputWidth: 2560 };
 
     const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
       panelClass: ['material-custom-dialog-panel', 'image-cropper-dialog-panel'],
@@ -1821,7 +1821,8 @@ export class ProfileHeaderComponent implements OnDestroy {
     if (!result) return;
 
     URL.revokeObjectURL(result.previewUrl);
-    await this.uploadAndUpdateProfile(type, result.file);
+    // Cropper output is already resized and high quality — skip the second lossy pass
+    await this.uploadAndUpdateProfile(type, result.file, !result.usedOriginal);
   }
 
   /**
@@ -1857,7 +1858,11 @@ export class ProfileHeaderComponent implements OnDestroy {
   /**
    * Upload a file and update the profile image or banner
    */
-  private async uploadAndUpdateProfile(type: 'profile' | 'banner', file: File): Promise<void> {
+  private async uploadAndUpdateProfile(
+    type: 'profile' | 'banner',
+    file: File,
+    uploadOriginalImages = false
+  ): Promise<void> {
     this.snackBar.open('Uploading...', undefined, { duration: 0 });
 
     try {
@@ -1866,6 +1871,7 @@ export class ProfileHeaderComponent implements OnDestroy {
 
       const result = await this.profileService.updateProfile({
         profileData,
+        uploadOriginalImages,
         ...(type === 'profile' ? { profileImageFile: file } : { bannerImageFile: file }),
       });
 
