@@ -666,20 +666,11 @@ export class ConcordService {
         case CORD_KIND_REACTION: {
           const target = tagValue(rumor.tags, 'e');
           if (target) {
-            const shortcode = rumor.content.replace(/^:|:$/g, '');
-            // NIP-30: the reaction carries the URL for its custom emoji.
-            const emojiTag = rumor.tags.find(
-              tag => tag[0] === 'emoji' && (tag[1] === shortcode || `:${tag[1]}:` === rumor.content)
-            );
+            const { emoji, url } = this.parseReaction(rumor);
 
             reactions.push({
               target,
-              reaction: {
-                emoji: rumor.content || '+',
-                pubkey: author,
-                timestamp,
-                url: emojiTag?.[2],
-              },
+              reaction: { emoji, pubkey: author, timestamp, url },
             });
           }
           break;
@@ -723,6 +714,36 @@ export class ConcordService {
       .sort((a, b) => a.timestamp - b.timestamp);
 
     this.messagesByChannel.update(current => ({ ...current, [key]: ordered }));
+  }
+
+  /**
+   * Normalize a reaction into an emoji and, for custom ones, its image URL.
+   *
+   * Three shapes occur in the wild: a plain emoji, a `:shortcode:` with a
+   * NIP-30 `emoji` tag, and — from some clients — a `:shortcode:` with the URL
+   * concatenated straight onto the content. The last renders as raw text
+   * unless it is split apart here.
+   */
+  private parseReaction(rumor: CordRumor): { emoji: string; url?: string } {
+    const raw = (rumor.content || '+').trim();
+
+    // `:shortcode:https://…` — split the glued-on URL back off.
+    const glued = raw.match(/^(:[a-zA-Z0-9_]+:)\s*(https?:\/\/\S+)$/);
+    if (glued) {
+      return { emoji: glued[1], url: glued[2] };
+    }
+
+    // A bare URL used as the whole reaction.
+    if (/^https?:\/\/\S+$/.test(raw)) {
+      return { emoji: ':custom:', url: raw };
+    }
+
+    const shortcode = raw.replace(/^:|:$/g, '');
+    const emojiTag = rumor.tags.find(
+      tag => tag[0] === 'emoji' && (tag[1] === shortcode || `:${tag[1]}:` === raw)
+    );
+
+    return { emoji: raw, url: emojiTag?.[2] };
   }
 
   private toMessage(
@@ -974,10 +995,13 @@ export class ConcordService {
     // the same NIP-30 tag a message does or it renders as literal text.
     const emojiTags = await this.emojiTags(emoji);
 
+    // Never echo a glued `:shortcode:https://…` back onto the wire.
+    const content = emoji.replace(/^(:[a-zA-Z0-9_]+:)\s*https?:\/\/\S+$/, '$1');
+
     await this.publishRumor(community, this.channelGroupKey(community, channel), {
       kind: CORD_KIND_REACTION,
       pubkey,
-      content: emoji,
+      content,
       tags: [
         ['channel', channel.channelId],
         ['epoch', String(channel.epoch)],

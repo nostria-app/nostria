@@ -59,6 +59,12 @@
   <!-- ─────────────────────── Channel sidebar ────────────────────── -->
   <aside class="sidebar" aria-label="Channels">
     @if (activeCommunity(); as community) {
+    @if (activeBanner(); as banner) {
+    <div class="community-banner">
+      <img [src]="banner" [alt]="communityName() + ' banner'" />
+    </div>
+    }
+
     <header class="sidebar-header">
       <button type="button" class="back" (click)="backToCommunities()" aria-label="Back">
         <mat-icon>arrow_back</mat-icon>
@@ -765,6 +771,15 @@
               <span class="edited" matTooltip="Edited by the author">(edited)</span>
               }
             </div>
+
+            @for (preview of previewsFor(message); track preview.url) {
+            <app-social-preview
+              class="social-preview"
+              [url]="preview.url"
+              [previewData]="preview"
+              [compact]="true"
+            />
+            }
 
             @if (reactionSummary(message).length > 0) {
             <div class="reactions">

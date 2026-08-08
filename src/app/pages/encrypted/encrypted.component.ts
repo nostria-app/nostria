@@ -31,6 +31,9 @@ import { nip19 } from 'nostr-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
+import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
+import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
+import { SettingsService } from '../../services/settings.service';
 import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
@@ -91,6 +94,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
     UserProfileComponent,
     ProfileDisplayNameComponent,
     MessageContentComponent,
+    SocialPreviewComponent,
   ],
   templateUrl: './encrypted.component.html',
   styleUrl: './encrypted.component.scss',
@@ -103,6 +107,8 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly openGraph = inject(OpenGraphService);
+  private readonly settings = inject(SettingsService);
 
   readonly layout = inject(LayoutService);
   readonly concord = inject(ConcordService);
@@ -1115,6 +1121,52 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       count: entry.count,
       url: entry.url,
     }));
+  }
+
+  /** Open Graph previews keyed by message id. */
+  private readonly previews = signal<Record<string, OpenGraphData[]>>({});
+  private readonly previewRequested = new Set<string>();
+
+  /**
+   * Rich link previews for a message, matching how the feed renders them.
+   *
+   * Fetched lazily on first render and cached per message, so a long channel
+   * does not fan out into hundreds of metadata requests at once.
+   */
+  previewsFor(message: CordMessage): OpenGraphData[] {
+    if (!this.settings.settings().socialSharingPreview) return [];
+
+    const cached = this.previews()[message.id];
+    if (cached) return cached;
+
+    if (!this.previewRequested.has(message.id)) {
+      this.previewRequested.add(message.id);
+      void this.loadPreviews(message);
+    }
+
+    return [];
+  }
+
+  private async loadPreviews(message: CordMessage): Promise<void> {
+    // Media URLs are rendered inline by the message content itself, so only
+    // ordinary links get a card.
+    const urls = [...(message.editedContent || message.content).matchAll(/https?:\/\/\S+/g)]
+      .map(match => match[0].replace(/[),.]+$/, ''))
+      .filter(url => !/\.(png|jpe?g|gif|webp|avif|mp4|webm|mov|mp3|ogg|wav)(\?|$)/i.test(url))
+      .slice(0, 3);
+
+    if (urls.length === 0) return;
+
+    try {
+      const results = await this.openGraph.getMultipleOpenGraphData(urls);
+
+      this.previews.update(current => ({
+        ...current,
+        [message.id]: results.map(result => ({ ...result, loading: false })),
+      }));
+    } catch (error) {
+      this.logger.debug('[Concord] Could not load link previews', error);
+    }
   }
 
   private scrollToBottom(): void {
