@@ -622,6 +622,15 @@
       <button
         mat-icon-button
         type="button"
+        [matTooltip]="pinsUnavailable() ? 'Pins unavailable on this device' : 'Pinned messages'"
+        (click)="showPins.set(!showPins())"
+      >
+        <mat-icon [matBadge]="pins().length || null" matBadgeSize="small">push_pin</mat-icon>
+      </button>
+
+      <button
+        mat-icon-button
+        type="button"
         [matTooltip]="showMemberRail() ? 'Hide members' : 'Show members'"
         (click)="showMemberRail.set(!showMemberRail())"
       >
@@ -657,6 +666,62 @@
     </div>
     }
 
+    @if (showPins()) {
+    <div class="pins-panel">
+      <header class="pins-head">
+        <mat-icon>push_pin</mat-icon>
+        <span>Pinned messages</span>
+        <span class="spacer"></span>
+        <button mat-icon-button type="button" (click)="showPins.set(false)" aria-label="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      @if (pinsUnavailable()) {
+      <p class="pins-empty warn">
+        <mat-icon>lock</mat-icon>
+        These pins were sealed under a key epoch you never held, so they cannot be shown or edited
+        here.
+      </p>
+      } @else {
+      @for (pin of pins(); track pin.id) {
+      <article class="pin-row">
+        <div class="pin-body">
+          <div class="pin-head">
+            <app-profile-display-name [pubkey]="pin.author" />
+            <time>{{ pin.createdAt * 1000 | date: 'short' }}</time>
+            <span class="verified" matTooltip="Author, words and time verified from the pin itself">
+              <mat-icon>verified</mat-icon>
+            </span>
+          </div>
+
+          <app-message-content
+            [content]="pin.editedContent || pin.content"
+            [tags]="pin.tags"
+            [authorPubkey]="pin.author"
+          />
+          @if (pin.editedContent) {
+          <span class="edited">(edited)</span>
+          }
+        </div>
+
+        <button mat-icon-button type="button" matTooltip="Jump" (click)="scrollToPin(pin.id)">
+          <mat-icon>my_location</mat-icon>
+        </button>
+
+        @if (canPin()) {
+        <button mat-icon-button type="button" matTooltip="Unpin" (click)="unpin(pin.id)">
+          <mat-icon>close</mat-icon>
+        </button>
+        }
+      </article>
+      } @empty {
+      <p class="pins-empty">Nothing pinned in this channel yet.</p>
+      }
+      }
+    </div>
+    }
+
     <div class="scroller" #scroller>
       @if (concord.loadingMessages() && messages().length === 0) {
       <div class="center"><mat-spinner diameter="30" /></div>
@@ -681,7 +746,7 @@
           </div>
 
           @for (message of cluster.messages; track message.id) {
-          <div class="row">
+          <div class="row" [id]="'cord-msg-' + message.id">
             @if (findMessage(message.parent); as parent) {
             <div class="reply-preview">
               <mat-icon>reply</mat-icon>
@@ -705,7 +770,12 @@
             <div class="reactions">
               @for (reaction of reactionSummary(message); track reaction.emoji) {
               <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
-                {{ reaction.emoji }} {{ reaction.count }}
+                @if (reaction.url) {
+                <img class="reaction-emoji" [src]="reaction.url" [alt]="reaction.emoji" loading="lazy" />
+                } @else {
+                <span>{{ reaction.emoji }}</span>
+                }
+                {{ reaction.count }}
               </button>
               }
             </div>
@@ -718,6 +788,17 @@
               <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
                 <mat-icon>reply</mat-icon>
               </button>
+              @if (canPin()) {
+              <button
+                mat-icon-button
+                type="button"
+                [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'"
+                [disabled]="busy()"
+                (click)="togglePin(message)"
+              >
+                <mat-icon>push_pin</mat-icon>
+              </button>
+              }
               @if (canDelete(message)) {
               <button
                 mat-icon-button

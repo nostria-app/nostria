@@ -1,6 +1,10 @@
 import { computed, effect, inject, PLATFORM_ID, Service, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Event, Filter, UnsignedEvent } from 'nostr-tools';
+import {
+  encrypt as nip44EncryptWithKey,
+  decrypt as nip44DecryptWithKey,
+} from 'nostr-tools/nip44';
 
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
@@ -8,6 +12,15 @@ import { AccountStateService } from './account-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService } from './database.service';
 import { ConcordListsService } from './concord/concord-lists.service';
+import { EmojiSetService } from './emoji-set.service';
+import {
+  buildPinEntry,
+  buildPinListContent,
+  parsePinList,
+  verifyPinEntry,
+  type CordPinEntry,
+  type CordVerifiedPin,
+} from './concord/concord-pins';
 import {
   CORD_KIND_DELETE,
   CORD_KIND_EDIT,
@@ -27,11 +40,14 @@ import {
   LABEL_CONTROL,
   LABEL_CONTROL_SIGNER,
   LABEL_GUESTBOOK,
+  LABEL_PINS,
 } from '../interfaces/concord';
 import {
+  cordHkdf,
   fromHex,
   groupKey,
   isHex32,
+  toHex,
   toId32,
 } from './concord/concord-crypto';
 import {
@@ -94,6 +110,7 @@ export class ConcordService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly database = inject(DatabaseService);
   private readonly lists = inject(ConcordListsService);
+  private readonly emojiSets = inject(EmojiSetService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /** Communities this client holds keys for. */
@@ -602,7 +619,7 @@ export class ConcordService {
         continue;
       }
 
-      const { rumor, author, timestamp } = opened;
+      const { rumor, author, timestamp, seal, wrapId } = opened;
 
       // A banned member vanishes entirely — messages, reactions, everything.
       if (control.banned.has(author)) continue;
@@ -622,7 +639,11 @@ export class ConcordService {
       switch (rumor.kind) {
         case CORD_KIND_MESSAGE:
         case CORD_KIND_REPLY: {
-          existing.set(rumor.id!, this.toMessage(channel.channelId, rumor, author, timestamp));
+          const message = this.toMessage(channel.channelId, rumor, author, timestamp);
+          // Pinning needs the seal verbatim and the wrap id as a locator hint.
+          message.seal = seal;
+          message.wrapId = wrapId;
+          existing.set(rumor.id!, message);
           break;
         }
 
@@ -645,9 +666,20 @@ export class ConcordService {
         case CORD_KIND_REACTION: {
           const target = tagValue(rumor.tags, 'e');
           if (target) {
+            const shortcode = rumor.content.replace(/^:|:$/g, '');
+            // NIP-30: the reaction carries the URL for its custom emoji.
+            const emojiTag = rumor.tags.find(
+              tag => tag[0] === 'emoji' && (tag[1] === shortcode || `:${tag[1]}:` === rumor.content)
+            );
+
             reactions.push({
               target,
-              reaction: { emoji: rumor.content || '+', pubkey: author, timestamp },
+              reaction: {
+                emoji: rumor.content || '+',
+                pubkey: author,
+                timestamp,
+                url: emojiTag?.[2],
+              },
             });
           }
           break;
@@ -750,6 +782,9 @@ export class ConcordService {
       const timer = this.getControl(communityId).metadata?.message_expiration ?? 0;
       if (timer > 0) tags.push(['expiration', String(created_at + timer)]);
 
+      // NIP-30: carry the URL for every custom emoji the text mentions.
+      tags.push(...(await this.emojiTags(trimmed)));
+
       let kind = CORD_KIND_MESSAGE;
 
       if (options.replyTo) {
@@ -786,6 +821,141 @@ export class ConcordService {
     }
   }
 
+  /**
+   * Resolve `:shortcode:` references to NIP-30 `emoji` tags.
+   *
+   * Without these the shortcode stays literal text for every other client, so
+   * outgoing messages must carry the URL for each custom emoji they mention.
+   */
+  private async emojiTags(content: string): Promise<string[][]> {
+    const pubkey = this.pubkey();
+    if (!pubkey) return [];
+
+    const matches = [...content.matchAll(/:([a-zA-Z0-9_]+):/g)];
+    if (matches.length === 0) return [];
+
+    try {
+      const available = await this.emojiSets.getUserEmojiSets(pubkey);
+      const tags: string[][] = [];
+      const seen = new Set<string>();
+
+      for (const match of matches) {
+        const shortcode = match[1];
+        if (seen.has(shortcode)) continue;
+
+        const url = available.get(shortcode) ?? available.get(`:${shortcode}:`);
+        if (!url) continue;
+
+        seen.add(shortcode);
+        tags.push(['emoji', shortcode, url]);
+      }
+
+      return tags;
+    } catch (error) {
+      this.logger.debug('[Concord] Could not resolve custom emoji', error);
+      return [];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pins (CORD-04 §7)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The verified pins for a channel.
+   *
+   * `readable` is false when the list is sealed under a key epoch this client
+   * never held — which must be surfaced as "unavailable" rather than "no pins",
+   * because a writer must never rebuild a list it could not read.
+   */
+  getPins(communityId: string, channelId: string): { pins: CordVerifiedPin[]; readable: boolean } {
+    const community = this.getCommunity(communityId);
+    const channel = this.getChannels(communityId).find(entry => entry.channelId === channelId);
+    if (!community || !channel) return { pins: [], readable: true };
+
+    const coordinate = this.pinsCoordinate(communityId, channelId);
+    const content = this.getControl(communityId).pins.get(coordinate);
+    if (!content) return { pins: [], readable: true };
+
+    const group = this.channelGroupKey(community, channel);
+
+    const { entries, readable } = parsePinList(content, (epoch, sealed) => {
+      // Only openable if we hold the key for the epoch it names.
+      if (Number(epoch) !== channel.epoch) return null;
+
+      try {
+        return nip44DecryptWithKey(sealed, group.convKey);
+      } catch {
+        return null;
+      }
+    });
+
+    const pins = entries
+      .map(entry => verifyPinEntry(entry, channelId))
+      .filter((pin): pin is CordVerifiedPin => !!pin);
+
+    return { pins, readable };
+  }
+
+  private pinsCoordinate(communityId: string, channelId: string): string {
+    return toHex(cordHkdf(fromHex(communityId), LABEL_PINS, toId32(channelId)));
+  }
+
+  /** Build the replacement pin list after adding or removing an entry. */
+  buildPinList(
+    communityId: string,
+    channelId: string,
+    change: { pin?: CordMessage; unpin?: string }
+  ): { content: string; readable: boolean } | null {
+    const community = this.getCommunity(communityId);
+    const channel = this.getChannels(communityId).find(entry => entry.channelId === channelId);
+    if (!community || !channel) return null;
+
+    const coordinate = this.pinsCoordinate(communityId, channelId);
+    const existingContent = this.getControl(communityId).pins.get(coordinate);
+    const group = this.channelGroupKey(community, channel);
+
+    let entries: CordPinEntry[] = [];
+    let readable = true;
+
+    if (existingContent) {
+      const parsed = parsePinList(existingContent, (epoch, sealed) => {
+        if (Number(epoch) !== channel.epoch) return null;
+        try {
+          return nip44DecryptWithKey(sealed, group.convKey);
+        } catch {
+          return null;
+        }
+      });
+
+      entries = parsed.entries;
+      readable = parsed.readable;
+    }
+
+    if (!readable) return { content: '', readable: false };
+
+    if (change.unpin) {
+      entries = entries.filter(entry => {
+        const verified = verifyPinEntry(entry, channelId);
+        return verified?.id !== change.unpin;
+      });
+    }
+
+    if (change.pin?.seal) {
+      const entry = buildPinEntry(change.pin.seal, group.convKey, change.pin.wrapId);
+      if (entry) entries = [...entries, entry];
+    }
+
+    return {
+      content: buildPinListContent(entries, {
+        private: channel.private,
+        epoch: channel.epoch,
+        seal: plaintext => nip44EncryptWithKey(plaintext, group.convKey),
+      }),
+      readable: true,
+    };
+  }
+
   /** React to a message (NIP-25 shape). */
   async react(
     communityId: string,
@@ -800,6 +970,10 @@ export class ConcordService {
 
     const { created_at, ms } = splitTimestamp(Date.now());
 
+    // A custom-emoji reaction is a `:shortcode:` in the content, so it needs
+    // the same NIP-30 tag a message does or it renders as literal text.
+    const emojiTags = await this.emojiTags(emoji);
+
     await this.publishRumor(community, this.channelGroupKey(community, channel), {
       kind: CORD_KIND_REACTION,
       pubkey,
@@ -808,6 +982,7 @@ export class ConcordService {
         ['channel', channel.channelId],
         ['epoch', String(channel.epoch)],
         ['ms', ms],
+        ...emojiTags,
         ['e', target.id],
         ['p', target.pubkey],
         ['k', String(target.kind)],

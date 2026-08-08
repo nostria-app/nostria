@@ -14,6 +14,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -46,7 +47,7 @@ import { ConcordRekeyService } from '../../services/concord/concord-rekey.servic
 import { ConcordVoiceService } from '../../services/concord/concord-voice.service';
 import {
   CORD_PERMISSIONS,
-  CORD_STOCK_RELAYS,
+  CORD_DEFAULT_RELAYS,
   CordChannel,
   CordCommunity,
   CordInviteBundle,
@@ -56,6 +57,7 @@ import {
   PERM_MANAGE_CHANNELS,
   PERM_MANAGE_METADATA,
   PERM_MANAGE_ROLES,
+  PERM_PIN_MESSAGES,
 } from '../../interfaces/concord';
 
 /** Consecutive messages from one author within this window are grouped. */
@@ -76,6 +78,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
   imports: [
     FormsModule,
     DatePipe,
+    MatBadgeModule,
     MatButtonModule,
     MatDividerModule,
     MatFormFieldModule,
@@ -129,7 +132,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly showCreate = signal(false);
   readonly newCommunityName = signal('');
   readonly newCommunityDescription = signal('');
-  readonly newCommunityRelays = signal(CORD_STOCK_RELAYS.join('\n'));
+  readonly newCommunityRelays = signal(CORD_DEFAULT_RELAYS.join('\n'));
   readonly newChannelName = signal('');
   readonly newChannelPrivate = signal(false);
   readonly settingsName = signal('');
@@ -140,6 +143,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly busy = signal(false);
   readonly brokerInput = signal('');
   readonly refounding = signal(false);
+  readonly showPins = signal(false);
 
   readonly permissionCatalogue = CORD_PERMISSIONS;
 
@@ -222,6 +226,28 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     return clusters;
   });
+
+  readonly canPin = computed(() => this.check(PERM_PIN_MESSAGES));
+
+  /** Verified pins for the open channel, plus whether we could read the list. */
+  readonly pinState = computed(() => {
+    this.revision();
+    const community = this.communityId();
+    const channel = this.channelId();
+
+    return community && channel
+      ? this.concord.getPins(community, channel)
+      : { pins: [], readable: true };
+  });
+
+  readonly pins = computed(() => this.pinState().pins);
+
+  /**
+   * True when the pin list is sealed under a key epoch we never held. It must
+   * be shown as unavailable rather than empty, because replacing a list we
+   * cannot read would silently drop every entry in it.
+   */
+  readonly pinsUnavailable = computed(() => !this.pinState().readable);
 
   readonly canPost = computed(() => !!this.pubkey() && !this.isDissolved());
 
@@ -531,15 +557,6 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
   findMessage(id: string | undefined): CordMessage | undefined {
     return id ? this.messages().find(message => message.id === id) : undefined;
-  }
-
-  /** Distinct reaction emojis with their counts. */
-  reactionSummary(message: CordMessage): { emoji: string; count: number }[] {
-    const counts = new Map<string, number>();
-    for (const reaction of message.reactions ?? []) {
-      counts.set(reaction.emoji, (counts.get(reaction.emoji) ?? 0) + 1);
-    }
-    return [...counts.entries()].map(([emoji, count]) => ({ emoji, count }));
   }
 
   // -------------------------------------------------------------------------
@@ -858,6 +875,115 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   }
 
   // -------------------------------------------------------------------------
+  // Pins (CORD-04 §7)
+  // -------------------------------------------------------------------------
+
+  isPinned(message: CordMessage): boolean {
+    return this.pins().some(pin => pin.id === message.id);
+  }
+
+  async togglePin(message: CordMessage): Promise<void> {
+    const community = this.activeCommunity();
+    const state = this.control();
+    const channel = this.activeChannel();
+    if (!community || !state || !channel || this.busy()) return;
+
+    if (this.pinsUnavailable()) {
+      this.snackBar.open(
+        'This channel\u2019s pins were sealed under a key you never held, so they cannot be changed here.',
+        'Dismiss',
+        { duration: 7000 }
+      );
+      return;
+    }
+
+    const pinned = this.isPinned(message);
+
+    if (!pinned && this.pins().length >= this.admin.maxPins) {
+      this.snackBar.open(`A channel can hold at most ${this.admin.maxPins} pins.`, 'Dismiss', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (!pinned && !message.seal) {
+      this.snackBar.open('This message cannot be pinned: its proof is unavailable.', 'Dismiss', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    this.busy.set(true);
+
+    try {
+      const built = this.concord.buildPinList(community.communityId, channel.channelId, {
+        pin: pinned ? undefined : message,
+        unpin: pinned ? message.id : undefined,
+      });
+
+      if (!built || !built.readable) {
+        throw new Error('The current pin list could not be read, so it must not be replaced');
+      }
+
+      await this.admin.setPins(community, state, channel.channelId, built.content, {
+        couldRead: true,
+      });
+
+      await this.concord.loadCommunity(community.communityId, true);
+      this.revision.update(value => value + 1);
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Remove a pin by its verified rumor id, without needing the message. */
+  async unpin(id: string): Promise<void> {
+    const community = this.activeCommunity();
+    const state = this.control();
+    const channel = this.activeChannel();
+    if (!community || !state || !channel || this.busy()) return;
+
+    this.busy.set(true);
+
+    try {
+      const built = this.concord.buildPinList(community.communityId, channel.channelId, {
+        unpin: id,
+      });
+
+      if (!built || !built.readable) {
+        throw new Error('The current pin list could not be read, so it must not be replaced');
+      }
+
+      await this.admin.setPins(community, state, channel.channelId, built.content, {
+        couldRead: true,
+      });
+
+      await this.concord.loadCommunity(community.communityId, true);
+      this.revision.update(value => value + 1);
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Jump to a pinned message when it is in the loaded timeline. */
+  scrollToPin(id: string): void {
+    const element = document.getElementById(`cord-msg-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('flash');
+      setTimeout(() => element.classList.remove('flash'), 1200);
+    } else {
+      this.snackBar.open('That message is not in the loaded history.', undefined, {
+        duration: 3000,
+      });
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Voice (CORD-07)
   // -------------------------------------------------------------------------
 
@@ -967,6 +1093,28 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     } finally {
       this.refounding.set(false);
     }
+  }
+
+  /**
+   * Group reactions by emoji, keeping the custom URL so shortcodes render as
+   * images rather than as literal `:name:` text.
+   */
+  reactionSummary(message: CordMessage): { emoji: string; count: number; url?: string }[] {
+    const counts = new Map<string, { count: number; url?: string }>();
+
+    for (const reaction of message.reactions ?? []) {
+      const existing = counts.get(reaction.emoji);
+      counts.set(reaction.emoji, {
+        count: (existing?.count ?? 0) + 1,
+        url: existing?.url ?? reaction.url,
+      });
+    }
+
+    return [...counts.entries()].map(([emoji, entry]) => ({
+      emoji,
+      count: entry.count,
+      url: entry.url,
+    }));
   }
 
   private scrollToBottom(): void {

@@ -12,7 +12,7 @@ import {
   CORD_KIND_INVITE_LIST,
   CORD_MAX_MEMBERSHIPS,
   CORD_NIP44_MAX_PLAINTEXT,
-  CORD_STOCK_RELAYS,
+  CORD_DEFAULT_RELAYS,
   CordCommunity,
   CordInviteBundle,
 } from '../../interfaces/concord';
@@ -337,7 +337,7 @@ export class ConcordListsService {
 
     try {
       const fromStock = await this.relayPool.query(
-        CORD_STOCK_RELAYS,
+        CORD_DEFAULT_RELAYS,
         { kinds: [kind], authors: [pubkey], limit: 1 },
         6000
       );
@@ -366,7 +366,7 @@ export class ConcordListsService {
     // Mirror to the Concord stock relays so other Concord clients converge on
     // the same document rather than each keeping a private fork.
     await this.relayPool
-      .publish(CORD_STOCK_RELAYS, signed, 8000)
+      .publish(CORD_DEFAULT_RELAYS, signed, 8000)
       .catch(error => this.logger.debug('[Concord] Stock relay mirror failed', error));
   }
 }

@@ -181,10 +181,28 @@ export const CORD_RELAY_DICTIONARY: Record<number, string> = {
   4: 'wss://relay.dreamith.to',
 };
 
-/** Selected by the fragment's "stock set" flag, so it costs zero relay bytes. */
+/**
+ * What the fragment's "stock set" flag expands to.
+ *
+ * This is wire format, not preference: a link minted with the flag set means
+ * exactly these four relays, so the list must match every other Concord client
+ * byte for byte or such links resolve to the wrong hosts.
+ */
 export const CORD_STOCK_RELAYS = [
   CORD_RELAY_DICTIONARY[1],
   CORD_RELAY_DICTIONARY[2],
+  CORD_RELAY_DICTIONARY[3],
+  CORD_RELAY_DICTIONARY[4],
+];
+
+/**
+ * The relays Nostria itself chooses — for new communities, and for mirroring
+ * the member's own encrypted lists.
+ *
+ * Separate from the dictionary above on purpose: this is the one we are free to
+ * change, because nothing on the wire refers to it.
+ */
+export const CORD_DEFAULT_RELAYS = [
   CORD_RELAY_DICTIONARY[3],
   CORD_RELAY_DICTIONARY[4],
 ];
@@ -360,12 +378,18 @@ export interface CordMessage {
   /** NIP-40 expiry in unix seconds, when the community timer is set. */
   expiration?: number;
   rumor: CordRumor;
+  /** Retained verbatim so this message can be pinned with proof later. */
+  seal?: CordSealEvent;
+  /** The outer wrap id, an unverifiable jump-to-context hint for pins. */
+  wrapId?: string;
 }
 
 export interface CordReaction {
   emoji: string;
   pubkey: string;
   timestamp: number;
+  /** NIP-30 custom emoji URL, when the reaction referenced a shortcode. */
+  url?: string;
 }
 
 /** A community as held by this client. */
