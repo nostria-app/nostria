@@ -498,6 +498,14 @@ function buildRouteFallbackPreview(path: string): { title: string; description: 
     };
   }
 
+  if (path.startsWith('/g/')) {
+    return {
+      title: 'Nostr Group on Nostria',
+      description: 'Join this group on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
   return null;
 }
 
@@ -557,6 +565,7 @@ function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
     'nostr album on nostria',
     'nostr artist on nostria',
     'nostr live stream on nostria',
+    'nostr group on nostria',
   ];
 
   const genericRouteFallbackMarkers = [
@@ -568,6 +577,7 @@ function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
     'open this album on nostria',
     'discover this artist on nostria',
     'watch this live stream on nostria',
+    'join this group on nostria',
   ];
 
   const genericHomeTitles = ['nostria - your social network', 'nostria'];
@@ -657,6 +667,7 @@ const SSR_ROUTE_PATTERNS = [
   /^\/u\/.+/,      // Username pages
   /^\/a\/.+/,      // Article pages
   /^\/stream\/.+/, // Stream pages
+  /^\/g\/[^/]+\/.+/, // NIP-29 group pages (/g/<relay-host>/<group-id>)
   /^\/music\/artist\/.+/, // Music artist pages
   /^\/music\/song\/.+/,   // Music song pages
   /^\/music\/playlist\/.+/, // Music playlist pages

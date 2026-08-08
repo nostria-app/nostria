@@ -145,6 +145,12 @@ export class MetaService {
 
     // Twitter Card - use explicit selector
     this.meta.updateTag({ name: 'twitter:site', content: '@nostriaapp' }, 'name="twitter:site"');
+    if (config.twitterCard) {
+      // Callers that only have a small square image (an avatar or a group icon)
+      // should ask for 'summary', otherwise it is upscaled into a blurry
+      // large card.
+      this.meta.updateTag({ name: 'twitter:card', content: config.twitterCard }, 'name="twitter:card"');
+    }
     if (config.title) {
       this.meta.updateTag({ name: 'twitter:title', content: config.title }, 'name="twitter:title"');
     }

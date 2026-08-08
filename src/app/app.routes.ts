@@ -3,6 +3,7 @@ import { DataResolver } from './data-resolver';
 import { ArticleResolver } from './articleResolver';
 import { UsernameResolver } from './usernameResolver';
 import { streamResolver } from './stream-resolver';
+import { groupResolver } from './group-resolver';
 
 // Only import the main landing component eagerly
 // Everything else should be lazy-loaded
@@ -226,6 +227,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/servers/servers.component').then(m => m.ServersComponent),
     data: { isRoot: true },
+    resolve: { group: groupResolver },
     title: 'Groups',
   },
   // Short, shareable aliases for NIP-29 groups: /g/<relay-host>/<group-id>.
@@ -249,6 +251,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/servers/servers.component').then(m => m.ServersComponent),
     data: { isRoot: true },
+    resolve: { group: groupResolver },
     title: 'Groups',
   },
   {

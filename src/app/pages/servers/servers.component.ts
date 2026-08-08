@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   signal,
+  TransferState,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -44,6 +45,7 @@ import { LoggerService } from '../../services/logger.service';
 import { Nip29GroupsListService } from '../../services/nip29-groups-list.service';
 import { Nip29LivekitService } from '../../services/nip29-livekit.service';
 import { Nip29Service, SUGGESTED_NIP29_SERVERS } from '../../services/nip29.service';
+import { GROUP_STATE_KEY, type GroupData } from '../../group-resolver';
 import {
   NIP29_KIND_CHAT,
   NIP29_KIND_THREAD,
@@ -109,6 +111,7 @@ export class ServersComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly transferState = inject(TransferState);
 
   readonly layout = inject(LayoutService);
   readonly nip29 = inject(Nip29Service);
@@ -397,6 +400,8 @@ export class ServersComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.consumeServerRenderedGroup();
+
     this.route.paramMap.subscribe(params => {
       this.serverSlug.set(params.get('slug'));
       this.groupId.set(params.get('groupId'));
@@ -411,6 +416,22 @@ export class ServersComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.nip29.closeSubscriptions();
     void this.voice.leave();
+  }
+
+  /**
+   * Adopt the group metadata the server already fetched for the social preview,
+   * so hydration renders the real name and icon without another relay request.
+   */
+  private consumeServerRenderedGroup(): void {
+    if (!this.transferState.hasKey(GROUP_STATE_KEY)) return;
+
+    const data = this.transferState.get<GroupData | null>(GROUP_STATE_KEY, null);
+    this.transferState.remove(GROUP_STATE_KEY);
+
+    if (data?.event && data.relay) {
+      this.nip29.seedGroupFromEvent(data.relay, data.event);
+      this.revision.update(value => value + 1);
+    }
   }
 
   // ---------------------------------------------------------------------------

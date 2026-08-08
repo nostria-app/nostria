@@ -262,6 +262,18 @@ export class Nip29Service {
   // Keys and lookups
   // ---------------------------------------------------------------------------
 
+  /**
+   * Seed a group record that was fetched during server-side rendering, so the
+   * client shows its name and icon immediately instead of waiting for a relay
+   * round-trip it has already paid for.
+   */
+  seedGroupFromEvent(relayUrl: string, event: Event): void {
+    const normalized = this.normalize(relayUrl);
+    if (!normalized) return;
+
+    this.upsertGroup(this.parseGroupMetadata(normalized, event));
+  }
+
   /** Stable cache key for a group on a specific relay. */
   groupKey(relay: string, groupId: string): string {
     return `${this.normalize(relay)}|${groupId}`;
