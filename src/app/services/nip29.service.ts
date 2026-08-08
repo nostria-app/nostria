@@ -1519,7 +1519,7 @@ export class Nip29Service {
       );
 
       if (cached.length > 0) {
-        this.ingest(relayUrl, groupId, cached, { persist: false });
+        this.ingest(relayUrl, groupId, cached, { persist: false, fromRelay: false });
       }
     } catch (error) {
       this.logger.debug('[NIP-29] No cached messages available', { groupId, error });
@@ -1530,7 +1530,7 @@ export class Nip29Service {
     relayUrl: string,
     groupId: string,
     events: Event[],
-    options: { persist?: boolean } = {}
+    options: { persist?: boolean; fromRelay?: boolean } = {}
   ): void {
     if (events.length === 0) return;
 
@@ -1565,7 +1565,10 @@ export class Nip29Service {
       if (threadId) this.mergeReplies(threadId, [reply]);
     }
 
-    this.rememberTimeline(key, events);
+    // Only relay-served events are valid `previous` references.
+    if (options.fromRelay !== false) {
+      this.rememberTimeline(key, events);
+    }
 
     if (options.persist !== false) {
       this.database.saveEvents(events).catch(error => {
@@ -1603,15 +1606,29 @@ export class Nip29Service {
    * Keep the last 50 event ids seen in a group so outgoing events can carry
    * NIP-29 `previous` timeline references.
    */
+  /**
+   * Keep the newest 50 event ids seen *on this relay* so outgoing events can
+   * carry NIP-29 `previous` timeline references.
+   *
+   * Only events the relay actually served are eligible. Locally cached events
+   * are excluded because the message cache is keyed by the `h` tag alone, so a
+   * forked group sharing an id on another relay could otherwise contribute
+   * references this relay has never seen — which it must reject.
+   */
   private rememberTimeline(key: string, events: Event[]): void {
     const own = this.accountState.pubkey();
-    const current = this.timeline.get(key) ?? [];
-    const ids = [
-      ...current,
-      ...events.filter(event => event.pubkey !== own).map(event => event.id),
-    ];
 
-    this.timeline.set(key, [...new Set(ids)].slice(-TIMELINE_WINDOW));
+    const incoming = events
+      .filter(event => event.pubkey !== own)
+      // The spec means the *latest* events seen, so order by time rather than
+      // by whatever order the relay or IndexedDB happened to return.
+      .sort((a, b) => a.created_at - b.created_at)
+      .map(event => event.id);
+
+    if (incoming.length === 0) return;
+
+    const merged = [...(this.timeline.get(key) ?? []), ...incoming];
+    this.timeline.set(key, [...new Set(merged)].slice(-TIMELINE_WINDOW));
   }
 
   private previousTags(relayUrl: string, groupId: string): string[][] {
