@@ -11,7 +11,11 @@
         matTooltipPosition="right"
         (click)="selectCommunity(community)"
       >
+        @if (communityIcon(community); as icon) {
+        <img class="rail-avatar" [src]="icon" [alt]="displayName(community)" />
+        } @else {
         <span class="rail-avatar">{{ initials(displayName(community)) }}</span>
+        }
       </button>
       } @empty {
       <p class="rail-empty">No communities</p>
@@ -59,6 +63,10 @@
       <button type="button" class="back" (click)="backToCommunities()" aria-label="Back">
         <mat-icon>arrow_back</mat-icon>
       </button>
+
+      @if (communityIcon(community); as icon) {
+      <img class="community-avatar" [src]="icon" [alt]="communityName()" />
+      }
 
       <div class="sidebar-title">
         <span class="community-name">
@@ -224,7 +232,11 @@
         @if (preview(); as bundle) {
         <div class="preview-card">
           <div class="preview-head">
+            @if (previewIcon(); as icon) {
+            <img class="rail-avatar" [src]="icon" [alt]="bundle.name || 'Community'" />
+            } @else {
             <span class="rail-avatar">{{ initials(bundle.name || 'Community') }}</span>
+            }
             <div>
               <h3>{{ bundle.name || 'Unnamed community' }}</h3>
               <span class="verified">

@@ -87,6 +87,18 @@
   letter-spacing: 0.03em;
 }
 
+img.rail-avatar {
+  object-fit: cover;
+}
+
+.community-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .rail-empty {
   font-size: 0.62rem;
   text-align: center;

@@ -41,6 +41,7 @@ import { ConcordService } from '../../services/concord.service';
 import { ConcordAdminService } from '../../services/concord/concord-admin.service';
 import { ConcordInviteService } from '../../services/concord/concord-invite.service';
 import { ConcordListsService } from '../../services/concord/concord-lists.service';
+import { ConcordMediaService } from '../../services/concord/concord-media.service';
 import { ConcordRekeyService } from '../../services/concord/concord-rekey.service';
 import { ConcordVoiceService } from '../../services/concord/concord-voice.service';
 import {
@@ -105,6 +106,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly admin = inject(ConcordAdminService);
   readonly invites = inject(ConcordInviteService);
   readonly lists = inject(ConcordListsService);
+  readonly media = inject(ConcordMediaService);
   readonly rekey = inject(ConcordRekeyService);
   readonly voice = inject(ConcordVoiceService);
 
@@ -480,6 +482,31 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * A community's icon, decrypted from its Control Plane metadata pointer.
+   *
+   * Returns null until the blob resolves, so callers fall back to initials
+   * rather than flashing a broken image.
+   */
+  communityIcon(community: CordCommunity): string | null {
+    this.media.revision();
+
+    const metadata = this.concord.getControl(community.communityId).metadata;
+    return this.media.resolve(metadata?.icon);
+  }
+
+  /** The active community's banner, when it publishes one. */
+  activeBanner(): string | null {
+    this.media.revision();
+    return this.media.resolve(this.control()?.metadata?.banner);
+  }
+
+  /** An invite preview's icon, carried in the bundle purely as a preview. */
+  previewIcon(): string | null {
+    this.media.revision();
+    return this.media.resolve(this.preview()?.icon);
+  }
 
   initials(name: string): string {
     return name
