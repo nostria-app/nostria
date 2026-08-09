@@ -22,6 +22,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DatabaseService } from '../../../services/database.service';
 import { TrustService } from '../../../services/trust.service';
 import { Event } from 'nostr-tools';
+import { getEffectiveMaxTagsAllowed, MaxFeedTagsAllowed } from '../../../services/local-settings.service';
 
 const PAGE_SIZE = 10;
 
@@ -168,6 +169,7 @@ export class ListColumnComponent implements OnDestroy {
   // Kinds to filter by (from parent filter panel)
   filterKinds = input<number[]>([]);
 
+  maxTagsAllowed = input<MaxFeedTagsAllowed>('any');
   hideWordle = input(true);
   wotMinRank = input<number | undefined>(undefined);
 
@@ -189,12 +191,17 @@ export class ListColumnComponent implements OnDestroy {
     const showReplies = this.showReplies();
     const showReposts = this.showReposts();
     const filterKinds = this.filterKinds();
+    const maxTagsAllowed = getEffectiveMaxTagsAllowed({ maxTagsAllowed: this.maxTagsAllowed() });
     const hideWordle = this.hideWordle();
     const wotMinRank = this.wotMinRank();
 
     return events.filter(event => {
       // Filter by kinds if specified
       if (filterKinds.length > 0 && !filterKinds.includes(event.kind)) {
+        return false;
+      }
+
+      if (maxTagsAllowed !== undefined && event.tags.length > maxTagsAllowed) {
         return false;
       }
 

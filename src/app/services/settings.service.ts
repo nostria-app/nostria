@@ -5,7 +5,12 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
-import { LocalSettingsService, MenuItemConfig, RelayDiscoveryMode } from './local-settings.service';
+import {
+  LocalSettingsService,
+  MaxFeedTagsAllowed,
+  MenuItemConfig,
+  RelayDiscoveryMode,
+} from './local-settings.service';
 
 export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
 
@@ -30,6 +35,7 @@ export interface SyncedFeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean;
   showReposts?: boolean;
+  maxTagsAllowed?: MaxFeedTagsAllowed;
   hideWordle?: boolean;
   wotFilter?: boolean;
   wotMinRank?: number;

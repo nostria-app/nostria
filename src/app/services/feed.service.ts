@@ -41,6 +41,7 @@ import {
   FeedMemoryLimits,
   getRuntimeResourceProfile,
 } from '../utils/runtime-resource-profile';
+import { MaxFeedTagsAllowed } from './local-settings.service';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -84,6 +85,7 @@ export interface FeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
   showReposts?: boolean; // Whether to show reposts in the feed (default: true)
+  maxTagsAllowed?: MaxFeedTagsAllowed; // Maximum allowed tag count before suppressing likely spam posts
   hideWordle?: boolean; // Whether to hide Wordle posts tagged with t=wordle
   wotFilter?: boolean; // Legacy toggle for Web of Trust filtering
   wotMinRank?: number; // Minimum Web of Trust rank to include (0 = any positive rank)
@@ -3884,6 +3886,7 @@ export class FeedService {
           filters: column.filters,
           showReplies: column.showReplies,
           showReposts: column.showReposts,
+          maxTagsAllowed: column.maxTagsAllowed,
           hideWordle: column.hideWordle,
           createdAt: feed.createdAt || Date.now(),
           updatedAt: Date.now(),
@@ -4254,6 +4257,7 @@ export class FeedService {
       filters: feed.filters,
       showReplies: feed.showReplies,
       showReposts: feed.showReposts,
+      maxTagsAllowed: feed.maxTagsAllowed,
       hideWordle: feed.hideWordle,
       wotFilter: feed.wotFilter,
       wotMinRank: feed.wotMinRank,
@@ -4472,6 +4476,7 @@ export class FeedService {
         feed1.searchQuery !== feed2.searchQuery ||
         feed1.showReplies !== feed2.showReplies ||
         feed1.showReposts !== feed2.showReposts ||
+        feed1.maxTagsAllowed !== feed2.maxTagsAllowed ||
         feed1.hideWordle !== feed2.hideWordle ||
         feed1.isSystem !== feed2.isSystem ||
         !this.arraysEqual(feed1.kinds, feed2.kinds) ||
@@ -4846,5 +4851,4 @@ export class FeedService {
     return this.DYNAMIC_FEED_ID;
   }
 }
-
 

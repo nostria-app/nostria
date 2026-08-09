@@ -23,7 +23,13 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
+import {
+  LocalSettingsService,
+  DEFAULT_CONTENT_FILTER,
+  getEffectiveMaxTagsAllowed,
+  getEffectiveWotMinRank,
+  isWotFilterEnabled,
+} from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 
@@ -253,10 +259,12 @@ export class FeedsComponent implements OnDestroy {
       const kindsMatch = kinds.length === defaultKinds.length && kinds.every(k => defaultKinds.includes(k));
       const showReplies = feed.showReplies ?? false;
       const showReposts = feed.showReposts ?? true;
+      const maxTagsAllowed = feed.maxTagsAllowed ?? 'any';
       const hideWordle = feed.hideWordle ?? true;
       return !kindsMatch
         || showReplies !== DEFAULT_CONTENT_FILTER.showReplies
         || showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+        || maxTagsAllowed !== DEFAULT_CONTENT_FILTER.maxTagsAllowed
         || hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
         || isWotFilterEnabled(feed);
     }
@@ -267,6 +275,7 @@ export class FeedsComponent implements OnDestroy {
     return !kindsMatch
       || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies
       || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+      || (filter.maxTagsAllowed ?? 'any') !== DEFAULT_CONTENT_FILTER.maxTagsAllowed
       || filter.hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
       || isWotFilterEnabled(filter);
   });
@@ -598,6 +607,7 @@ export class FeedsComponent implements OnDestroy {
    * Each feed has its own kinds, showReplies, and showReposts settings
    * Filters out reply events when showReplies is false
    * Filters out repost events when showReposts is false
+   * Filters out likely spam posts when they exceed the configured tag-count threshold
    * Filters out Wordle-tagged events when hideWordle is true
    * Filters events by kinds based on the feed's configuration
    */
@@ -605,6 +615,7 @@ export class FeedsComponent implements OnDestroy {
     // Use feed-specific settings
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
+    const maxTagsAllowed = getEffectiveMaxTagsAllowed(feed);
     const hideWordle = feed.hideWordle ?? true;
     const allowedKinds = feed.kinds || [];
     const wotMinRank = getEffectiveWotMinRank(feed);
@@ -627,6 +638,10 @@ export class FeedsComponent implements OnDestroy {
         if (!allowedKinds.includes(event.kind)) {
           return false;
         }
+      }
+
+      if (maxTagsAllowed !== undefined && event.tags.length > maxTagsAllowed) {
+        return false;
       }
 
       if (hideWordle && event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'wordle')) {
@@ -654,6 +669,7 @@ export class FeedsComponent implements OnDestroy {
     return [
       feed.showReplies ?? false,
       feed.showReposts ?? true,
+      feed.maxTagsAllowed ?? 'any',
       feed.hideWordle ?? true,
       getEffectiveWotMinRank(feed),
       (feed.kinds || []).join(','),
@@ -2415,7 +2431,8 @@ export class FeedsComponent implements OnDestroy {
           searchQuery: result.searchQuery,
           showReplies: result.showReplies,
           showReposts: result.showReposts,
-          hideWordle: result.hideWordle,
+          maxTagsAllowed: result.maxTagsAllowed ?? editingFeedData.maxTagsAllowed,
+          hideWordle: result.hideWordle ?? editingFeedData.hideWordle,
         });
       } else {
         // Add new feed
@@ -2434,6 +2451,7 @@ export class FeedsComponent implements OnDestroy {
           searchQuery: result.searchQuery,
           showReplies: result.showReplies,
           showReposts: result.showReposts,
+          maxTagsAllowed: result.maxTagsAllowed ?? DEFAULT_CONTENT_FILTER.maxTagsAllowed,
           hideWordle: result.hideWordle,
           filters: result.filters || {},
         });

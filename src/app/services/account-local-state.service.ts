@@ -2,6 +2,7 @@ import { inject, signal, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { DeviceNotificationPreferences } from './database.service';
+import { MaxFeedTagsAllowed } from './local-settings.service';
 
 /**
  * Filter options for People page
@@ -32,6 +33,7 @@ export interface StoredFeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean;
   showReposts?: boolean;
+  maxTagsAllowed?: MaxFeedTagsAllowed;
   hideWordle?: boolean;
   wotFilter?: boolean;
   wotMinRank?: number;

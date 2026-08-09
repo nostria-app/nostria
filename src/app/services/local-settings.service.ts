@@ -21,12 +21,20 @@ export interface WotFilterSettings {
   wotMinRank?: number;
 }
 
+export type MaxFeedTagsAllowed = 'any' | 5 | 20;
+
 export function getEffectiveWotMinRank(settings?: WotFilterSettings | null): number {
   if (typeof settings?.wotMinRank === 'number') {
     return settings.wotMinRank;
   }
 
   return settings?.wotFilter ? 0 : -1;
+}
+
+export function getEffectiveMaxTagsAllowed(
+  settings?: { maxTagsAllowed?: MaxFeedTagsAllowed | null } | null,
+): number | undefined {
+  return typeof settings?.maxTagsAllowed === 'number' ? settings.maxTagsAllowed : undefined;
 }
 
 export function isWotFilterEnabled(settings?: WotFilterSettings | null): boolean {
@@ -44,6 +52,8 @@ export interface ContentFilterSettings {
   showReplies: boolean;
   /** Whether to show reposts */
   showReposts: boolean;
+  /** Maximum allowed tag count before a post is treated as spam. 'any' disables the filter. */
+  maxTagsAllowed: MaxFeedTagsAllowed;
   /** Whether to hide Wordle posts tagged with t=wordle */
   hideWordle: boolean;
   /** Legacy boolean toggle for Web of Trust filtering. Prefer wotMinRank for new code. */
@@ -57,6 +67,7 @@ export const DEFAULT_CONTENT_FILTER: ContentFilterSettings = {
   kinds: [1, 1111, 6, 16, 30023, 1068, 6969, 1222, 1244, 20, 21, 22, 34235, 34236],
   showReplies: false,
   showReposts: true,
+  maxTagsAllowed: 'any',
   hideWordle: true,
 };
 
@@ -375,7 +386,10 @@ export class LocalSettingsService {
           // who don't have this property yet (most users don't use authentication)
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
           // Ensure contentFilter exists for existing users
-          contentFilter: stored.contentFilter ?? DEFAULT_CONTENT_FILTER,
+          contentFilter: {
+            ...DEFAULT_CONTENT_FILTER,
+            ...(stored.contentFilter ?? {}),
+          },
           // Ensure locale is supported
           locale: normalizeLocale(stored.locale),
         };
@@ -629,6 +643,14 @@ export class LocalSettingsService {
   setContentFilterShowReposts(showReposts: boolean): void {
     const current = this.contentFilter();
     this.setContentFilter({ ...current, showReposts });
+  }
+
+  /**
+   * Set content filter maximum allowed tag count for feed spam filtering.
+   */
+  setContentFilterMaxTagsAllowed(maxTagsAllowed: MaxFeedTagsAllowed): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, maxTagsAllowed });
   }
 
   /**

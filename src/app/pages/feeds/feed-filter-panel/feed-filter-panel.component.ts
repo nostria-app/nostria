@@ -5,7 +5,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSliderModule } from '@angular/material/slider';
-import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../../services/local-settings.service';
+import {
+  LocalSettingsService,
+  DEFAULT_CONTENT_FILTER,
+  getEffectiveWotMinRank,
+  isWotFilterEnabled,
+  MaxFeedTagsAllowed,
+} from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 
@@ -27,6 +33,11 @@ interface ToggleFilterOption {
   icon: string;
 }
 
+interface MaxTagsAllowedOption {
+  value: MaxFeedTagsAllowed;
+  label: string;
+}
+
 /**
  * All available content types with their Nostr kinds
  * Note: Articles are excluded as there's a dedicated Articles feature in the app
@@ -43,8 +54,20 @@ const CONTENT_TYPES: ContentType[] = [
 
 const TOGGLE_FILTER_OPTIONS: ToggleFilterOption[] = [
   { id: 'showReplies', label: 'Show Replies', description: 'Comments on other posts', icon: 'reply' },
-  { id: 'hideWordle', label: 'Hide Wordle', description: 'Filter out posts tagged wordle', icon: 'grid_view' },
 ];
+
+const MAX_TAGS_ALLOWED_OPTIONS: MaxTagsAllowedOption[] = [
+  { value: 5, label: '5' },
+  { value: 20, label: '20' },
+  { value: 'any', label: 'Any' },
+];
+
+const HIDE_WORDLE_OPTION: ToggleFilterOption = {
+  id: 'hideWordle',
+  label: 'Hide Wordle',
+  description: 'Filter out posts tagged wordle',
+  icon: 'grid_view',
+};
 
 /**
  * Get all standard kinds from CONTENT_TYPES (kinds that can be toggled via quick buttons)
@@ -146,6 +169,35 @@ function isStandardKindsSelection(kinds: number[]): boolean {
             </button>
           </div>
           }
+        </div>
+
+        <div class="tag-limit-panel">
+          <div class="tag-limit-header">
+            <span class="section-label">Tags allowed</span>
+            <span class="tag-limit-value">{{ currentMaxTagsAllowedLabel() }}</span>
+          </div>
+          <mat-button-toggle-group
+            class="tag-limit-toggle-group"
+            [value]="currentMaxTagsAllowed()"
+            (change)="onMaxTagsAllowedChange($event.value)">
+            @for (option of maxTagsAllowedOptions; track option.value) {
+            <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+          <p class="tag-limit-hint">Hide posts with more tags than this. Any disables the spam filter.</p>
+        </div>
+
+        <div class="toggle-option">
+          <button
+            class="content-type-chip full-width"
+            [class.selected]="isToggleOptionSelected(hideWordleOption)"
+            (click)="toggleOption(hideWordleOption)">
+            <mat-icon class="chip-icon">{{ hideWordleOption.icon }}</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">{{ hideWordleOption.label }}</span>
+              <span class="chip-description">{{ hideWordleOption.description }}</span>
+            </div>
+          </button>
         </div>
 
         @if (trustProviderEnabled()) {
@@ -484,14 +536,46 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 
     .toggle-options-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
       gap: 0.5rem;
     }
 
-    @media (max-width: 480px) {
-      .toggle-options-grid {
-        grid-template-columns: 1fr;
-      }
+    .tag-limit-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      padding: 0.875rem;
+      border-radius: 8px;
+      background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .tag-limit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .tag-limit-value {
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .tag-limit-toggle-group {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tag-limit-toggle-group mat-button-toggle {
+      width: 100%;
+    }
+
+    .tag-limit-hint {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .wot-slider-panel {
@@ -645,6 +729,8 @@ export class FeedFilterPanelComponent {
   availableContentTypes = computed(() => CONTENT_TYPES);
 
   readonly toggleFilterOptions = TOGGLE_FILTER_OPTIONS;
+  readonly maxTagsAllowedOptions = MAX_TAGS_ALLOWED_OPTIONS;
+  readonly hideWordleOption = HIDE_WORDLE_OPTION;
 
   favoritesSet = computed(() =>
     this.followSetsService.followSets().find(set => set.dTag === 'nostria-favorites') ?? null
@@ -690,6 +776,14 @@ export class FeedFilterPanelComponent {
       return feedConfig.hideWordle ?? true;
     }
     return this.localSettings.contentFilter().hideWordle;
+  });
+
+  currentMaxTagsAllowed = computed<MaxFeedTagsAllowed>(() => {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      return feedConfig.maxTagsAllowed ?? 'any';
+    }
+    return this.localSettings.contentFilter().maxTagsAllowed ?? 'any';
   });
 
   // Track whether WoT filtering is enabled - from feed config if available
@@ -807,6 +901,10 @@ export class FeedFilterPanelComponent {
     this.updateHideWordle(checked);
   }
 
+  onMaxTagsAllowedChange(value: MaxFeedTagsAllowed): void {
+    this.updateMaxTagsAllowed(value);
+  }
+
   /**
    * Handle WoT filter toggle
    */
@@ -821,6 +919,11 @@ export class FeedFilterPanelComponent {
 
   currentWotMinRankLabel(): string {
     return String(this.currentWotMinRank());
+  }
+
+  currentMaxTagsAllowedLabel(): string {
+    const value = this.currentMaxTagsAllowed();
+    return value === 'any' ? 'Any' : `${value}`;
   }
 
   /**
@@ -879,6 +982,7 @@ export class FeedFilterPanelComponent {
     this.updateKinds(this.getDefaultKindsForFeedType(feedConfig.type));
     this.updateShowReplies(false);
     this.updateShowReposts(true);
+    this.updateMaxTagsAllowed(DEFAULT_CONTENT_FILTER.maxTagsAllowed);
     this.updateHideWordle(true);
   }
 
@@ -916,6 +1020,7 @@ export class FeedFilterPanelComponent {
       this.updateKinds(defaultKinds);
       this.updateShowReplies(false);
       this.updateShowReposts(true);
+      this.updateMaxTagsAllowed(DEFAULT_CONTENT_FILTER.maxTagsAllowed);
       this.updateHideWordle(true);
       this.updateWotMinRank(undefined);
     } else {
@@ -979,6 +1084,15 @@ export class FeedFilterPanelComponent {
       this.feedService.updateFeed(feedConfig.id, { hideWordle });
     } else {
       this.localSettings.setContentFilterHideWordle(hideWordle);
+    }
+  }
+
+  private updateMaxTagsAllowed(maxTagsAllowed: MaxFeedTagsAllowed): void {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      this.feedService.updateFeed(feedConfig.id, { maxTagsAllowed });
+    } else {
+      this.localSettings.setContentFilterMaxTagsAllowed(maxTagsAllowed);
     }
   }
 
