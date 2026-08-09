@@ -94,6 +94,22 @@ describe('RichTextEditorComponent', () => {
       }
     });
 
+    it('should preserve ordered list markdown from rich text content with multiline list HTML', () => {
+      const emitted: string[] = [];
+      component.contentChange.subscribe(value => emitted.push(value));
+
+      component.isRichTextMode.set(true);
+      fixture.detectChanges();
+
+      const editor = fixture.nativeElement.querySelector('.rich-text-content') as HTMLElement;
+      editor.innerHTML = '<ol>\n<li><p>First item</p></li>\n<li><p>Second item</p></li>\n</ol>';
+
+      component.onRichTextContentChange();
+
+      expect(component.markdownContent()).toBe('1. First item\n2. Second item');
+      expect(emitted.at(-1)).toBe('1. First item\n2. Second item');
+    });
+
     it('should emit richTextModeChange when toggling editor mode', () => {
       const emitted: boolean[] = [];
       component.richTextModeChange.subscribe(value => emitted.push(value));

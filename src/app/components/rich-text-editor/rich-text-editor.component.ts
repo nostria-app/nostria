@@ -371,6 +371,11 @@ export class RichTextEditorComponent implements AfterViewInit {
     // Clean up spans that might be inserted by contenteditable
     html = html.replace(/<span[^>]*>(.*?)<\/span>/gi, '$1');
 
+    // Convert lists through the DOM before the generic regex pipeline. Browsers
+    // often serialize contenteditable lists with extra whitespace or wrapped
+    // paragraphs, which makes plain regex list handling drop ordered markers.
+    html = this.convertHtmlListsToMarkdown(html);
+
     // Convert HTML to Markdown with proper line break handling
     let markdown = html
       // Handle horizontal rules
@@ -399,20 +404,6 @@ export class RichTextEditorComponent implements AfterViewInit {
 
       // Handle links (after images to avoid conflict)
       .replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
-
-      // Handle lists - more complex handling needed for nested lists
-      .replace(/<ul[^>]*>(.*?)<\/ul>/gi, function (match: string, content: string) {
-        const items = content
-          .split(/<li[^>]*>(.*?)<\/li>/gi)
-          .filter((item: string, i: number) => i % 2 === 1);
-        return items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n';
-      })
-      .replace(/<ol[^>]*>(.*?)<\/ol>/gi, function (match: string, content: string) {
-        const items = content
-          .split(/<li[^>]*>(.*?)<\/li>/gi)
-          .filter((item: string, i: number) => i % 2 === 1);
-        return items.map((item: string, i: number) => `${i + 1}. ${item.trim()}`).join('\n') + '\n';
-      })
 
       // Handle blockquotes - MUST be done before handling <p> tags
       // because marked wraps blockquote content in <p> tags
@@ -462,6 +453,106 @@ export class RichTextEditorComponent implements AfterViewInit {
       .trim();
 
     return markdown;
+  }
+
+  private convertHtmlListsToMarkdown(html: string): string {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    const rootLists = Array.from(container.querySelectorAll('ol, ul')).filter(
+      list => !list.parentElement?.closest('li')
+    );
+
+    for (const list of rootLists) {
+      const markdown = this.convertListElementToMarkdown(
+        list as HTMLOListElement | HTMLUListElement
+      );
+
+      list.replaceWith(document.createTextNode(markdown ? `\n\n${markdown}\n\n` : ''));
+    }
+
+    return container.innerHTML;
+  }
+
+  private convertListElementToMarkdown(
+    list: HTMLOListElement | HTMLUListElement,
+    depth = 0
+  ): string {
+    const ordered = list.tagName.toLowerCase() === 'ol';
+    const items = Array.from(list.children).filter(
+      (child): child is HTMLLIElement => child.tagName.toLowerCase() === 'li'
+    );
+
+    return items
+      .map((item, index) => this.convertListItemToMarkdown(item, ordered, depth, index))
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private convertListItemToMarkdown(
+    item: HTMLLIElement,
+    ordered: boolean,
+    depth: number,
+    index: number
+  ): string {
+    const nestedLists = Array.from(item.children).filter(
+      (child): child is HTMLOListElement | HTMLUListElement =>
+        child.tagName.toLowerCase() === 'ol' || child.tagName.toLowerCase() === 'ul'
+    );
+
+    const itemClone = item.cloneNode(true) as HTMLLIElement;
+    Array.from(itemClone.children)
+      .filter(child => child.tagName.toLowerCase() === 'ol' || child.tagName.toLowerCase() === 'ul')
+      .forEach(child => child.remove());
+
+    const inlineContent = this.convertHtmlFragmentToMarkdown(itemClone.innerHTML);
+    const marker = ordered ? `${index + 1}.` : '-';
+    const indent = '  '.repeat(depth);
+    const continuationIndent = `${indent}${' '.repeat(marker.length + 1)}`;
+    const contentLines = (inlineContent || '').split('\n').filter(line => line.trim().length > 0);
+
+    const itemMarkdown =
+      contentLines.length > 0
+        ? contentLines
+            .map((line, lineIndex) =>
+              lineIndex === 0
+                ? `${indent}${marker} ${line.trim()}`
+                : `${continuationIndent}${line.trim()}`
+            )
+            .join('\n')
+        : `${indent}${marker}`;
+
+    const nestedMarkdown = nestedLists
+      .map(list => this.convertListElementToMarkdown(list, depth + 1))
+      .filter(Boolean)
+      .join('\n');
+
+    return nestedMarkdown ? `${itemMarkdown}\n${nestedMarkdown}` : itemMarkdown;
+  }
+
+  private convertHtmlFragmentToMarkdown(html: string): string {
+    return html
+      .replace(/<p[^>]*>(.*?)<\/p>/gis, '$1\n')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+      .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+      .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+      .replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~')
+      .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+      .replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/<[^>]*>/g, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   // Rich text formatting methods
