@@ -130,11 +130,23 @@ Tester group management is not automated; only the bundle upload is.
 
 ## Troubleshooting
 
-| Error                                                         | Cause                                                                                                 |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `The caller does not have permission`                         | Service account not invited in Play Console, or permissions not yet propagated                        |
-| `Package not found: app.nostria.twa`                          | App not created in Play Console, or the service account has no access to it                           |
-| `Version code N has already been used`                        | Bump `version` in `package.json`                                                                      |
-| `APK specifies a version code that has already been used`     | Same as above                                                                                         |
-| `Only releases with status draft may be created on draft app` | The app has never had a production release; use `play_release_status: draft` or publish the app first |
-| Job says _Google Play upload skipped_                         | `PLAY_SERVICE_ACCOUNT_JSON` is not configured                                                         |
+| Error                                                         | Cause                                                                                                                      |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `The caller does not have permission`                         | Service account not invited in Play Console, granted access to the wrong app, or permissions not yet propagated. See below |
+| `Package not found: app.nostria.twa`                          | App not created in Play Console, or the service account has no access to it                                                |
+| `Version code N has already been used`                        | Bump `version` in `package.json`                                                                                           |
+| `APK specifies a version code that has already been used`     | Same as above                                                                                                              |
+| `Only releases with status draft may be created on draft app` | The app has never had a production release; use `play_release_status: draft` or publish the app first                      |
+| Job says _Google Play upload skipped_                         | `PLAY_SERVICE_ACCOUNT_JSON` is not configured                                                                              |
+
+### `The caller does not have permission`
+
+This is raised on the very first API call (`edits.insert`), so it always means the service account cannot act on the package it was given — not that the artifact is wrong.
+
+Check, in this order:
+
+1. **App-level access covers `app.nostria.twa`.** Play Console → **Users and permissions** → the service account's email → **App permissions**. If it was granted access to a specific app rather than account-level access, the legacy TWA listing must be added explicitly. This is the usual cause right after switching the package name.
+2. **Permissions granted:** _Release → Release apps to testing tracks_ and _Manage testing tracks and edit tester lists_ (plus _Release to production_ if the `production` track is used).
+3. **Same developer account.** The `app.nostria.twa` listing must live in the Play developer account that the service account was invited to. If the Bubblewrap app was published from a different account, the service account has to be invited there.
+4. **Google Play Android Developer API enabled** in the Google Cloud project that owns the service account key.
+5. **Propagation delay.** Newly granted Play Console permissions can take minutes to several hours to take effect. Re-run the workflow before changing anything else.

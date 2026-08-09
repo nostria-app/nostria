@@ -1092,7 +1092,7 @@ jobs:
           releaseFiles: ${{ steps.play-artifacts.outputs.aab_path }}
           mappingFile: ${{ steps.play-artifacts.outputs.mapping_path }}
           releaseName: ${{ needs.prepare-release.outputs.version }} (${{ steps.play-config.outputs.version_code }})
-          track: ${{ steps.play-config.outputs.track }}
+          tracks: ${{ steps.play-config.outputs.track }}
           status: ${{ steps.play-config.outputs.status }}
           whatsNewDirectory: play-whatsnew
 
