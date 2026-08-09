@@ -503,20 +503,40 @@
         cursor: zoom-in;
       }
 
-      table {
+      .article-table-scroll {
         width: 100%;
-        border-collapse: collapse;
+        overflow-x: auto;
+        overflow-y: hidden;
         margin: 1rem 0;
+        border-radius: 8px;
+      }
+
+      table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+        table-layout: auto;
 
         th,
         td {
           border: 1px solid var(--mat-sys-outline-variant);
           padding: 8px 12px;
           text-align: left;
+          white-space: nowrap;
+          word-break: normal;
+          overflow-wrap: normal;
+          vertical-align: top;
         }
 
         th {
           background-color: var(--mat-sys-surface-variant);
+        }
+
+        td :where(a, code, span) {
+          white-space: normal;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
       }
     }

@@ -103,4 +103,28 @@ markdownRenderer.link = ({ href, title, tokens }: any): string => {
   return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`;
 };
 
+// Wrap tables to keep them readable in narrow panes.
+// We build the HTML manually because the default renderer's tablecell relies
+// on this.parser.parseInline() which is only bound during an active parse pass;
+// using marked.parseInline() achieves the same result safely.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+markdownRenderer.table = (token: any): string => {
+  const renderCell = (cell: any, tag: 'th' | 'td'): string => {
+    const content = marked.parseInline(cell.text) as string;
+    const align = cell.align ? ` align="${cell.align}"` : '';
+    return `<${tag}${align}>${content}</${tag}>\n`;
+  };
+
+  const headerCells = (token.header as any[]).map((h: any) => renderCell(h, 'th')).join('');
+  const thead = `<thead>\n<tr>\n${headerCells}</tr>\n</thead>\n`;
+
+  const bodyRows = (token.rows as any[][]).map((row: any[]) => {
+    const cells = row.map((cell: any) => renderCell(cell, 'td')).join('');
+    return `<tr>\n${cells}</tr>\n`;
+  }).join('');
+  const tbody = bodyRows ? `<tbody>\n${bodyRows}</tbody>\n` : '';
+
+  return `<div class="article-table-scroll"><table>\n${thead}${tbody}</table></div>`;
+};
+
 export default markdownRenderer;
