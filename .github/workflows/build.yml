@@ -5,6 +5,25 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      play_track:
+        description: "Google Play track for the Android upload (defaults to the PLAY_TRACK variable, else 'internal')"
+        type: choice
+        required: false
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      play_release_status:
+        description: "Google Play release status"
+        type: choice
+        required: false
+        default: completed
+        options:
+          - completed
+          - draft
 
 permissions:
   contents: write
@@ -934,6 +953,164 @@ jobs:
           # Don't block the pipeline on Apple's processing queue (can take a long time).
           wait-for-processing: 'false'
           uses-non-exempt-encryption: 'false'
+
+  publish-android-play-store:
+    name: Publish Android to Google Play
+    # Google Play equivalent of the TestFlight upload: the signed AAB produced by
+    # build-android-signed-release is pushed to a testing track (default: internal).
+    runs-on: ubuntu-22.04
+    needs:
+      - prepare-release
+      - build-android-signed-release
+    if: needs.build-android-signed-release.result == 'success'
+
+    steps:
+      - name: Check Google Play service account secret
+        id: play-secret
+        shell: bash
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PLAY_SERVICE_ACCOUNT_JSON:-}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo '::warning title=Google Play upload skipped::Secret PLAY_SERVICE_ACCOUNT_JSON is not configured.'
+            {
+              echo '### Google Play upload skipped'
+              echo
+              echo 'The `PLAY_SERVICE_ACCOUNT_JSON` secret is not configured, so the signed AAB was not uploaded.'
+              echo 'See `docs/android-play-store-ci.md` for the one-time setup.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if ! printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" | python3 -c 'import json,sys; data = json.load(sys.stdin); sys.exit(0 if data.get("type") == "service_account" and data.get("client_email") and data.get("private_key") else 1)'; then
+            echo 'PLAY_SERVICE_ACCOUNT_JSON must contain the full Google Cloud service account JSON key (type, client_email and private_key fields).' >&2
+            exit 1
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Google Play release settings
+        id: play-config
+        if: steps.play-secret.outputs.configured == 'true'
+        shell: bash
+        env:
+          INPUT_TRACK: ${{ inputs.play_track }}
+          INPUT_STATUS: ${{ inputs.play_release_status }}
+          VAR_TRACK: ${{ vars.PLAY_TRACK }}
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          TRACK="${INPUT_TRACK:-}"
+          [ -n "$TRACK" ] || TRACK="${VAR_TRACK:-}"
+          [ -n "$TRACK" ] || TRACK="internal"
+
+          STATUS="${INPUT_STATUS:-}"
+          [ -n "$STATUS" ] || STATUS="completed"
+
+          # Mirrors the version code Tauri writes into gen/android/app/tauri.properties.
+          VERSION_CODE=$(VERSION="$VERSION" python3 -c 'import os; major, minor, patch = (os.environ["VERSION"].split("+")[0].split("-")[0].split(".") + ["0", "0"])[:3]; print(int(major) * 1000000 + int(minor) * 1000 + int(patch))')
+
+          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Uploading Nostria v$VERSION (versionCode $VERSION_CODE) to the '$TRACK' track as '$STATUS'."
+
+      - name: Download signed Android AAB
+        if: steps.play-secret.outputs.configured == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: nostria-android-release-aab-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: android-release-aab
+
+      - name: Download signed Android mapping
+        if: steps.play-secret.outputs.configured == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: nostria-android-release-mapping-signed-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: android-release-mapping
+
+      - name: Locate AAB and mapping file
+        id: play-artifacts
+        if: steps.play-secret.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          AAB_PATH=$(find android-release-aab -type f -name '*.aab' | sort | head -n 1 || true)
+          if [ -z "$AAB_PATH" ]; then
+            echo 'No .aab found in the signed Android artifacts.' >&2
+            find android-release-aab -type f | sort || true
+            exit 1
+          fi
+
+          MAPPING_PATH=$(find android-release-mapping -type f -name 'mapping.txt' -path '*arm64Release*' 2>/dev/null | head -n 1 || true)
+          if [ -z "$MAPPING_PATH" ]; then
+            MAPPING_PATH=$(find android-release-mapping -type f -name 'mapping.txt' 2>/dev/null | head -n 1 || true)
+          fi
+
+          echo "aab_path=$AAB_PATH" >> "$GITHUB_OUTPUT"
+          echo "mapping_path=$MAPPING_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found AAB: $AAB_PATH"
+          ls -lh "$AAB_PATH"
+          echo "Found mapping: ${MAPPING_PATH:-<none>}"
+
+      - name: Prepare release notes
+        if: steps.play-secret.outputs.configured == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Google Play caps release notes at 500 characters per locale.
+          mkdir -p play-whatsnew
+          printf 'Nostria v%s\n\nSee https://github.com/%s/releases for the full changelog.\n' \
+            "$VERSION" "$REPOSITORY" > play-whatsnew/whatsnew-en-US
+
+      - name: Upload AAB to Google Play
+        if: steps.play-secret.outputs.configured == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: app.nostria
+          releaseFiles: ${{ steps.play-artifacts.outputs.aab_path }}
+          mappingFile: ${{ steps.play-artifacts.outputs.mapping_path }}
+          releaseName: ${{ needs.prepare-release.outputs.version }} (${{ steps.play-config.outputs.version_code }})
+          track: ${{ steps.play-config.outputs.track }}
+          status: ${{ steps.play-config.outputs.status }}
+          whatsNewDirectory: play-whatsnew
+
+      - name: Summarize Google Play upload
+        if: always() && steps.play-secret.outputs.configured == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+          VERSION_CODE: ${{ steps.play-config.outputs.version_code }}
+          TRACK: ${{ steps.play-config.outputs.track }}
+          STATUS: ${{ steps.play-config.outputs.status }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo '### Google Play upload'
+            echo
+            echo "- Package: \`app.nostria\`"
+            echo "- Version: \`${VERSION}\` (versionCode \`${VERSION_CODE}\`)"
+            echo "- Track: \`${TRACK}\` (status \`${STATUS}\`)"
+            echo "- Result: \`${JOB_STATUS}\`"
+            if [ "$JOB_STATUS" != "success" ]; then
+              echo
+              echo 'If the failure mentions that the version code has already been used, bump `version` in `package.json`.'
+              echo 'Google Play rejects re-uploading the same versionCode.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   publish-draft-release:
     name: Publish draft release assets

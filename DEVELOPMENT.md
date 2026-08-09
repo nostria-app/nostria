@@ -164,6 +164,7 @@ The `.gitattributes` file ensures:
    - `TAURI_ANDROID_KEY_ALIAS`
    - `TAURI_ANDROID_KEY_PASSWORD`
 - Android rejects unsigned release APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`, so `tauri:android:run:release` will fail until signing is configured.
+- Release builds pushed to `main` are uploaded to Google Play automatically. See [docs/android-play-store-ci.md](./docs/android-play-store-ci.md).
 
 ### Before Committing
 

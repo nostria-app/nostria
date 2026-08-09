@@ -1,5 +1,7 @@
 # TestFlight upload from GitHub Actions
 
+> The Android counterpart is documented in [android-play-store-ci.md](./android-play-store-ci.md).
+
 When the **Build** workflow runs (push to `main` or manual `workflow_dispatch`), after a successful signed IPA build it uploads that IPA to App Store Connect for TestFlight.
 
 ## Job flow
