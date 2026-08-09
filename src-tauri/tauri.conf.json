@@ -59,6 +59,9 @@
     "macOS": {
       "minimumSystemVersion": "10.15"
     },
+    "iOS": {
+      "minimumSystemVersion": "15.0"
+    },
     "windows": {
       "allowDowngrades": false,
       "wix": {

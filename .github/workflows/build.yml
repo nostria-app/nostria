@@ -525,7 +525,7 @@ jobs:
           # nm check after a quick compile for arm64 simulator — must export the
           # exact Darwin linker symbol (__swift_FORCE_LOAD_$_swiftCompatibility56).
           SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
-          clang -c "$STUB" -o /tmp/swift-stubs.o -isysroot "$SDK" -target arm64-apple-ios14.0-simulator
+          clang -c "$STUB" -o /tmp/swift-stubs.o -isysroot "$SDK" -target arm64-apple-ios15.0-simulator
           if ! nm /tmp/swift-stubs.o | grep -F '__swift_FORCE_LOAD_$_swiftCompatibility56'; then
             echo 'Stub object does not export expected force-load symbol:' >&2
             nm /tmp/swift-stubs.o >&2 || true
