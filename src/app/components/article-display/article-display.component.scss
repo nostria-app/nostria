@@ -474,10 +474,20 @@
       ol {
         margin: 1rem 0;
         padding-left: 2rem;
+        list-style-position: inside;
+      }
+
+      ul {
+        list-style-type: disc;
+      }
+
+      ol {
+        list-style-type: decimal;
       }
 
       li {
         margin-bottom: 0.5rem;
+        display: list-item;
       }
 
       img {
@@ -516,6 +526,30 @@
 :host ::ng-deep .markdown-content img,
 :host ::ng-deep .markdown-content a img {
   cursor: zoom-in !important;
+}
+
+:host ::ng-deep .markdown-content ul,
+:host ::ng-deep .markdown-content ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+  list-style-position: inside;
+}
+
+:host ::ng-deep .markdown-content ul {
+  list-style-type: disc;
+}
+
+:host ::ng-deep .markdown-content ol {
+  list-style-type: decimal;
+}
+
+:host ::ng-deep .markdown-content li {
+  display: list-item;
+  margin-bottom: 0.5rem;
+}
+
+:host ::ng-deep .markdown-content li::marker {
+  color: var(--mat-sys-on-surface);
 }
 
 :host ::ng-deep .markdown-content .article-event-embed .user-profile-avatar,

@@ -188,10 +188,20 @@
       ol {
         padding-left: 20px;
         margin: 16px 0;
+        list-style-position: inside;
+      }
+
+      ul {
+        list-style-type: disc;
+      }
+
+      ol {
+        list-style-type: decimal;
       }
 
       li {
         margin: 8px 0;
+        display: list-item;
       }
 
       a {
@@ -294,6 +304,32 @@
   .spinning {
     animation: spin 1s linear infinite;
   }
+}
+
+// Content inside the rich-text contenteditable is created at runtime and
+// does not get Angular's scoped attributes, so list rules must be deep.
+:host ::ng-deep .rich-text-content ul,
+:host ::ng-deep .rich-text-content ol {
+  margin: 16px 0;
+  padding-left: 20px;
+  list-style-position: inside;
+}
+
+:host ::ng-deep .rich-text-content ul {
+  list-style-type: disc;
+}
+
+:host ::ng-deep .rich-text-content ol {
+  list-style-type: decimal;
+}
+
+:host ::ng-deep .rich-text-content li {
+  display: list-item;
+  margin: 8px 0;
+}
+
+:host ::ng-deep .rich-text-content li::marker {
+  color: var(--mat-sys-on-surface);
 }
 
 @keyframes spin {
