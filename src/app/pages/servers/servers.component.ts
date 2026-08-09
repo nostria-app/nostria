@@ -38,6 +38,10 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import { ImageInputComponent } from '../../components/image-input/image-input.component';
+import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { MediaService } from '../../services/media.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { VideoRecordDialogResult } from '../../interfaces/media-upload';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -98,6 +102,7 @@ const LAST_GROUP_STORAGE_KEY = 'nostria-nip29-last-group-v1';
     ProfileDisplayNameComponent,
     MessageContentComponent,
     ImageInputComponent,
+    EmojiPickerComponent,
     AgoPipe,
   ],
   templateUrl: './servers.component.html',
@@ -111,6 +116,8 @@ export class ServersComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly mediaService = inject(MediaService);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly transferState = inject(TransferState);
 
   readonly layout = inject(LayoutService);
@@ -119,6 +126,8 @@ export class ServersComponent implements OnInit, OnDestroy {
   readonly groupsList = inject(Nip29GroupsListService);
 
   private readonly messageScroller = viewChild<ElementRef<HTMLElement>>('messageScroller');
+  private readonly composer = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
+  private readonly mediaFileInput = viewChild<ElementRef<HTMLInputElement>>('mediaFileInput');
 
   readonly suggestedServers = SUGGESTED_NIP29_SERVERS;
 
@@ -187,6 +196,7 @@ export class ServersComponent implements OnInit, OnDestroy {
   readonly replyingTo = signal<Nip29Message | null>(null);
   readonly inviteCode = signal('');
   readonly joining = signal(false);
+  readonly uploading = signal(false);
 
   // -- Thread state -----------------------------------------------------------
   readonly activeThread = signal<Nip29Message | null>(null);
@@ -808,6 +818,259 @@ export class ServersComponent implements OnInit, OnDestroy {
   findMessage(id: string | undefined): Nip29Message | undefined {
     if (!id) return undefined;
     return this.messages().find(message => message.id === id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Composer attachments
+  // ---------------------------------------------------------------------------
+
+  private hasMediaServers(): boolean {
+    if (this.mediaService.mediaServers().length > 0) return true;
+
+    this.snackBar
+      .open('You need to configure a media server first', 'Configure', { duration: 5000 })
+      .onAction()
+      .subscribe(() => void this.router.navigate(['/collections/media']));
+
+    return false;
+  }
+
+  /** Append text to the composer, keeping it on its own line. */
+  private appendToComposer(value: string): void {
+    const current = this.messageText();
+    const separator = current && !current.endsWith('\n') ? '\n' : '';
+
+    this.messageText.set(current + separator + value);
+    this.composer()?.nativeElement.focus();
+  }
+
+  openFileDialog(): void {
+    if (!this.hasMediaServers()) return;
+    this.mediaFileInput()?.nativeElement.click();
+  }
+
+  /**
+   * Upload and reference media by URL.
+   *
+   * NIP-29 groups are not end-to-end encrypted — the relay sees every message
+   * in the clear — so attachments are uploaded as ordinary blobs. Encrypting
+   * them here would imply a privacy guarantee the protocol does not provide.
+   */
+  async onMediaFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+
+    if (files.length === 0) return;
+
+    this.uploading.set(true);
+
+    try {
+      for (const file of files) {
+        const result = await this.mediaService.uploadFile(file, false, []);
+
+        if (result.status === 'success' || result.status === 'duplicate') {
+          if (result.item?.url) this.appendToComposer(result.item.url);
+        } else {
+          this.snackBar.open(result.message || 'Upload failed', 'Close', { duration: 5000 });
+        }
+      }
+    } catch (error) {
+      this.snackBar.open(this.humanizeRelayError(String(error)), 'Close', { duration: 5000 });
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  async openMediaChooser(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { MediaChooserDialogComponent } = await import(
+      '../../components/media-chooser-dialog/media-chooser-dialog.component'
+    );
+    type MediaChooserResult = import(
+      '../../components/media-chooser-dialog/media-chooser-dialog.component'
+    ).MediaChooserResult;
+
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
+      width: '700px',
+      maxWidth: '95vw',
+      data: { multiple: true, mediaType: 'all' },
+    });
+
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
+      for (const item of result?.items ?? []) {
+        if (item.url) this.appendToComposer(item.url);
+      }
+    });
+  }
+
+  async openGifPicker(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
+      width: '400px',
+      // The GIF tab is selected by activeTab; `mode` is reaction vs content.
+      data: { title: 'GIFs', mode: 'content', activeTab: 'gifs' },
+    });
+
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (result) this.appendToComposer(result);
+    });
+  }
+
+  async openMusicChooser(): Promise<void> {
+    const { MusicChooserDialogComponent } = await import(
+      '../../components/music-chooser-dialog/music-chooser-dialog.component'
+    );
+    type MusicChooserResult = import(
+      '../../components/music-chooser-dialog/music-chooser-dialog.component'
+    ).MusicChooserResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof MusicChooserDialogComponent.prototype,
+      MusicChooserResult
+    >(MusicChooserDialogComponent, {
+      title: 'Choose Music',
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.naddr) this.appendToComposer('nostr:' + result.naddr);
+    });
+  }
+
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.dialog.open(ArticleReferencePickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'article-reference-picker-dialog-panel'],
+      width: '760px',
+      maxWidth: '96vw',
+    });
+
+    dialogRef.afterClosed().subscribe((result: ArticleReferencePickerResult | undefined) => {
+      for (const reference of result?.references ?? []) {
+        if (reference?.trim()) this.appendToComposer('nostr:' + reference.replace(/^nostr:/, ''));
+      }
+    });
+  }
+
+  private async uploadAndInsert(file: File): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    this.uploading.set(true);
+
+    try {
+      const result = await this.mediaService.uploadFile(file, false, []);
+
+      if (result.status === 'success' || result.status === 'duplicate') {
+        if (result.item?.url) this.appendToComposer(result.item.url);
+      } else {
+        this.snackBar.open(result.message || 'Upload failed', 'Close', { duration: 5000 });
+      }
+    } catch {
+      this.snackBar.open('Failed to upload the clip', 'Close', { duration: 5000 });
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  async recordAudioClip(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { AudioRecordDialogComponent } = await import(
+      '../../pages/media/audio-record-dialog/audio-record-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async (result: { blob?: Blob } | undefined) => {
+      if (!result?.blob) return;
+
+      await this.uploadAndInsert(
+        new File([result.blob], 'voice-message.mp4', { type: result.blob.type || 'audio/mp4' })
+      );
+    });
+  }
+
+  async recordVideoClip(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { VideoRecordDialogComponent } = await import(
+      '../../pages/media/video-record-dialog/video-record-dialog.component'
+    );
+
+    const dialogRef = this.customDialog.open<
+      typeof VideoRecordDialogComponent.prototype,
+      VideoRecordDialogResult | null
+    >(VideoRecordDialogComponent, {
+      title: 'Record Video Clip',
+      width: '600px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      if (result?.file) await this.uploadAndInsert(result.file);
+    });
+  }
+
+  /** Insert an emoji at the caret rather than appending it. */
+  insertEmoji(emoji: string): void {
+    const textarea = this.composer()?.nativeElement;
+
+    if (!textarea) {
+      this.messageText.update(current => current + emoji);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? start;
+    const current = this.messageText();
+
+    this.messageText.set(current.slice(0, start) + emoji + current.slice(end));
+
+    queueMicrotask(() => {
+      textarea.focus();
+      const caret = start + emoji.length;
+      textarea.setSelectionRange(caret, caret);
+    });
+  }
+
+  insertGifUrl(url: string): void {
+    this.appendToComposer(url);
+  }
+
+  async openEmojiPickerDialog(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
+    });
+
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (!result) return;
+
+      if (result.startsWith('http')) this.insertGifUrl(result);
+      else this.insertEmoji(result);
+    });
   }
 
   // ---------------------------------------------------------------------------

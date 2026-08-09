@@ -32,6 +32,11 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { MediaService } from '../../services/media.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { VideoRecordDialogResult } from '../../interfaces/media-upload';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { SettingsService } from '../../services/settings.service';
@@ -96,6 +101,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
     ProfileDisplayNameComponent,
     MessageContentComponent,
     SocialPreviewComponent,
+    EmojiPickerComponent,
   ],
   templateUrl: './encrypted.component.html',
   styleUrl: './encrypted.component.scss',
@@ -110,6 +116,9 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly openGraph = inject(OpenGraphService);
   private readonly settings = inject(SettingsService);
+  private readonly mediaService = inject(MediaService);
+  private readonly mediaProcessing = inject(MediaProcessingService);
+  private readonly customDialog = inject(CustomDialogService);
 
   readonly layout = inject(LayoutService);
   readonly concord = inject(ConcordService);
@@ -121,6 +130,9 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly voice = inject(ConcordVoiceService);
 
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  private readonly composer = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
+  private readonly mediaFileInput = viewChild<ElementRef<HTMLInputElement>>('mediaFileInput');
+  private readonly encryptedFileInput = viewChild<ElementRef<HTMLInputElement>>('encryptedFileInput');
 
   readonly communityId = signal<string | null>(null);
   readonly channelId = signal<string | null>(null);
@@ -151,6 +163,10 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly brokerInput = signal('');
   readonly refounding = signal(false);
   readonly showPins = signal(false);
+  readonly uploading = signal(false);
+
+  /** Tags staged by attachments, merged into the next message. */
+  private readonly pendingTags = signal<string[][]>([]);
 
   readonly permissionCatalogue = CORD_PERMISSIONS;
 
@@ -472,11 +488,16 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.messageText.set('');
     this.replyingTo.set(null);
 
-    const sent = await this.concord.sendMessage(community, channel, content, { replyTo });
+    const extraTags = this.takePendingTags();
+    const sent = await this.concord.sendMessage(community, channel, content, {
+      replyTo,
+      extraTags,
+    });
 
     if (!sent) {
       this.messageText.set(content);
       this.replyingTo.set(replyTo ?? null);
+      this.pendingTags.set(extraTags);
       this.snackBar.open('Could not send that message', 'Dismiss', { duration: 5000 });
     } else {
       this.revision.update(value => value + 1);
@@ -879,6 +900,323 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     }
 
     return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Composer attachments
+  // -------------------------------------------------------------------------
+
+  private hasMediaServers(): boolean {
+    if (this.mediaService.mediaServers().length > 0) return true;
+
+    this.snackBar
+      .open('You need to configure a media server first', 'Configure', { duration: 5000 })
+      .onAction()
+      .subscribe(() => void this.router.navigate(['/collections/media']));
+
+    return false;
+  }
+
+  /** Append text to the composer, keeping it on its own line. */
+  private appendToComposer(value: string): void {
+    const current = this.messageText();
+    const separator = current && !current.endsWith('\n') ? '\n' : '';
+
+    this.messageText.set(current + separator + value);
+    this.composer()?.nativeElement.focus();
+  }
+
+  openFileDialog(): void {
+    if (!this.hasMediaServers()) return;
+    this.mediaFileInput()?.nativeElement.click();
+  }
+
+  openEncryptedFileDialog(): void {
+    if (!this.hasMediaServers()) return;
+    this.encryptedFileInput()?.nativeElement.click();
+  }
+
+  /** Upload plain media and reference it by URL. */
+  async onMediaFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+
+    if (files.length === 0) return;
+
+    this.uploading.set(true);
+
+    try {
+      for (const file of files) {
+        const result = await this.mediaService.uploadFile(file, false, []);
+
+        if (result.status === 'success' || result.status === 'duplicate') {
+          if (result.item?.url) this.appendToComposer(result.item.url);
+        } else {
+          this.snackBar.open(result.message || 'Upload failed', 'Close', { duration: 5000 });
+        }
+      }
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Close', { duration: 5000 });
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  /**
+   * Upload a file encrypted, so the media server never sees its contents.
+   *
+   * The message itself is already end-to-end encrypted, but its attachments
+   * live on an ordinary host — so the bytes are sealed with a per-file AES-GCM
+   * key and the key travels in the message's own tags.
+   */
+  async onEncryptedFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (file) await this.uploadEncryptedFile(file);
+  }
+
+  private async uploadEncryptedFile(file: File): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    this.uploading.set(true);
+
+    try {
+      const sourceBytes = await this.mediaService.getFileBytes(file);
+      const key = crypto.getRandomValues(new Uint8Array(32));
+      const nonce = crypto.getRandomValues(new Uint8Array(12));
+
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        toArrayBuffer(key),
+        { name: 'AES-GCM' },
+        false,
+        ['encrypt']
+      );
+
+      const encrypted = new Uint8Array(
+        await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: toArrayBuffer(nonce) },
+          cryptoKey,
+          toArrayBuffer(new Uint8Array(sourceBytes))
+        )
+      );
+
+      const buffer = new ArrayBuffer(encrypted.byteLength);
+      new Uint8Array(buffer).set(encrypted);
+
+      const encryptedFile = new File([buffer], file.name, { type: 'application/octet-stream' });
+      const result = await this.mediaService.uploadFile(encryptedFile, false, []);
+
+      if (result.status !== 'success' && result.status !== 'duplicate') {
+        throw new Error(result.message || 'Upload failed');
+      }
+
+      const url = result.item?.url;
+      if (!url) throw new Error('The media server returned no URL');
+
+      // The same tag shape the app's encrypted DMs use, so every renderer in
+      // Nostria — and this page's own attachment resolver — can open it.
+      this.pendingTags.update(tags => [
+        ...tags,
+        ['encryption-algorithm', 'aes-gcm'],
+        ['decryption-key', toHexString(key)],
+        ['decryption-nonce', toHexString(nonce)],
+        ['file-type', file.type || 'application/octet-stream'],
+        ['alt', file.name],
+        ['size', String(file.size)],
+      ]);
+
+      this.appendToComposer(url);
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Close', { duration: 6000 });
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  async openMediaChooser(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { MediaChooserDialogComponent } = await import(
+      '../../components/media-chooser-dialog/media-chooser-dialog.component'
+    );
+    type MediaChooserResult = import(
+      '../../components/media-chooser-dialog/media-chooser-dialog.component'
+    ).MediaChooserResult;
+
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
+      width: '700px',
+      maxWidth: '95vw',
+      data: { multiple: true, mediaType: 'all' },
+    });
+
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
+      for (const item of result?.items ?? []) {
+        if (item.url) this.appendToComposer(item.url);
+      }
+    });
+  }
+
+  async openGifPicker(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
+      width: '400px',
+      // `mode` selects reaction vs content; the GIF tab is chosen by activeTab.
+      data: { title: 'GIFs', mode: 'content', activeTab: 'gifs' },
+    });
+
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (result) this.appendToComposer(result);
+    });
+  }
+
+  async openMusicChooser(): Promise<void> {
+    const { MusicChooserDialogComponent } = await import(
+      '../../components/music-chooser-dialog/music-chooser-dialog.component'
+    );
+    type MusicChooserResult = import(
+      '../../components/music-chooser-dialog/music-chooser-dialog.component'
+    ).MusicChooserResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof MusicChooserDialogComponent.prototype,
+      MusicChooserResult
+    >(MusicChooserDialogComponent, {
+      title: 'Choose Music',
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.naddr) this.appendToComposer('nostr:' + result.naddr);
+    });
+  }
+
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.dialog.open(ArticleReferencePickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'article-reference-picker-dialog-panel'],
+      width: '760px',
+      maxWidth: '96vw',
+    });
+
+    dialogRef.afterClosed().subscribe((result: ArticleReferencePickerResult | undefined) => {
+      for (const reference of result?.references ?? []) {
+        if (reference?.trim()) this.appendToComposer('nostr:' + reference.replace(/^nostr:/, ''));
+      }
+    });
+  }
+
+  async recordAudioClip(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { AudioRecordDialogComponent } = await import(
+      '../../pages/media/audio-record-dialog/audio-record-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef
+      .afterClosed()
+      .subscribe(async (result: { blob?: Blob } | undefined) => {
+        if (!result?.blob) return;
+
+        const file = new File([result.blob], 'voice-message.mp4', {
+          type: result.blob.type || 'audio/mp4',
+        });
+
+        await this.uploadEncryptedFile(file);
+      });
+  }
+
+  async recordVideoClip(): Promise<void> {
+    if (!this.hasMediaServers()) return;
+
+    const { VideoRecordDialogComponent } = await import(
+      '../../pages/media/video-record-dialog/video-record-dialog.component'
+    );
+
+    const dialogRef = this.customDialog.open<
+      typeof VideoRecordDialogComponent.prototype,
+      VideoRecordDialogResult | null
+    >(VideoRecordDialogComponent, {
+      title: 'Record Video Clip',
+      width: '600px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      if (result?.file) await this.uploadEncryptedFile(result.file);
+    });
+  }
+
+  /** Insert an emoji at the caret, matching the messages composer. */
+  insertEmoji(emoji: string): void {
+    const textarea = this.composer()?.nativeElement;
+
+    if (!textarea) {
+      this.messageText.update(current => current + emoji);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? start;
+    const current = this.messageText();
+
+    this.messageText.set(current.slice(0, start) + emoji + current.slice(end));
+
+    queueMicrotask(() => {
+      textarea.focus();
+      const caret = start + emoji.length;
+      textarea.setSelectionRange(caret, caret);
+    });
+  }
+
+  insertGifUrl(url: string): void {
+    this.appendToComposer(url);
+  }
+
+  async openEmojiPickerDialog(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
+    });
+
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (!result) return;
+
+      if (result.startsWith('http')) this.insertGifUrl(result);
+      else this.insertEmoji(result);
+    });
+  }
+
+  /** Tags staged by attachments, consumed when the message is sent. */
+  takePendingTags(): string[][] {
+    const tags = this.pendingTags();
+    this.pendingTags.set([]);
+    return tags;
   }
 
   // -------------------------------------------------------------------------
@@ -1360,6 +1698,18 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     this.revision.update(value => value + 1);
   }
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
+function toHexString(bytes: Uint8Array): string {
+  let hex = '';
+  for (const byte of bytes) hex += byte.toString(16).padStart(2, '0');
+  return hex;
 }
 
 function describe(error: unknown): string {

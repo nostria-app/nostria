@@ -1416,3 +1416,23 @@ app-image-input {
     display: none;
   }
 }
+
+// ───────────────────────────── Composer buttons ────────────────────────────
+
+.hidden-file-input {
+  display: none;
+}
+
+.plus-button,
+.emoji-button {
+  flex-shrink: 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  &:hover:not([disabled]) {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.composer-input {
+  padding-left: 4px;
+}

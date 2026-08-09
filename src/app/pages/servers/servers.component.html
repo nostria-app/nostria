@@ -659,7 +659,97 @@
       </div>
       } @else {
       <div class="composer-input">
+        <button
+          mat-icon-button
+          type="button"
+          class="plus-button"
+          [matMenuTriggerFor]="plusMenu"
+          [disabled]="uploading() || nip29.sending()"
+          matTooltip="More options"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+
+        <mat-menu #plusMenu="matMenu">
+          <button mat-menu-item type="button" (click)="openFileDialog()">
+            <mat-icon>upload</mat-icon>
+            <span>Media</span>
+          </button>
+          <button mat-menu-item type="button" (click)="openMediaChooser()">
+            <mat-icon>photo_library</mat-icon>
+            <span>Media Library</span>
+          </button>
+          <button mat-menu-item type="button" (click)="openGifPicker()">
+            <mat-icon>gif_box</mat-icon>
+            <span>GIFs</span>
+          </button>
+          <button mat-menu-item type="button" (click)="openMusicChooser()">
+            <mat-icon>music_note</mat-icon>
+            <span>Music</span>
+          </button>
+          <button mat-menu-item type="button" (click)="openReferencePicker()">
+            <mat-icon>link</mat-icon>
+            <span>Reference</span>
+          </button>
+
+          <mat-divider />
+
+          <button mat-menu-item type="button" (click)="recordAudioClip()">
+            <mat-icon>mic</mat-icon>
+            <span>Audio Clip</span>
+          </button>
+          <button mat-menu-item type="button" (click)="recordVideoClip()">
+            <mat-icon>videocam</mat-icon>
+            <span>Video Clip</span>
+          </button>
+        </mat-menu>
+
+        <input
+          type="file"
+          #mediaFileInput
+          class="hidden-file-input"
+          accept="image/*,video/*"
+          multiple
+          (change)="onMediaFileSelected($event)"
+          aria-label="Upload media"
+        />
+
+        @if (layout.isHandset()) {
+        <button
+          mat-icon-button
+          type="button"
+          class="emoji-button"
+          matTooltip="Emoji"
+          [disabled]="nip29.sending()"
+          (click)="openEmojiPickerDialog()"
+        >
+          <mat-icon>sentiment_satisfied</mat-icon>
+        </button>
+        } @else {
+        <button
+          mat-icon-button
+          type="button"
+          class="emoji-button"
+          [matMenuTriggerFor]="emojiMenu"
+          matTooltip="Emoji"
+          [disabled]="nip29.sending()"
+        >
+          <mat-icon>sentiment_satisfied</mat-icon>
+        </button>
+
+        <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
+          <ng-template matMenuContent>
+            <app-emoji-picker
+              mode="content"
+              (emojiSelected)="insertEmoji($event)"
+              (gifSelected)="insertGifUrl($event)"
+            />
+          </ng-template>
+        </mat-menu>
+        }
+
         <textarea
+          #composerInput
           rows="1"
           [placeholder]="'Message ' + group.name"
           [ngModel]="messageText()"
@@ -672,11 +762,15 @@
           mat-icon-button
           type="button"
           class="send-button"
-          [disabled]="!messageText().trim() || nip29.sending()"
+          [disabled]="!messageText().trim() || nip29.sending() || uploading()"
           (click)="sendMessage()"
           aria-label="Send message"
         >
+          @if (uploading()) {
+          <mat-spinner diameter="18" />
+          } @else {
           <mat-icon>send</mat-icon>
+          }
         </button>
       </div>
       }

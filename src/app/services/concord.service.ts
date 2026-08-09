@@ -927,7 +927,7 @@ export class ConcordService {
     communityId: string,
     channelId: string,
     content: string,
-    options: { quote?: CordMessage; replyTo?: CordMessage } = {}
+    options: { quote?: CordMessage; replyTo?: CordMessage; extraTags?: string[][] } = {}
   ): Promise<boolean> {
     const community = this.getCommunity(communityId);
     const channel = this.getChannels(communityId).find(entry => entry.channelId === channelId);
@@ -953,6 +953,9 @@ export class ConcordService {
 
       // NIP-30: carry the URL for every custom emoji the text mentions.
       tags.push(...(await this.emojiTags(trimmed)));
+
+      // Attachment tags staged by the composer (decryption keys, file type…).
+      if (options.extraTags?.length) tags.push(...options.extraTags);
 
       let kind = CORD_KIND_MESSAGE;
 
