@@ -13,6 +13,10 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Google Play hosts Nostria under the legacy TWA package name, while Zapstore and direct
+// APK downloads use `app.nostria`. The Kotlin/JNI namespace stays `app.nostria` either way.
+val applicationIdOverride = System.getenv("TAURI_ANDROID_APPLICATION_ID")?.takeIf { it.isNotBlank() }
+
 val releaseKeystorePath = System.getenv("TAURI_ANDROID_KEYSTORE_PATH")
 val releaseKeystorePassword = System.getenv("TAURI_ANDROID_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("TAURI_ANDROID_KEY_ALIAS")
@@ -40,7 +44,7 @@ android {
     namespace = "app.nostria"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "app.nostria"
+        applicationId = applicationIdOverride ?: "app.nostria"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

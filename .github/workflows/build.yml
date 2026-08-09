@@ -31,6 +31,11 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Google Play still hosts the app under the original TWA package name, so the AAB
+  # uploaded there must keep that applicationId. Every other distribution channel
+  # (GitHub release APK, Zapstore, sideloading) uses `app.nostria`.
+  ANDROID_APPLICATION_ID: app.nostria
+  ANDROID_PLAY_APPLICATION_ID: app.nostria.twa
 
 jobs:
   prepare-release:
@@ -420,8 +425,10 @@ jobs:
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: npx tauri android build --apk --target aarch64
 
+      # APK for GitHub releases / Zapstore / sideloading: applicationId `app.nostria`.
       - name: Build signed arm64 release APK
         env:
+          TAURI_ANDROID_APPLICATION_ID: ${{ env.ANDROID_APPLICATION_ID }}
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -432,8 +439,11 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:assembleArm64Release -x rustBuildArm64Release
 
-      - name: Build signed arm64 release AAB
+      # AAB for Google Play: applicationId `app.nostria.twa` (legacy TWA listing).
+      # Runs after the APK so the retained ProGuard mapping matches the Play artifact.
+      - name: Build signed arm64 release AAB for Google Play
         env:
+          TAURI_ANDROID_APPLICATION_ID: ${{ env.ANDROID_PLAY_APPLICATION_ID }}
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -495,7 +505,7 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           # Prefer latest 26.x installed on the image (App Store SDK requirement).
-          xcode-version: '26'
+          xcode-version: "26"
 
       - name: Print selected Xcode
         run: |
@@ -613,7 +623,7 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '26'
+          xcode-version: "26"
 
       - name: Print selected Xcode
         run: |
@@ -951,8 +961,8 @@ jobs:
           # App Store Connect API (Linux-friendly). Avoids Transporter.app / altool -10814.
           backend: appstore-api
           # Don't block the pipeline on Apple's processing queue (can take a long time).
-          wait-for-processing: 'false'
-          uses-non-exempt-encryption: 'false'
+          wait-for-processing: "false"
+          uses-non-exempt-encryption: "false"
 
   publish-android-play-store:
     name: Publish Android to Google Play
@@ -1078,7 +1088,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: app.nostria
+          packageName: ${{ env.ANDROID_PLAY_APPLICATION_ID }}
           releaseFiles: ${{ steps.play-artifacts.outputs.aab_path }}
           mappingFile: ${{ steps.play-artifacts.outputs.mapping_path }}
           releaseName: ${{ needs.prepare-release.outputs.version }} (${{ steps.play-config.outputs.version_code }})
@@ -1101,7 +1111,7 @@ jobs:
           {
             echo '### Google Play upload'
             echo
-            echo "- Package: \`app.nostria\`"
+            echo "- Package: \`${{ env.ANDROID_PLAY_APPLICATION_ID }}\`"
             echo "- Version: \`${VERSION}\` (versionCode \`${VERSION_CODE}\`)"
             echo "- Track: \`${TRACK}\` (status \`${STATUS}\`)"
             echo "- Result: \`${JOB_STATUS}\`"

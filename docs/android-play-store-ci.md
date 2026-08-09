@@ -15,16 +15,40 @@ build-android-verification (debug + debug-signed release APK, Linux)
 
 The upload uses `r0adkll/upload-google-play@v1`, which talks to the Google Play Developer API directly (no fastlane or Play Console UI step needed).
 
+## Package names
+
+The same source tree is shipped under two different Android `applicationId` values:
+
+| Channel                              | `applicationId`   | Artifact      |
+| ------------------------------------ | ----------------- | ------------- |
+| Google Play                          | `app.nostria.twa` | signed `.aab` |
+| GitHub release / Zapstore / sideload | `app.nostria`     | signed `.apk` |
+
+Google Play keeps the package name of the original Bubblewrap TWA listing (`app.nostria.twa`) because a published package name can never be changed. Zapstore and direct downloads use `app.nostria`.
+
+Only the `applicationId` differs. The Kotlin/JNI `namespace` stays `app.nostria` in `src-tauri/gen/android/app/build.gradle.kts`, and `identifier` in `src-tauri/tauri.conf.json` stays `app.nostria`, so no Rust, Kotlin or iOS code changes are needed.
+
+This is driven by the `TAURI_ANDROID_APPLICATION_ID` environment variable, which overrides `applicationId` at Gradle configuration time. The Build workflow sets it per artifact via the `ANDROID_APPLICATION_ID` / `ANDROID_PLAY_APPLICATION_ID` workflow env values, so a single pipeline run produces both. Local builds without the variable keep `app.nostria`.
+
+To build the Play variant locally:
+
+```bash
+cd src-tauri/gen/android
+TAURI_ANDROID_APPLICATION_ID=app.nostria.twa ./gradlew :app:bundleArm64Release
+```
+
+> The keystore behind `KEYSTORE_BASE64` must be the registered **upload key** for `app.nostria.twa`. If the original Bubblewrap upload key is lost, request an upload key reset in Play Console before the first automated upload.
+
 ## Secrets and variables
 
-| Name | Type | Purpose |
-| --- | --- | --- |
-| `KEYSTORE_BASE64` | secret | Base64 of the upload keystore (already used to sign the AAB) |
-| `KEYSTORE_PASSWORD` | secret | Keystore password |
-| `KEY_ALIAS` | secret | Key alias inside the keystore |
-| `KEY_PASSWORD` | secret | Key password |
-| `PLAY_SERVICE_ACCOUNT_JSON` | secret | **New.** Full Google Cloud service account JSON key with Play Console access |
-| `PLAY_TRACK` | variable (optional) | Default track when the workflow is not started manually. Defaults to `internal` |
+| Name                        | Type                | Purpose                                                                         |
+| --------------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `KEYSTORE_BASE64`           | secret              | Base64 of the upload keystore (already used to sign the AAB)                    |
+| `KEYSTORE_PASSWORD`         | secret              | Keystore password                                                               |
+| `KEY_ALIAS`                 | secret              | Key alias inside the keystore                                                   |
+| `KEY_PASSWORD`              | secret              | Key password                                                                    |
+| `PLAY_SERVICE_ACCOUNT_JSON` | secret              | **New.** Full Google Cloud service account JSON key with Play Console access    |
+| `PLAY_TRACK`                | variable (optional) | Default track when the workflow is not started manually. Defaults to `internal` |
 
 The four `KEYSTORE_*` / `KEY_*` secrets already existed for the signed release build — nothing changes there.
 
@@ -37,7 +61,7 @@ The four `KEYSTORE_*` / `KEY_*` secrets already existed for the signed release b
 The Play Developer API **cannot create an app**. Do this once manually:
 
 1. Open [Google Play Console](https://play.google.com/console) → **Create app**.
-2. Package name must be `app.nostria` (matches `identifier` in `src-tauri/tauri.conf.json`).
+2. Package name must be `app.nostria.twa` (the existing Bubblewrap TWA listing). Nothing to create if that listing already exists.
 3. Complete the required declarations (app content, data safety, content rating, target audience).
 
 ### 2. Upload the first release manually
@@ -106,11 +130,11 @@ Tester group management is not automated; only the bundle upload is.
 
 ## Troubleshooting
 
-| Error | Cause |
-| --- | --- |
-| `The caller does not have permission` | Service account not invited in Play Console, or permissions not yet propagated |
-| `Package not found: app.nostria` | App not created in Play Console, or the service account has no access to it |
-| `Version code N has already been used` | Bump `version` in `package.json` |
-| `APK specifies a version code that has already been used` | Same as above |
+| Error                                                         | Cause                                                                                                 |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `The caller does not have permission`                         | Service account not invited in Play Console, or permissions not yet propagated                        |
+| `Package not found: app.nostria.twa`                          | App not created in Play Console, or the service account has no access to it                           |
+| `Version code N has already been used`                        | Bump `version` in `package.json`                                                                      |
+| `APK specifies a version code that has already been used`     | Same as above                                                                                         |
 | `Only releases with status draft may be created on draft app` | The app has never had a production release; use `play_release_status: draft` or publish the app first |
-| Job says *Google Play upload skipped* | `PLAY_SERVICE_ACCOUNT_JSON` is not configured |
+| Job says _Google Play upload skipped_                         | `PLAY_SERVICE_ACCOUNT_JSON` is not configured                                                         |
