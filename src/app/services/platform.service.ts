@@ -191,7 +191,29 @@ export class PlatformService {
       return true;
     }
 
+    // Tauri iOS shell (src-tauri) - the StoreKit plugin is available there.
+    if (this.isIOS() && this.detectTauriShell()) {
+      return true;
+    }
+
     return false;
+  }
+
+  /**
+   * Detect the Tauri WebView shell (any platform).
+   */
+  private detectTauriShell(): boolean {
+    const win = window as unknown as {
+      __TAURI__?: unknown;
+      __TAURI_INTERNALS__?: unknown;
+    };
+
+    if (win.__TAURI_INTERNALS__ !== undefined || win.__TAURI__ !== undefined) {
+      return true;
+    }
+
+    return window.location.protocol === 'tauri:'
+      || window.location.hostname === 'tauri.localhost';
   }
 
   /**

@@ -1,6 +1,7 @@
 import { effect, inject, signal, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { PlatformService } from './platform.service';
 import { LoggerService } from './logger.service';
 import { StoreDebugService } from './store-debug.service';
@@ -258,6 +259,24 @@ export class InAppPurchaseService {
    */
   private initAppStoreBilling(): void {
     try {
+      // Tauri iOS shell: StoreKit is exposed through the `storekit` Tauri plugin.
+      if (this.isTauriShell()) {
+        this.appStoreAvailable.set(true);
+        this.logger.info('App Store billing available via Tauri StoreKit plugin');
+        this.debug.success('bridge', 'Tauri StoreKit plugin detected', {
+          appContext: this.platformService.appContext(),
+          paymentPlatform: this.platformService.paymentPlatform(),
+        });
+
+        void invoke<Record<string, unknown>>('plugin:storekit|initialize')
+          .then(result => this.debug.info('bridge', 'StoreKit plugin initialized', result))
+          .catch(error => {
+            this.appStoreAvailable.set(false);
+            this.debug.error('bridge', 'StoreKit plugin initialization failed', error);
+          });
+        return;
+      }
+
       const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
       if (webkit?.messageHandlers?.nostriaStoreKit) {
         this.appStoreAvailable.set(true);
@@ -393,6 +412,34 @@ export class InAppPurchaseService {
   }
 
   /**
+   * Whether the app runs inside the Tauri iOS shell, where StoreKit is
+   * reached through the `storekit` Tauri plugin instead of a WebKit bridge.
+   */
+  private isTauriShell(): boolean {
+    return this.isBrowser && isTauri();
+  }
+
+  /**
+   * Call a command on the Tauri `storekit` plugin and normalize failures into
+   * the same response shape used by the WebKit bridge.
+   */
+  private async invokeStoreKit(
+    action: string,
+    command: string,
+    payload: Record<string, unknown> = {}
+  ): Promise<AppStorePurchaseResponse> {
+    this.debug.info(action, `Invoking ${command}`, payload);
+
+    try {
+      return await invoke<AppStorePurchaseResponse>(command, payload);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.debug.error(action, `${command} failed`, message);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
    * Send a non-purchase action ('restore' / 'getproducts') to the native shell.
    */
   private postAppStoreAction(
@@ -435,7 +482,11 @@ export class InAppPurchaseService {
    * and that the app is talking to the right storefront.
    */
   async getAppStoreProducts(productIds: string[]): Promise<AppStoreProductDetails[]> {
-    const response = await this.postAppStoreAction('getproducts', 'getProducts', { productIds });
+    const response = this.isTauriShell()
+      ? await this.invokeStoreKit('getproducts', 'plugin:storekit|get_products', {
+          request: { productIds },
+        })
+      : await this.postAppStoreAction('getproducts', 'getProducts', { productIds });
 
     if (!response.success) {
       this.debug.error('getproducts', response.error || 'Failed to load products');
@@ -460,7 +511,9 @@ export class InAppPurchaseService {
    * Restore previous App Store purchases and report the current entitlements.
    */
   async restoreAppStorePurchases(): Promise<AppStorePurchaseResponse> {
-    const response = await this.postAppStoreAction('restore', 'restore', {}, 60000);
+    const response = this.isTauriShell()
+      ? await this.invokeStoreKit('restore', 'plugin:storekit|restore')
+      : await this.postAppStoreAction('restore', 'restore', {}, 60000);
 
     if (response.success) {
       this.debug.success('restore', `Restored ${response.purchases?.length ?? 0} entitlement(s)`, response.purchases);
@@ -640,6 +693,10 @@ export class InAppPurchaseService {
    * @returns Purchase result with transaction ID for server-side verification
    */
   async purchaseWithAppStore(productId: string): Promise<PurchaseResult> {
+    if (this.isTauriShell()) {
+      return this.purchaseWithTauriStoreKit(productId);
+    }
+
     const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
     const handler = webkit?.messageHandlers?.nostriaStoreKit;
 
@@ -693,6 +750,55 @@ export class InAppPurchaseService {
         success: false,
         error: error instanceof Error ? error.message : 'App Store purchase failed',
       };
+    }
+  }
+
+  /**
+   * Purchase a subscription through the Tauri `storekit` plugin (Tauri iOS shell).
+   * Unlike the WebKit bridge, the plugin resolves the invoke promise directly.
+   */
+  private async purchaseWithTauriStoreKit(productId: string): Promise<PurchaseResult> {
+    this.debug.info('purchase', `Starting App Store purchase for ${productId}`, {
+      appContext: this.platformService.appContext(),
+      bridge: 'tauri-storekit',
+    });
+
+    this.purchasing.set(true);
+
+    try {
+      const response = await this.invokeStoreKit('purchase', 'plugin:storekit|purchase', {
+        request: { productId },
+      });
+
+      // Prefer JWS for backend verification; fall back to transaction id.
+      const purchaseToken = response.jwsRepresentation || response.transactionId;
+
+      if (response.success && purchaseToken) {
+        this.debug.success('purchase', 'StoreKit purchase succeeded', {
+          productId: response.productId,
+          transactionId: response.transactionId,
+          tokenType: response.jwsRepresentation ? 'jws' : 'transactionId',
+          token: StoreDebugService.summarizeToken(purchaseToken),
+        });
+
+        return {
+          success: true,
+          purchaseToken,
+          orderId: response.originalTransactionId || response.transactionId,
+        };
+      }
+
+      this.debug.error('purchase', response.error || 'App Store purchase failed', {
+        success: response.success,
+        hasToken: Boolean(purchaseToken),
+      });
+
+      return {
+        success: false,
+        error: response.error || 'App Store purchase failed',
+      };
+    } finally {
+      this.purchasing.set(false);
     }
   }
 

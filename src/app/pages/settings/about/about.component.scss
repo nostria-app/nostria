@@ -255,6 +255,26 @@
   font-size: 0.85rem;
 }
 
+.store-debug-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  border-radius: var(--mat-sys-corner-extra-small);
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 @media (max-width: 480px) {
   .store-debug-row {
     grid-template-columns: 1fr;

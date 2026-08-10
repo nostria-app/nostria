@@ -2,6 +2,7 @@
 mod android_signer;
 mod image_thumbnail;
 mod media_session;
+mod storekit;
 
 #[cfg(desktop)]
 use tauri::Manager;
@@ -92,6 +93,7 @@ pub fn run() {
         .plugin(android_signer::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(media_session::init())
+        .plugin(storekit::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {

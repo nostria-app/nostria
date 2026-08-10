@@ -33,12 +33,16 @@ const MEDIA_SESSION_COMMANDS: &[&str] = &[
 const ANDROID_MEDIA_SESSION_ENV: &str = "DEP_MEDIA_SESSION_ANDROID_LIBRARY_PATH";
 const ANDROID_MEDIA_SESSION_MODULE: &str = "media-session";
 
-#[cfg(target_os = "macos")]
+const STOREKIT_COMMANDS: &[&str] = &["initialize", "get_products", "purchase", "restore"];
+
 const IOS_MEDIA_SESSION_PACKAGE_NAME: &str = "nostria-media-session";
+
+const IOS_STOREKIT_PACKAGE_NAME: &str = "nostria-storekit";
 
 fn main() {
     configure_target_aliases();
     setup_media_session_mobile_sources().expect("failed to wire mobile media-session sources");
+    setup_storekit_mobile_sources().expect("failed to wire mobile storekit sources");
 
     tauri_build::try_build(
         tauri_build::Attributes::new()
@@ -52,6 +56,12 @@ fn main() {
                 "media-session",
                 tauri_build::InlinedPlugin::new()
                     .commands(MEDIA_SESSION_COMMANDS)
+                    .default_permission(tauri_build::DefaultPermissionRule::AllowAllCommands),
+            )
+            .plugin(
+                "storekit",
+                tauri_build::InlinedPlugin::new()
+                    .commands(STOREKIT_COMMANDS)
                     .default_permission(tauri_build::DefaultPermissionRule::AllowAllCommands),
             ),
     )
@@ -82,8 +92,22 @@ fn setup_media_session_mobile_sources() -> Result<(), Box<dyn std::error::Error>
 
     match target_os.as_str() {
         "android" => setup_android_sources(&manifest_dir.join("media-session/android"))?,
-        "ios" => setup_ios_sources(&manifest_dir.join("media-session/ios"))?,
+        "ios" => setup_ios_sources(
+            &manifest_dir.join("media-session/ios"),
+            IOS_MEDIA_SESSION_PACKAGE_NAME,
+        )?,
         _ => {}
+    }
+
+    Ok(())
+}
+
+/// StoreKit is iOS only - there is no Android/desktop counterpart to wire up.
+fn setup_storekit_mobile_sources() -> Result<(), Box<dyn std::error::Error>> {
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+
+    if env::var("CARGO_CFG_TARGET_OS")?.as_str() == "ios" {
+        setup_ios_sources(&manifest_dir.join("storekit/ios"), IOS_STOREKIT_PACKAGE_NAME)?;
     }
 
     Ok(())
@@ -158,7 +182,7 @@ fn setup_android_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>
 }
 
 #[cfg(target_os = "macos")]
-fn setup_ios_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_ios_sources(source: &Path, package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let tauri_library_path = PathBuf::from(
         env::var("DEP_TAURI_IOS_LIBRARY_PATH")
             .expect("missing DEP_TAURI_IOS_LIBRARY_PATH environment variable"),
@@ -168,17 +192,20 @@ fn setup_ios_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let tauri_dep_path = source
         .parent()
-        .expect("media-session/ios should have a parent directory")
+        .expect("plugin ios folder should have a parent directory")
         .join(".tauri/tauri-api");
     copy_folder(&tauri_library_path, &tauri_dep_path, &[".build", "Package.resolved", "Tests"])?;
 
-    tauri_utils::build::link_apple_library(IOS_MEDIA_SESSION_PACKAGE_NAME, source.to_path_buf());
+    tauri_utils::build::link_apple_library(package_name, source.to_path_buf());
 
     Ok(())
 }
 
 #[cfg(not(target_os = "macos"))]
-fn setup_ios_sources(_source: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_ios_sources(
+    _source: &Path,
+    _package_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 

@@ -198,24 +198,32 @@
             }
           </div>
 
+          @if (!iap.appStoreAvailable()) {
+          <p class="store-debug-notice">
+            <mat-icon>info</mat-icon>
+            <span>Not running inside the iOS app shell, so StoreKit is unavailable. Open this page in the
+              TestFlight/Xcode build to test purchases.</span>
+          </p>
+          }
+
           <div class="store-debug-actions">
             <button mat-flat-button [disabled]="storeDiagnosticsBusy()" (click)="refreshStoreDiagnostics()"
               matTooltip="Read the backend store configuration">
               <mat-icon>cloud_sync</mat-icon>
               Backend
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="loadStoreProducts()"
-              matTooltip="Ask StoreKit for the subscription product">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy() || !iap.appStoreAvailable()"
+              (click)="loadStoreProducts()" matTooltip="Ask StoreKit for the subscription product">
               <mat-icon>inventory_2</mat-icon>
               Products
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="restoreStorePurchases()"
-              matTooltip="Restore previous purchases">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy() || !iap.appStoreAvailable()"
+              (click)="restoreStorePurchases()" matTooltip="Restore previous purchases">
               <mat-icon>restore</mat-icon>
               Restore
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="runStorePurchaseTest()"
-              matTooltip="Run a full purchase and backend verification">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy() || !iap.appStoreAvailable()"
+              (click)="runStorePurchaseTest()" matTooltip="Run a full purchase and backend verification">
               <mat-icon>play_circle</mat-icon>
               Purchase
             </button>
