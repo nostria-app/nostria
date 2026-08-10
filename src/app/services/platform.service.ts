@@ -213,6 +213,7 @@ export class PlatformService {
     }
 
     return window.location.protocol === 'tauri:'
+      || window.location.protocol === 'asset:'
       || window.location.hostname === 'tauri.localhost';
   }
 
@@ -234,11 +235,8 @@ export class PlatformService {
 
     const userAgent = navigator.userAgent;
     const isAndroidWebView = /\bwv\b/i.test(userAgent);
-    const isTauriLocation = window.location.protocol === 'tauri:'
-      || window.location.protocol === 'asset:'
-      || window.location.hostname === 'tauri.localhost';
 
-    return isAndroidWebView || isTauriLocation;
+    return isAndroidWebView || this.detectTauriShell();
   }
 
   /**

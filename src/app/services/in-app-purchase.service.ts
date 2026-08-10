@@ -118,8 +118,8 @@ interface WebKitHandlers {
 }
 
 /**
- * Result payload posted back from the iOS native shell
- * via window.nostriaStoreKitCallback().
+ * Result payload returned by the native store bridges (iOS StoreKit and
+ * Android Play billing).
  */
 interface AppStorePurchaseResponse {
   success: boolean;
@@ -128,12 +128,18 @@ interface AppStorePurchaseResponse {
   productId?: string;
   /** StoreKit 2 JWS for server-side verification with Apple */
   jwsRepresentation?: string;
+  /** Google Play purchase token for server-side verification */
+  purchaseToken?: string;
+  /** Google Play order id */
+  orderId?: string;
   error?: string;
   action?: string;
   purchases?: Array<{
     transactionId?: string;
     originalTransactionId?: string;
     productId?: string;
+    purchaseToken?: string;
+    orderId?: string;
   }>;
   products?: AppStoreProductDetails[];
 }
@@ -231,11 +237,28 @@ export class InAppPurchaseService {
   }
 
   /**
-   * Initialize Google Play Store billing via Digital Goods API.
-   * This is only available inside a TWA (Trusted Web Activity).
+   * Initialize Google Play Store billing.
+   * Uses the `billing` Tauri plugin in the native Android app, and the
+   * Digital Goods API when running inside a TWA (Trusted Web Activity).
    */
   private async initPlayStoreBilling(): Promise<void> {
     try {
+      if (this.isTauriShell()) {
+        const response = await this.invokeNativeStore('initialize', 'plugin:billing|initialize');
+        this.playStoreAvailable.set(response.success === true);
+
+        if (response.success) {
+          this.logger.info('Play Store billing initialized via Tauri billing plugin');
+          this.debug.success('bridge', 'Tauri Play billing plugin ready', {
+            appContext: this.platformService.appContext(),
+            paymentPlatform: this.platformService.paymentPlatform(),
+          });
+        } else {
+          this.debug.error('bridge', response.error || 'Play billing plugin unavailable');
+        }
+        return;
+      }
+
       if ('getDigitalGoodsService' in window) {
         this.digitalGoodsService = await (
           window as unknown as {
@@ -413,18 +436,18 @@ export class InAppPurchaseService {
   }
 
   /**
-   * Whether the app runs inside the Tauri iOS shell, where StoreKit is
-   * reached through the `storekit` Tauri plugin instead of a WebKit bridge.
+   * Whether the app runs inside a Tauri shell, where the native stores are
+   * reached through the `storekit` / `billing` Tauri plugins.
    */
   private isTauriShell(): boolean {
     return this.isBrowser && isTauri();
   }
 
   /**
-   * Call a command on the Tauri `storekit` plugin and normalize failures into
+   * Call a command on a native store Tauri plugin and normalize failures into
    * the same response shape used by the WebKit bridge.
    */
-  private async invokeStoreKit(
+  private async invokeNativeStore(
     action: string,
     command: string,
     payload: Record<string, unknown> = {}
@@ -484,7 +507,7 @@ export class InAppPurchaseService {
    */
   async getAppStoreProducts(productIds: string[]): Promise<AppStoreProductDetails[]> {
     const response = this.isTauriShell()
-      ? await this.invokeStoreKit('getproducts', 'plugin:storekit|get_products', {
+      ? await this.invokeNativeStore('getproducts', 'plugin:storekit|get_products', {
         request: { productIds },
       })
       : await this.postAppStoreAction('getproducts', 'getProducts', { productIds });
@@ -513,7 +536,7 @@ export class InAppPurchaseService {
    */
   async restoreAppStorePurchases(): Promise<AppStorePurchaseResponse> {
     const response = this.isTauriShell()
-      ? await this.invokeStoreKit('restore', 'plugin:storekit|restore')
+      ? await this.invokeNativeStore('restore', 'plugin:storekit|restore')
       : await this.postAppStoreAction('restore', 'restore', {}, 60000);
 
     if (response.success) {
@@ -597,6 +620,24 @@ export class InAppPurchaseService {
    * Returns pricing and other product information.
    */
   async getProductDetails(productIds: string[]): Promise<ItemDetails[]> {
+    if (this.isTauriShell()) {
+      const response = await this.invokeNativeStore('getproducts', 'plugin:billing|get_products', {
+        request: { productIds },
+      });
+
+      if (!response.success) {
+        this.debug.error('getproducts', response.error || 'Failed to load Play products');
+        return [];
+      }
+
+      return (response.products ?? []).map(product => ({
+        itemId: product.productId,
+        title: product.displayName,
+        description: product.description,
+        price: { currency: '', value: product.displayPrice },
+      })) as ItemDetails[];
+    }
+
     if (!this.digitalGoodsService) {
       return [];
     }
@@ -617,6 +658,10 @@ export class InAppPurchaseService {
    * @returns Purchase result with token for server-side verification
    */
   async purchaseWithPlayStore(productId: string): Promise<PurchaseResult> {
+    if (this.isTauriShell()) {
+      return this.purchaseWithTauriBilling(productId);
+    }
+
     if (!this.digitalGoodsService) {
       return { success: false, error: 'Play Store billing not available' };
     }
@@ -678,6 +723,49 @@ export class InAppPurchaseService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Purchase failed',
+      };
+    } finally {
+      this.purchasing.set(false);
+    }
+  }
+
+  /**
+   * Purchase a subscription through the Tauri `billing` plugin (native Android app).
+   * The Digital Goods API is not available outside a TWA, so the native
+   * Play Billing Library is used instead.
+   */
+  private async purchaseWithTauriBilling(productId: string): Promise<PurchaseResult> {
+    this.debug.info('purchase', `Starting Play Store purchase for ${productId}`, {
+      appContext: this.platformService.appContext(),
+      bridge: 'tauri-billing',
+    });
+
+    this.purchasing.set(true);
+
+    try {
+      const response = await this.invokeNativeStore('purchase', 'plugin:billing|purchase', {
+        request: { productId },
+      });
+
+      if (response.success && response.purchaseToken) {
+        this.logger.info('Play Store purchase completed:', productId);
+        this.debug.success('purchase', 'Play billing purchase succeeded', {
+          productId: response.productId,
+          orderId: response.orderId,
+          token: StoreDebugService.summarizeToken(response.purchaseToken),
+        });
+
+        return {
+          success: true,
+          purchaseToken: response.purchaseToken,
+          orderId: response.orderId,
+        };
+      }
+
+      this.debug.error('purchase', response.error || 'Play Store purchase failed');
+      return {
+        success: false,
+        error: response.error || 'Play Store purchase failed',
       };
     } finally {
       this.purchasing.set(false);
@@ -767,7 +855,7 @@ export class InAppPurchaseService {
     this.purchasing.set(true);
 
     try {
-      const response = await this.invokeStoreKit('purchase', 'plugin:storekit|purchase', {
+      const response = await this.invokeNativeStore('purchase', 'plugin:storekit|purchase', {
         request: { productId },
       });
 
@@ -808,6 +896,18 @@ export class InAppPurchaseService {
    * This must be called to prevent Google from refunding the purchase.
    */
   async acknowledgePurchase(purchaseToken: string): Promise<boolean> {
+    if (this.isTauriShell()) {
+      const response = await this.invokeNativeStore('acknowledge', 'plugin:billing|acknowledge', {
+        request: { purchaseToken },
+      });
+
+      if (!response.success) {
+        this.debug.error('acknowledge', response.error || 'Failed to acknowledge purchase');
+      }
+
+      return response.success === true;
+    }
+
     if (!this.digitalGoodsService) {
       return false;
     }

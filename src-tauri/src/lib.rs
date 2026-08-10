@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod android_signer;
+mod billing;
 mod image_thumbnail;
 mod media_session;
 mod storekit;
@@ -91,6 +92,7 @@ pub fn run() {
 
     builder
         .plugin(android_signer::init())
+        .plugin(billing::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(media_session::init())
         .plugin(storekit::init())

@@ -35,6 +35,16 @@ const ANDROID_MEDIA_SESSION_MODULE: &str = "media-session";
 
 const STOREKIT_COMMANDS: &[&str] = &["initialize", "get_products", "purchase", "restore"];
 
+const BILLING_COMMANDS: &[&str] = &[
+    "initialize",
+    "get_products",
+    "purchase",
+    "restore",
+    "acknowledge",
+];
+
+const ANDROID_BILLING_MODULE: &str = "billing";
+
 const IOS_MEDIA_SESSION_PACKAGE_NAME: &str = "nostria-media-session";
 
 const IOS_STOREKIT_PACKAGE_NAME: &str = "nostria-storekit";
@@ -63,6 +73,12 @@ fn main() {
                 tauri_build::InlinedPlugin::new()
                     .commands(STOREKIT_COMMANDS)
                     .default_permission(tauri_build::DefaultPermissionRule::AllowAllCommands),
+            )
+            .plugin(
+                "billing",
+                tauri_build::InlinedPlugin::new()
+                    .commands(BILLING_COMMANDS)
+                    .default_permission(tauri_build::DefaultPermissionRule::AllowAllCommands),
             ),
     )
     .expect("failed to run tauri build");
@@ -70,8 +86,7 @@ fn main() {
     ensure_ios_deep_link_url_schemes()
         .expect("failed to ensure iOS deep-link URL schemes");
 
-    finalize_android_media_session_project()
-        .expect("failed to finalize Android media-session Gradle wiring");
+    finalize_android_projects().expect("failed to finalize Android Gradle wiring");
 }
 
 fn configure_target_aliases() {
@@ -113,13 +128,17 @@ fn setup_storekit_mobile_sources() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn finalize_android_media_session_project() -> Result<(), Box<dyn std::error::Error>> {
+fn finalize_android_projects() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("CARGO_CFG_TARGET_OS")?.as_str() != "android" {
         return Ok(());
     }
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-    link_android_library(&manifest_dir.join("media-session/android"))?;
+    link_android_library(
+        &manifest_dir.join("media-session/android"),
+        ANDROID_MEDIA_SESSION_MODULE,
+    )?;
+    link_android_library(&manifest_dir.join("billing/android"), ANDROID_BILLING_MODULE)?;
     Ok(())
 }
 
@@ -254,7 +273,7 @@ fn copy_folder_recursive(
     Ok(())
 }
 
-fn link_android_library(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn link_android_library(source: &Path, module: &str) -> Result<(), Box<dyn std::error::Error>> {
     let Some(project_path) = env::var_os("TAURI_ANDROID_PROJECT_PATH").map(PathBuf::from) else {
         return Ok(());
     };
@@ -267,10 +286,9 @@ fn link_android_library(source: &Path) -> Result<(), Box<dyn std::error::Error>>
     let settings_path = project_path.join("tauri.settings.gradle");
     if settings_path.exists() {
         let settings_contents = fs::read_to_string(&settings_path)?;
-        let include_line = format!("include ':{ANDROID_MEDIA_SESSION_MODULE}'");
-        let project_line = format!(
-            "project(':{ANDROID_MEDIA_SESSION_MODULE}').projectDir = new File(\"{gradle_path}\")"
-        );
+        let include_line = format!("include ':{module}'");
+        let project_line =
+            format!("project(':{module}').projectDir = new File(\"{gradle_path}\")");
 
         let mut lines = Vec::new();
         let mut include_present = false;
@@ -285,7 +303,7 @@ fn link_android_library(source: &Path) -> Result<(), Box<dyn std::error::Error>>
                 continue;
             }
 
-            if line.starts_with(&format!("project(':{ANDROID_MEDIA_SESSION_MODULE}').projectDir = ")) {
+            if line.starts_with(&format!("project(':{module}').projectDir = ")) {
                 if !project_written {
                     lines.push(project_line.clone());
                     project_written = true;
@@ -316,7 +334,7 @@ fn link_android_library(source: &Path) -> Result<(), Box<dyn std::error::Error>>
     let app_gradle_path = project_path.join("app").join("tauri.build.gradle.kts");
     if app_gradle_path.exists() {
         let app_gradle_contents = fs::read_to_string(&app_gradle_path)?;
-        let dependency_line = format!("  implementation(project(\":{ANDROID_MEDIA_SESSION_MODULE}\"))");
+        let dependency_line = format!("  implementation(project(\":{module}\"))");
 
         if !app_gradle_contents.contains(&dependency_line) {
             let insertion_point = "  implementation(project(\":tauri-android\"))\n";

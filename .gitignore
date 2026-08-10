@@ -75,6 +75,9 @@ src-android/*
 src-tauri/media-session/android/build/
 src-tauri/media-session/android/.gradle/
 src-tauri/media-session/android/.kotlin/
+src-tauri/billing/android/build/
+src-tauri/billing/android/.gradle/
+src-tauri/billing/android/.kotlin/
 
 # Generated Tauri mobile plugin API copies
 src-tauri/media-session/android/.tauri/
