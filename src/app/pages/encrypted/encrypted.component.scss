@@ -424,7 +424,7 @@ img.rail-avatar {
   position: relative;
   padding: 2px 0;
 
-  &:hover > .row-actions {
+  &:hover>.row-actions {
     opacity: 1;
   }
 }
@@ -454,19 +454,50 @@ img.rail-avatar {
 }
 
 .thread-replies {
-  margin: 2px 0 6px 4px;
+  margin: 2px 0 6px 2px;
   padding-left: 10px;
   border-left: 2px solid var(--mat-sys-outline-variant);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.thread-reply {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+
+  &:hover .row-actions {
+    opacity: 1;
+  }
+}
+
+.thread-reply-avatar {
+  padding-top: 2px;
+
+  ::ng-deep .user-profile-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  ::ng-deep .user-avatar,
+  ::ng-deep .default-user-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 28px !important;
+  }
+}
+
+.thread-reply-body {
+  min-width: 0;
 }
 
 .thread-reply-head {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 
   time {
     font-size: 0.7rem;
@@ -1098,6 +1129,7 @@ img.rail-avatar {
   from {
     background: var(--mat-sys-tertiary-container);
   }
+
   to {
     background: transparent;
   }
