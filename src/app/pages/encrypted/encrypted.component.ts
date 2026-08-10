@@ -73,6 +73,15 @@ import {
 /** Consecutive messages from one author within this window are grouped. */
 const GROUPING_WINDOW_MS = 5 * 60 * 1000;
 
+/** Remembers where the user left off, so the section resumes on return. */
+const LAST_LOCATION_STORAGE_KEY = 'nostria-concord-last-location-v1';
+
+interface CordLastLocation {
+  communityId: string | null;
+  /** Last channel opened per community. */
+  channels: Record<string, string>;
+}
+
 interface MessageCluster {
   key: string;
   pubkey: string;
@@ -438,6 +447,20 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       this.communityId.set(params.get('communityId'));
       this.channelId.set(params.get('channelId'));
     });
+
+    void this.prefetchCommunityMetadata();
+  }
+
+  /**
+   * Fold every held community's Control Plane in the background so the rail
+   * shows names and icons before any community is opened. Loads are sequential
+   * to keep the relay queries — and the shared loading flag — well behaved.
+   */
+  private async prefetchCommunityMetadata(): Promise<void> {
+    for (const community of this.concord.communities()) {
+      await this.concord.loadCommunity(community.communityId);
+      this.revision.update(value => value + 1);
+    }
   }
 
   ngOnDestroy(): void {
@@ -1778,6 +1801,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     if (!communityId) {
       this.concord.closeSubscriptions();
       this.mobilePane.set('communities');
+
+      // Resume where the user left off instead of showing an empty shell.
+      const last = this.recallLocation();
+      if (last?.communityId && this.concord.getCommunity(last.communityId)) {
+        void this.router.navigate(['/c', last.communityId], { replaceUrl: true });
+      }
       return;
     }
 
@@ -1794,15 +1823,20 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       this.concord.closeSubscriptions();
       this.mobilePane.set('channels');
 
-      // Drop straight into the first readable channel, the way Discord does.
-      const first = this.concord.getChannels(communityId)[0];
-      if (first) {
-        void this.router.navigate(['/c', communityId, first.channelId], { replaceUrl: true });
+      // Drop straight into the last channel used here, or the first readable
+      // one, the way Discord does.
+      const channels = this.concord.getChannels(communityId);
+      const remembered = this.recallLocation()?.channels?.[communityId];
+      const target = channels.find(channel => channel.channelId === remembered) ?? channels[0];
+
+      if (target) {
+        void this.router.navigate(['/c', communityId, target.channelId], { replaceUrl: true });
       }
       return;
     }
 
     this.mobilePane.set('content');
+    this.rememberLocation(communityId, channelId);
 
     try {
       await this.concord.openChannel(communityId, channelId);
@@ -1811,6 +1845,41 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     }
 
     this.revision.update(value => value + 1);
+  }
+
+  private rememberLocation(communityId: string, channelId: string): void {
+    const stored = this.recallLocation() ?? { communityId: null, channels: {} };
+
+    this.writeStore(LAST_LOCATION_STORAGE_KEY, {
+      communityId,
+      channels: { ...stored.channels, [communityId]: channelId },
+    } satisfies CordLastLocation);
+  }
+
+  private recallLocation(): CordLastLocation | null {
+    const stored = this.readStore<CordLastLocation | null>(LAST_LOCATION_STORAGE_KEY, null);
+    return stored?.channels ? stored : null;
+  }
+
+  private readStore<T>(key: string, fallback: T): T {
+    if (typeof localStorage === 'undefined') return fallback;
+
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private writeStore(key: string, value: unknown): void {
+    if (typeof localStorage === 'undefined') return;
+
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Storage is best-effort; losing the last location is not worth an error.
+    }
   }
 }
 

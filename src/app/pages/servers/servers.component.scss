@@ -781,7 +781,7 @@
 }
 
 // The chat composer floats over the timeline; the thread composer stays inline.
-.channel-main > .composer {
+.channel-main>.composer {
   position: absolute;
   bottom: 6px;
   left: 6px;
@@ -806,7 +806,7 @@
   }
 }
 
-:host-context(.dark) .channel-main > .composer {
+:host-context(.dark) .channel-main>.composer {
   background-color: rgba(30, 30, 30, 0.92);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
@@ -1312,7 +1312,7 @@ app-image-input {
   font-size: 0.78rem;
   color: var(--mat-sys-on-surface-variant);
 
-  > mat-icon {
+  >mat-icon {
     font-size: 16px;
     width: 16px;
     height: 16px;
