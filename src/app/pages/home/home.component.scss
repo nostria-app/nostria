@@ -719,6 +719,19 @@
   }
 }
 
+.tile-encrypted {
+  background: linear-gradient(160deg, rgba(94, 53, 177, 0.12) 0%, transparent 100%);
+  border: 1px solid rgba(94, 53, 177, 0.15);
+
+  .tile-icon {
+    color: #5e35b1;
+  }
+
+  &:hover {
+    border-color: rgba(94, 53, 177, 0.4);
+  }
+}
+
 // AI Section tiles
 .tile-ai-models {
   background: linear-gradient(135deg, rgba(103, 58, 183, 0.12) 0%, rgba(156, 39, 176, 0.08) 100%);
@@ -1929,6 +1942,20 @@
     &:hover {
       border-color: rgba(0, 150, 136, 0.6);
       box-shadow: 0 12px 32px rgba(0, 150, 136, 0.18);
+    }
+  }
+
+  .tile-encrypted {
+    background: linear-gradient(160deg, rgba(94, 53, 177, 0.28) 0%, rgba(94, 53, 177, 0.06) 100%);
+    border-color: rgba(94, 53, 177, 0.4);
+
+    .tile-icon {
+      color: #B39DDB;
+    }
+
+    &:hover {
+      border-color: rgba(94, 53, 177, 0.6);
+      box-shadow: 0 12px 32px rgba(94, 53, 177, 0.18);
     }
   }
 

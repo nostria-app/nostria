@@ -96,8 +96,17 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-chats',
       label: 'Open Chats',
       icon: 'forum',
+      description: 'Public, group and private chats',
       action: () => this.router.navigate(['/chats']),
-      keywords: ['chats', 'channels', 'public', 'rooms', 'chat']
+      keywords: ['chats', 'channels', 'rooms', 'chat']
+    },
+    {
+      id: 'nav-chats-public',
+      label: 'Open Public Chats',
+      icon: 'forum',
+      description: 'Public channels (NIP-28)',
+      action: () => this.router.navigate(['/chats/public']),
+      keywords: ['chats', 'channels', 'public', 'rooms', 'chat', 'nip28', 'nip-28']
     },
     {
       id: 'nav-servers',
@@ -106,6 +115,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       description: 'Relay-based groups (NIP-29)',
       action: () => this.router.navigate(['/chats/servers']),
       keywords: ['groups', 'servers', 'nip29', 'nip-29', 'discord', 'communities', 'voice', 'rooms']
+    },
+    {
+      id: 'nav-encrypted',
+      label: 'Open Private Chats',
+      icon: 'lock',
+      description: 'End-to-end encrypted communities',
+      action: () => this.router.navigate(['/c']),
+      keywords: ['private', 'encrypted', 'concord', 'cord', 'communities', 'secret', 'chat']
     },
     {
       id: 'nav-notifications',

@@ -605,7 +605,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.selectedChannelId.set(null);
     this.chatChannels.closeMessageSubscription();
     this.cleanupZapSubscription();
-    this.router.navigate(['/chats']);
+    this.router.navigate(['/chats/public']);
   }
 
   /** Toggle search */

@@ -705,7 +705,7 @@ export class App implements OnInit, OnDestroy {
       if (item.path === 'chats') {
         const chatChildren: NavItem[] = [
           {
-            path: '/chats',
+            path: '/chats/public',
             label: $localize`:@@app.nav.chats.public:Public`,
             icon: 'forum',
             authenticated: false,
