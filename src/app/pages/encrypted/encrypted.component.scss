@@ -424,8 +424,53 @@ img.rail-avatar {
   position: relative;
   padding: 2px 0;
 
-  &:hover .row-actions {
+  &:hover > .row-actions {
     opacity: 1;
+  }
+}
+
+.thread-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 2px;
+  padding: 2px 10px 2px 6px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 999px;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.thread-replies {
+  margin: 2px 0 6px 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.thread-reply-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+
+  time {
+    font-size: 0.7rem;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 

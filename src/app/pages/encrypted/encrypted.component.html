@@ -753,106 +753,134 @@
 
           @for (message of cluster.messages; track message.id) {
           <div class="row" [id]="'cord-msg-' + message.id">
-            @if (findMessage(message.parent); as parent) {
-            <div class="reply-preview">
-              <mat-icon>reply</mat-icon>
-              <app-profile-display-name [pubkey]="parent.pubkey" />
-              <span class="reply-text">{{ parent.content }}</span>
-            </div>
-            }
+            <ng-container
+              [ngTemplateOutlet]="messageBody"
+              [ngTemplateOutletContext]="{ $implicit: message, rootId: message.id }"
+            ></ng-container>
 
-            @if (textFor(message); as text) {
-            <div class="body">
-              <app-message-content
-                [content]="text"
-                [tags]="message.rumor.tags"
-                [authorPubkey]="message.pubkey"
-              />
-              @if (message.editedContent) {
-              <span class="edited" matTooltip="Edited by the author">(edited)</span>
-              }
-            </div>
-            }
+            @if (replyCount(message.id); as count) {
+            <button type="button" class="thread-toggle" (click)="toggleThread(message.id)">
+              <mat-icon>{{ isThreadExpanded(message.id) ? 'expand_less' : 'forum' }}</mat-icon>
+              <span>{{ count }} {{ count === 1 ? 'reply' : 'replies' }}</span>
+            </button>
 
-            @if (attachmentsFor(message); as attachments) {
-            @if (attachments.length > 0) {
-            <div class="attachments">
-              @for (attachment of attachments; track attachment.src) {
-              @if (attachment.video) {
-              <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
-              } @else {
-              <img
-                class="attachment"
-                [src]="attachment.src"
-                [alt]="attachment.alt"
-                loading="lazy"
-                (click)="openAttachment(attachment.src, attachment.alt)"
-              />
-              }
+            @if (isThreadExpanded(message.id)) {
+            <div class="thread-replies">
+              @for (reply of repliesFor(message.id); track reply.id) {
+              <div class="row thread-reply" [id]="'cord-msg-' + reply.id">
+                <div class="thread-reply-head">
+                  <app-user-profile [pubkey]="reply.pubkey" view="icon" />
+                  <app-profile-display-name [pubkey]="reply.pubkey" />
+                  <time>{{ reply.timestamp | date: 'short' }}</time>
+                </div>
+
+                <ng-container
+                  [ngTemplateOutlet]="messageBody"
+                  [ngTemplateOutletContext]="{ $implicit: reply, rootId: message.id }"
+                ></ng-container>
+              </div>
               }
             </div>
             }
             }
-
-            @for (preview of previewsFor(message); track preview.url) {
-            <app-social-preview
-              class="social-preview"
-              [url]="preview.url"
-              [previewData]="preview"
-              [compact]="true"
-            />
-            }
-
-            @if (reactionSummary(message).length > 0) {
-            <div class="reactions">
-              @for (reaction of reactionSummary(message); track reaction.emoji) {
-              <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
-                @if (reaction.url) {
-                <img class="reaction-emoji" [src]="reaction.url" [alt]="reaction.emoji" loading="lazy" />
-                } @else {
-                <span>{{ reaction.emoji }}</span>
-                }
-                {{ reaction.count }}
-              </button>
-              }
-            </div>
-            }
-
-            <div class="row-actions">
-              <button mat-icon-button type="button" matTooltip="React" (click)="react(message, '👍')">
-                <mat-icon>add_reaction</mat-icon>
-              </button>
-              <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
-                <mat-icon>reply</mat-icon>
-              </button>
-              @if (canPin()) {
-              <button
-                mat-icon-button
-                type="button"
-                [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'"
-                [disabled]="busy()"
-                (click)="togglePin(message)"
-              >
-                <mat-icon>push_pin</mat-icon>
-              </button>
-              }
-              @if (canDelete(message)) {
-              <button
-                mat-icon-button
-                type="button"
-                matTooltip="Delete"
-                (click)="deleteMessage(message)"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
-              }
-            </div>
           </div>
           }
         </div>
       </article>
       }
     </div>
+
+    <ng-template #messageBody let-message let-rootId="rootId">
+      @if (parentPreview(message, rootId); as parent) {
+      <div class="reply-preview">
+        <mat-icon>reply</mat-icon>
+        <app-profile-display-name [pubkey]="parent.pubkey" />
+        <span class="reply-text">{{ parent.content }}</span>
+      </div>
+      }
+
+      @if (textFor(message); as text) {
+      <div class="body">
+        <app-message-content
+          [content]="text"
+          [tags]="message.rumor.tags"
+          [authorPubkey]="message.pubkey"
+        />
+        @if (message.editedContent) {
+        <span class="edited" matTooltip="Edited by the author">(edited)</span>
+        }
+      </div>
+      }
+
+      @if (attachmentsFor(message); as attachments) {
+      @if (attachments.length > 0) {
+      <div class="attachments">
+        @for (attachment of attachments; track attachment.src) {
+        @if (attachment.video) {
+        <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
+        } @else {
+        <img
+          class="attachment"
+          [src]="attachment.src"
+          [alt]="attachment.alt"
+          loading="lazy"
+          (click)="openAttachment(attachment.src, attachment.alt)"
+        />
+        }
+        }
+      </div>
+      }
+      }
+
+      @for (preview of previewsFor(message); track preview.url) {
+      <app-social-preview
+        class="social-preview"
+        [url]="preview.url"
+        [previewData]="preview"
+        [compact]="true"
+      />
+      }
+
+      @if (reactionSummary(message).length > 0) {
+      <div class="reactions">
+        @for (reaction of reactionSummary(message); track reaction.emoji) {
+        <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
+          @if (reaction.url) {
+          <img class="reaction-emoji" [src]="reaction.url" [alt]="reaction.emoji" loading="lazy" />
+          } @else {
+          <span>{{ reaction.emoji }}</span>
+          }
+          {{ reaction.count }}
+        </button>
+        }
+      </div>
+      }
+
+      <div class="row-actions">
+        <button mat-icon-button type="button" matTooltip="React" (click)="react(message, '👍')">
+          <mat-icon>add_reaction</mat-icon>
+        </button>
+        <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
+          <mat-icon>reply</mat-icon>
+        </button>
+        @if (canPin()) {
+        <button
+          mat-icon-button
+          type="button"
+          [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'"
+          [disabled]="busy()"
+          (click)="togglePin(message)"
+        >
+          <mat-icon>push_pin</mat-icon>
+        </button>
+        }
+        @if (canDelete(message)) {
+        <button mat-icon-button type="button" matTooltip="Delete" (click)="deleteMessage(message)">
+          <mat-icon>delete</mat-icon>
+        </button>
+        }
+      </div>
+    </ng-template>
 
     <footer class="composer">
       @if (replyingTo(); as reply) {

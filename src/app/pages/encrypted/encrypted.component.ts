@@ -11,7 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -55,6 +55,7 @@ import { ConcordMediaService } from '../../services/concord/concord-media.servic
 import { ConcordRekeyService } from '../../services/concord/concord-rekey.service';
 import { ConcordVoiceService } from '../../services/concord/concord-voice.service';
 import {
+  CORD_KIND_REPLY,
   CORD_PERMISSIONS,
   CORD_DEFAULT_RELAYS,
   CordChannel,
@@ -87,6 +88,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
   imports: [
     FormsModule,
     DatePipe,
+    NgTemplateOutlet,
     MatBadgeModule,
     MatButtonModule,
     MatDividerModule,
@@ -146,6 +148,9 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly messageText = signal('');
   readonly replyingTo = signal<CordMessage | null>(null);
   readonly showMemberRail = signal(true);
+
+  /** Thread roots whose replies are currently unfolded. */
+  private readonly expandedThreads = signal<ReadonlySet<string>>(new Set());
 
   // -- Admin state ----------------------------------------------------------
   readonly showCreate = signal(false);
@@ -226,16 +231,51 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
   readonly isDissolved = computed(() => this.control()?.dissolved === true);
 
+  private readonly messageIndex = computed(() => {
+    const index = new Map<string, CordMessage>();
+    for (const message of this.messages()) index.set(message.id, message);
+    return index;
+  });
+
+  /**
+   * Splits the timeline into top-level messages and the replies that hang off
+   * them. Replies are flattened onto their thread root so a deep chain still
+   * folds under the one message the timeline shows. A reply whose parent is
+   * not in the loaded history stays top-level rather than disappearing.
+   */
+  private readonly threads = computed(() => {
+    const index = this.messageIndex();
+    const roots: CordMessage[] = [];
+    const replies = new Map<string, CordMessage[]>();
+    const rootOf = new Map<string, string>();
+
+    for (const message of this.messages()) {
+      const rootId = this.resolveRootId(message, index, rootOf);
+
+      if (!rootId) {
+        roots.push(message);
+        continue;
+      }
+
+      rootOf.set(message.id, rootId);
+      const bucket = replies.get(rootId);
+      if (bucket) bucket.push(message);
+      else replies.set(rootId, [message]);
+    }
+
+    return { roots, replies, rootOf };
+  });
+
   readonly clusters = computed<MessageCluster[]>(() => {
     const clusters: MessageCluster[] = [];
 
-    for (const message of this.messages()) {
+    for (const message of this.threads().roots) {
       const last = clusters.at(-1);
       const sameAuthor = last?.pubkey === message.pubkey;
       const within =
         !!last && message.timestamp - (last.messages.at(-1)?.timestamp ?? 0) < GROUPING_WINDOW_MS;
 
-      if (last && sameAuthor && within && message.kind !== 1111) {
+      if (last && sameAuthor && within && message.kind !== CORD_KIND_REPLY) {
         last.messages.push(message);
       } else {
         clusters.push({
@@ -249,6 +289,64 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     return clusters;
   });
+
+  /** The thread root a reply belongs to, or undefined when it is top-level. */
+  private resolveRootId(
+    message: CordMessage,
+    index: Map<string, CordMessage>,
+    rootOf: Map<string, string>
+  ): string | undefined {
+    let current = message;
+
+    for (let hop = 0; hop < 64; hop++) {
+      const parentId = current.parent ?? current.threadRoot;
+      if (!parentId) break;
+
+      const known = rootOf.get(parentId);
+      if (known) return known;
+
+      const parent = index.get(parentId);
+      if (!parent) break;
+
+      current = parent;
+    }
+
+    return current.id === message.id ? undefined : current.id;
+  }
+
+  repliesFor(rootId: string): CordMessage[] {
+    return this.threads().replies.get(rootId) ?? [];
+  }
+
+  replyCount(rootId: string): number {
+    return this.repliesFor(rootId).length;
+  }
+
+  isThreadExpanded(rootId: string): boolean {
+    return this.expandedThreads().has(rootId);
+  }
+
+  toggleThread(rootId: string): void {
+    this.expandedThreads.update(current => {
+      const next = new Set(current);
+      if (!next.delete(rootId)) next.add(rootId);
+      return next;
+    });
+  }
+
+  private expandThread(rootId: string): void {
+    this.expandedThreads.update(current => new Set(current).add(rootId));
+  }
+
+  /**
+   * The quoted parent shown above a reply. It is skipped when the parent is
+   * the thread root, because the reply already renders directly beneath it.
+   */
+  parentPreview(message: CordMessage, rootId: string): CordMessage | undefined {
+    const parentId = message.parent;
+    if (!parentId || parentId === rootId) return undefined;
+    return this.messageIndex().get(parentId);
+  }
 
   readonly canPin = computed(() => this.check(PERM_PIN_MESSAGES));
 
@@ -501,6 +599,11 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       this.snackBar.open('Could not send that message', 'Dismiss', { duration: 5000 });
     } else {
       this.revision.update(value => value + 1);
+
+      // Unfold the thread so the author sees the reply they just sent.
+      if (replyTo) {
+        this.expandThread(this.threads().rootOf.get(replyTo.id) ?? replyTo.id);
+      }
     }
   }
 
@@ -584,7 +687,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   }
 
   findMessage(id: string | undefined): CordMessage | undefined {
-    return id ? this.messages().find(message => message.id === id) : undefined;
+    return id ? this.messageIndex().get(id) : undefined;
   }
 
   // -------------------------------------------------------------------------
@@ -1316,6 +1419,17 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
   /** Jump to a pinned message when it is in the loaded timeline. */
   scrollToPin(id: string): void {
+    const rootId = this.threads().rootOf.get(id);
+    if (rootId && !this.isThreadExpanded(rootId)) {
+      this.expandThread(rootId);
+      setTimeout(() => this.scrollToElement(id));
+      return;
+    }
+
+    this.scrollToElement(id);
+  }
+
+  private scrollToElement(id: string): void {
     const element = document.getElementById(`cord-msg-${id}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
