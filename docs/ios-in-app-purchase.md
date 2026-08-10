@@ -12,12 +12,12 @@ Angular InAppPurchaseService
   → POST https://api.nostria.app/api/account/verify-store-purchase
 ```
 
-| Layer | Location |
-| --- | --- |
-| Checkout UI | `src/app/pages/premium/upgrade`, `renew` |
-| JS bridge | `src/app/services/in-app-purchase.service.ts` |
-| Platform routing | `src/app/services/platform.service.ts` |
-| Native StoreKit | `packages/ios/Nostria/StoreKitBridge.swift` |
+| Layer            | Location                                      |
+| ---------------- | --------------------------------------------- |
+| Checkout UI      | `src/app/pages/premium/upgrade`, `renew`      |
+| JS bridge        | `src/app/services/in-app-purchase.service.ts` |
+| Platform routing | `src/app/services/platform.service.ts`        |
+| Native StoreKit  | `packages/ios/Nostria/StoreKitBridge.swift`   |
 
 On **native iOS**, payment methods are limited to **App Store only** (no Lightning / external browser checkout) so App Review does not see alternative digital-payment paths.
 
@@ -27,12 +27,12 @@ Web / PWA continues to use Bitcoin Lightning.
 
 Configure these product IDs to match the client:
 
-| Product ID | Type | Notes |
-| --- | --- | --- |
-| `nostria_premium_monthly` | Auto-renewable subscription | **Primary SKU** for first release |
-| `nostria_premium_quarterly` | Auto-renewable subscription | Mapped, not exposed yet in store-only mode |
-| `nostria_premium_yearly` | Auto-renewable subscription | Mapped, not exposed yet in store-only mode |
-| `username` | Non-consumable or non-renewing | Debug / username test flow |
+| Product ID                  | Type                           | Notes                                      |
+| --------------------------- | ------------------------------ | ------------------------------------------ |
+| `nostria_premium_monthly`   | Auto-renewable subscription    | **Primary SKU** for first release          |
+| `nostria_premium_quarterly` | Auto-renewable subscription    | Mapped, not exposed yet in store-only mode |
+| `nostria_premium_yearly`    | Auto-renewable subscription    | Mapped, not exposed yet in store-only mode |
+| `username`                  | Non-consumable or non-renewing | Debug / username test flow                 |
 
 First native release UI only offers **Premium Monthly** (`nostria_premium_monthly`) at **$9.99** display override in the upgrade UI.
 
@@ -110,17 +110,18 @@ backend URL, logged-in pubkey, plus the backend's Apple configuration fetched fr
 
 Actions:
 
-| Button | What it does |
-| --- | --- |
-| Check backend | `GET /api/store/config` — verifies the server has the Apple credentials |
+| Button        | What it does                                                                |
+| ------------- | --------------------------------------------------------------------------- |
+| Check backend | `GET /api/store/config` — verifies the server has the Apple credentials     |
 | Load products | `getproducts` over the bridge — verifies App Store Connect products resolve |
-| Restore | `AppStore.sync()` + current entitlements |
-| Test purchase | Full purchase + backend verification for `nostria_premium_monthly` |
-| Copy log | Copies diagnostics + full log to the clipboard |
-| Clear | Empties the log |
+| Restore       | `AppStore.sync()` + current entitlements                                    |
+| Test purchase | Full purchase + backend verification for `nostria_premium_monthly`          |
+| Copy log      | Copies diagnostics + full log to the clipboard                              |
+| Clear         | Empties the log                                                             |
 
 ## Debug (browser only)
 
 Settings → Debug:
 
 - **Simulate Platform → Native iOS** plus **Enable store payments while simulating platform** exercises UI routing in a browser (StoreKit sheet still requires the real iOS shell).
+
