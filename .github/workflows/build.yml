@@ -277,6 +277,22 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: Configure Gradle dependency mirrors
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.gradle/init.d"
+          cp .github/gradle/mirrors.init.gradle "$HOME/.gradle/init.d/mirrors.gradle"
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', 'src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties', 'src-tauri/*/android/build.gradle.kts') }}
+          restore-keys: |
+            gradle-android-
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -372,6 +388,22 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
+
+      - name: Configure Gradle dependency mirrors
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.gradle/init.d"
+          cp .github/gradle/mirrors.init.gradle "$HOME/.gradle/init.d/mirrors.gradle"
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', 'src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties', 'src-tauri/*/android/build.gradle.kts') }}
+          restore-keys: |
+            gradle-android-
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

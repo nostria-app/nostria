@@ -1,0 +1,33 @@
+// Copied into ~/.gradle/init.d by the Android CI jobs so it also applies to buildSrc,
+// the Tauri-generated project and every included native library module.
+//
+// Maven Central aggressively rate-limits anonymous GitHub Actions traffic (HTTP 429),
+// which breaks dependency resolution mid-build. Resolving through Google's read-only
+// Maven Central mirror first keeps the build off the rate-limited host.
+
+beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        maven { url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
+        google()
+        gradlePluginPortal()
+        mavenCentral()
+    }
+
+    settings.dependencyResolutionManagement.repositories {
+        maven { url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
+        google()
+        mavenCentral()
+    }
+}
+
+allprojects {
+    buildscript {
+        repositories {
+            maven { url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
+        }
+    }
+
+    repositories {
+        maven { url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
+    }
+}
