@@ -771,9 +771,31 @@ img.rail-avatar {
   gap: 8px;
   padding: 2px 4px;
   border-radius: 8px;
+  min-width: 0;
 
   &:hover {
     background: var(--mat-sys-surface-container-high);
+  }
+
+  app-user-profile {
+    flex: 1;
+    min-width: 0;
+  }
+
+  ::ng-deep .user-profile-container,
+  ::ng-deep .user-profile-content,
+  ::ng-deep .user-profile-npub-link,
+  ::ng-deep .user-profile-npub {
+    min-width: 0;
+  }
+
+  ::ng-deep .user-profile-name-link,
+  ::ng-deep .user-profile-npub span {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -797,6 +819,7 @@ img.rail-avatar {
   border-left: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container);
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px 8px;
 }
 
