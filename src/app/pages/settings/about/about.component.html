@@ -172,6 +172,95 @@
         </mat-list>
       </div>
 
+      @if (showStoreDebug()) {
+        <div class="store-debug-section">
+          <mat-expansion-panel (opened)="refreshStoreDiagnostics()">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>shopping_cart_checkout</mat-icon>
+                <span>In-app purchase debug</span>
+              </mat-panel-title>
+              <mat-panel-description>
+                @if (storeDebug.hasErrors()) {
+                  <mat-icon class="store-debug-error-icon">error</mat-icon>
+                }
+                {{ storeDebug.entries().length }} events
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="store-debug-grid">
+              @for (row of storeDiagnostics(); track row.label) {
+                <span class="store-debug-key">{{ row.label }}</span>
+                <span
+                  class="store-debug-value"
+                  [class.is-ok]="row.ok === true"
+                  [class.is-bad]="row.ok === false"
+                  >{{ row.value }}</span
+                >
+              }
+            </div>
+
+            <div class="store-debug-actions">
+              <button
+                mat-flat-button
+                [disabled]="storeDiagnosticsBusy()"
+                (click)="refreshStoreDiagnostics()"
+              >
+                <mat-icon>cloud_sync</mat-icon>
+                Check backend
+              </button>
+              <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="loadStoreProducts()">
+                <mat-icon>inventory_2</mat-icon>
+                Load products
+              </button>
+              <button
+                mat-stroked-button
+                [disabled]="storeDiagnosticsBusy()"
+                (click)="restoreStorePurchases()"
+              >
+                <mat-icon>restore</mat-icon>
+                Restore
+              </button>
+              <button
+                mat-stroked-button
+                [disabled]="storeDiagnosticsBusy()"
+                (click)="runStorePurchaseTest()"
+              >
+                <mat-icon>play_circle</mat-icon>
+                Test purchase
+              </button>
+              <button mat-stroked-button (click)="copyStoreDebugLog()">
+                <mat-icon>content_copy</mat-icon>
+                Copy log
+              </button>
+              <button mat-stroked-button (click)="clearStoreDebugLog()">
+                <mat-icon>delete_sweep</mat-icon>
+                Clear
+              </button>
+            </div>
+
+            <div class="store-debug-log">
+              @for (entry of storeDebug.entriesNewestFirst(); track entry.id) {
+                <div class="store-debug-entry" [class]="'level-' + entry.level">
+                  <div class="store-debug-entry-head">
+                    <span class="store-debug-time">{{ entry.timestamp | date: 'HH:mm:ss' }}</span>
+                    <span class="store-debug-step">{{ entry.step }}</span>
+                  </div>
+                  <div class="store-debug-message">{{ entry.message }}</div>
+                  @if (entry.detail) {
+                    <pre class="store-debug-detail">{{ entry.detail }}</pre>
+                  }
+                </div>
+              } @empty {
+                <p class="store-debug-empty">
+                  No purchase events recorded yet. Start a purchase to capture the flow.
+                </p>
+              }
+            </div>
+          </mat-expansion-panel>
+        </div>
+      }
+
       <!-- </mat-card-content>
   </mat-card> -->
     </div>

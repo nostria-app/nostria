@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PlatformService } from './platform.service';
 import { LoggerService } from './logger.service';
+import { StoreDebugService } from './store-debug.service';
 import { environment } from '../../environments/environment';
 
 /**
@@ -133,6 +134,35 @@ interface AppStorePurchaseResponse {
     originalTransactionId?: string;
     productId?: string;
   }>;
+  products?: AppStoreProductDetails[];
+}
+
+/** Product metadata returned by the native StoreKit `getProducts` action. */
+export interface AppStoreProductDetails {
+  productId: string;
+  displayName?: string;
+  description?: string;
+  displayPrice?: string;
+  price?: string;
+}
+
+/** Non-secret snapshot of the backend's store verification configuration. */
+export interface BackendStoreConfig {
+  appStore: {
+    configured: boolean;
+    bundleId: string;
+    appAppleId?: string;
+    environment: string;
+    hasIssuerId: boolean;
+    hasKeyId: boolean;
+    hasPrivateKey: boolean;
+    privateKeyLooksValid: boolean;
+    allowUnverifiedDecode: boolean;
+    missing: string[];
+  };
+  playStore: { configured: boolean };
+  products: { productId: string; tier: string; billingCycle: string; kind: string }[];
+  serverTime: number;
 }
 
 export interface VerifyStorePurchaseOptions {
@@ -160,6 +190,7 @@ export class InAppPurchaseService {
   private readonly snackBar = inject(MatSnackBar);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+  readonly debug = inject(StoreDebugService);
 
   /** Whether Play Store billing is available and ready */
   readonly playStoreAvailable = signal(false);
@@ -176,6 +207,9 @@ export class InAppPurchaseService {
 
   /** Pending App Store purchase resolve callback */
   private appStorePurchaseResolve: ((result: PurchaseResult) => void) | null = null;
+
+  /** Pending resolvers for non-purchase native actions (restore / getProducts) */
+  private appStoreActionResolvers = new Map<string, (response: AppStorePurchaseResponse) => void>();
 
   constructor() {
     if (!this.isBrowser) {
@@ -228,17 +262,28 @@ export class InAppPurchaseService {
       if (webkit?.messageHandlers?.nostriaStoreKit) {
         this.appStoreAvailable.set(true);
         this.logger.info('App Store billing bridge detected');
+        this.debug.success('bridge', 'StoreKit bridge detected', {
+          appContext: this.platformService.appContext(),
+          paymentPlatform: this.platformService.paymentPlatform(),
+        });
 
         // Register the global callback for receiving purchase results from native
         (window as unknown as { nostriaStoreKitCallback: (response: AppStorePurchaseResponse) => void })
           .nostriaStoreKitCallback = (response: AppStorePurchaseResponse) => {
             this.handleAppStoreCallback(response);
           };
+        this.debug.info('bridge', 'nostriaStoreKitCallback registered');
       } else {
         this.logger.warn('WebKit StoreKit message handler not available');
+        this.debug.error('bridge', 'WebKit StoreKit message handler not available', {
+          hasWebkit: Boolean(webkit),
+          hasMessageHandlers: Boolean(webkit?.messageHandlers),
+          userAgent: navigator.userAgent,
+        });
       }
     } catch (error) {
       this.logger.error('Failed to initialize App Store billing:', error);
+      this.debug.error('bridge', 'Failed to initialize App Store billing', error);
     }
   }
 
@@ -246,8 +291,31 @@ export class InAppPurchaseService {
    * Handle the callback from the native iOS app shell after a StoreKit purchase.
    */
   private handleAppStoreCallback(response: AppStorePurchaseResponse): void {
+    const action = response.action?.toLowerCase();
+
+    this.debug.info('bridge', `Native callback received (action=${action || 'purchase'})`, {
+      success: response.success,
+      productId: response.productId,
+      transactionId: response.transactionId,
+      originalTransactionId: response.originalTransactionId,
+      hasJws: Boolean(response.jwsRepresentation),
+      error: response.error,
+    });
+
+    if (action && action !== 'purchase') {
+      const resolver = this.appStoreActionResolvers.get(action);
+      if (resolver) {
+        this.appStoreActionResolvers.delete(action);
+        resolver(response);
+      } else {
+        this.debug.warn('bridge', `No pending handler for native action "${action}"`);
+      }
+      return;
+    }
+
     if (!this.appStorePurchaseResolve) {
       this.logger.warn('Received App Store callback with no pending purchase');
+      this.debug.warn('purchase', 'Received App Store callback with no pending purchase');
       return;
     }
 
@@ -259,16 +327,132 @@ export class InAppPurchaseService {
     const purchaseToken = response.jwsRepresentation || response.transactionId;
 
     if (response.success && purchaseToken) {
+      this.debug.success('purchase', 'StoreKit purchase succeeded', {
+        productId: response.productId,
+        transactionId: response.transactionId,
+        tokenType: response.jwsRepresentation ? 'jws' : 'transactionId',
+        token: StoreDebugService.summarizeToken(purchaseToken),
+      });
       resolve({
         success: true,
         purchaseToken,
         orderId: response.originalTransactionId || response.transactionId,
       });
     } else {
+      this.debug.error('purchase', response.error || 'App Store purchase failed', {
+        success: response.success,
+        hasToken: Boolean(purchaseToken),
+      });
       resolve({
         success: false,
         error: response.error || 'App Store purchase failed',
       });
+    }
+  }
+
+  /**
+   * Send a non-purchase action ('restore' / 'getproducts') to the native shell.
+   */
+  private postAppStoreAction(
+    action: 'restore' | 'getproducts',
+    responseAction: string,
+    payload: Record<string, unknown> = {},
+    timeoutMs = 30000
+  ): Promise<AppStorePurchaseResponse> {
+    const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
+    const handler = webkit?.messageHandlers?.nostriaStoreKit;
+
+    if (!handler) {
+      this.debug.error(action, 'StoreKit bridge not available');
+      return Promise.resolve({ success: false, error: 'App Store billing not available' });
+    }
+
+    return new Promise<AppStorePurchaseResponse>(resolve => {
+      const key = responseAction.toLowerCase();
+
+      const timeout = setTimeout(() => {
+        if (this.appStoreActionResolvers.get(key)) {
+          this.appStoreActionResolvers.delete(key);
+          this.debug.error(action, 'Native action timed out');
+          resolve({ success: false, error: `${action} timed out` });
+        }
+      }, timeoutMs);
+
+      this.appStoreActionResolvers.set(key, response => {
+        clearTimeout(timeout);
+        resolve(response);
+      });
+
+      this.debug.info(action, 'Posting action to native shell', payload);
+      handler.postMessage({ action, ...payload });
+    });
+  }
+
+  /**
+   * Ask StoreKit for product metadata. Confirms the products exist in App Store Connect
+   * and that the app is talking to the right storefront.
+   */
+  async getAppStoreProducts(productIds: string[]): Promise<AppStoreProductDetails[]> {
+    const response = await this.postAppStoreAction('getproducts', 'getProducts', { productIds });
+
+    if (!response.success) {
+      this.debug.error('getproducts', response.error || 'Failed to load products');
+      return [];
+    }
+
+    const products = response.products ?? [];
+    if (products.length === 0) {
+      this.debug.warn(
+        'getproducts',
+        'StoreKit returned no products. Check the product IDs, agreements and sandbox account.',
+        { requested: productIds }
+      );
+    } else {
+      this.debug.success('getproducts', `StoreKit returned ${products.length} product(s)`, products);
+    }
+
+    return products;
+  }
+
+  /**
+   * Restore previous App Store purchases and report the current entitlements.
+   */
+  async restoreAppStorePurchases(): Promise<AppStorePurchaseResponse> {
+    const response = await this.postAppStoreAction('restore', 'restore', {}, 60000);
+
+    if (response.success) {
+      this.debug.success('restore', `Restored ${response.purchases?.length ?? 0} entitlement(s)`, response.purchases);
+    } else {
+      this.debug.error('restore', response.error || 'Restore failed');
+    }
+
+    return response;
+  }
+
+  /**
+   * Read the backend's store verification configuration (no secrets returned).
+   */
+  async getBackendStoreConfig(): Promise<BackendStoreConfig | null> {
+    const url = new URL('api/store/config', environment.backendUrl).toString();
+    this.debug.info('backend', 'Fetching store config', url);
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        this.debug.error('backend', `Store config request failed (${response.status})`);
+        return null;
+      }
+
+      const config = (await response.json()) as BackendStoreConfig;
+      if (config.appStore?.configured) {
+        this.debug.success('backend', 'Backend App Store verification is configured', config.appStore);
+      } else {
+        this.debug.error('backend', 'Backend App Store verification is NOT configured', config.appStore);
+      }
+      return config;
+    } catch (error) {
+      this.debug.error('backend', 'Store config request threw', error);
+      return null;
     }
   }
 
@@ -417,7 +601,13 @@ export class InAppPurchaseService {
     const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
     const handler = webkit?.messageHandlers?.nostriaStoreKit;
 
+    this.debug.info('purchase', `Starting App Store purchase for ${productId}`, {
+      appContext: this.platformService.appContext(),
+      bridgeAvailable: Boolean(handler),
+    });
+
     if (!handler) {
+      this.debug.error('purchase', 'App Store billing not available (no StoreKit bridge)');
       return { success: false, error: 'App Store billing not available' };
     }
 
@@ -433,6 +623,7 @@ export class InAppPurchaseService {
           if (this.appStorePurchaseResolve === resolve) {
             this.appStorePurchaseResolve = null;
             this.purchasing.set(false);
+            this.debug.error('purchase', 'App Store purchase timed out after 120s');
             resolve({ success: false, error: 'App Store purchase timed out' });
           }
         }, 120000); // 2 minute timeout
@@ -450,10 +641,12 @@ export class InAppPurchaseService {
         });
 
         this.logger.info('App Store purchase initiated:', productId);
+        this.debug.info('purchase', 'Purchase request posted to native shell', { productId });
       });
     } catch (error) {
       this.purchasing.set(false);
       this.logger.error('App Store purchase failed:', error);
+      this.debug.error('purchase', 'App Store purchase threw', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'App Store purchase failed',
@@ -560,32 +753,49 @@ export class InAppPurchaseService {
     store: 'play-store' | 'app-store',
     options?: VerifyStorePurchaseOptions
   ): Promise<boolean> {
+    const url = new URL('api/account/verify-store-purchase', environment.backendUrl).toString();
+
+    this.debug.info('verify', `Verifying ${store} purchase with backend`, {
+      url,
+      pubkey: pubkey ? `${pubkey.slice(0, 12)}…` : '(missing)',
+      productId: options?.productId,
+      username: options?.username || undefined,
+      token: StoreDebugService.summarizeToken(purchaseToken),
+      sendingJws: Boolean(options?.jwsRepresentation),
+    });
+
     try {
-      const response = await fetch(
-        new URL('api/account/verify-store-purchase', environment.backendUrl).toString(),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            purchaseToken,
-            pubkey,
-            store,
-            productId: options?.productId,
-            username: options?.username || undefined,
-            jwsRepresentation: options?.jwsRepresentation,
-          }),
-        }
-      );
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purchaseToken,
+          pubkey,
+          store,
+          productId: options?.productId,
+          username: options?.username || undefined,
+          jwsRepresentation: options?.jwsRepresentation,
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         this.logger.error('Backend purchase verification failed:', errorData);
+        this.debug.error('verify', `Backend verification failed (HTTP ${response.status})`, errorData);
         return false;
       }
 
+      const result = await response.json().catch(() => ({}));
+      this.debug.success('verify', 'Backend verification succeeded', {
+        alreadyProcessed: (result as { alreadyProcessed?: boolean }).alreadyProcessed,
+        transactionId: (result as { transactionId?: string }).transactionId,
+        tier: (result as { account?: { tier?: string } }).account?.tier,
+        expires: (result as { account?: { expires?: number } }).account?.expires,
+      });
       return true;
     } catch (error) {
       this.logger.error('Failed to verify purchase with backend:', error);
+      this.debug.error('verify', 'Backend verification request threw', error);
       return false;
     }
   }

@@ -505,7 +505,10 @@ export class RenewComponent implements OnDestroy {
    * Initiate an App Store purchase for renewal (iOS native app).
    */
   async purchaseWithAppStore() {
+    this.iap.debug.info('flow', 'Renew: App Store purchase requested');
+
     if (!this.iap.appStoreAvailable()) {
+      this.iap.debug.error('flow', 'Renew aborted: App Store bridge not ready');
       this.snackBar.open(
         'App Store billing is not ready yet. Please try again in a moment.',
         'Close',
@@ -515,6 +518,7 @@ export class RenewComponent implements OnDestroy {
     }
 
     const productId = this.iap.getPrimaryStoreSubscriptionProductId();
+    this.iap.debug.info('flow', 'Renew: selected product', { productId });
 
     const result = await this.iap.purchaseWithAppStore(productId);
     if (result.success && result.purchaseToken) {
@@ -534,12 +538,14 @@ export class RenewComponent implements OnDestroy {
         this.stepComplete.set({ ...this.stepComplete(), 1: true, 2: true });
         this.isPaymentCompleted.set(true);
         await this.accountState.refreshSubscription();
+        this.iap.debug.success('flow', 'Renewal complete, subscription refreshed');
 
         this.snackBar.open('Subscription renewed successfully!', 'Great!', {
           duration: 8000,
         });
         setTimeout(() => this.currentStep.set(2), 1000);
       } else {
+        this.iap.debug.error('flow', 'Renew: purchase succeeded but backend verification failed');
         this.snackBar.open(
           'Purchase completed but verification failed. Please contact support.',
           'Close',

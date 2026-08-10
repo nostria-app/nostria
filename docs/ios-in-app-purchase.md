@@ -94,6 +94,31 @@ Without a working verification endpoint, the StoreKit sheet can succeed but the 
 
 Optional: add a StoreKit Configuration file in Xcode for offline product mocking during development.
 
+## On-device debug panel (TestFlight)
+
+Settings → About → **In-app purchase debug** (shown automatically on native/mobile builds).
+
+The panel renders `StoreDebugService`, which records every step of the flow — bridge detection,
+messages posted to the native shell, every `nostriaStoreKitCallback` payload, the backend
+verification request/response and the resulting account tier. The log is persisted in
+`localStorage` (`nostria-store-debug-log`, max 300 entries) so it survives the WKWebView reloads
+that happen around the StoreKit purchase sheet.
+
+Diagnostics shown: app context, payment platform, StoreKit bridge availability, primary product id,
+backend URL, logged-in pubkey, plus the backend's Apple configuration fetched from
+`GET /api/store/config` (configured?, bundle id, environment, missing environment variables).
+
+Actions:
+
+| Button | What it does |
+| --- | --- |
+| Check backend | `GET /api/store/config` — verifies the server has the Apple credentials |
+| Load products | `getproducts` over the bridge — verifies App Store Connect products resolve |
+| Restore | `AppStore.sync()` + current entitlements |
+| Test purchase | Full purchase + backend verification for `nostria_premium_monthly` |
+| Copy log | Copies diagnostics + full log to the clipboard |
+| Clear | Empties the log |
+
 ## Debug (browser only)
 
 Settings → Debug:

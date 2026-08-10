@@ -92,3 +92,113 @@
 .update-error {
   color: var(--mat-sys-error);
 }
+
+.store-debug-section {
+  margin-top: 1.5rem;
+
+  mat-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  mat-panel-description {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+}
+
+.store-debug-error-icon {
+  color: var(--mat-sys-error);
+}
+
+.store-debug-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 4px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.store-debug-key {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.store-debug-value {
+  overflow-wrap: anywhere;
+
+  &.is-ok {
+    color: var(--mat-success-color);
+  }
+
+  &.is-bad {
+    color: var(--mat-sys-error);
+  }
+}
+
+.store-debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.store-debug-log {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.store-debug-entry {
+  border-left: 3px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-extra-small);
+  background: var(--mat-sys-surface-container-low);
+  padding: 8px 10px;
+
+  &.level-success {
+    border-left-color: var(--mat-success-color);
+  }
+
+  &.level-warn {
+    border-left-color: var(--mat-sys-tertiary);
+  }
+
+  &.level-error {
+    border-left-color: var(--mat-sys-error);
+  }
+}
+
+.store-debug-entry-head {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.store-debug-step {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.store-debug-message {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.store-debug-detail {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--mat-sys-surface-container-high);
+  border-radius: var(--mat-sys-corner-extra-small);
+}
+
+.store-debug-empty {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+}

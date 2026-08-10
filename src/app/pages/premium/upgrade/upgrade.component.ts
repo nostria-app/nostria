@@ -610,7 +610,10 @@ export class UpgradeComponent implements OnDestroy {
    * Uses the native iOS bridge to trigger a StoreKit purchase.
    */
   async purchaseWithAppStore() {
+    this.iap.debug.info('flow', 'Upgrade: App Store purchase requested');
+
     if (!this.iap.appStoreAvailable()) {
+      this.iap.debug.error('flow', 'Upgrade aborted: App Store bridge not ready');
       this.snackBar.open(
         'App Store billing is not ready yet. Please try again in a moment.',
         'Close',
@@ -621,6 +624,7 @@ export class UpgradeComponent implements OnDestroy {
 
     const productId = this.iap.getPrimaryStoreSubscriptionProductId();
     const username = this.usernameFormGroup.get('username')?.value || undefined;
+    this.iap.debug.info('flow', 'Upgrade: selected product', { productId, username });
 
     const result = await this.iap.purchaseWithAppStore(productId);
     if (result.success && result.purchaseToken) {
@@ -643,12 +647,14 @@ export class UpgradeComponent implements OnDestroy {
         this.stepComplete.set({ ...this.stepComplete(), 2: true, 3: true });
         this.isPaymentCompleted.set(true);
         await this.accountState.changeAccount(this.accountState.account());
+        this.iap.debug.success('flow', 'Upgrade complete, account refreshed');
 
         this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
           duration: 8000,
         });
         setTimeout(() => this.currentStep.set(3), 1000);
       } else {
+        this.iap.debug.error('flow', 'Upgrade: purchase succeeded but backend verification failed');
         this.snackBar.open(
           'Purchase completed but verification failed. Please contact support.',
           'Close',

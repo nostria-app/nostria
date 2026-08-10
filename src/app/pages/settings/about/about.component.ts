@@ -4,6 +4,8 @@ import { isTauri } from '@tauri-apps/api/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../../services/application.service';
 import { MetaService } from '../../../services/meta.service';
 import { Router } from '@angular/router';
@@ -17,6 +19,20 @@ import { ZapSoundService, ZapTier } from '../../../services/zap-sound.service';
 import { HapticsService } from '../../../services/haptics.service';
 import { DesktopUpdaterService } from '../../../services/desktop-updater.service';
 import { AndroidUpdaterService } from '../../../services/android-updater.service';
+import { PlatformService } from '../../../services/platform.service';
+import { StoreDebugService } from '../../../services/store-debug.service';
+import {
+  BackendStoreConfig,
+  InAppPurchaseService,
+} from '../../../services/in-app-purchase.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { environment } from '../../../../environments/environment';
+
+interface DiagnosticRow {
+  label: string;
+  value: string;
+  ok?: boolean;
+}
 
 interface WebManifest {
   version?: string;
@@ -31,7 +47,7 @@ interface WebManifest {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-about',
-  imports: [DatePipe, MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, CelebrationBurstComponent],
+  imports: [DatePipe, MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, MatExpansionModule, CelebrationBurstComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
   host: { class: 'panel-with-sticky-header' },
@@ -45,6 +61,11 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly rightPanel = inject(RightPanelService);
   private readonly zapSound = inject(ZapSoundService);
   private readonly haptics = inject(HapticsService);
+  private readonly platform = inject(PlatformService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly snackBar = inject(MatSnackBar);
+  readonly iap = inject(InAppPurchaseService);
+  readonly storeDebug = inject(StoreDebugService);
   readonly desktopUpdater = inject(DesktopUpdaterService);
   readonly androidUpdater = inject(AndroidUpdaterService);
   version = computed(() => this.app.version());
@@ -61,7 +82,149 @@ export class AboutComponent implements OnInit, OnDestroy {
   /** Timers for the demo sequence so we can clean up. */
   private demoTimers: ReturnType<typeof setTimeout>[] = [];
 
+  /** ---- In-app purchase debugging (iOS / Android store builds) ---- */
+
+  readonly backendStoreConfig = signal<BackendStoreConfig | null>(null);
+  readonly storeDiagnosticsBusy = signal(false);
+
+  /** Show the debug panel on mobile/native builds, or once the log has content. */
+  readonly showStoreDebug = computed(
+    () =>
+      this.platform.isNativeApp() ||
+      this.platform.isIOS() ||
+      this.platform.isAndroid() ||
+      this.storeDebug.entries().length > 0
+  );
+
+  readonly storeDiagnostics = computed<DiagnosticRow[]>(() => {
+    const config = this.backendStoreConfig();
+    const apple = config?.appStore;
+    const rows: DiagnosticRow[] = [
+      { label: 'App context', value: this.platform.appContext() },
+      { label: 'Payment platform', value: this.platform.paymentPlatform() },
+      {
+        label: 'StoreKit bridge',
+        value: this.iap.appStoreAvailable() ? 'available' : 'not available',
+        ok: this.iap.appStoreAvailable(),
+      },
+      { label: 'Purchase in progress', value: this.iap.purchasing() ? 'yes' : 'no' },
+      { label: 'Primary product', value: this.iap.getPrimaryStoreSubscriptionProductId() },
+      { label: 'Backend', value: environment.backendUrl },
+      {
+        label: 'Account',
+        value: this.accountState.pubkey() ? `${this.accountState.pubkey().slice(0, 16)}…` : 'not logged in',
+        ok: Boolean(this.accountState.pubkey()),
+      },
+    ];
+
+    if (apple) {
+      rows.push(
+        {
+          label: 'Backend App Store verification',
+          value: apple.configured ? 'configured' : `missing: ${apple.missing.join(', ') || 'unknown'}`,
+          ok: apple.configured,
+        },
+        { label: 'Backend bundle id', value: apple.bundleId },
+        { label: 'Backend Apple environment', value: apple.environment }
+      );
+    }
+
+    return rows;
+  });
+
   constructor() { }
+
+  /** Reload backend store configuration and re-check the native bridge. */
+  async refreshStoreDiagnostics(): Promise<void> {
+    this.storeDiagnosticsBusy.set(true);
+    try {
+      this.storeDebug.info('diagnostics', 'Refreshing store diagnostics', {
+        appContext: this.platform.appContext(),
+        userAgent: navigator.userAgent,
+        standalone: this.platform.isStandalone(),
+      });
+      const config = await this.iap.getBackendStoreConfig();
+      this.backendStoreConfig.set(config);
+    } finally {
+      this.storeDiagnosticsBusy.set(false);
+    }
+  }
+
+  /** Ask StoreKit for the subscription product to confirm App Store Connect setup. */
+  async loadStoreProducts(): Promise<void> {
+    this.storeDiagnosticsBusy.set(true);
+    try {
+      await this.iap.getAppStoreProducts([this.iap.getPrimaryStoreSubscriptionProductId()]);
+    } finally {
+      this.storeDiagnosticsBusy.set(false);
+    }
+  }
+
+  /** Restore previous purchases and log the entitlements StoreKit reports. */
+  async restoreStorePurchases(): Promise<void> {
+    this.storeDiagnosticsBusy.set(true);
+    try {
+      await this.iap.restoreAppStorePurchases();
+    } finally {
+      this.storeDiagnosticsBusy.set(false);
+    }
+  }
+
+  /** Run the full purchase + backend verification flow and log every step. */
+  async runStorePurchaseTest(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Log in before testing a store purchase.', 'Close', { duration: 5000 });
+      return;
+    }
+
+    this.storeDiagnosticsBusy.set(true);
+    try {
+      const productId = this.iap.getPrimaryStoreSubscriptionProductId();
+      this.storeDebug.info('test', `Starting test purchase for ${productId}`);
+
+      const result = await this.iap.purchaseWithAppStore(productId);
+      if (!result.success || !result.purchaseToken) {
+        this.snackBar.open(result.error || 'Purchase did not complete.', 'Close', { duration: 6000 });
+        return;
+      }
+
+      const verified = await this.iap.verifyPurchaseWithBackend(
+        result.purchaseToken,
+        pubkey,
+        'app-store',
+        {
+          productId,
+          jwsRepresentation: result.purchaseToken.includes('.') ? result.purchaseToken : undefined,
+        }
+      );
+
+      this.snackBar.open(
+        verified ? 'Test purchase verified by backend.' : 'Backend verification failed — see the log.',
+        'Close',
+        { duration: 6000 }
+      );
+    } finally {
+      this.storeDiagnosticsBusy.set(false);
+    }
+  }
+
+  async copyStoreDebugLog(): Promise<void> {
+    const text = `${this.storeDiagnostics()
+      .map(row => `${row.label}: ${row.value}`)
+      .join('\n')}\n\n${this.storeDebug.export()}`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      this.snackBar.open('Debug log copied to clipboard.', 'Close', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Could not copy the log.', 'Close', { duration: 3000 });
+    }
+  }
+
+  clearStoreDebugLog(): void {
+    this.storeDebug.clear();
+  }
 
   resetIntroduction() {
     this.layout.showWelcomeScreen.set(true);
