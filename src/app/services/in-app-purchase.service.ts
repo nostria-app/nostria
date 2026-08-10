@@ -323,6 +323,7 @@ export class InAppPurchaseService {
     const probe = (name: string) => Boolean(handlers && name in handlers);
 
     return {
+      isTauri: this.isTauriShell(),
       hasWebkit: Boolean(win.webkit),
       hasMessageHandlers: Boolean(handlers),
       enumeratedHandlers: handlers ? Object.keys(handlers) : [],
@@ -484,8 +485,8 @@ export class InAppPurchaseService {
   async getAppStoreProducts(productIds: string[]): Promise<AppStoreProductDetails[]> {
     const response = this.isTauriShell()
       ? await this.invokeStoreKit('getproducts', 'plugin:storekit|get_products', {
-          request: { productIds },
-        })
+        request: { productIds },
+      })
       : await this.postAppStoreAction('getproducts', 'getProducts', { productIds });
 
     if (!response.success) {

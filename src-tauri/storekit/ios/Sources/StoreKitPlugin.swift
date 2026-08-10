@@ -2,7 +2,6 @@ import Foundation
 import StoreKit
 import Tauri
 import UIKit
-import WebKit
 
 struct GetProductsArgs: Decodable {
     let productIds: [String]
@@ -32,9 +31,14 @@ enum StoreKitPluginError: LocalizedError {
 class StoreKitPlugin: Plugin {
     private var updatesTask: Task<Void, Never>?
 
+    deinit {
+        updatesTask?.cancel()
+    }
+
     /// Finishes renewals and interrupted purchases so StoreKit stays in sync.
-    @objc public override func load(webview: WKWebView) {
-        guard #available(iOS 15.0, *) else { return }
+    @available(iOS 15.0, *)
+    private func startTransactionListener() {
+        guard updatesTask == nil else { return }
 
         updatesTask = Task.detached {
             for await update in Transaction.updates {
@@ -45,15 +49,13 @@ class StoreKitPlugin: Plugin {
         }
     }
 
-    deinit {
-        updatesTask?.cancel()
-    }
-
     @objc public func initialize(_ invoke: Invoke) throws {
         guard #available(iOS 15.0, *) else {
             invoke.reject(StoreKitPluginError.unsupportedOS.localizedDescription)
             return
         }
+
+        startTransactionListener()
 
         Task {
             let storefront = await Storefront.current?.countryCode ?? ""

@@ -79,3 +79,6 @@ src-tauri/media-session/android/.kotlin/
 # Generated Tauri mobile plugin API copies
 src-tauri/media-session/android/.tauri/
 src-tauri/media-session/ios/.tauri/
+src-tauri/media-session/.tauri/
+src-tauri/storekit/.tauri/
+src-tauri/storekit/ios/.build/
