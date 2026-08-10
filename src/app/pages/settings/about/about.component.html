@@ -190,34 +190,40 @@
 
           <div class="store-debug-grid">
             @for (row of storeDiagnostics(); track row.label) {
-            <span class="store-debug-key">{{ row.label }}</span>
-            <span class="store-debug-value" [class.is-ok]="row.ok === true" [class.is-bad]="row.ok === false">{{
-              row.value }}</span>
+            <div class="store-debug-row">
+              <span class="store-debug-key">{{ row.label }}</span>
+              <span class="store-debug-value" [class.is-ok]="row.ok === true" [class.is-bad]="row.ok === false">{{
+                row.value }}</span>
+            </div>
             }
           </div>
 
           <div class="store-debug-actions">
-            <button mat-flat-button [disabled]="storeDiagnosticsBusy()" (click)="refreshStoreDiagnostics()">
+            <button mat-flat-button [disabled]="storeDiagnosticsBusy()" (click)="refreshStoreDiagnostics()"
+              matTooltip="Read the backend store configuration">
               <mat-icon>cloud_sync</mat-icon>
-              Check backend
+              Backend
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="loadStoreProducts()">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="loadStoreProducts()"
+              matTooltip="Ask StoreKit for the subscription product">
               <mat-icon>inventory_2</mat-icon>
-              Load products
+              Products
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="restoreStorePurchases()">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="restoreStorePurchases()"
+              matTooltip="Restore previous purchases">
               <mat-icon>restore</mat-icon>
               Restore
             </button>
-            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="runStorePurchaseTest()">
+            <button mat-stroked-button [disabled]="storeDiagnosticsBusy()" (click)="runStorePurchaseTest()"
+              matTooltip="Run a full purchase and backend verification">
               <mat-icon>play_circle</mat-icon>
-              Test purchase
+              Purchase
             </button>
-            <button mat-stroked-button (click)="copyStoreDebugLog()">
+            <button mat-stroked-button (click)="copyStoreDebugLog()" matTooltip="Copy diagnostics and log">
               <mat-icon>content_copy</mat-icon>
-              Copy log
+              Copy
             </button>
-            <button mat-stroked-button (click)="clearStoreDebugLog()">
+            <button mat-stroked-button (click)="clearStoreDebugLog()" matTooltip="Clear the log">
               <mat-icon>delete_sweep</mat-icon>
               Clear
             </button>
@@ -232,7 +238,10 @@
               </div>
               <div class="store-debug-message">{{ entry.message }}</div>
               @if (entry.detail) {
-              <pre class="store-debug-detail">{{ entry.detail }}</pre>
+              <details class="store-debug-details">
+                <summary>Details</summary>
+                <pre class="store-debug-detail">{{ entry.detail }}</pre>
+              </details>
               }
             </div>
             } @empty {

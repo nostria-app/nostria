@@ -274,17 +274,59 @@ export class InAppPurchaseService {
           };
         this.debug.info('bridge', 'nostriaStoreKitCallback registered');
       } else {
+        this.appStoreAvailable.set(false);
         this.logger.warn('WebKit StoreKit message handler not available');
-        this.debug.error('bridge', 'WebKit StoreKit message handler not available', {
-          hasWebkit: Boolean(webkit),
-          hasMessageHandlers: Boolean(webkit?.messageHandlers),
-          userAgent: navigator.userAgent,
-        });
+        this.debug.error(
+          'bridge',
+          'WebKit StoreKit message handler not available',
+          this.getBridgeDiagnostics()
+        );
       }
     } catch (error) {
       this.logger.error('Failed to initialize App Store billing:', error);
       this.debug.error('bridge', 'Failed to initialize App Store billing', error);
     }
+  }
+
+  /**
+   * Everything needed to tell "not running in the native shell" apart from
+   * "running in an older native build that has no StoreKit bridge".
+   */
+  getBridgeDiagnostics(): Record<string, unknown> {
+    const win = window as unknown as {
+      webkit?: { messageHandlers?: Record<string, unknown> };
+      __NOSTRIA_NATIVE_IOS__?: boolean;
+      __NOSTRIA_APP_CONTEXT__?: string;
+    };
+    const handlers = win.webkit?.messageHandlers;
+
+    // Message handler names are not always enumerable, so probe the known ones too.
+    const probe = (name: string) => Boolean(handlers && name in handlers);
+
+    return {
+      hasWebkit: Boolean(win.webkit),
+      hasMessageHandlers: Boolean(handlers),
+      enumeratedHandlers: handlers ? Object.keys(handlers) : [],
+      handlerNostriaStoreKit: probe('nostriaStoreKit'),
+      handlerPushToken: probe('push-token'),
+      handlerPrint: probe('print'),
+      nativeIosFlag: win.__NOSTRIA_NATIVE_IOS__ ?? false,
+      nativeAppContextFlag: win.__NOSTRIA_APP_CONTEXT__ ?? null,
+      appContext: this.platformService.appContext(),
+      paymentPlatform: this.platformService.paymentPlatform(),
+      simulatedContext: this.platformService.simulatedAppContext(),
+      standalone: this.platformService.isStandalone(),
+      userAgent: navigator.userAgent,
+    };
+  }
+
+  /**
+   * Re-run bridge detection. The native handlers exist from document start, but
+   * this lets the debug panel confirm the current state on demand.
+   */
+  recheckAppStoreBridge(): boolean {
+    this.initAppStoreBilling();
+    return this.appStoreAvailable();
   }
 
   /**
@@ -363,7 +405,7 @@ export class InAppPurchaseService {
     const handler = webkit?.messageHandlers?.nostriaStoreKit;
 
     if (!handler) {
-      this.debug.error(action, 'StoreKit bridge not available');
+      this.debug.error(action, 'StoreKit bridge not available', this.getBridgeDiagnostics());
       return Promise.resolve({ success: false, error: 'App Store billing not available' });
     }
 

@@ -100,6 +100,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 0.95rem;
   }
 
   mat-panel-description {
@@ -107,27 +108,52 @@
     align-items: center;
     gap: 6px;
     justify-content: flex-end;
+    flex-grow: 0;
+    flex-basis: auto;
+    margin-right: 0;
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+
+  // Reclaim the expansion panel's generous default padding on narrow screens.
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 12px 12px;
+  }
+
+  ::ng-deep .mat-expansion-panel-header {
+    padding: 0 12px;
   }
 }
 
 .store-debug-error-icon {
   color: var(--mat-sys-error);
+  flex: 0 0 auto;
 }
 
 .store-debug-grid {
   display: grid;
-  grid-template-columns: minmax(120px, auto) 1fr;
-  gap: 4px 12px;
-  font-size: 0.85rem;
+  gap: 6px;
+  font-size: 0.8rem;
   margin-bottom: 12px;
+}
+
+.store-debug-row {
+  display: grid;
+  grid-template-columns: 40% 1fr;
+  gap: 4px 8px;
+  align-items: baseline;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--mat-sys-surface-container-high);
 }
 
 .store-debug-key {
   color: var(--mat-sys-on-surface-variant);
+  overflow-wrap: anywhere;
 }
 
 .store-debug-value {
   overflow-wrap: anywhere;
+  text-align: right;
 
   &.is-ok {
     color: var(--mat-success-color);
@@ -139,17 +165,24 @@
 }
 
 .store-debug-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
   margin-bottom: 12px;
+
+  button {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .store-debug-log {
   display: grid;
   gap: 8px;
-  max-height: 420px;
+  max-height: min(55dvh, 420px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .store-debug-entry {
@@ -157,6 +190,7 @@
   border-radius: var(--mat-sys-corner-extra-small);
   background: var(--mat-sys-surface-container-low);
   padding: 8px 10px;
+  min-width: 0;
 
   &.level-success {
     border-left-color: var(--mat-success-color);
@@ -174,26 +208,44 @@
 .store-debug-entry-head {
   display: flex;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--mat-sys-on-surface-variant);
 }
 
 .store-debug-step {
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
 }
 
 .store-debug-message {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+.store-debug-details {
+  margin-top: 6px;
+
+  summary {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    cursor: pointer;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+  }
+}
+
 .store-debug-detail {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   padding: 6px 8px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  line-height: 1.35;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  max-width: 100%;
+  overflow-x: auto;
   background: var(--mat-sys-surface-container-high);
   border-radius: var(--mat-sys-corner-extra-small);
 }
@@ -201,4 +253,18 @@
 .store-debug-empty {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .store-debug-row {
+    grid-template-columns: 1fr;
+  }
+
+  .store-debug-value {
+    text-align: left;
+  }
+
+  .store-debug-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

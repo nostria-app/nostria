@@ -99,9 +99,15 @@ export class AboutComponent implements OnInit, OnDestroy {
   readonly storeDiagnostics = computed<DiagnosticRow[]>(() => {
     const config = this.backendStoreConfig();
     const apple = config?.appStore;
+    const win = window as unknown as { __NOSTRIA_NATIVE_IOS__?: boolean };
     const rows: DiagnosticRow[] = [
       { label: 'App context', value: this.platform.appContext() },
       { label: 'Payment platform', value: this.platform.paymentPlatform() },
+      {
+        label: 'Native iOS shell',
+        value: win.__NOSTRIA_NATIVE_IOS__ ? 'yes' : 'no',
+        ok: Boolean(win.__NOSTRIA_NATIVE_IOS__),
+      },
       {
         label: 'StoreKit bridge',
         value: this.iap.appStoreAvailable() ? 'available' : 'not available',
@@ -138,11 +144,8 @@ export class AboutComponent implements OnInit, OnDestroy {
   async refreshStoreDiagnostics(): Promise<void> {
     this.storeDiagnosticsBusy.set(true);
     try {
-      this.storeDebug.info('diagnostics', 'Refreshing store diagnostics', {
-        appContext: this.platform.appContext(),
-        userAgent: navigator.userAgent,
-        standalone: this.platform.isStandalone(),
-      });
+      const bridgeReady = this.iap.recheckAppStoreBridge();
+      this.storeDebug.info('diagnostics', `Native bridge ${bridgeReady ? 'ready' : 'missing'}`, this.iap.getBridgeDiagnostics());
       const config = await this.iap.getBackendStoreConfig();
       this.backendStoreConfig.set(config);
     } finally {
@@ -154,6 +157,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   async loadStoreProducts(): Promise<void> {
     this.storeDiagnosticsBusy.set(true);
     try {
+      this.iap.recheckAppStoreBridge();
       await this.iap.getAppStoreProducts([this.iap.getPrimaryStoreSubscriptionProductId()]);
     } finally {
       this.storeDiagnosticsBusy.set(false);
