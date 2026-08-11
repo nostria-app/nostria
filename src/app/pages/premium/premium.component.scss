@@ -4,7 +4,8 @@
   padding: 2rem 1rem;
 
   @media (max-width: 699px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    // Clears the fixed bottom nav cube (64px tall, offset from the bottom inset).
+    padding-bottom: calc(120px + var(--safe-area-bottom, 0px));
   }
 }
 
