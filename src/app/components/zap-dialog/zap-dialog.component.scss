@@ -581,8 +581,11 @@ h2[mat-dialog-title] {
   color: var(--mat-sys-on-surface-variant);
 }
 
-mat-dialog-actions {
+[dialog-actions] {
   display: flex;
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   margin: 0;

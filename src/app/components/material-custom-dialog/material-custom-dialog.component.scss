@@ -219,6 +219,15 @@
     min-width: 0;
   }
 
+  .dialog-actions>.zap-dialog-actions {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
   .primary-action {
     background: var(--mat-sys-primary-container);
     color: var(--mat-sys-on-primary-container);
@@ -586,11 +595,9 @@
     max-width: var(--note-editor-dialog-visual-width, 100vw) !important;
     height: calc(var(--note-editor-dialog-visual-height, 100dvh) - var(--safe-area-top, 0px)) !important;
     max-height: calc(var(--note-editor-dialog-visual-height, 100dvh) - var(--safe-area-top, 0px)) !important;
-    transform: translate3d(
-      var(--note-editor-dialog-offset-left, 0px),
-      var(--note-editor-dialog-offset-top, 0px),
-      0
-    );
+    transform: translate3d(var(--note-editor-dialog-offset-left, 0px),
+        var(--note-editor-dialog-offset-top, 0px),
+        0);
 
     .mat-mdc-dialog-container {
       height: 100% !important;
