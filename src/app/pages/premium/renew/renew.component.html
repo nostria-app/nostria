@@ -47,13 +47,7 @@
   @if (currentStep() === 0) {
   <div class="step-content payment-plan-step">
     <h2>Select Your Renewal Plan</h2>
-    <p class="step-description">
-      @if (storeSingleSubscriptionMode()) {
-      Store checkout currently supports <strong>Premium Monthly</strong>.
-      } @else {
-      Choose how long you want to extend your subscription.
-      }
-    </p>
+    <p class="step-description">Choose how long you want to extend your subscription.</p>
 
     <div class="tier-options">
       @for (tier of planTiers(); track tier.key) {
@@ -287,7 +281,7 @@
     <!-- Apple App Store payment -->
     <div class="payment-method-content">
       <div class="store-payment-container">
-        <mat-icon class="store-icon">apple</mat-icon>
+        <mat-icon class="store-icon">storefront</mat-icon>
         <p>Your renewal will be processed through the App Store.</p>
         <button mat-flat-button (click)="purchaseWithAppStore()"
           [disabled]="iap.purchasing() || !iap.appStoreAvailable()">

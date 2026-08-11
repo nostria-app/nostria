@@ -2,6 +2,10 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1rem;
+
+  @media (max-width: 699px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .upgrade-title {
@@ -789,6 +793,8 @@ h2 {
     min-width: 0;
     max-width: 100%;
     width: 100%;
+    // The base `flex: 1 1 320px` becomes a minimum height once the row turns into a column.
+    flex: 0 0 auto;
   }
 
   .payment-option-cards {

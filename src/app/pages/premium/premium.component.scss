@@ -2,6 +2,10 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
+
+  @media (max-width: 699px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .premium-header {

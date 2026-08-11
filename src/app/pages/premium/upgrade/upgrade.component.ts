@@ -144,7 +144,7 @@ export class UpgradeComponent implements OnDestroy {
       methods.push({
         key: 'app-store',
         label: 'App Store',
-        icon: 'apple',
+        icon: 'storefront',
         description: this.iap.appStoreAvailable()
           ? 'Pay through Apple App Store'
           : 'App Store billing is loading…',
