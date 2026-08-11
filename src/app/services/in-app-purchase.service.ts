@@ -134,6 +134,12 @@ interface AppStorePurchaseResponse {
   orderId?: string;
   error?: string;
   action?: string;
+  /** Requested product IDs the store could not resolve */
+  unavailable?: string[];
+  /** Bundle identifier the native shell is actually running as */
+  bundleId?: string;
+  /** Two-letter storefront country code of the signed-in store account */
+  storefront?: string;
   purchases?: Array<{
     transactionId?: string;
     originalTransactionId?: string;
@@ -522,7 +528,12 @@ export class InAppPurchaseService {
       this.debug.warn(
         'getproducts',
         'StoreKit returned no products. Check the product IDs, agreements and sandbox account.',
-        { requested: productIds }
+        {
+          requested: productIds,
+          unavailable: response.unavailable ?? productIds,
+          bundleId: response.bundleId,
+          storefront: response.storefront,
+        }
       );
     } else {
       this.debug.success('getproducts', `StoreKit returned ${products.length} product(s)`, products);

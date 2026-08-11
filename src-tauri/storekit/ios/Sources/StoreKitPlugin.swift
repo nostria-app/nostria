@@ -86,7 +86,15 @@ class StoreKitPlugin: Plugin {
                         "price": NSDecimalNumber(decimal: product.price).stringValue,
                     ]
                 }
-                invoke.resolve(["success": true, "products": details])
+                let resolvedIds = Set(products.map { $0.id })
+                let storefront = await Storefront.current?.countryCode ?? ""
+                invoke.resolve([
+                    "success": true,
+                    "products": details,
+                    "unavailable": args.productIds.filter { !resolvedIds.contains($0) },
+                    "bundleId": Bundle.main.bundleIdentifier ?? "",
+                    "storefront": storefront,
+                ])
             } catch {
                 invoke.resolve(["success": false, "error": error.localizedDescription])
             }
