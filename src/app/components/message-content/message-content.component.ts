@@ -134,7 +134,6 @@ interface DecryptedPreviewState {
           <span class="attachment-visibility" [class.encrypted]="part.encrypted"
             [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
             <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
-            {{ part.encrypted ? 'Encrypted' : 'Public' }}
           </span>
         </div>
       } @else if (part.type === 'video') {
@@ -145,7 +144,6 @@ interface DecryptedPreviewState {
           <span class="attachment-visibility" [class.encrypted]="part.encrypted"
             [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
             <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
-            {{ part.encrypted ? 'Encrypted' : 'Public' }}
           </span>
         </div>
       } @else if (part.type === 'audio') {
@@ -156,7 +154,6 @@ interface DecryptedPreviewState {
           <span class="attachment-visibility" [class.encrypted]="part.encrypted"
             [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
             <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
-            {{ part.encrypted ? 'Encrypted' : 'Public' }}
           </span>
         </div>
       } @else if (part.type === 'url') {
@@ -363,13 +360,12 @@ interface DecryptedPreviewState {
       right: 6px;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      padding: 3px 6px;
+      justify-content: center;
+      padding: 4px;
       border-radius: var(--mat-sys-corner-full);
       background: var(--mat-sys-secondary-container);
       color: var(--mat-sys-on-secondary-container);
-      font-size: 0.68rem;
-      pointer-events: none;
+      cursor: help;
 
       &.encrypted {
         background: var(--mat-sys-primary-container);
