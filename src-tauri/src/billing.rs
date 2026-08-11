@@ -20,6 +20,9 @@ pub struct GetProductsRequest {
 #[serde(rename_all = "camelCase")]
 pub struct PurchaseRequest {
     pub product_id: String,
+    /// Play base plan to buy; subscriptions can expose several offers.
+    #[serde(default)]
+    pub base_plan_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

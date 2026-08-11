@@ -72,6 +72,14 @@ const APP_STORE_USERNAME_PRODUCT_ID = 'username';
 const PRIMARY_STORE_SUBSCRIPTION_PRODUCT_ID = 'nostria_premium_monthly';
 
 /**
+ * Google Play base plan ID for each subscription product.
+ * Play subscriptions can expose several offers, so the base plan must be named explicitly.
+ */
+const PLAY_STORE_BASE_PLAN_IDS: Record<string, string> = {
+  nostria_premium_monthly: '1',
+};
+
+/**
  * Digital Goods API types for Play Store billing via TWA.
  * @see https://developer.chrome.com/docs/android/trusted-web-activity/receive-payments-play-billing
  */
@@ -746,16 +754,19 @@ export class InAppPurchaseService {
    * Play Billing Library is used instead.
    */
   private async purchaseWithTauriBilling(productId: string): Promise<PurchaseResult> {
+    const basePlanId = PLAY_STORE_BASE_PLAN_IDS[productId];
+
     this.debug.info('purchase', `Starting Play Store purchase for ${productId}`, {
       appContext: this.platformService.appContext(),
       bridge: 'tauri-billing',
+      basePlanId,
     });
 
     this.purchasing.set(true);
 
     try {
       const response = await this.invokeNativeStore('purchase', 'plugin:billing|purchase', {
-        request: { productId },
+        request: { productId, basePlanId },
       });
 
       if (response.success && response.purchaseToken) {

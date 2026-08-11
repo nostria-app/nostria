@@ -32,6 +32,7 @@ class GetProductsArgs {
 @InvokeArg
 class PurchaseArgs {
     var productId: String = ""
+    var basePlanId: String? = null
 }
 
 @Keep
@@ -116,7 +117,7 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity) {
         withClient(invoke) { client ->
             queryProducts(client, listOf(args.productId), BillingClient.ProductType.SUBS) { subs ->
                 if (subs.isNotEmpty()) {
-                    launchPurchase(client, invoke, subs.first())
+                    launchPurchase(client, invoke, subs.first(), args.basePlanId)
                     return@queryProducts
                 }
 
@@ -125,7 +126,7 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity) {
                     if (product == null) {
                         invoke.resolve(failure("Product not found in Google Play: ${args.productId}", args.productId))
                     } else {
-                        launchPurchase(client, invoke, product)
+                        launchPurchase(client, invoke, product, null)
                     }
                 }
             }
@@ -174,12 +175,24 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
-    private fun launchPurchase(client: BillingClient, invoke: Invoke, product: ProductDetails) {
-        val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken
+    private fun launchPurchase(
+        client: BillingClient,
+        invoke: Invoke,
+        product: ProductDetails,
+        basePlanId: String?
+    ) {
+        val offers = product.subscriptionOfferDetails
+        // A subscription can expose several offers (base plan, intro, free trial); pick the requested base plan.
+        val offer = offers?.firstOrNull { basePlanId == null || it.basePlanId == basePlanId }
+            ?: offers?.firstOrNull()
+
+        if (offers != null && basePlanId != null && offer?.basePlanId != basePlanId) {
+            Log.w(TAG, "Base plan '$basePlanId' not found for ${product.productId}, falling back to ${offer?.basePlanId}")
+        }
 
         val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(product)
-            .apply { offerToken?.let { setOfferToken(it) } }
+            .apply { offer?.offerToken?.let { setOfferToken(it) } }
             .build()
 
         val flowParams = BillingFlowParams.newBuilder()
