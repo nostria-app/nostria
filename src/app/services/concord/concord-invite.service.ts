@@ -181,7 +181,7 @@ export class ConcordInviteService {
     if (remaining.length === 0) {
       this.logger.info(
         '[Concord] The last live link was retired; this community is Private again. ' +
-          'A Refounding is required to cut off anyone who kept an old link.'
+        'A Refounding is required to cut off anyone who kept an old link.'
       );
     }
   }
