@@ -350,6 +350,24 @@
         </section>
         }
 
+        @if (isOwner() && !isDissolved()) {
+        <section class="admin-panel">
+          <h4>Dissolve community</h4>
+
+          <p class="hint">
+            Dissolving is permanent. Everyone can keep reading existing history, but no one can post again.
+          </p>
+
+          <div class="actions start">
+            <button mat-stroked-button type="button" class="danger" [disabled]="busy()"
+              (click)="openDissolveConfirmation()">
+              <mat-icon>gavel</mat-icon>
+              Dissolve community
+            </button>
+          </div>
+        </section>
+        }
+
         @if (canCreateInvite()) {
         <section class="admin-panel">
           <h4>Invites</h4>
@@ -873,3 +891,21 @@
   </aside>
   }
 </div>
+
+@if (showDissolveConfirmation()) {
+<app-custom-dialog title="Dissolve this community?" headerIcon="gavel" [disableClose]="true"
+  [disableEnterSubmit]="true" (closed)="showDissolveConfirmation.set(false)">
+  <div dialog-content>
+    <p>This permanently makes the community read-only for every member, including you.</p>
+    <p>Existing history remains readable, but this cannot be undone.</p>
+  </div>
+  <div dialog-actions>
+    <button mat-button type="button" [disabled]="busy()" (click)="showDissolveConfirmation.set(false)">
+      Cancel
+    </button>
+    <button mat-flat-button type="button" [disabled]="busy()" (click)="dissolveCommunity()">
+      Dissolve community
+    </button>
+  </div>
+</app-custom-dialog>
+}

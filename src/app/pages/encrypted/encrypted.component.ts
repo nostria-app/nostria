@@ -33,6 +33,7 @@ import { ProfileDisplayNameComponent } from '../../components/user-profile/displ
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { CustomDialogComponent } from '../../components/custom-dialog/custom-dialog.component';
 import { MediaService } from '../../services/media.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -113,6 +114,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
     MessageContentComponent,
     SocialPreviewComponent,
     EmojiPickerComponent,
+    CustomDialogComponent,
   ],
   templateUrl: './encrypted.component.html',
   styleUrl: './encrypted.component.scss',
@@ -176,6 +178,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly busy = signal(false);
   readonly brokerInput = signal('');
   readonly refounding = signal(false);
+  readonly showDissolveConfirmation = signal(false);
   readonly showPins = signal(false);
   readonly uploading = signal(false);
 
@@ -907,6 +910,30 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     }
   }
 
+  openDissolveConfirmation(): void {
+    if (this.isOwner() && !this.isDissolved()) this.showDissolveConfirmation.set(true);
+  }
+
+  async dissolveCommunity(): Promise<void> {
+    const community = this.activeCommunity();
+    const state = this.control();
+    if (!community || !state || !this.isOwner() || this.busy()) return;
+
+    this.busy.set(true);
+
+    try {
+      await this.admin.dissolveCommunity(community, state);
+      await this.concord.loadCommunity(community.communityId, true);
+      this.showDissolveConfirmation.set(false);
+      this.revision.update(value => value + 1);
+      this.snackBar.open('Community dissolved. It is now read-only.', 'Dismiss', { duration: 6000 });
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Moderation
   // -------------------------------------------------------------------------
@@ -1425,7 +1452,6 @@ export class EncryptedComponent implements OnInit, OnDestroy {
         couldRead: true,
       });
 
-      await this.concord.loadCommunity(community.communityId, true);
       this.revision.update(value => value + 1);
     } catch (error) {
       this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
@@ -1456,7 +1482,6 @@ export class EncryptedComponent implements OnInit, OnDestroy {
         couldRead: true,
       });
 
-      await this.concord.loadCommunity(community.communityId, true);
       this.revision.update(value => value + 1);
     } catch (error) {
       this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
@@ -1841,7 +1866,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       return;
     }
 
-    await this.concord.loadCommunity(communityId);
+    await this.concord.loadCommunity(communityId, true);
     this.revision.update(value => value + 1);
 
     if (!channelId) {

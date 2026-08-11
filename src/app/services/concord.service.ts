@@ -12,6 +12,7 @@ import { AccountStateService } from './account-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService } from './database.service';
 import { ConcordListsService } from './concord/concord-lists.service';
+import { ConcordRekeyService, CordRekeyScope } from './concord/concord-rekey.service';
 import { EmojiSetService } from './emoji-set.service';
 import {
   buildPinEntry,
@@ -113,6 +114,7 @@ export class ConcordService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly database = inject(DatabaseService);
   private readonly lists = inject(ConcordListsService);
+  private readonly rekey = inject(ConcordRekeyService);
   private readonly emojiSets = inject(EmojiSetService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -471,6 +473,8 @@ export class ConcordService {
     const age = Date.now() - (this.controlFetchedAt.get(communityId) ?? 0);
     if (!force && age < CONTROL_TTL_MS) return;
 
+    let rotationApplied = false;
+
     await this.dedupe(`community:${communityId}`, async () => {
       this.loadingCommunity.set(communityId);
 
@@ -495,8 +499,29 @@ export class ConcordService {
           freshJoiner: !this.controlByCommunity()[communityId],
         });
 
+        this.logger.warn('[Concord diagnostic] Control plane refresh', {
+          communityId,
+          force,
+          relays: community.relays,
+          controlAddress: address,
+          receivedWraps: wraps.length,
+          decryptedEditions: editions.length,
+          editionTypes: [...new Set(editions.map(edition => edition.vsk))],
+          dissolutionEditions: editions
+            .filter(edition => edition.vsk === 10)
+            .map(edition => ({ actor: edition.actor, isOwner: edition.actor === community.owner })),
+          owner: community.owner,
+          dissolved: state.dissolved,
+          suspendedEntities: [...state.suspended],
+        });
+
         this.controlByCommunity.update(current => ({ ...current, [communityId]: state }));
         this.controlFetchedAt.set(communityId, Date.now());
+
+        if (await this.receivePendingRotations(community, state)) {
+          rotationApplied = true;
+          return;
+        }
 
         // The Guestbook is off-consensus, so it never blocks the Control fold.
         void this.loadGuestbook(communityId);
@@ -506,6 +531,8 @@ export class ConcordService {
         this.loadingCommunity.set(null);
       }
     });
+
+    if (rotationApplied) await this.loadCommunity(communityId, true);
   }
 
   private async loadGuestbook(communityId: string): Promise<void> {
@@ -537,6 +564,90 @@ export class ConcordService {
     } catch (error) {
       this.logger.debug('[Concord] Guestbook load failed', { communityId, error });
     }
+  }
+
+  /** Apply CORD-06 rotations addressed to the epoch material this device holds. */
+  private async receivePendingRotations(
+    community: CordCommunity,
+    control: CordControlState
+  ): Promise<boolean> {
+    const scopes: { scope: CordRekeyScope; currentKey: string; currentEpoch: number }[] = [
+      {
+        scope: { kind: 'base' },
+        currentKey: community.communityRoot,
+        currentEpoch: community.rootEpoch,
+      },
+      ...community.channelKeys.map(channel => ({
+        scope: { kind: 'channel' as const, channelId: channel.id },
+        currentKey: channel.key,
+        currentEpoch: channel.epoch,
+      })),
+    ];
+
+    for (const entry of scopes) {
+      const nextEpoch = entry.currentEpoch + 1;
+      const address = this.rekey.rekeyAddress(community, entry.scope, nextEpoch);
+      const wraps = await this.relayPool.query(
+        community.relays,
+        { kinds: [CORD_KIND_WRAP], authors: [address.pk], limit: 1000 },
+        10000
+      );
+
+      const result = await this.rekey.receiveRotation({
+        community,
+        scope: entry.scope,
+        newEpoch: nextEpoch,
+        wraps,
+        currentKey: entry.currentKey,
+        currentEpoch: entry.currentEpoch,
+        isAuthorized: rotator =>
+          isStaff(resolveStanding(control, community.owner, rotator)),
+      });
+
+      if (result.status !== 'rotated') continue;
+
+      const channelId = entry.scope.kind === 'channel' ? entry.scope.channelId : undefined;
+
+      this.communities.update(communities =>
+        communities.map(current => {
+          if (current.communityId !== community.communityId) return current;
+
+          if (entry.scope.kind === 'base') {
+            return {
+              ...current,
+              communityRoot: result.newKey,
+              rootEpoch: nextEpoch,
+              controlPk: result.controlPk ?? current.controlPk,
+              // A split base rekey omits control_root for non-staff recipients.
+              controlRoot: result.controlPk ? result.controlRoot : current.controlRoot,
+            };
+          }
+
+          return {
+            ...current,
+            channelKeys: current.channelKeys.map(channel =>
+              channel.id === channelId
+                ? { ...channel, key: result.newKey, epoch: nextEpoch }
+                : channel
+            ),
+          };
+        })
+      );
+      this.persist();
+      this.controlByCommunity.update(current => {
+        const { [community.communityId]: _, ...remaining } = current;
+        return remaining;
+      });
+      this.controlFetchedAt.delete(community.communityId);
+      this.logger.info('[Concord] Applied community key rotation', {
+        communityId: community.communityId,
+        scope: entry.scope.kind,
+        epoch: nextEpoch,
+      });
+      return true;
+    }
+
+    return false;
   }
 
   // ---------------------------------------------------------------------------
@@ -945,6 +1056,10 @@ export class ConcordService {
     const trimmed = content.trim();
 
     if (!community || !channel || !pubkey || !trimmed) return false;
+    if (this.getControl(communityId).dissolved) {
+      this.logger.warn('[Concord] Refusing to send to a dissolved community', { communityId });
+      return false;
+    }
 
     this.sending.set(true);
 

@@ -37,6 +37,7 @@ import {
   PERM_PIN_MESSAGES,
   VSK_BANLIST,
   VSK_CHANNEL,
+  VSK_DISSOLVED,
   VSK_GRANT,
   VSK_METADATA,
   VSK_PINS,
@@ -130,6 +131,14 @@ export class ConcordAdminService {
     );
   }
 
+  /** The split Control Plane write key: signer identity plus member read encryption. */
+  private controlWrite(community: CordCommunity): CordGroupKey {
+    const signer = this.controlSigner(community);
+    const reader = this.controlRead(community);
+
+    return { ...signer, convKey: reader.convKey };
+  }
+
   /**
    * Publish one edition.
    *
@@ -192,7 +201,7 @@ export class ConcordAdminService {
     };
 
     const wrap = await buildStreamEvent(
-      this.controlSigner(community),
+      this.controlWrite(community),
       rumor,
       async event => this.nostr.signEvent(event),
       {
@@ -357,6 +366,19 @@ export class ConcordAdminService {
     return params.private
       ? { channelId, key: toHex(randomBytes32()) }
       : { channelId };
+  }
+
+  /** Publish the owner-only, terminal CORD-02 dissolution tombstone. */
+  async dissolveCommunity(community: CordCommunity, state: CordControlState): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey !== community.owner) throw new Error('Only the community owner can dissolve it');
+    if (state.dissolved) return;
+
+    await this.publishEdition(community, state, {
+      vsk: VSK_DISSOLVED,
+      eid: community.communityId,
+      content: '{}',
+    });
   }
 
   async renameChannel(
@@ -639,12 +661,15 @@ export class ConcordAdminService {
       throw new Error(`Pin lists are capped at ${CORD_MAX_PIN_BYTES} bytes`);
     }
 
-    await this.publishEdition(community, state, {
+    const edition = await this.publishEdition(community, state, {
       vsk: VSK_PINS,
       eid: this.pinsCoordinate(community.communityId, channelId),
       content,
       requires: PERM_PIN_MESSAGES,
     });
+
+    state.pins.set(edition.eid, content);
+    state.heads.set(`${edition.vsk}:${edition.eid}`, edition);
   }
 
   /** The per-channel pin cap, surfaced so the UI can show remaining budget. */

@@ -2,6 +2,16 @@
 
 > Guidelines for AI coding agents working in the Nostria codebase.
 
+# Coding preferences (General)
+
+- Keep things simple. Channel "yagni" energy unless told otherwise.
+- Typesafety is useful, take advantage of it.
+- Don't be scared to propose bold ideas if they can meaningfully benefit to the app.
+- Be careful with destructive actions that are not explicity requested by the user.
+- Tests are good! Tests should be focused, not slop.
+- Comments are a great way to clarify functionality and how code is used. Don't comment every line, but feel free to describe (concisely) how functions are used abovce function definitions, class, etc.
+- Keep comments up to date! When making changes, it's important to keep things in sync.
+
 **Tech Stack:** Angular 22+, TypeScript (strict), Angular Material 3, SCSS, Playwright (E2E), Karma/Jasmine (unit)
 
 **App URL:** https://nostria.app | **Protocol:** Nostr (nostr-tools library)
@@ -50,6 +60,9 @@ npx playwright test --grep @security
 - Strict mode enabled - no implicit any
 - Avoid `any`; use `unknown` when type is uncertain
 - Prefer type inference when obvious
+- If your TS code looks like a Pyuthon dev wrote it, it is bad TS code.
+- Avoid one-line functions that are just casting wrappers.
+- Write TypeScript in ways tthat Matt Pocock would be proud of.
 
 ## Angular Components
 
