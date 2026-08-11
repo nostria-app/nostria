@@ -154,12 +154,14 @@ export class UpgradeComponent implements OnDestroy {
     }
 
     // Play Store billing when available on Android native
-    if (this.platform.canPayWithPlayStore() && this.iap.playStoreAvailable()) {
+    if (this.platform.canPayWithPlayStore()) {
       methods.push({
         key: 'play-store',
         label: 'Google Play',
         icon: 'shop',
-        description: 'Pay through Google Play Store',
+        description: this.iap.playStoreAvailable()
+          ? 'Pay through Google Play Store'
+          : 'Google Play billing is loading…',
         recommended: true,
       });
     }
