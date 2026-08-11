@@ -419,8 +419,7 @@
           <div class="invite-profile-results" aria-label="Cached profiles">
             @for (profile of directInviteProfiles(); track profile) {
             <button mat-button type="button" class="search-result-item" [attr.aria-label]="'Invite ' + profile"
-              title="Select profile for invite"
-              (click)="selectDirectInviteProfile(profile)">
+              title="Select profile for invite" (click)="selectDirectInviteProfile(profile)">
               <app-user-profile [pubkey]="profile" view="list" [disableLink]="true" />
             </button>
             }

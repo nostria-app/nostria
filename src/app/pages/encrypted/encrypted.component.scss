@@ -841,6 +841,18 @@ img.rail-avatar {
   color: var(--mat-sys-on-surface-variant);
 }
 
+// The app-level right panel halves the available content area. Keep the chat
+// readable by collapsing its secondary member rail and tightening channels.
+:host-context(.dual-panel-layout.has-right-content) {
+  .encrypted-page {
+    grid-template-columns: 72px 200px minmax(0, 1fr);
+  }
+
+  .member-rail {
+    display: none;
+  }
+}
+
 // ────────────────────────────── Responsive ─────────────────────────────────
 
 @media (max-width: 1200px) {
