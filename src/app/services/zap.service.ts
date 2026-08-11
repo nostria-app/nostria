@@ -1,6 +1,6 @@
 import { inject, signal, Service } from '@angular/core';
 import { Event, UnsignedEvent, nip19, nip57 } from 'nostr-tools';
-import { LN } from '@getalby/sdk';
+import { NWCClient } from '@getalby/sdk/nwc';
 import { NostrService } from './nostr.service';
 import { AccountStateService } from './account-state.service';
 import { RelaysService } from './relays/relays';
@@ -604,41 +604,18 @@ export class ZapService {
 
     this.logger.debug(`Using wallet: ${walletName}`);
 
-    // Use Alby SDK to handle the NWC payment
-    // Always close the LN client after use to release WebSocket connections
-    const ln = new LN(connectionString);
+    // Always close the NWC client after use to release relay connections.
+    const nwcClient = new NWCClient({ nostrWalletConnectUrl: connectionString });
     try {
-      this.logger.debug('Created Alby LN client, making payment...');
+      this.logger.debug('Created Alby NWC client, making payment...');
       const paymentStartTime = Date.now();
-      const result = await ln.pay(invoice);
+      const result = await nwcClient.payInvoice({ invoice });
       const paymentDuration = Date.now() - paymentStartTime;
 
       this.logger.info(`Payment completed successfully via Alby SDK (took ${paymentDuration}ms)`);
       this.logger.debug('Payment result:', result);
 
-      // Extract preimage and fees from Alby SDK result
-      // Define types for expected response formats
-      interface AlbyPaymentResult {
-        preimage?: string;
-        payment_preimage?: string;
-        fees_paid?: number;
-        fee?: number;
-      }
-
-      let preimage: string;
-      let fees_paid: number | undefined;
-
-      if (typeof result === 'object' && result !== null) {
-        // Handle object response
-        const paymentResult = result as AlbyPaymentResult;
-        preimage = paymentResult.preimage || paymentResult.payment_preimage || '';
-        fees_paid = paymentResult.fees_paid || paymentResult.fee;
-      } else if (typeof result === 'string') {
-        // Handle string response (might be just preimage)
-        preimage = result;
-      } else {
-        throw new Error('Unexpected payment result format');
-      }
+      const { preimage, fees_paid } = result;
 
       if (!preimage) {
         throw new Error('Payment completed but no preimage received');
@@ -654,7 +631,7 @@ export class ZapService {
       this.logger.error(`Failed to pay invoice via Alby SDK (NIP-47 code: ${nip47Code || 'N/A'}):`, error);
       throw error;
     } finally {
-      ln.close();
+      nwcClient.close();
     }
   }
 
@@ -1018,7 +995,7 @@ export class ZapService {
 
       // Register payment context so outgoing NWC notifications can be correlated
       try {
-        const { decodeInvoice } = await import('@getalby/lightning-tools');
+        const { decodeInvoice } = await import('@getalby/lightning-tools/bolt11');
         const decoded = decodeInvoice(zapPayment.pr);
         if (decoded?.paymentHash) {
           this.nwcService.registerPaymentContext(decoded.paymentHash, {

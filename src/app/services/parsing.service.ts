@@ -8,7 +8,7 @@ import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 import type { SafeResourceUrl } from '@angular/platform-browser';
 import { MediaPlayerService } from './media-player.service';
-import { getDecodedToken } from '@cashu/cashu-ts';
+import { getTokenMetadata } from '@cashu/cashu-ts';
 import { EmojiSetService } from './emoji-set.service';
 
 export interface NostrData {
@@ -665,10 +665,8 @@ export class ParsingService implements OnDestroy {
     while ((match = cashuRegex.exec(processedContent)) !== null) {
       try {
         const tokenString = match[0];
-        const decoded = getDecodedToken(tokenString);
-
-        // Calculate total amount from all proofs
-        const totalAmount = decoded.proofs.reduce((sum: number, proof: { amount: number }) => sum + proof.amount, 0);
+        const decoded = getTokenMetadata(tokenString);
+        const totalAmount = decoded.amount.toNumber();
 
         matches.push({
           start: match.index,

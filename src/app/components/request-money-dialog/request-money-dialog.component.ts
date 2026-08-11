@@ -266,7 +266,7 @@ export class RequestMoneyDialogComponent {
       const memo = this.memoControl.value?.trim() || '';
 
       // Create NWC client and generate invoice
-      const { NWCClient } = await import('@getalby/sdk');
+      const { NWCClient } = await import('@getalby/sdk/nwc');
       const nwcClient = new NWCClient({
         nostrWalletConnectUrl: wallet.connectionString,
       });

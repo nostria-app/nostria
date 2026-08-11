@@ -324,8 +324,10 @@ export class MigrationService {
             onclose: (reasons) => {
               clearTimeout(timeout);
               // If closed before EOSE, return what we have
-              if (reasons && reasons.length > 0 && !reasons.includes('closed by caller')) {
-                this.logger.warn(`Subscription closed: ${reasons.join(', ')}`);
+              if (reasons.length > 0 && !reasons.some(({ reason }) => reason === 'closed by caller')) {
+                this.logger.warn(
+                  `Subscription closed: ${reasons.map(({ url, reason }) => `${url}: ${reason}`).join(', ')}`
+                );
               }
               resolve(events);
             },

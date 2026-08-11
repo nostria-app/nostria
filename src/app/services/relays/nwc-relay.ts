@@ -105,7 +105,7 @@ export class NwcRelayService extends RelayServiceBase {
           this.logger.debug('NWC subscription EOSE received');
           if (onEose) onEose();
         },
-        onclose: (reasons: string[]) => {
+        onclose: (reasons) => {
           this.logger.debug('NWC subscription closed:', reasons);
         },
       });

@@ -914,15 +914,13 @@ export abstract class RelayServiceBase {
           },
           onclose: (reasons) => {
             // Check the reasons is other than "closed automatically on eose", if it is, log the error as error.
-            if (!reasons.includes('closed automatically on eose')) {
+            if (!reasons.some(({ reason }) => reason === 'closed automatically on eose')) {
               this.logger.error('Subscriptions closed unexpectedly', reasons);
             }
 
-            reasons.forEach((reason) => {
+            reasons.forEach(({ url, reason }) => {
               if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
-                urls.forEach((url) => {
-                  this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
-                });
+                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               }
             });
 
@@ -1251,11 +1249,9 @@ export abstract class RelayServiceBase {
             subscriptionId,
             reasons,
           });
-          reasons.forEach((reason) => {
+          reasons.forEach(({ url, reason }) => {
             if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
-              availableRelays.forEach((url) => {
-                this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
-              });
+              this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
             }
           });
           if (onEose) {
@@ -1375,11 +1371,9 @@ export abstract class RelayServiceBase {
         },
         onclose: (reasons) => {
           this.logger.debug('Pool closed', reasons);
-          reasons.forEach((reason) => {
+          reasons.forEach(({ url, reason }) => {
             if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
-              urls.forEach((url) => {
-                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
-              });
+              this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
             }
           });
           if (onEose) {

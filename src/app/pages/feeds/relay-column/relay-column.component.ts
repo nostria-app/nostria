@@ -465,14 +465,14 @@ export class RelayColumnComponent implements OnDestroy {
           this.isLoading.set(false);
           this.isRefreshing.set(false);
         },
-        onclose: (reasons: string[]) => {
+        onclose: (reasons) => {
           // Reasons is an array of close reasons from all relays
-          for (const reason of reasons) {
-            this.logger.debug(`Subscription closed: ${reason}`);
+          for (const { reason, url } of reasons) {
+            this.logger.debug(`Subscription closed for ${url}: ${reason}`);
 
             // Check for auth-required or restricted messages
             if (reason.includes('auth-required:') || reason.includes('restricted:')) {
-              this.logger.info(`Relay requires authentication: ${reason}`);
+              this.logger.info(`Relay ${url} requires authentication: ${reason}`);
               this.authRequired.set(true);
               this.authError.set(reason);
               this.isLoading.set(false);

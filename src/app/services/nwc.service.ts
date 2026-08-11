@@ -1,6 +1,6 @@
 import { inject, signal, computed, effect, PLATFORM_ID, Service } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { NWCClient } from '@getalby/sdk';
+import { NWCClient } from '@getalby/sdk/nwc';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { v2 } from 'nostr-tools/nip44';

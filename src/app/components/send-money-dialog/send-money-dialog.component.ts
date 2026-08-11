@@ -333,12 +333,12 @@ export class SendMoneyDialogComponent {
         throw new Error('No wallet connection available');
       }
 
-      const { LN } = await import('@getalby/sdk');
-      const ln = new LN(wallet.connectionString);
+      const { NWCClient } = await import('@getalby/sdk/nwc');
+      const nwcClient = new NWCClient({ nostrWalletConnectUrl: wallet.connectionString });
       try {
-        await ln.pay(invoiceData.pr);
+        await nwcClient.payInvoice({ invoice: invoiceData.pr });
       } finally {
-        ln.close();
+        nwcClient.close();
       }
 
       // Send payment notification DM (same content for both parties to preserve reaction compatibility)

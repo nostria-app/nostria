@@ -346,12 +346,12 @@ export class SharedRelayService {
             events.push(event as T);
           },
           onclose: (reasons) => {
-            if (!reasons.includes('closed automatically on eose')) {
+            if (!reasons.some(({ reason }) => reason === 'closed automatically on eose')) {
               this.logger.error('Subscriptions closed unexpectedly', reasons);
             }
-            reasons.forEach(reason => {
+            reasons.forEach(({ url, reason }) => {
               if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
-                this.logger.debug('Relay closed with reason:', reason);
+                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               }
             });
 

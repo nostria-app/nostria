@@ -91,7 +91,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
 
   /**
    * Decode the invoice on initialization.
-   * Uses dynamic import so @getalby/lightning-tools is not in the main bundle.
+  * Uses dynamic import so the BOLT11 decoder is not in the main bundle.
    * After decoding, checks local paid cache first, then starts polling if needed.
    */
   async ngOnInit(): Promise<void> {
@@ -102,7 +102,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
 
       // Still decode for display purposes (amount, description) but skip polling
       try {
-        const { decodeInvoice } = await import('@getalby/lightning-tools');
+        const { decodeInvoice } = await import('@getalby/lightning-tools/bolt11');
         const result = decodeInvoice(this.invoice());
         this.decoded.set(result);
       } catch {
@@ -112,7 +112,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const { decodeInvoice } = await import('@getalby/lightning-tools');
+      const { decodeInvoice } = await import('@getalby/lightning-tools/bolt11');
       const result = decodeInvoice(this.invoice());
       this.decoded.set(result);
     } catch {

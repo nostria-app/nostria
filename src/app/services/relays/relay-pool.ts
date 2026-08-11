@@ -579,7 +579,7 @@ export class RelayPoolService {
 
         if (!manuallyClosed && reason && reason.length > 0) {
           reason.forEach(reasonEntry => {
-            if (!reasonEntry || shouldIgnoreCloseReason(reasonEntry)) {
+            if (!reasonEntry || shouldIgnoreCloseReason(reasonEntry.reason)) {
               return;
             }
             this.logger.debug('[RelayPoolService] Subscription closed with reason:', reasonEntry);
