@@ -724,12 +724,19 @@
       @if (attachments.length > 0) {
       <div class="attachments">
         @for (attachment of attachments; track attachment.src) {
+        <div class="attachment-frame">
         @if (attachment.video) {
         <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
         } @else {
         <img class="attachment" [src]="attachment.src" [alt]="attachment.alt" loading="lazy"
           (click)="openAttachment(attachment.src, attachment.alt)" />
         }
+        <span class="attachment-visibility" [class.encrypted]="attachment.encrypted"
+          [matTooltip]="attachment.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+          <mat-icon>{{ attachment.encrypted ? 'lock' : 'public' }}</mat-icon>
+          {{ attachment.encrypted ? 'Encrypted' : 'Public' }}
+        </span>
+        </div>
         }
       </div>
       }

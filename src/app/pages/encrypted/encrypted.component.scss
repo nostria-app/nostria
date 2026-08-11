@@ -1273,8 +1273,13 @@ img.rail-avatar {
   margin: 6px 0 2px;
 }
 
-.attachment {
+.attachment-frame {
+  position: relative;
   max-width: min(420px, 100%);
+}
+
+.attachment {
+  max-width: 100%;
   max-height: 320px;
   border-radius: 10px;
   object-fit: contain;
@@ -1285,6 +1290,32 @@ img.rail-avatar {
 
 video.attachment {
   cursor: default;
+}
+
+.attachment-visibility {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 0.68rem;
+  pointer-events: none;
+
+  &.encrypted {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  mat-icon {
+    width: 13px;
+    height: 13px;
+    font-size: 13px;
+  }
 }
 
 // ───────────────────────────── Composer buttons ────────────────────────────

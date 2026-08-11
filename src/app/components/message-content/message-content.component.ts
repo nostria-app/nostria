@@ -66,6 +66,7 @@ interface ContentPart {
   fileType?: string;
   fileSize?: number;
   decrypting?: boolean;
+  encrypted?: boolean;
   naddrData?: {
     pubkey: string;
     identifier: string;
@@ -128,14 +129,35 @@ interface DecryptedPreviewState {
       } @else if (part.type === 'linebreak') {
         <br />
       } @else if (part.type === 'image') {
-        <img class="message-image" [src]="part.content" alt="Image" loading="lazy" (click)="onImageClick($event, part.content)" />
+        <div class="media-attachment">
+          <img class="message-image" [src]="part.content" alt="Image" loading="lazy" (click)="onImageClick($event, part.content)" />
+          <span class="attachment-visibility" [class.encrypted]="part.encrypted"
+            [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+            <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
+            {{ part.encrypted ? 'Encrypted' : 'Public' }}
+          </span>
+        </div>
       } @else if (part.type === 'video') {
-        <div class="message-video-container">
-          <app-inline-video-player [src]="part.content" [controlsConfig]="messageVideoControlsConfig" />
+        <div class="media-attachment">
+          <div class="message-video-container">
+            <app-inline-video-player [src]="part.content" [controlsConfig]="messageVideoControlsConfig" />
+          </div>
+          <span class="attachment-visibility" [class.encrypted]="part.encrypted"
+            [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+            <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
+            {{ part.encrypted ? 'Encrypted' : 'Public' }}
+          </span>
         </div>
       } @else if (part.type === 'audio') {
-        <div class="message-audio-container">
-          <app-audio-player [src]="part.content" [waveform]="part.waveform || []" [duration]="part.duration || 0"></app-audio-player>
+        <div class="media-attachment">
+          <div class="message-audio-container">
+            <app-audio-player [src]="part.content" [waveform]="part.waveform || []" [duration]="part.duration || 0"></app-audio-player>
+          </div>
+          <span class="attachment-visibility" [class.encrypted]="part.encrypted"
+            [matTooltip]="part.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+            <mat-icon>{{ part.encrypted ? 'lock' : 'public' }}</mat-icon>
+            {{ part.encrypted ? 'Encrypted' : 'Public' }}
+          </span>
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
@@ -325,6 +347,39 @@ interface DecryptedPreviewState {
 
       &:hover {
         opacity: 0.9;
+      }
+    }
+
+    .media-attachment {
+      position: relative;
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .attachment-visibility {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 6px;
+      border-radius: var(--mat-sys-corner-full);
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+      font-size: 0.68rem;
+      pointer-events: none;
+
+      &.encrypted {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+
+      mat-icon {
+        width: 13px;
+        height: 13px;
+        font-size: 13px;
       }
     }
 
@@ -924,6 +979,7 @@ export class MessageContentComponent implements OnDestroy {
         parts.push({
           type: this.getUrlMediaType(cleanUrl),
           content: cleanUrl,
+          encrypted: false,
           ...this.getImetaData(cleanUrl),
           ...this.getMusicEmbedData(cleanUrl),
           ...this.getYouTubeEmbedData(cleanUrl),
@@ -1375,6 +1431,7 @@ export class MessageContentComponent implements OnDestroy {
         fileName: metadata.fileName,
         fileType: metadata.fileType,
         fileSize: metadata.fileSize,
+        encrypted: true,
         id: this.partIdCounter++,
       };
     }
@@ -1386,6 +1443,7 @@ export class MessageContentComponent implements OnDestroy {
       fileType: metadata.fileType,
       fileSize: metadata.fileSize,
       decrypting: this.encryptedFileStates().get(content) || false,
+      encrypted: true,
       id: this.partIdCounter++,
     };
   }

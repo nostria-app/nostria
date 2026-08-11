@@ -1178,7 +1178,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.encryptedFileInput()?.nativeElement.click();
   }
 
-  /** Upload plain media and reference it by URL. */
+  /** Upload selected media as an encrypted attachment. */
   async onMediaFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -1186,22 +1186,8 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     if (files.length === 0) return;
 
-    this.uploading.set(true);
-
-    try {
-      for (const file of files) {
-        const result = await this.mediaService.uploadFile(file, false, []);
-
-        if (result.status === 'success' || result.status === 'duplicate') {
-          if (result.item?.url) this.appendToComposer(result.item.url);
-        } else {
-          this.snackBar.open(result.message || 'Upload failed', 'Close', { duration: 5000 });
-        }
-      }
-    } catch (error) {
-      this.snackBar.open(describe(error), 'Close', { duration: 5000 });
-    } finally {
-      this.uploading.set(false);
+    for (const file of files) {
+      await this.uploadEncryptedFile(file);
     }
   }
 
@@ -1249,7 +1235,11 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       const buffer = new ArrayBuffer(encrypted.byteLength);
       new Uint8Array(buffer).set(encrypted);
 
-      const encryptedFile = new File([buffer], file.name, { type: 'application/octet-stream' });
+      // Ciphertext is not media. An opaque name keeps MediaService on the
+      // generic upload endpoint instead of asking a server to transcode it.
+      const encryptedFile = new File([buffer], 'encrypted-attachment.bin', {
+        type: 'application/octet-stream',
+      });
       const result = await this.mediaService.uploadFile(encryptedFile, false, []);
 
       if (result.status !== 'success' && result.status !== 'duplicate') {
@@ -1721,12 +1711,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
    * bare URLs in the content. Encrypted ones are decrypted before display,
    * because the URL by itself serves ciphertext.
    */
-  attachmentsFor(message: CordMessage): { src: string; alt: string; video: boolean }[] {
+  attachmentsFor(message: CordMessage): { src: string; alt: string; video: boolean; encrypted: boolean }[] {
     this.media.revision();
     const sourceUrls: string[] = [];
 
     const tags = message.rumor.tags;
-    const out: { src: string; alt: string; video: boolean }[] = [];
+    const out: { src: string; alt: string; video: boolean; encrypted: boolean }[] = [];
     const seen = new Set<string>();
 
     const add = (raw: {
@@ -1760,7 +1750,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       // Still decrypting; it will appear once the blob resolves.
       if (!src) return;
 
-      out.push({ src, alt: raw.alt ?? 'attachment', video: isVideo });
+      out.push({
+        src,
+        alt: raw.alt ?? 'attachment',
+        video: isVideo,
+        encrypted: Boolean(raw.key && raw.nonce),
+      });
     };
 
     // NIP-92: one tag per file, "key value" pairs after the tag name.
