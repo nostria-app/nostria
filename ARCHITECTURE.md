@@ -902,7 +902,7 @@ the feature's components:
 
 ```typescript
 loadComponent: () =>
-  import('./pages/feature/feature-route-components').then(m => m.FeatureComponent);
+  import('./pages/feature/feature-route-components').then((m) => m.FeatureComponent);
 ```
 
 - Keep the barrel feature-local and load it only from route loaders, so the homepage remains unaffected.
