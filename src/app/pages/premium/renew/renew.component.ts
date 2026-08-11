@@ -49,6 +49,13 @@ interface TierDisplay {
   };
 }
 
+/** Tiers inherit the storage entitlements of lower tiers, so only the largest one is shown. */
+const STORAGE_FEATURE_RANK: Record<string, number> = {
+  STORAGE_1GB: 1,
+  STORAGE_5GB: 2,
+  STORAGE_50GB: 3,
+};
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-renew',
@@ -615,8 +622,16 @@ export class RenewComponent implements OnDestroy {
 
   // Helper for template: get human-readable features for a tier
   getFeatureDescriptions(tier: TierDisplay): string[] {
-    if (!tier.details.entitlements?.features) return [];
-    return tier.details.entitlements.features.map(feature => feature.label || feature.key);
+    const features = tier.details.entitlements?.features;
+    if (!features) return [];
+
+    const largestStorage = features
+      .filter(feature => STORAGE_FEATURE_RANK[feature.key])
+      .sort((a, b) => STORAGE_FEATURE_RANK[b.key] - STORAGE_FEATURE_RANK[a.key])[0];
+
+    return features
+      .filter(feature => !STORAGE_FEATURE_RANK[feature.key] || feature === largestStorage)
+      .map(feature => feature.label || feature.key);
   }
 
   // Helper for template: get pricing for a tier and billing period

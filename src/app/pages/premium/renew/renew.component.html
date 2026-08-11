@@ -55,13 +55,6 @@
       }
     </p>
 
-    @if (storeSingleSubscriptionMode()) {
-    <div class="store-limited-notice">
-      <mat-icon>info</mat-icon>
-      <span>For the first native store release, only <strong>Premium Monthly</strong> is available.</span>
-    </div>
-    }
-
     <div class="tier-options">
       @for (tier of planTiers(); track tier.key) {
       <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key"

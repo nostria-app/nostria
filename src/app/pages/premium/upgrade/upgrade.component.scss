@@ -98,22 +98,6 @@ h2 {
   margin-bottom: 2rem;
 }
 
-.store-limited-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  margin-bottom: 1.25rem;
-  border-radius: 10px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface-variant);
-
-  mat-icon {
-    color: var(--mat-sys-primary);
-  }
-}
-
 .step-actions {
   display: flex;
   justify-content: space-between;
@@ -372,23 +356,27 @@ h2 {
 
 .payment-summary {
   background-color: var(--mat-sys-surface-container);
-  padding: 1.5rem;
+  padding: 0.75rem 1rem;
   border-radius: 12px;
   border: 1px solid var(--mat-sys-outline-variant);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 
   h3 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    color: var(--mat-sys-on-surface);
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 1rem;
-  padding: 0.5rem 0;
+  padding: 0;
   color: var(--mat-sys-on-surface);
 
   &.total {
@@ -744,8 +732,9 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  // Reversed so the primary action sits above "Back" when stacked.
   .step-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 1rem;
 
     button {
@@ -768,8 +757,7 @@ h2 {
   }
 
   .summary-row {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .payment-method-card {
