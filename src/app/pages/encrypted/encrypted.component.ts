@@ -2021,8 +2021,10 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private async loadPreviews(message: CordMessage): Promise<void> {
     // Media URLs are rendered inline by the message content itself, so only
     // ordinary links get a card.
+    const attachmentUrls = new Set(this.attachmentUrls(message));
     const urls = [...(message.editedContent || message.content).matchAll(/https?:\/\/\S+/g)]
       .map(match => match[0].replace(/[),.]+$/, ''))
+      .filter(url => !attachmentUrls.has(url))
       .filter(url => !/\.(png|jpe?g|gif|webp|avif|mp4|webm|mov|mp3|ogg|wav)(\?|$)/i.test(url))
       .slice(0, 3);
 

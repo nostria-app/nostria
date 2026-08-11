@@ -83,11 +83,10 @@
     </div>
 
     <!-- Always in DOM (hidden via CSS when closed) so iOS can focus within the button gesture -->
-    <div class="message-threads-header" [class.search-visible]="showSearch()"
-      [attr.aria-hidden]="!showSearch()">
+    <div class="message-threads-header" [class.search-visible]="showSearch()" [attr.aria-hidden]="!showSearch()">
       <input #chatSearchInput class="chat-search-input" type="text" placeholder="Search chats..."
-        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)"
-        autocomplete="off" name="chat-search" [tabindex]="showSearch() ? 0 : -1" />
+        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)" autocomplete="off"
+        name="chat-search" [tabindex]="showSearch() ? 0 : -1" />
       <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search"
         [tabindex]="showSearch() ? 0 : -1">
         <mat-icon>close</mat-icon>
@@ -141,7 +140,8 @@
                         <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                         }
                         @if (chat.lastMessage?.created_at) {
-                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago }}</span>
+                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago
+                          }}</span>
                         }
                       </div>
                       <div class="chat-preview">
@@ -181,7 +181,8 @@
                         <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                         }
                         @if (chat.lastMessage?.created_at) {
-                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago }}</span>
+                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago
+                          }}</span>
                         }
                       </div>
                       <div class="chat-preview">
@@ -227,7 +228,8 @@
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
                           @if (chat.lastMessage?.created_at) {
-                          <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago }}</span>
+                          <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) |
+                            ago }}</span>
                           }
                         </div>
                         <div class="chat-preview">
@@ -327,7 +329,8 @@
                         <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                         }
                         @if (chat.lastMessage?.created_at) {
-                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago }}</span>
+                        <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago
+                          }}</span>
                         }
                       </div>
                       <div class="chat-preview">
@@ -371,7 +374,8 @@
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
                           @if (chat.lastMessage?.created_at) {
-                          <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) | ago }}</span>
+                          <span class="message-time-chats">{{ $safeNavigationMigration(chat.lastMessage?.created_at) |
+                            ago }}</span>
                           }
                         </div>
                         <div class="chat-preview">
@@ -649,76 +653,76 @@
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #messageMenu="matMenu">
-<ng-template matMenuContent>
-                  @if (!message.isOutgoing && !isReactionMessage(message)) {
-                  <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
-                    <mat-icon>sentiment_satisfied</mat-icon>
-                    <span>React</span>
-                  </button>
-                  }
-                  <button mat-menu-item (click)="setReplyTo(message)">
-                    <mat-icon>reply</mat-icon>
-                    <span>Reply</span>
-                  </button>
-                  <button mat-menu-item (click)="forwardMessage(message)">
-                    <mat-icon>forward</mat-icon>
-                    <span>Forward</span>
-                  </button>
-                  <button mat-menu-item (click)="copyMessageContent(message)">
-                    <mat-icon>content_copy</mat-icon>
-                    <span>Copy</span>
-                  </button>
-                  <button mat-menu-item (click)="showMessageDetails(message)">
-                    <mat-icon>info</mat-icon>
-                    <span>Details</span>
-                  </button>
-                  @if (getMessageImageUrls(message).length > 0) {
-                  <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
-                    <mat-icon>gif_box</mat-icon>
-                    <span>Save to Gifs Set</span>
-                  </button>
-                  }
-                  @if (message.isOutgoing && message.failed) {
-                  <mat-divider></mat-divider>
-                  <button mat-menu-item (click)="retryMessage(message)">
-                    <mat-icon>refresh</mat-icon>
-                    <span>Retry</span>
-                  </button>
-                  }
-                  <mat-divider></mat-divider>
-                  @if (message.isOutgoing) {
-                  <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Delete</span>
-                  </button>
-                  } @else {
-                  <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
-                    <mat-icon>visibility_off</mat-icon>
-                    <span>Hide</span>
-                  </button>
-                  }
-                </ng-template>
-</mat-menu>
+                  <ng-template matMenuContent>
+                    @if (!message.isOutgoing && !isReactionMessage(message)) {
+                    <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+                      <mat-icon>sentiment_satisfied</mat-icon>
+                      <span>React</span>
+                    </button>
+                    }
+                    <button mat-menu-item (click)="setReplyTo(message)">
+                      <mat-icon>reply</mat-icon>
+                      <span>Reply</span>
+                    </button>
+                    <button mat-menu-item (click)="forwardMessage(message)">
+                      <mat-icon>forward</mat-icon>
+                      <span>Forward</span>
+                    </button>
+                    <button mat-menu-item (click)="copyMessageContent(message)">
+                      <mat-icon>content_copy</mat-icon>
+                      <span>Copy</span>
+                    </button>
+                    <button mat-menu-item (click)="showMessageDetails(message)">
+                      <mat-icon>info</mat-icon>
+                      <span>Details</span>
+                    </button>
+                    @if (getMessageImageUrls(message).length > 0) {
+                    <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
+                      <mat-icon>gif_box</mat-icon>
+                      <span>Save to Gifs Set</span>
+                    </button>
+                    }
+                    @if (message.isOutgoing && message.failed) {
+                    <mat-divider></mat-divider>
+                    <button mat-menu-item (click)="retryMessage(message)">
+                      <mat-icon>refresh</mat-icon>
+                      <span>Retry</span>
+                    </button>
+                    }
+                    <mat-divider></mat-divider>
+                    @if (message.isOutgoing) {
+                    <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Delete</span>
+                    </button>
+                    } @else {
+                    <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
+                      <mat-icon>visibility_off</mat-icon>
+                      <span>Hide</span>
+                    </button>
+                    }
+                  </ng-template>
+                </mat-menu>
 
                 <mat-menu #reactionMenu="matMenu">
-<ng-template matMenuContent>
-                  @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
-                  <button mat-menu-item
-                    (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
-                    @if (reactionItem.customEmojiUrl) {
-                    <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
-                      cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
-                    } @else {
-                    <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+                  <ng-template matMenuContent>
+                    @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
+                    <button mat-menu-item
+                      (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
+                      @if (reactionItem.customEmojiUrl) {
+                      <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
+                        cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
+                      } @else {
+                      <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+                      }
+                    </button>
                     }
-                  </button>
-                  }
-                  <mat-divider></mat-divider>
-                  <button mat-menu-item (click)="openReactionPickerDialog(message)">
-                    <mat-icon>add_reaction</mat-icon>
-                  </button>
-                </ng-template>
-</mat-menu>
+                    <mat-divider></mat-divider>
+                    <button mat-menu-item (click)="openReactionPickerDialog(message)">
+                      <mat-icon>add_reaction</mat-icon>
+                    </button>
+                  </ng-template>
+                </mat-menu>
               </div>
             </div>
 
@@ -816,75 +820,76 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #messageMenu="matMenu">
-<ng-template matMenuContent>
-              @if (!message.isOutgoing && !isReactionMessage(message)) {
-              <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
-                <mat-icon>sentiment_satisfied</mat-icon>
-                <span>React</span>
-              </button>
-              }
-              <button mat-menu-item (click)="setReplyTo(message)">
-                <mat-icon>reply</mat-icon>
-                <span>Reply</span>
-              </button>
-              <button mat-menu-item (click)="forwardMessage(message)">
-                <mat-icon>forward</mat-icon>
-                <span>Forward</span>
-              </button>
-              <button mat-menu-item (click)="copyMessageContent(message)">
-                <mat-icon>content_copy</mat-icon>
-                <span>Copy</span>
-              </button>
-              <button mat-menu-item (click)="showMessageDetails(message)">
-                <mat-icon>info</mat-icon>
-                <span>Details</span>
-              </button>
-              @if (getMessageImageUrls(message).length > 0) {
-              <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
-                <mat-icon>gif_box</mat-icon>
-                <span>Save to Gifs Set</span>
-              </button>
-              }
-              @if (message.isOutgoing && message.failed) {
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="retryMessage(message)">
-                <mat-icon>refresh</mat-icon>
-                <span>Retry</span>
-              </button>
-              }
-              <mat-divider></mat-divider>
-              @if (message.isOutgoing) {
-              <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
-                <mat-icon>delete</mat-icon>
-                <span>Delete</span>
-              </button>
-              } @else {
-              <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
-                <mat-icon>visibility_off</mat-icon>
-                <span>Hide</span>
-              </button>
-              }
-            </ng-template>
-</mat-menu>
+              <ng-template matMenuContent>
+                @if (!message.isOutgoing && !isReactionMessage(message)) {
+                <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+                  <mat-icon>sentiment_satisfied</mat-icon>
+                  <span>React</span>
+                </button>
+                }
+                <button mat-menu-item (click)="setReplyTo(message)">
+                  <mat-icon>reply</mat-icon>
+                  <span>Reply</span>
+                </button>
+                <button mat-menu-item (click)="forwardMessage(message)">
+                  <mat-icon>forward</mat-icon>
+                  <span>Forward</span>
+                </button>
+                <button mat-menu-item (click)="copyMessageContent(message)">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy</span>
+                </button>
+                <button mat-menu-item (click)="showMessageDetails(message)">
+                  <mat-icon>info</mat-icon>
+                  <span>Details</span>
+                </button>
+                @if (getMessageImageUrls(message).length > 0) {
+                <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
+                  <mat-icon>gif_box</mat-icon>
+                  <span>Save to Gifs Set</span>
+                </button>
+                }
+                @if (message.isOutgoing && message.failed) {
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="retryMessage(message)">
+                  <mat-icon>refresh</mat-icon>
+                  <span>Retry</span>
+                </button>
+                }
+                <mat-divider></mat-divider>
+                @if (message.isOutgoing) {
+                <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
+                  <mat-icon>delete</mat-icon>
+                  <span>Delete</span>
+                </button>
+                } @else {
+                <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
+                  <mat-icon>visibility_off</mat-icon>
+                  <span>Hide</span>
+                </button>
+                }
+              </ng-template>
+            </mat-menu>
 
             <mat-menu #reactionMenu="matMenu">
-<ng-template matMenuContent>
-              @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
-              <button mat-menu-item (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
-                @if (reactionItem.customEmojiUrl) {
-                <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
-                  cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
-                } @else {
-                <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+              <ng-template matMenuContent>
+                @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
+                <button mat-menu-item
+                  (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
+                  @if (reactionItem.customEmojiUrl) {
+                  <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
+                    cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
+                  } @else {
+                  <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+                  }
+                </button>
                 }
-              </button>
-              }
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="openReactionPickerDialog(message)">
-                <mat-icon>add_reaction</mat-icon>
-              </button>
-            </ng-template>
-</mat-menu>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="openReactionPickerDialog(message)">
+                  <mat-icon>add_reaction</mat-icon>
+                </button>
+              </ng-template>
+            </mat-menu>
           </div>
           }
         </div>
