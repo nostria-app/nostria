@@ -999,7 +999,7 @@
             </div>
             } @else if (preview.type === 'file') {
             <div class="reference-preview-thumb">
-              <mat-icon>lock</mat-icon>
+              <mat-icon>{{ isLegacyNip04Chat() ? 'public' : 'lock' }}</mat-icon>
               <span class="reference-preview-label">{{ preview.label }}</span>
               @if (preview.meta) {
               <span class="reference-preview-meta">{{ preview.meta }}</span>
@@ -1028,7 +1028,7 @@
               <span class="dm-optimization-label">Media Optimization</span>
               <mat-button-toggle-group class="dm-optimization-toggle-group" [value]="selectedDmOptimization()"
                 (change)="onDmOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
-                aria-label="Encrypted media optimization">
+                aria-label="Media optimization">
                 @for (option of optimizationOptions; track option.value) {
                 <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
                 }
@@ -1043,7 +1043,7 @@
             <div class="pending-media-buttons">
               <button mat-flat-button type="button" (click)="confirmPastedMedia()"
                 [disabled]="isUploading() || isSending()">
-                Send encrypted
+                {{ isLegacyNip04Chat() ? 'Send public' : 'Send encrypted' }}
               </button>
               <button mat-button type="button" (click)="clearPendingEncryptedMediaPreviews()">Cancel</button>
             </div>

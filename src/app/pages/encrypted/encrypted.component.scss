@@ -1333,3 +1333,109 @@ video.attachment {
     color: var(--mat-sys-primary);
   }
 }
+
+.community-pending-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.community-attachment-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.community-attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+
+  img,
+  video {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+}
+
+.community-attachment-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+
+  span,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.community-pending-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.community-compression-controls {
+  display: flex;
+  flex: 0 1 360px;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+
+  mat-button-toggle-group {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  small {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.community-pending-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 188px;
+}
+
+.community-upload-status {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .community-pending-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .community-compression-controls,
+  .community-pending-buttons {
+    flex-basis: auto;
+    width: 100%;
+  }
+}

@@ -725,17 +725,17 @@
       <div class="attachments">
         @for (attachment of attachments; track attachment.src) {
         <div class="attachment-frame">
-        @if (attachment.video) {
-        <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
-        } @else {
-        <img class="attachment" [src]="attachment.src" [alt]="attachment.alt" loading="lazy"
-          (click)="openAttachment(attachment.src, attachment.alt)" />
-        }
-        <span class="attachment-visibility" [class.encrypted]="attachment.encrypted"
-          [matTooltip]="attachment.encrypted ? 'Encrypted attachment' : 'Public attachment'">
-          <mat-icon>{{ attachment.encrypted ? 'lock' : 'public' }}</mat-icon>
-          {{ attachment.encrypted ? 'Encrypted' : 'Public' }}
-        </span>
+          @if (attachment.video) {
+          <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
+          } @else {
+          <img class="attachment" [src]="attachment.src" [alt]="attachment.alt" loading="lazy"
+            (click)="openAttachment(attachment.src, attachment.alt)" />
+          }
+          <span class="attachment-visibility" [class.encrypted]="attachment.encrypted"
+            [matTooltip]="attachment.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+            <mat-icon>{{ attachment.encrypted ? 'lock' : 'public' }}</mat-icon>
+            {{ attachment.encrypted ? 'Encrypted' : 'Public' }}
+          </span>
         </div>
         }
       </div>
@@ -797,6 +797,60 @@
       <div class="notice">Sign in to take part in this conversation.</div>
       } @else if (isDissolved()) {
       <div class="notice">This community is dissolved and read-only.</div>
+      } @else {
+      @if (pendingCommunityAttachments().length > 0) {
+      <div class="community-pending-attachments">
+        <div class="community-attachment-previews">
+          @for (attachment of pendingCommunityAttachments(); track attachment.id) {
+          <div class="community-attachment-preview">
+            @if (attachment.type === 'image') {
+            <img [src]="attachment.objectUrl" [alt]="attachment.sourceFile.name" title="Encrypted attachment preview" />
+            } @else if (attachment.type === 'video') {
+            <video [src]="attachment.objectUrl" muted preload="metadata"></video>
+            } @else {
+            <mat-icon>lock</mat-icon>
+            }
+            <div class="community-attachment-copy">
+              <span>{{ attachment.sourceFile.name }}</span>
+              <small>{{ attachment.processedSize | number }} bytes</small>
+            </div>
+            <button mat-icon-button type="button" matTooltip="Remove" [disabled]="uploading()"
+              (click)="removePendingCommunityAttachment(attachment.id)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+        </div>
+
+        <div class="community-pending-actions">
+          @if (hasPendingCommunityMedia()) {
+          <div class="community-compression-controls">
+            <span>Media Optimization</span>
+            <mat-button-toggle-group [value]="selectedCommunityOptimization()"
+              (change)="onCommunityOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
+              aria-label="Encrypted media optimization">
+              @for (option of optimizationOptions; track option.value) {
+              <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+            <small>{{ communityOptimizationDescription() }}</small>
+          </div>
+          }
+
+          <div class="community-pending-buttons">
+            <button mat-flat-button type="button" [disabled]="uploading() || concord.sending()"
+              (click)="sendPendingCommunityAttachments()">
+              Send encrypted
+            </button>
+            <button mat-button type="button" [disabled]="uploading()" (click)="clearPendingCommunityAttachments()">
+              Cancel
+            </button>
+          </div>
+        </div>
+        @if (communityUploadStatus()) {
+        <span class="community-upload-status">{{ communityUploadStatus() }}</span>
+        }
+      </div>
       } @else {
       <div class="composer-input">
         <!-- Attachment menu -->
@@ -881,6 +935,7 @@
           }
         </button>
       </div>
+      }
       }
     </footer>
     } @else {

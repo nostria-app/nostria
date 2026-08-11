@@ -343,6 +343,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     getMediaOptimizationOption(this.dmMediaUploadMode(), this.dmCompressionStrength())
   );
   readonly usesLocalDmCompression = computed(() => usesLocalCompressionMode(this.dmMediaUploadMode()));
+  readonly isLegacyNip04Chat = computed(() => {
+    const chat = this.selectedChat();
+    return !!chat && !chat.isGroup && chat.encryptionType === 'nip04';
+  });
   dmVideoProfileMenuPreviewId = signal<string | null>(null);
   readonly dmOptimizationDescription = computed(() =>
     getMediaOptimizationDescription(this.dmMediaUploadMode(), this.dmCompressionStrength(), this.dmVideoOptimizationProfile())
@@ -3144,8 +3148,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    const isLegacyNip04 = this.isLegacyNip04Chat();
+
     if (this.newMessageText().trim()) {
-      this.layout.toast('Send the current text message first. Encrypted media is sent as a separate message.', 4000, 'error-snackbar');
+      this.layout.toast(
+        isLegacyNip04
+          ? 'Send the current text message first. NIP-04 attachments are sent as public URLs.'
+          : 'Send the current text message first. Encrypted media is sent as a separate message.',
+        4000,
+        'error-snackbar'
+      );
       return;
     }
 
@@ -3160,18 +3172,35 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.mediaService.load();
 
       for (let index = 0; index < stagedPreviews.length; index++) {
-        this.uploadStatus.set(stagedPreviews.length > 1 ? `Encrypting ${index + 1}/${stagedPreviews.length}...` : 'Encrypting...');
-        await this.sendEncryptedFileMessage(stagedPreviews[index].file, {
-          preserveComposer: true,
-          uploadSettings: this.getDmUploadSettingsForPreview(stagedPreviews[index]),
-          skipMediaPreparation: stagedPreviews[index].type === 'image' || stagedPreviews[index].type === 'video',
-        });
+        if (isLegacyNip04) {
+          this.uploadStatus.set(stagedPreviews.length > 1 ? `Uploading ${index + 1}/${stagedPreviews.length}...` : 'Uploading...');
+          await this.sendPublicNip04Attachment(stagedPreviews[index].file);
+        } else {
+          this.uploadStatus.set(stagedPreviews.length > 1 ? `Encrypting ${index + 1}/${stagedPreviews.length}...` : 'Encrypting...');
+          await this.sendEncryptedFileMessage(stagedPreviews[index].file, {
+            preserveComposer: true,
+            uploadSettings: this.getDmUploadSettingsForPreview(stagedPreviews[index]),
+            skipMediaPreparation: stagedPreviews[index].type === 'image' || stagedPreviews[index].type === 'video',
+          });
+        }
       }
     } finally {
       this.isUploading.set(false);
       this.uploadStatus.set('');
       this.clearPendingEncryptedMediaPreviews();
     }
+  }
+
+  private async sendPublicNip04Attachment(file: File): Promise<void> {
+    const uploadResult = await this.mediaService.uploadFile(file, true, this.mediaService.mediaServers());
+    const url = uploadResult.item?.url;
+
+    if ((uploadResult.status !== 'success' && uploadResult.status !== 'duplicate') || !url) {
+      throw new Error(uploadResult.message || 'Failed to upload public attachment');
+    }
+
+    this.newMessageText.set(url);
+    await this.sendMessage();
   }
 
   async openPendingCompressionPreview(previewId: string): Promise<void> {

@@ -11,11 +11,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -36,9 +37,19 @@ import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker
 import { CustomDialogComponent } from '../../components/custom-dialog/custom-dialog.component';
 import { ImageInputComponent } from '../../components/image-input/image-input.component';
 import { MediaService } from '../../services/media.service';
-import { MediaProcessingService } from '../../services/media-processing.service';
+import { MediaProcessingService, type PreparedUploadFile } from '../../services/media-processing.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
-import { VideoRecordDialogResult } from '../../interfaces/media-upload';
+import {
+  DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
+  getMediaOptimizationDescription,
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  MEDIA_OPTIMIZATION_OPTIONS,
+  type MediaOptimizationOptionValue,
+  type MediaUploadMode,
+  type MediaUploadSettings,
+  VideoRecordDialogResult,
+} from '../../interfaces/media-upload';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { SettingsService } from '../../services/settings.service';
@@ -93,6 +104,16 @@ interface MessageCluster {
   messages: CordMessage[];
 }
 
+interface PendingCommunityAttachment {
+  id: string;
+  objectUrl: string;
+  file: File;
+  sourceFile: File;
+  type: 'image' | 'video' | 'file';
+  originalSize: number;
+  processedSize: number;
+}
+
 type MobilePane = 'communities' | 'channels' | 'content';
 type ChannelView = 'chat' | 'members' | 'settings';
 
@@ -101,9 +122,11 @@ type ChannelView = 'chat' | 'members' | 'settings';
   imports: [
     FormsModule,
     DatePipe,
+    DecimalPipe,
     NgTemplateOutlet,
     MatBadgeModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatDividerModule,
     MatFormFieldModule,
     MatIconModule,
@@ -192,6 +215,20 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly showDissolveConfirmation = signal(false);
   readonly showPins = signal(false);
   readonly uploading = signal(false);
+  readonly communityUploadStatus = signal('');
+  readonly communityMediaUploadMode = signal<MediaUploadMode>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
+  readonly communityCompressionStrength = signal(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  readonly pendingCommunityAttachments = signal<PendingCommunityAttachment[]>([]);
+  readonly optimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
+  readonly hasPendingCommunityMedia = computed(() =>
+    this.pendingCommunityAttachments().some(item => item.type === 'image' || item.type === 'video')
+  );
+  readonly selectedCommunityOptimization = computed(() =>
+    getMediaOptimizationOption(this.communityMediaUploadMode(), this.communityCompressionStrength())
+  );
+  readonly communityOptimizationDescription = computed(() =>
+    getMediaOptimizationDescription(this.communityMediaUploadMode(), this.communityCompressionStrength())
+  );
 
   /** Tags staged by attachments, merged into the next message. */
   private readonly pendingTags = signal<string[][]>([]);
@@ -1178,7 +1215,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.encryptedFileInput()?.nativeElement.click();
   }
 
-  /** Upload selected media as an encrypted attachment. */
+  /** Stage selected media for encrypted upload and optional local optimization. */
   async onMediaFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -1186,9 +1223,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     if (files.length === 0) return;
 
-    for (const file of files) {
-      await this.uploadEncryptedFile(file);
-    }
+    await this.stageCommunityAttachments(files);
   }
 
   /**
@@ -1203,13 +1238,115 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     input.value = '';
 
-    if (file) await this.uploadEncryptedFile(file);
+    if (file) await this.stageCommunityAttachments([file]);
   }
 
-  private async uploadEncryptedFile(file: File): Promise<void> {
-    if (!this.hasMediaServers()) return;
+  private async stageCommunityAttachments(files: File[]): Promise<void> {
+    if (this.messageText().trim()) {
+      this.snackBar.open('Send the current message before adding encrypted attachments.', 'Dismiss', { duration: 4000 });
+      return;
+    }
+
+    if (this.pendingCommunityAttachments().length > 0) {
+      this.snackBar.open('Send or cancel the staged attachments first.', 'Dismiss', { duration: 4000 });
+      return;
+    }
 
     this.uploading.set(true);
+
+    try {
+      const staged = await Promise.all(files.map((file, index) => this.prepareCommunityAttachment(file, index)));
+      this.pendingCommunityAttachments.set(staged);
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
+    } finally {
+      this.communityUploadStatus.set('');
+      this.uploading.set(false);
+    }
+  }
+
+  async onCommunityOptimizationChange(value: MediaOptimizationOptionValue): Promise<void> {
+    const settings = getMediaUploadSettingsForOptimization(value);
+    this.communityMediaUploadMode.set(settings.mode);
+    this.communityCompressionStrength.set(settings.compressionStrength);
+
+    const current = this.pendingCommunityAttachments();
+    if (current.length === 0) return;
+
+    this.uploading.set(true);
+    try {
+      const refreshed = await Promise.all(current.map((item, index) => this.prepareCommunityAttachment(item.sourceFile, index)));
+      for (const item of current) URL.revokeObjectURL(item.objectUrl);
+      this.pendingCommunityAttachments.set(refreshed);
+    } catch (error) {
+      this.snackBar.open(describe(error), 'Dismiss', { duration: 6000 });
+    } finally {
+      this.communityUploadStatus.set('');
+      this.uploading.set(false);
+    }
+  }
+
+  removePendingCommunityAttachment(id: string): void {
+    const attachment = this.pendingCommunityAttachments().find(item => item.id === id);
+    if (attachment) URL.revokeObjectURL(attachment.objectUrl);
+    this.pendingCommunityAttachments.update(items => items.filter(item => item.id !== id));
+  }
+
+  clearPendingCommunityAttachments(): void {
+    for (const attachment of this.pendingCommunityAttachments()) URL.revokeObjectURL(attachment.objectUrl);
+    this.pendingCommunityAttachments.set([]);
+  }
+
+  async sendPendingCommunityAttachments(): Promise<void> {
+    const attachments = this.pendingCommunityAttachments();
+    if (attachments.length === 0 || this.uploading() || this.concord.sending()) return;
+
+    this.uploading.set(true);
+
+    try {
+      for (const attachment of attachments) {
+        const sent = await this.uploadEncryptedFile(attachment.file, false);
+        if (!sent) return;
+      }
+      await this.send();
+      this.clearPendingCommunityAttachments();
+    } finally {
+      this.communityUploadStatus.set('');
+      this.uploading.set(false);
+    }
+  }
+
+  private async prepareCommunityAttachment(file: File, index: number): Promise<PendingCommunityAttachment> {
+    const isMedia = file.type.startsWith('image/') || file.type.startsWith('video/');
+    const prepared: PreparedUploadFile = isMedia
+      ? await this.mediaProcessing.prepareFileForUpload(file, this.communityUploadSettings(), progress => {
+        const suffix = progress.progress === undefined ? '' : ` ${Math.round(progress.progress * 100)}%`;
+        this.communityUploadStatus.set(`${progress.message}${suffix}`);
+      })
+      : { file, uploadOriginal: true, wasProcessed: false };
+
+    return {
+      id: `${Date.now()}-${index}-${file.name}`,
+      objectUrl: URL.createObjectURL(prepared.file),
+      file: prepared.file,
+      sourceFile: file,
+      type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'file',
+      originalSize: file.size,
+      processedSize: prepared.file.size,
+    };
+  }
+
+  private communityUploadSettings(): MediaUploadSettings {
+    return {
+      mode: this.communityMediaUploadMode(),
+      compressionStrength: this.communityCompressionStrength(),
+    };
+  }
+
+  private async uploadEncryptedFile(file: File, manageUploadState = true): Promise<boolean> {
+    if (!this.hasMediaServers()) return false;
+
+    if (manageUploadState) this.uploading.set(true);
 
     try {
       const sourceBytes = await this.mediaService.getFileBytes(file);
@@ -1262,10 +1399,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
       ]);
 
       this.appendToComposer(url);
+      return true;
     } catch (error) {
       this.snackBar.open(describe(error), 'Close', { duration: 6000 });
+      return false;
     } finally {
-      this.uploading.set(false);
+      if (manageUploadState) this.uploading.set(false);
     }
   }
 
