@@ -53,6 +53,9 @@ const STORAGE_KEY_SERVERS = 'nostria-nip29-servers-v1';
 const STORAGE_KEY_GROUPS = 'nostria-nip29-groups-v1';
 const STORAGE_KEY_INFO = 'nostria-nip29-relay-info-v1';
 
+/** Storage slot for a signed-out session, so nothing leaks into an account. */
+const ANONYMOUS_SLOT = 'anonymous';
+
 /** How long a cached group list stays fresh before we hit the relay again. */
 const GROUPS_TTL_MS = 10 * 60 * 1000;
 /** How long cached admin/member/role lists stay fresh. */
@@ -145,6 +148,9 @@ export class Nip29Service {
   /** Promise de-duplication for identical concurrent relay requests. */
   private readonly inflight = new Map<string, Promise<unknown>>();
 
+  /** Which account's storage slot is currently loaded. */
+  private activeSlot = '';
+
   /** Live subscriptions for the currently open channel. */
   private activeSubscriptions: Closeable[] = [];
   private activeGroupKey: string | null = null;
@@ -221,6 +227,21 @@ export class Nip29Service {
 
   constructor() {
     this.restoreServers();
+
+    // Server lists, saved groups and the "last opened" memory all belong to one
+    // account. Switching identities must therefore swap the whole set, not just
+    // stop refreshing it — otherwise the previous account's communities stay on
+    // screen for someone who never joined them.
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (this.activeSlot === (pubkey ?? ANONYMOUS_SLOT)) return;
+
+        this.activeSlot = pubkey ?? ANONYMOUS_SLOT;
+        this.resetForAccount();
+      });
+    });
 
     // The kind:10009 list arrives asynchronously (IndexedDB, then the relays).
     // Merge its relay hints into the rail whenever it changes so servers the
@@ -2016,11 +2037,40 @@ export class Nip29Service {
     return promise;
   }
 
+  /** Namespace a storage key to the signed-in account. */
+  private slotKey(key: string): string {
+    return `${key}:${this.accountState.pubkey() ?? ANONYMOUS_SLOT}`;
+  }
+
+  /**
+   * Drop every trace of the previous account and load the new one's state.
+   *
+   * Cached group metadata is public relay data and stays shared, but anything
+   * describing *this member* — their servers, memberships, open subscriptions
+   * and last-opened channel — is swapped wholesale.
+   */
+  private resetForAccount(): void {
+    this.closeSubscriptions();
+
+    this.groupsByServer.set({});
+    this.detailsByGroup.set({});
+    this.messagesByGroup.set({});
+    this.threadsByGroup.set({});
+    this.repliesByThread.set({});
+    this.membershipByGroup.set({});
+    this.timeline.clear();
+    this.exhaustedHistory.clear();
+    this.inflight.clear();
+    this.optionalStateUnsupported.clear();
+
+    this.restoreServers();
+  }
+
   private readJson<T>(key: string, fallback: T): T {
     if (!this.isBrowser) return fallback;
 
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(this.slotKey(key));
       return raw ? (JSON.parse(raw) as T) : fallback;
     } catch {
       return fallback;
@@ -2031,7 +2081,7 @@ export class Nip29Service {
     if (!this.isBrowser) return;
 
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(this.slotKey(key), JSON.stringify(value));
     } catch (error) {
       this.logger.debug('[NIP-29] Failed to write local cache', { key, error });
     }

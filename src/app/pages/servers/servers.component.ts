@@ -208,6 +208,9 @@ export class ServersComponent implements OnInit, OnDestroy {
   /** Bumped whenever service state changes so computed views re-evaluate. */
   private readonly revision = signal(0);
 
+  /** Tracks account switches; undefined until the first read. */
+  private lastAccount: string | null | undefined = undefined;
+
   readonly pubkey = computed(() => this.accountState.pubkey());
 
   /** Primary rail entities: the groups the user has joined. */
@@ -387,6 +390,26 @@ export class ServersComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Switching accounts must not leave another identity's group on screen.
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (this.lastAccount === pubkey) return;
+
+        const previous = this.lastAccount;
+        this.lastAccount = pubkey;
+
+        if (previous !== undefined) {
+          this.replyingTo.set(null);
+          this.activeThread.set(null);
+          this.revision.update(value => value + 1);
+
+          if (this.groupId()) void this.router.navigate(this.basePath());
+        }
+      });
+    });
+
     // Keep the URL, the loaded data and the mobile pane in sync.
     effect(() => {
       const slug = this.serverSlug();
@@ -515,6 +538,14 @@ export class ServersComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Namespace the remembered view and group to the signed-in account, so one
+   * identity never resumes into another's channel.
+   */
+  private slotKey(key: string): string {
+    return `${key}:${this.pubkey() ?? 'anonymous'}`;
+  }
+
   /** Persist the active view so re-opening this group returns to it. */
   private rememberView(view: ChannelView): void {
     const server = this.activeServer();
@@ -547,7 +578,7 @@ export class ServersComponent implements OnInit, OnDestroy {
     if (typeof localStorage === 'undefined') return fallback;
 
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(this.slotKey(key));
       return raw ? (JSON.parse(raw) as T) : fallback;
     } catch {
       return fallback;
@@ -558,7 +589,7 @@ export class ServersComponent implements OnInit, OnDestroy {
     if (typeof localStorage === 'undefined') return;
 
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(this.slotKey(key), JSON.stringify(value));
     } catch {
       // Storage is best-effort; losing the last view is not worth an error.
     }
@@ -1594,9 +1625,10 @@ export class ServersComponent implements OnInit, OnDestroy {
     if (!slug) {
       this.nip29.closeSubscriptions();
 
-      // Resume where the user left off instead of showing an empty shell.
+      // Resume where the user left off instead of showing an empty shell —
+      // but only if this account actually holds that server.
       const last = this.recallGroupLocation();
-      if (last) {
+      if (last && this.nip29.getServerBySlug(last.slug)) {
         void this.router.navigate([...this.basePath(), last.slug, last.groupId], {
           replaceUrl: true,
         });

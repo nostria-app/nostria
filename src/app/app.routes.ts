@@ -243,21 +243,21 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/encrypted/encrypted.component').then(m => m.EncryptedComponent),
     data: { isRoot: true },
-    title: 'Encrypted',
+    title: 'Private',
   },
   {
     path: 'c/:communityId',
     loadComponent: () =>
       import('./pages/encrypted/encrypted.component').then(m => m.EncryptedComponent),
     data: { isRoot: true },
-    title: 'Encrypted',
+    title: 'Private',
   },
   {
     path: 'c/:communityId/:channelId',
     loadComponent: () =>
       import('./pages/encrypted/encrypted.component').then(m => m.EncryptedComponent),
     data: { isRoot: true },
-    title: 'Encrypted',
+    title: 'Private',
   },
   // Short, shareable aliases for NIP-29 groups: /g/<relay-host>/<group-id>.
   // Other clients use the same shape (behind a hash), so links are portable.

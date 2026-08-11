@@ -81,6 +81,9 @@ import { CordGroupKey } from '../interfaces/concord';
 const STORAGE_KEY_COMMUNITIES = 'nostria-concord-communities-v1';
 const STORAGE_KEY_BROKER = 'nostria-concord-voice-broker-v1';
 
+/** Storage slot for a signed-out session. */
+const ANONYMOUS_SLOT = 'anonymous';
+
 /** How long a folded Control Plane stays fresh before a background refetch. */
 const CONTROL_TTL_MS = 5 * 60 * 1000;
 /** Messages fetched on first opening a channel. */
@@ -148,6 +151,9 @@ export class ConcordService {
   readonly sending = signal(false);
 
   private readonly inflight = new Map<string, Promise<unknown>>();
+
+  /** Which account's storage slot is currently loaded. */
+  private activeSlot = '';
   private activeSubscriptions: Closeable[] = [];
   private activeChannelKey: string | null = null;
 
@@ -163,12 +169,16 @@ export class ConcordService {
       const pubkey = this.accountState.pubkey();
 
       untracked(() => {
-        if (!pubkey) {
-          this.closeSubscriptions();
-          return;
-        }
+        const slot = pubkey ?? ANONYMOUS_SLOT;
+        if (this.activeSlot === slot) return;
 
-        void this.syncMemberships();
+        // Community keys are per-identity secrets. Switching accounts must
+        // unload the previous account's communities entirely, not merely stop
+        // refreshing them.
+        this.activeSlot = slot;
+        this.resetForAccount();
+
+        if (pubkey) void this.syncMemberships();
       });
     });
   }
@@ -1345,14 +1355,34 @@ export class ConcordService {
   // Persistence
   // ---------------------------------------------------------------------------
 
+  /** Namespace a storage key to the signed-in account. */
+  private slotKey(key: string): string {
+    return `${key}:${this.accountState.pubkey() ?? ANONYMOUS_SLOT}`;
+  }
+
+  /** Unload the previous account's state and load the new one's. */
+  private resetForAccount(): void {
+    this.closeSubscriptions();
+
+    this.communities.set([]);
+    this.controlByCommunity.set({});
+    this.messagesByChannel.set({});
+    this.membersByCommunity.set({});
+    this.controlFetchedAt.clear();
+    this.observed.clear();
+    this.inflight.clear();
+
+    this.restore();
+  }
+
   private restore(): void {
     if (!this.isBrowser) return;
 
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_COMMUNITIES);
-      if (raw) this.communities.set(JSON.parse(raw) as CordCommunity[]);
+      const raw = localStorage.getItem(this.slotKey(STORAGE_KEY_COMMUNITIES));
+      this.communities.set(raw ? (JSON.parse(raw) as CordCommunity[]) : []);
 
-      this.voiceBroker.set(localStorage.getItem(STORAGE_KEY_BROKER) ?? '');
+      this.voiceBroker.set(localStorage.getItem(this.slotKey(STORAGE_KEY_BROKER)) ?? '');
     } catch (error) {
       this.logger.warn('[Concord] Could not restore held communities', error);
     }
@@ -1366,7 +1396,7 @@ export class ConcordService {
     if (!this.isBrowser) return;
 
     try {
-      localStorage.setItem(STORAGE_KEY_BROKER, trimmed);
+      localStorage.setItem(this.slotKey(STORAGE_KEY_BROKER), trimmed);
     } catch (error) {
       this.logger.warn('[Concord] Could not persist the broker setting', error);
     }
@@ -1376,7 +1406,7 @@ export class ConcordService {
     if (!this.isBrowser) return;
 
     try {
-      localStorage.setItem(STORAGE_KEY_COMMUNITIES, JSON.stringify(this.communities()));
+      localStorage.setItem(this.slotKey(STORAGE_KEY_COMMUNITIES), JSON.stringify(this.communities()));
     } catch (error) {
       this.logger.warn('[Concord] Could not persist held communities', error);
     }

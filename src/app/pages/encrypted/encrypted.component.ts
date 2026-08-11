@@ -187,6 +187,9 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   /** Bumped after service mutations so derived views re-evaluate. */
   private readonly revision = signal(0);
 
+  /** Tracks account switches; undefined until the first read. */
+  private lastAccount: string | null | undefined = undefined;
+
   readonly pubkey = computed(() => this.accountState.pubkey());
 
   readonly communities = computed<CordCommunity[]>(() => {
@@ -427,6 +430,28 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // A community's keys belong to one identity, so switching accounts leaves
+    // the open community entirely rather than showing a stale one.
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (this.lastAccount === pubkey) return;
+
+        const previous = this.lastAccount;
+        this.lastAccount = pubkey;
+
+        if (previous !== undefined) {
+          this.replyingTo.set(null);
+          this.showJoin.set(false);
+          this.showCreate.set(false);
+          this.revision.update(value => value + 1);
+
+          if (this.communityId()) void this.router.navigate(['/c']);
+        }
+      });
+    });
+
     effect(() => {
       const community = this.communityId();
       const channel = this.channelId();
