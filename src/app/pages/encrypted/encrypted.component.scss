@@ -845,10 +845,11 @@ img.rail-avatar {
 // readable by collapsing its secondary member rail and tightening channels.
 :host-context(.dual-panel-layout.has-right-content) {
   .encrypted-page {
-    grid-template-columns: 72px 200px minmax(0, 1fr);
+    grid-template-columns: 72px 180px minmax(0, 1fr);
   }
 
-  .member-rail {
+  .member-rail,
+  .member-rail-toggle {
     display: none;
   }
 }

@@ -685,6 +685,27 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.revision.update(value => value + 1);
   }
 
+  async openReactionPicker(message: CordMessage): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'desktop-reaction-picker-dialog-panel'],
+      width: '400px',
+      data: {
+        title: 'React',
+        mode: 'reaction',
+        activeTab: 'emoji',
+        allowPreferredReactionShortcut: true,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((emoji: string | undefined) => {
+      if (emoji) void this.react(message, emoji);
+    });
+  }
+
   canDelete(message: CordMessage): boolean {
     return message.pubkey === this.pubkey();
   }

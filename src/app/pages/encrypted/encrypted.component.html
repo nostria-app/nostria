@@ -551,7 +551,8 @@
         <mat-icon [matBadge]="pins().length || null" matBadgeSize="small">push_pin</mat-icon>
       </button>
 
-      <button mat-icon-button type="button" [matTooltip]="showMemberRail() ? 'Hide members' : 'Show members'"
+      <button mat-icon-button type="button" class="member-rail-toggle"
+        [matTooltip]="showMemberRail() ? 'Hide members' : 'Show members'"
         (click)="showMemberRail.set(!showMemberRail())">
         <mat-icon>group</mat-icon>
       </button>
@@ -754,7 +755,7 @@
       }
 
       <div class="row-actions">
-        <button mat-icon-button type="button" matTooltip="React" (click)="react(message, '👍')">
+        <button mat-icon-button type="button" matTooltip="React" (click)="openReactionPicker(message)">
           <mat-icon>add_reaction</mat-icon>
         </button>
         <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
