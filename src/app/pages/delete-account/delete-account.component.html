@@ -279,7 +279,7 @@
 
     <div class="vanish-actions">
       <button mat-flat-button class="danger-button" (click)="requestToVanish()"
-        [disabled]="!isDeleteConfirmationValid() || !isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
+        [disabled]="!isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
         <span class="button-content">
           @if (deletionState() === 'vanishing') {
           <mat-icon class="spinning">sync</mat-icon>

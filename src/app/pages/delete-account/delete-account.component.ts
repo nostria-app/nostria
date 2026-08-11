@@ -387,11 +387,6 @@ export class DeleteAccountComponent implements OnInit {
       return;
     }
 
-    if (!this.isDeleteConfirmationValid()) {
-      this.showMessage('Please enter the confirmation text correctly');
-      return;
-    }
-
     if (!this.isVanishConfirmationValid()) {
       this.showMessage(`Please type "${this.vanishConfirmationPhrase}" to confirm vanish request`);
       return;
