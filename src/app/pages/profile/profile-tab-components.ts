@@ -1,0 +1,9 @@
+export { ProfileHomeComponent } from './profile-home/profile-home.component';
+export { ProfileNotesComponent } from './profile-notes/profile-notes.component';
+export { ProfileReadsComponent } from './profile-reads/profile-reads.component';
+export { ProfileMediaComponent } from './profile-media/profile-media.component';
+export { ProfileConnectionComponent } from './profile-connection/profile-connection.component';
+export { ProfileAboutComponent } from './profile-about/profile-about.component';
+export { FollowingComponent } from './following/following.component';
+export { ProfileRelaysComponent } from './profile-relays/profile-relays.component';
+export { ProfileBadgesComponent } from './profile-badges/profile-badges.component';

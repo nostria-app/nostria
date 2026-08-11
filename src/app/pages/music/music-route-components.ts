@@ -1,0 +1,13 @@
+export { MusicComponent } from './music.component';
+export { MusicOfflineComponent } from './music-offline/music-offline.component';
+export { MusicLikedComponent } from './music-liked/music-liked.component';
+export { MusicLikedPlaylistsComponent } from './music-liked-playlists/music-liked-playlists.component';
+export { MusicTracksComponent } from './music-tracks/music-tracks.component';
+export { MusicBookmarkPlaylistsComponent } from './music-bookmark-playlists/music-bookmark-playlists.component';
+export { MusicAlbumsComponent } from './music-albums/music-albums.component';
+export { ArtistsComponent } from './artists/artists.component';
+export { SongDetailComponent } from './song-detail/song-detail.component';
+export { MusicArtistComponent } from './music-artist/music-artist.component';
+export { MusicAlbumComponent } from './music-album/music-album.component';
+export { MusicBookmarkPlaylistComponent } from './music-bookmark-playlist/music-bookmark-playlist.component';
+export { MusicTermsComponent } from './music-terms/music-terms.component';

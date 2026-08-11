@@ -1,36 +1,60 @@
-import { Type } from '@angular/core';
+import type { Type } from '@angular/core';
+import { GeneralPreferencesSettingsComponent } from './general-preferences.component';
+import { ProfileSettingsComponent } from './profile-settings.component';
+import { AppearanceSettingsComponent } from './appearance-settings.component';
+import { MenuNavigationSettingsComponent } from './menu-navigation-settings.component';
+import { FeedContentSettingsComponent } from './feed-content-settings.component';
+import { RelaysNetworkSettingsComponent } from './relays-network-settings.component';
+import { TrustSettingsComponent } from './trust/trust.component';
+import { DatabaseSettingsComponent } from './database/database.component';
+import { LogsDebugSettingsComponent } from './logs-debug-settings.component';
+import { AdvancedPostingSettingsComponent } from './advanced-posting-settings.component';
+import { GeneralSettingsComponent } from './general/general.component';
+import { LayoutSettingsComponent } from './layout/layout.component';
+import { AlgorithmComponent } from './algorithm/algorithm';
+import { RelaysComponent } from './relays/relays.component';
+import { SearchSettingsComponent } from './search/search.component';
+import { PrivacySettingsComponent } from './privacy-settings/privacy-settings.component';
+import { BackupComponent } from './backup/backup.component';
+import { LogsSettingsComponent } from './logs-settings/logs-settings.component';
+import { AboutComponent } from './about/about.component';
+import { DebugSettingsComponent } from './debug/debug.component';
+import { DeleteEventComponent } from '../delete-event/delete-event.component';
+import { DeleteAccountComponent } from '../delete-account/delete-account.component';
+
+const resolveComponent = (component: Type<unknown>) => () => Promise.resolve(component);
 
 /**
- * Maps settings section IDs to their component types.
- * Used for lazy loading settings sections into the right panel.
- * 
+ * Maps settings section IDs to their component types behind the settings feature boundary.
+ * The asynchronous API keeps existing callers unchanged.
+ *
  * The IDs here must match the `id` field in SettingsRegistryService.sections
  */
 export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<unknown>>> = {
-  'general': () => import('./general-preferences.component').then(m => m.GeneralPreferencesSettingsComponent),
-  'profile': () => import('./profile-settings.component').then(m => m.ProfileSettingsComponent),
-  'appearance': () => import('./appearance-settings.component').then(m => m.AppearanceSettingsComponent),
-  'navigation': () => import('./menu-navigation-settings.component').then(m => m.MenuNavigationSettingsComponent),
-  'content': () => import('./feed-content-settings.component').then(m => m.FeedContentSettingsComponent),
-  'network': () => import('./relays-network-settings.component').then(m => m.RelaysNetworkSettingsComponent),
-  'web-of-trust': () => import('./trust/trust.component').then(m => m.TrustSettingsComponent),
-  'storage': () => import('./database/database.component').then(m => m.DatabaseSettingsComponent),
-  'logs-debug': () => import('./logs-debug-settings.component').then(m => m.LogsDebugSettingsComponent),
-  'advanced-posting': () => import('./advanced-posting-settings.component').then(m => m.AdvancedPostingSettingsComponent),
-  'legacy-general': () => import('./general/general.component').then(m => m.GeneralSettingsComponent),
-  'layout': () => import('./layout/layout.component').then(m => m.LayoutSettingsComponent),
-  'algorithm': () => import('./algorithm/algorithm').then(m => m.AlgorithmComponent),
-  'relays': () => import('./relays/relays.component').then(m => m.RelaysComponent),
-  'search': () => import('./search/search.component').then(m => m.SearchSettingsComponent),
-  'privacy': () => import('./privacy-settings/privacy-settings.component').then(m => m.PrivacySettingsComponent),
-  'trust': () => import('./trust/trust.component').then(m => m.TrustSettingsComponent),
-  'backup': () => import('./backup/backup.component').then(m => m.BackupComponent),
-  'database': () => import('./database/database.component').then(m => m.DatabaseSettingsComponent),
-  'logs': () => import('./logs-settings/logs-settings.component').then(m => m.LogsSettingsComponent),
-  'about': () => import('./about/about.component').then(m => m.AboutComponent),
-  'debug': () => import('./debug/debug.component').then(m => m.DebugSettingsComponent),
-  'delete-event': () => import('../delete-event/delete-event.component').then(m => m.DeleteEventComponent),
-  'delete-account': () => import('../delete-account/delete-account.component').then(m => m.DeleteAccountComponent),
+  'general': resolveComponent(GeneralPreferencesSettingsComponent),
+  'profile': resolveComponent(ProfileSettingsComponent),
+  'appearance': resolveComponent(AppearanceSettingsComponent),
+  'navigation': resolveComponent(MenuNavigationSettingsComponent),
+  'content': resolveComponent(FeedContentSettingsComponent),
+  'network': resolveComponent(RelaysNetworkSettingsComponent),
+  'web-of-trust': resolveComponent(TrustSettingsComponent),
+  'storage': resolveComponent(DatabaseSettingsComponent),
+  'logs-debug': resolveComponent(LogsDebugSettingsComponent),
+  'advanced-posting': resolveComponent(AdvancedPostingSettingsComponent),
+  'legacy-general': resolveComponent(GeneralSettingsComponent),
+  'layout': resolveComponent(LayoutSettingsComponent),
+  'algorithm': resolveComponent(AlgorithmComponent),
+  'relays': resolveComponent(RelaysComponent),
+  'search': resolveComponent(SearchSettingsComponent),
+  'privacy': resolveComponent(PrivacySettingsComponent),
+  'trust': resolveComponent(TrustSettingsComponent),
+  'backup': resolveComponent(BackupComponent),
+  'database': resolveComponent(DatabaseSettingsComponent),
+  'logs': resolveComponent(LogsSettingsComponent),
+  'about': resolveComponent(AboutComponent),
+  'debug': resolveComponent(DebugSettingsComponent),
+  'delete-event': resolveComponent(DeleteEventComponent),
+  'delete-account': resolveComponent(DeleteAccountComponent),
 };
 
 /**

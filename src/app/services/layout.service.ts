@@ -43,7 +43,6 @@ import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
 import { stripImageProxy } from '../utils/strip-image-proxy';
 import { RightPanelService } from './right-panel.service';
-import { getSettingsSectionComponent } from '../pages/settings/settings-section-components.map';
 import { PanelNavigationService } from './panel-navigation.service';
 import { ThreadedEvent } from './event';
 import type { ArticleEditorDialogInitialDraft } from '../components/article-editor-dialog/article-editor-dialog.component';
@@ -3231,15 +3230,12 @@ export class LayoutService implements OnDestroy {
       kind: event.kind,
     });
 
-    const componentLoader = getSettingsSectionComponent('delete-event');
-    if (componentLoader) {
-      const component = await componentLoader();
-      this.rightPanel.open({
-        component,
-        title: 'Delete Event',
-        inputs: { eventId: neventId },
-      });
-    }
+    const { DeleteEventComponent } = await import('../pages/delete-event/delete-event.component');
+    this.rightPanel.open({
+      component: DeleteEventComponent,
+      title: 'Delete Event',
+      inputs: { eventId: neventId },
+    });
   }
 
   toast(message: string, duration = 3000, panelClass = 'success-snackbar') {

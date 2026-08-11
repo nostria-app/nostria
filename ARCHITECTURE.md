@@ -893,6 +893,28 @@ For items with optional content (comments, metadata), use these techniques to ma
   unaffected and loads original URLs directly (no proxy load for feed thumbnails). Frontend entry
   point: `TauriImageService`. The full-resolution original is still used by the image viewer.
 
+### Feature Route Bundles
+
+Angular's application builder creates an ESM split point for every runtime `import()`. Features with
+many `loadComponent` routes can therefore emit many small browser chunks. Cohesive route screens can
+share one lazy feature boundary through a `*-route-components.ts` barrel that statically re-exports
+the feature's components:
+
+```typescript
+loadComponent: () =>
+  import('./pages/feature/feature-route-components').then(m => m.FeatureComponent);
+```
+
+- Keep the barrel feature-local and load it only from route loaders, so the homepage remains unaffected.
+- Group screens users reasonably navigate between within the same feature; do not create broad
+  application-wide route barrels.
+- Do not import a route bundle from eager services or application configuration. Import a specific
+  action component dynamically instead when an eager service needs it.
+- Keep named-outlet routes separate when sharing their barrel promotes feature code into the initial
+  `main` chunk.
+- Validate changes with `npm run build -- --stats-json`; chunk count must decrease without increasing
+  the initial transfer size.
+
 ### Route Reuse Strategy
 
 Custom `RouteReuseStrategy` preserves component state:

@@ -20,36 +20,36 @@ function createProfileChildren(): Routes {
     {
       path: '',
       loadComponent: () =>
-        import('./pages/profile/profile-home/profile-home.component').then(m => m.ProfileHomeComponent),
+        import('./pages/profile/profile-tab-components').then(m => m.ProfileHomeComponent),
       children: [
         {
           path: '',
           loadComponent: () =>
-            import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+            import('./pages/profile/profile-tab-components').then(m => m.ProfileNotesComponent),
           title: 'Timeline',
         },
         {
           path: 'notes',
           loadComponent: () =>
-            import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+            import('./pages/profile/profile-tab-components').then(m => m.ProfileNotesComponent),
           title: 'Timeline',
         },
         {
           path: 'articles',
           loadComponent: () =>
-            import('./pages/profile/profile-reads/profile-reads.component').then(m => m.ProfileReadsComponent),
+            import('./pages/profile/profile-tab-components').then(m => m.ProfileReadsComponent),
           title: 'Articles',
         },
         {
           path: 'media',
           loadComponent: () =>
-            import('./pages/profile/profile-media/profile-media.component').then(m => m.ProfileMediaComponent),
+            import('./pages/profile/profile-tab-components').then(m => m.ProfileMediaComponent),
           title: 'Media',
         },
         {
           path: 'connection',
           loadComponent: () =>
-            import('./pages/profile/profile-connection/profile-connection.component').then(m => m.ProfileConnectionComponent),
+            import('./pages/profile/profile-tab-components').then(m => m.ProfileConnectionComponent),
           title: 'Connection',
         },
       ],
@@ -57,26 +57,26 @@ function createProfileChildren(): Routes {
     {
       path: 'about',
       loadComponent: () =>
-        import('./pages/profile/profile-about/profile-about.component').then(m => m.ProfileAboutComponent),
+        import('./pages/profile/profile-tab-components').then(m => m.ProfileAboutComponent),
       data: { isRoot: true },
       title: 'About',
     },
     {
       path: 'following',
       loadComponent: () =>
-        import('./pages/profile/following/following.component').then(m => m.FollowingComponent),
+        import('./pages/profile/profile-tab-components').then(m => m.FollowingComponent),
       title: 'Following',
     },
     {
       path: 'relays',
       loadComponent: () =>
-        import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
+        import('./pages/profile/profile-tab-components').then(m => m.ProfileRelaysComponent),
       title: 'Relays',
     },
     {
       path: 'badges',
       loadComponent: () =>
-        import('./pages/profile/profile-badges/profile-badges.component').then(m => m.ProfileBadgesComponent),
+        import('./pages/profile/profile-tab-components').then(m => m.ProfileBadgesComponent),
       title: 'Badges',
     },
     {
@@ -328,25 +328,25 @@ export const routes: Routes = [
   {
     path: 'discover',
     loadComponent: () =>
-      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+      import('./pages/discover/discover-route-components').then(m => m.DiscoverComponent),
     title: 'Discover',
   },
   {
     path: 'discover/media',
     loadComponent: () =>
-      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+      import('./pages/discover/discover-route-components').then(m => m.DiscoverComponent),
     title: 'Discover Media',
   },
   {
     path: 'discover/content/:category',
     loadComponent: () =>
-      import('./pages/discover/discover-category/discover-category.component').then(m => m.DiscoverCategoryComponent),
+      import('./pages/discover/discover-route-components').then(m => m.DiscoverCategoryComponent),
     title: 'Discover Content',
   },
   {
     path: 'discover/media/:category',
     loadComponent: () =>
-      import('./pages/discover/discover-category/discover-category.component').then(m => m.DiscoverCategoryComponent),
+      import('./pages/discover/discover-route-components').then(m => m.DiscoverCategoryComponent),
     title: 'Discover Media',
   },
   {
@@ -359,98 +359,98 @@ export const routes: Routes = [
   {
     path: 'music',
     loadComponent: () =>
-      import('./pages/music/music.component').then(m => m.MusicComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicComponent),
     data: { isRoot: true },
     title: 'Music',
   },
   {
     path: 'music/offline',
     loadComponent: () =>
-      import('./pages/music/music-offline/music-offline.component').then(m => m.MusicOfflineComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicOfflineComponent),
     title: 'Offline Music',
   },
   {
     path: 'music/liked',
     loadComponent: () =>
-      import('./pages/music/music-liked/music-liked.component').then(m => m.MusicLikedComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicLikedComponent),
     title: 'Liked Songs',
   },
   {
     path: 'music/liked-playlists',
     loadComponent: () =>
-      import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicLikedPlaylistsComponent),
     title: 'Liked Albums',
   },
   {
     path: 'music/tracks',
     loadComponent: () =>
-      import('./pages/music/music-tracks/music-tracks.component').then(m => m.MusicTracksComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicTracksComponent),
     title: 'All Songs',
   },
   {
     path: 'music/playlists',
     loadComponent: () =>
-      import('./pages/music/music-bookmark-playlists/music-bookmark-playlists.component').then(m => m.MusicBookmarkPlaylistsComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicBookmarkPlaylistsComponent),
     title: 'All Playlists',
   },
   {
     path: 'music/albums',
     loadComponent: () =>
-      import('./pages/music/music-albums/music-albums.component').then(m => m.MusicAlbumsComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicAlbumsComponent),
     title: 'All Albums',
   },
   {
     path: 'music/artists',
     loadComponent: () =>
-      import('./pages/music/artists/artists.component').then(m => m.ArtistsComponent),
+      import('./pages/music/music-route-components').then(m => m.ArtistsComponent),
     title: 'Artists',
   },
   {
     path: 'music/song/:encodedAddress',
     loadComponent: () =>
-      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+      import('./pages/music/music-route-components').then(m => m.SongDetailComponent),
     resolve: { data: DataResolver },
     title: 'Song',
   },
   {
     path: 'music/song/:pubkey/:identifier',
     loadComponent: () =>
-      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+      import('./pages/music/music-route-components').then(m => m.SongDetailComponent),
     resolve: { data: DataResolver },
     title: 'Song',
   },
   {
     path: 'music/artist/:pubkey',
     loadComponent: () =>
-      import('./pages/music/music-artist/music-artist.component').then(m => m.MusicArtistComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicArtistComponent),
     resolve: { data: DataResolver },
     title: 'Artist',
   },
   {
     path: 'music/album/:encodedAddress',
     loadComponent: () =>
-      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicAlbumComponent),
     resolve: { data: DataResolver },
     title: 'Album',
   },
   {
     path: 'music/album/:pubkey/:identifier',
     loadComponent: () =>
-      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicAlbumComponent),
     resolve: { data: DataResolver },
     title: 'Album',
   },
   {
     path: 'music/playlist/:pubkey/:identifier',
     loadComponent: () =>
-      import('./pages/music/music-bookmark-playlist/music-bookmark-playlist.component').then(m => m.MusicBookmarkPlaylistComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicBookmarkPlaylistComponent),
     resolve: { data: DataResolver },
     title: 'Playlist',
   },
   {
     path: 'music/terms',
     loadComponent: () =>
-      import('./pages/music/music-terms/music-terms.component').then(m => m.MusicTermsComponent),
+      import('./pages/music/music-route-components').then(m => m.MusicTermsComponent),
     title: 'Music Terms of Service',
   },
   {
@@ -481,30 +481,30 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./pages/communities/communities.component').then(m => m.CommunitiesComponent),
+          import('./pages/communities/community-route-components').then(m => m.CommunitiesComponent),
       },
       {
         path: 'create',
         loadComponent: () =>
-          import('./pages/communities/create-community/create-community.component').then(m => m.CreateCommunityComponent),
+          import('./pages/communities/community-route-components').then(m => m.CreateCommunityComponent),
         title: 'Create Community',
       },
       {
         path: 'edit/:naddr',
         loadComponent: () =>
-          import('./pages/communities/create-community/create-community.component').then(m => m.CreateCommunityComponent),
+          import('./pages/communities/community-route-components').then(m => m.CreateCommunityComponent),
         title: 'Edit Community',
       },
       {
         path: ':naddr/post',
         loadComponent: () =>
-          import('./pages/community/create-post/create-post.component').then(m => m.CreatePostComponent),
+          import('./pages/communities/community-route-components').then(m => m.CreatePostComponent),
         title: 'Create Post',
       },
       {
         path: ':naddr',
         loadComponent: () =>
-          import('./pages/community/community.component').then(m => m.CommunityComponent),
+          import('./pages/communities/community-route-components').then(m => m.CommunityComponent),
         title: 'Community',
       },
     ],
@@ -534,32 +534,32 @@ export const routes: Routes = [
   {
     path: 'polls',
     loadComponent: () =>
-      import('./pages/polls/polls.component').then(m => m.PollsComponent),
+      import('./pages/polls/poll-route-components').then(m => m.PollsComponent),
     title: 'Polls',
   },
   {
     path: 'polls/edit/:id',
     loadComponent: () =>
-      import('./pages/polls/poll-editor/poll-editor.component').then(m => m.PollEditorComponent),
+      import('./pages/polls/poll-route-components').then(m => m.PollEditorComponent),
     title: 'Edit Poll',
   },
   {
     path: 'notifications',
     loadComponent: () =>
-      import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent),
+      import('./pages/notifications/notification-route-components').then(m => m.NotificationsComponent),
     title: 'Notifications',
   },
   {
     path: 'notifications/settings',
     loadComponent: () =>
-      import('./pages/notifications/settings/settings.component').then(
+      import('./pages/notifications/notification-route-components').then(
         m => m.NotificationSettingsComponent
       ),
   },
   {
     path: 'notifications/manage',
     loadComponent: () =>
-      import('./pages/notifications/manage/manage.component').then(m => m.NotificationManageComponent),
+      import('./pages/notifications/notification-route-components').then(m => m.NotificationManageComponent),
   },
   {
     path: 'search',
@@ -598,28 +598,28 @@ export const routes: Routes = [
     path: 'collections',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/collections/collections.component').then(m => m.CollectionsComponent),
+      import('./pages/collections/collection-route-components').then(m => m.CollectionsComponent),
     title: 'Collections',
   },
   {
     path: 'collections/bookmarks',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
+      import('./pages/collections/collection-route-components').then(m => m.BookmarksComponent),
     title: 'Bookmarks',
   },
   {
     path: 'collections/web',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/collections/web-bookmarks/web-bookmarks.component').then(m => m.WebBookmarksComponent),
+      import('./pages/collections/collection-route-components').then(m => m.WebBookmarksComponent),
     title: 'Social Bookmarks',
   },
   {
     path: 'collections/web/:pubkey',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/collections/web-bookmarks/web-bookmarks.component').then(m => m.WebBookmarksComponent),
+      import('./pages/collections/collection-route-components').then(m => m.WebBookmarksComponent),
     title: 'Social Bookmarks',
   },
   {
@@ -805,20 +805,20 @@ export const routes: Routes = [
   {
     path: 'people',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
+    loadComponent: () => import('./pages/people/people-route-components').then(m => m.PeopleComponent),
     title: 'People',
   },
   {
     path: 'people/list/:setId',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
+    loadComponent: () => import('./pages/people/people-route-components').then(m => m.PeopleComponent),
     title: 'People',
   },
   {
     path: 'people/discover',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/people/discover/discover-people.component').then(m => m.DiscoverPeopleComponent),
+      import('./pages/people/people-route-components').then(m => m.DiscoverPeopleComponent),
     title: 'Discover People',
   },
   {
@@ -830,37 +830,37 @@ export const routes: Routes = [
   {
     path: 'collections/relays',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/relay-sets/relay-sets.component').then(m => m.RelaySetsComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.RelaySetsComponent),
     title: 'Relays',
   },
   {
     path: 'collections/emojis',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/emoji-sets/emoji-sets.component').then(m => m.EmojiSetsComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.EmojiSetsComponent),
     title: 'Emojis',
   },
   {
     path: 'collections/interests',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/interest-sets/interest-sets.component').then(m => m.InterestSetsComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.InterestSetsComponent),
     title: 'Interests',
   },
   {
     path: 'collections/follow-packs',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/follow-packs/follow-packs.component').then(m => m.FollowPacksComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.FollowPacksComponent),
     title: 'Follow Packs',
   },
   {
     path: 'collections/boards',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/boards/boards.component').then(m => m.BoardsComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.BoardsComponent),
     title: 'Boards',
   },
   {
     path: 'collections/boards/:kind/:identifier',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/collections/boards/board-detail/board-detail.component').then(m => m.BoardDetailComponent),
+    loadComponent: () => import('./pages/collections/collection-route-components').then(m => m.BoardDetailComponent),
     title: 'Board',
   },
 
