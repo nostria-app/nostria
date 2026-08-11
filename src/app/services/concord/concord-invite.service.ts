@@ -13,6 +13,7 @@ import {
   CORD_KIND_DIRECT_INVITE,
   CORD_KIND_INVITE_BUNDLE,
   CORD_MAX_FRAGMENT_RELAYS,
+  CordBlobPointer,
   CordCommunity,
   CordInviteBundle,
   PERM_CREATE_INVITE,
@@ -26,6 +27,10 @@ import { CordControlState } from './concord-control';
 
 /** Where minted links point by default; any base opens the same invite. */
 const DEFAULT_INVITE_BASE = 'https://nostria.app';
+
+function asBlobPointer(icon: CordBlobPointer | string | undefined): CordBlobPointer | undefined {
+  return typeof icon === 'string' ? undefined : icon;
+}
 
 /**
  * CORD-05 invite minting.
@@ -84,7 +89,7 @@ export class ConcordInviteService {
       channels: params.channels ?? [],
       relays: community.relays,
       name: state.metadata?.name ?? community.name,
-      icon: state.metadata?.icon,
+      icon: asBlobPointer(state.metadata?.icon),
       expires_at: params.expiresAt,
       creator_npub: creator,
       label: params.label,
@@ -237,7 +242,7 @@ export class ConcordInviteService {
       channels: params.channels ?? [],
       relays: community.relays,
       name: state.metadata?.name ?? community.name,
-      icon: state.metadata?.icon,
+      icon: asBlobPointer(state.metadata?.icon),
       expires_at: params.expiresAt,
       creator_npub: inviter,
     };

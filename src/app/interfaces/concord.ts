@@ -274,8 +274,8 @@ export interface CordCommunityMetadata {
   name: string;
   description?: string;
   relays?: string[];
-  icon?: CordBlobPointer;
-  banner?: CordBlobPointer;
+  icon?: CordBlobPointer | string;
+  banner?: CordBlobPointer | string;
   /** Disappearing-messages timer in seconds; absent or 0 means off (CORD-08). */
   message_expiration?: number;
   custom?: Record<string, unknown>;

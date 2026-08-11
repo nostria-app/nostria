@@ -304,6 +304,11 @@
             was sent under. Control and membership history never expire.
           </p>
 
+          <app-image-input label="Community icon" shape="circle" [(value)]="settingsIconUrl"
+            (valueChange)="settingsIconChanged.set(true)" />
+          <app-image-input label="Community banner" shape="wide" [(value)]="settingsBannerUrl"
+            (valueChange)="settingsBannerChanged.set(true)" />
+
           <div class="actions">
             <button mat-flat-button type="button" [disabled]="busy()" (click)="saveSettings()">
               Save
@@ -401,13 +406,22 @@
           <div class="admin-row">
             <mat-form-field appearance="outline" class="grow">
               <mat-label>npub or hex key</mat-label>
-              <input matInput [ngModel]="directInvitePubkey()" (ngModelChange)="directInvitePubkey.set($event)" />
+              <input matInput [ngModel]="directInvitePubkey()" (ngModelChange)="searchDirectInviteProfiles($event)" />
             </mat-form-field>
             <button mat-flat-button type="button" [disabled]="!directInvitePubkey().trim() || busy()"
               (click)="sendDirectInvite()">
               Send
             </button>
           </div>
+          @if (directInviteProfiles().length > 0) {
+          <div class="results-list">
+            @for (profile of directInviteProfiles(); track profile) {
+            <button mat-button type="button" class="search-result-item" (click)="selectDirectInviteProfile(profile)">
+              <app-user-profile [pubkey]="profile" view="list" [disableLink]="true" />
+            </button>
+            }
+          </div>
+          }
         </section>
         }
 
@@ -893,8 +907,8 @@
 </div>
 
 @if (showDissolveConfirmation()) {
-<app-custom-dialog title="Dissolve this community?" headerIcon="gavel" [disableClose]="true"
-  [disableEnterSubmit]="true" (closed)="showDissolveConfirmation.set(false)">
+<app-custom-dialog title="Dissolve this community?" headerIcon="gavel" [disableClose]="true" [disableEnterSubmit]="true"
+  (closed)="showDissolveConfirmation.set(false)">
   <div dialog-content>
     <p>This permanently makes the community read-only for every member, including you.</p>
     <p>Existing history remains readable, but this cannot be undone.</p>

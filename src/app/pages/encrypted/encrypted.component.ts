@@ -34,6 +34,7 @@ import { MessageContentComponent } from '../../components/message-content/messag
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
 import { CustomDialogComponent } from '../../components/custom-dialog/custom-dialog.component';
+import { ImageInputComponent } from '../../components/image-input/image-input.component';
 import { MediaService } from '../../services/media.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -48,6 +49,8 @@ import {
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
+import { DatabaseService } from '../../services/database.service';
+import { FollowingService } from '../../services/following.service';
 import { ConcordService } from '../../services/concord.service';
 import { ConcordAdminService } from '../../services/concord/concord-admin.service';
 import { ConcordInviteService } from '../../services/concord/concord-invite.service';
@@ -115,6 +118,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
     SocialPreviewComponent,
     EmojiPickerComponent,
     CustomDialogComponent,
+    ImageInputComponent,
   ],
   templateUrl: './encrypted.component.html',
   styleUrl: './encrypted.component.scss',
@@ -132,6 +136,8 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private readonly mediaService = inject(MediaService);
   private readonly mediaProcessing = inject(MediaProcessingService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly database = inject(DatabaseService);
+  private readonly following = inject(FollowingService);
 
   readonly layout = inject(LayoutService);
   readonly concord = inject(ConcordService);
@@ -173,8 +179,13 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   readonly settingsName = signal('');
   readonly settingsDescription = signal('');
   readonly settingsTimer = signal(0);
+  readonly settingsIconUrl = signal('');
+  readonly settingsBannerUrl = signal('');
+  readonly settingsIconChanged = signal(false);
+  readonly settingsBannerChanged = signal(false);
   readonly inviteResult = signal<string | null>(null);
   readonly directInvitePubkey = signal('');
+  readonly directInviteProfiles = signal<string[]>([]);
   readonly busy = signal(false);
   readonly brokerInput = signal('');
   readonly refounding = signal(false);
@@ -807,6 +818,10 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.settingsName.set(metadata?.name ?? this.communityName());
     this.settingsDescription.set(metadata?.description ?? '');
     this.settingsTimer.set(metadata?.message_expiration ?? 0);
+    this.settingsIconUrl.set(typeof metadata?.icon === 'string' ? metadata.icon : '');
+    this.settingsBannerUrl.set(typeof metadata?.banner === 'string' ? metadata.banner : '');
+    this.settingsIconChanged.set(false);
+    this.settingsBannerChanged.set(false);
     this.brokerInput.set(this.concord.voiceBroker());
     this.setView('settings');
   }
@@ -819,12 +834,17 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.busy.set(true);
 
     try {
-      await this.admin.updateMetadata(community, state, {
+      const metadata = {
         ...(state.metadata ?? { name: this.settingsName() }),
         name: this.settingsName().trim(),
         description: this.settingsDescription().trim(),
         message_expiration: this.settingsTimer() || 0,
-      });
+      };
+
+      if (this.settingsIconChanged()) metadata.icon = this.settingsIconUrl() || undefined;
+      if (this.settingsBannerChanged()) metadata.banner = this.settingsBannerUrl() || undefined;
+
+      await this.admin.updateMetadata(community, state, metadata);
 
       await this.concord.loadCommunity(community.communityId, true);
       this.revision.update(value => value + 1);
@@ -1063,6 +1083,29 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  async searchDirectInviteProfiles(query: string): Promise<void> {
+    this.directInvitePubkey.set(query);
+    const trimmed = query.trim();
+
+    if (!trimmed || this.toHexPubkey(trimmed)) {
+      this.directInviteProfiles.set([]);
+      return;
+    }
+
+    const following = this.following
+      .toNostrRecords(this.following.searchProfiles(trimmed))
+      .map(profile => profile.event.pubkey);
+    const cached = await this.database.searchCachedProfiles(trimmed);
+
+    if (this.directInvitePubkey().trim() !== trimmed) return;
+    this.directInviteProfiles.set([...new Set([...following, ...cached.map(profile => profile.pubkey)])].slice(0, 8));
+  }
+
+  selectDirectInviteProfile(pubkey: string): void {
+    this.directInvitePubkey.set(pubkey);
+    this.directInviteProfiles.set([]);
   }
 
   private toHexPubkey(value: string): string | null {

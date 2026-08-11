@@ -391,12 +391,12 @@ export class ConcordService {
       return list.map(entry =>
         entry.communityId === community.communityId
           ? {
-              ...community,
-              controlRoot: community.controlRoot ?? entry.controlRoot,
-              channelKeys: mergeChannelKeys(entry.channelKeys, community.channelKeys),
-              rootEpoch: Math.max(entry.rootEpoch, community.rootEpoch),
-              addedAt: entry.addedAt,
-            }
+            ...community,
+            controlRoot: community.controlRoot ?? entry.controlRoot,
+            channelKeys: mergeChannelKeys(entry.channelKeys, community.channelKeys),
+            rootEpoch: Math.max(entry.rootEpoch, community.rootEpoch),
+            addedAt: entry.addedAt,
+          }
           : entry
       );
     });
@@ -1440,11 +1440,11 @@ export class ConcordService {
             current.map(entry =>
               entry.communityId === community.communityId
                 ? {
-                    ...community,
-                    controlRoot: community.controlRoot ?? existing.controlRoot,
-                    channelKeys: mergeChannelKeys(existing.channelKeys, community.channelKeys),
-                    addedAt: existing.addedAt,
-                  }
+                  ...community,
+                  controlRoot: community.controlRoot ?? existing.controlRoot,
+                  channelKeys: mergeChannelKeys(existing.channelKeys, community.channelKeys),
+                  addedAt: existing.addedAt,
+                }
                 : entry
             )
           );

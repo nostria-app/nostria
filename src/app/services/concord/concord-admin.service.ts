@@ -374,11 +374,14 @@ export class ConcordAdminService {
     if (pubkey !== community.owner) throw new Error('Only the community owner can dissolve it');
     if (state.dissolved) return;
 
-    await this.publishEdition(community, state, {
+    const edition = await this.publishEdition(community, state, {
       vsk: VSK_DISSOLVED,
       eid: community.communityId,
       content: '{}',
     });
+
+    state.dissolved = true;
+    state.heads.set(`${edition.vsk}:${edition.eid}`, edition);
   }
 
   async renameChannel(
