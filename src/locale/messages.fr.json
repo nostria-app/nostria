@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Relais de messages\n",
     "settings.relays.message-relays-description": "Relais utilisés pour recevoir des messages directs (NIP-17)\n",
     "settings.relays.no-message-relays": "Aucun relais de message configuré. Synchronisez avec les relais de votre compte ou ajoutez-en un manuellement.\n",
-    "settings.relays.sync-with-account": "Synchronisation avec les relais de compte\n",
     "settings.relays.add-message-relay-url": "URL du relais (wss://...)\n",
     "settings.relays.deprecated.title": "Avertissement de dépréciation",
     "settings.relays.deprecated.description": "Votre liste de suivis contient une liste de relais. Ceci est déprécié dans le protocole.",

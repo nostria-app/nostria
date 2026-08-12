@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Релеји за поруке",
     "settings.relays.message-relays-description": "Релеји који се користе за пријем директних порука (НИП-17)",
     "settings.relays.no-message-relays": "Нема конфигурисаних релеја порука. Синхронизујте са релејима налога или их додајте ручно.",
-    "settings.relays.sync-with-account": "Синхронизујте са релејима налога",
     "settings.relays.add-message-relay-url": "Релеј УРЛ (всс://...)",
     "settings.relays.deprecated.title": "Upozorenje o zastarjelosti",
     "settings.relays.deprecated.description": "Vaša lista praćenja sadrži listu releja. Ovo je zastarjelo u protokolu.",

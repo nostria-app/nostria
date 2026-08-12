@@ -37,6 +37,7 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
 import { PinPromptService } from './pin-prompt.service';
 import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
+import { DEFAULT_DM_RELAYS } from './relays/default-dm-relays';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
@@ -2546,8 +2547,8 @@ export class NostrService implements NostriaService {
     await this.database.saveEvent(signedMediaEvent);
     await this.accountRelay.publish(signedMediaEvent);
 
-    // Create and publish DM Relay List event
-    const relayDMTags = this.createTags('relay', signupRelayUrls);
+    // Create and publish DM Relay List event (auth-friendly NIP-17 inbox relays)
+    const relayDMTags = this.createTags('relay', [...DEFAULT_DM_RELAYS]);
 
     const relayDMListEvent: UnsignedEvent = {
       pubkey: user.pubkey,

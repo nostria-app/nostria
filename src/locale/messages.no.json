@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Meldingsreleer\n",
     "settings.relays.message-relays-description": "Reléer som brukes til å motta direktemeldinger (NIP-17)\n",
     "settings.relays.no-message-relays": "Ingen meldingsreléer konfigurert. Synkroniser med kontoreléene dine eller legg til en manuelt.\n",
-    "settings.relays.sync-with-account": "Synkroniser med kontoreléer\n",
     "settings.relays.add-message-relay-url": "Relé URL (wss://...)\n",
     "settings.relays.deprecated.title": "Foreldet advarsel",
     "settings.relays.deprecated.description": "Følgelisten din inneholder en liste med reléer. Dette er foreldet i protokollen.",

@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "รีเลย์ข้อความ\n",
     "settings.relays.message-relays-description": "รีเลย์ที่ใช้สำหรับรับข้อความโดยตรง (NIP-17)\n",
     "settings.relays.no-message-relays": "ไม่มีการกำหนดค่าการส่งต่อข้อความ ซิงค์กับรีเลย์บัญชีของคุณหรือเพิ่มด้วยตนเอง\n",
-    "settings.relays.sync-with-account": "ซิงค์กับรีเลย์บัญชี\n",
     "settings.relays.add-message-relay-url": "URL รีเลย์ (wss://...)\n",
     "settings.relays.deprecated.title": "คำเตือนที่เลิกใช้แล้ว\n",
     "settings.relays.deprecated.description": "รายการต่อไปนี้ของคุณประกอบด้วยรายการรีเลย์ {$INTERPOLATION} สิ่งนี้เลิกใช้แล้วในโปรโตคอล",

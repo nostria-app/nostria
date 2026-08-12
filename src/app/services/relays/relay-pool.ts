@@ -291,7 +291,9 @@ export class RelayPoolService {
     }
 
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+      allowAuthRequired: options.auth === true,
+    });
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute get');
       return null;
@@ -320,7 +322,9 @@ export class RelayPoolService {
       try {
         let event = await this.#pool.get(filteredUrls, filter, {
           maxWait: timeoutMs,
-          ...(options.auth ? { onauth: this.relayAuth.getAuthCallback() } : {}),
+          ...(options.auth
+            ? { onauth: this.relayAuth.getAuthCallback({ force: true }) }
+            : {}),
         });
 
         // Filter event through centralized processor (expiration, deletion, muting)
@@ -384,7 +388,9 @@ export class RelayPoolService {
     }
 
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+      allowAuthRequired: options.auth === true,
+    });
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute query');
       return [];
@@ -413,7 +419,9 @@ export class RelayPoolService {
       try {
         let events = await this.#pool.querySync(filteredUrls, filter, {
           maxWait: timeoutMs,
-          ...(options.auth ? { onauth: this.relayAuth.getAuthCallback() } : {}),
+          ...(options.auth
+            ? { onauth: this.relayAuth.getAuthCallback({ force: true }) }
+            : {}),
         });
 
         // Filter events through centralized processor (expiration, deletion, muting)
@@ -461,8 +469,16 @@ export class RelayPoolService {
 
   /**
    * Subscribe to events
+   *
+   * @param options.auth Force NIP-42 authentication for this subscription
+   * (required for AUTH-gated inbox relays used by NIP-17 DMs).
    */
-  subscribe(relayUrls: string[], filter: Filter, onEvent: (event: Event) => void) {
+  subscribe(
+    relayUrls: string[],
+    filter: Filter,
+    onEvent: (event: Event) => void,
+    options: { auth?: boolean } = {}
+  ) {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'subscribe');
 
     // Filter out insecure ws:// relays - they cannot be used from secure context
@@ -477,7 +493,9 @@ export class RelayPoolService {
     }
 
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+      allowAuthRequired: options.auth === true,
+    });
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot subscribe');
       return {
@@ -533,7 +551,9 @@ export class RelayPoolService {
     });
 
     // Get auth callback for NIP-42 authentication
-    const authCallback = this.relayAuth.getAuthCallback();
+    const authCallback = this.relayAuth.getAuthCallback(
+      options.auth ? { force: true } : undefined
+    );
     let manuallyClosed = false;
     let unregistered = false;
 
@@ -607,8 +627,14 @@ export class RelayPoolService {
    * @param relayUrls Array of relay URLs to publish to
    * @param event Event to publish
    * @param timeoutMs Timeout in milliseconds (default: 10000)
+   * @param options.auth Force NIP-42 authentication for this publish
    */
-  async publish(relayUrls: string[], event: Event, timeoutMs = 10000): Promise<void> {
+  async publish(
+    relayUrls: string[],
+    event: Event,
+    timeoutMs = 10000,
+    options: { auth?: boolean } = {}
+  ): Promise<void> {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publish');
 
     if (connectableRelayUrls.length === 0) {
@@ -616,7 +642,9 @@ export class RelayPoolService {
     }
 
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
+      allowAuthRequired: options.auth === true,
+    });
     if (filteredUrls.length === 0) {
       if (connectableRelayUrls.length === 1) {
         throw new Error(`${connectableRelayUrls[0]}: relay unavailable for publishing at the moment`);
@@ -629,7 +657,9 @@ export class RelayPoolService {
     this.addRelays(filteredUrls);
 
     // Get auth callback for NIP-42 authentication
-    const authCallback = this.relayAuth.getAuthCallback();
+    const authCallback = this.relayAuth.getAuthCallback(
+      options.auth ? { force: true } : undefined
+    );
 
     try {
       const publishPromises = this.#pool.publish(filteredUrls, event, { onauth: authCallback });
@@ -654,7 +684,7 @@ export class RelayPoolService {
         return await Promise.allSettled(publishPromises);
       });
 
-      const relayResults = this.handlePublishResults(filteredUrls, results);
+      const relayResults = this.handlePublishResults(filteredUrls, results, !!authCallback);
       if (relayResults.length === 1 && !relayResults[0].success) {
         throw new Error(relayResults[0].error || `Failed to publish to ${relayResults[0].relayUrl}`);
       }
@@ -677,25 +707,36 @@ export class RelayPoolService {
    * Use this when callers need to track individual relay publish results
    * (e.g. to display per-relay notifications).  The caller receives the raw
    * promises and is responsible for handling rejections.
+   *
+   * @param options.auth Force NIP-42 authentication (required for AUTH inbox relays).
    */
-  publishWithTracking(relayUrls: string[], event: Event): Promise<string>[] {
+  publishWithTracking(
+    relayUrls: string[],
+    event: Event,
+    options: { auth?: boolean } = {}
+  ): Promise<string>[] {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publishWithTracking');
     const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
       return [];
     }
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+      allowAuthRequired: options.auth === true,
+    });
     if (filteredUrls.length === 0) {
       return [];
     }
     this.addRelays(filteredUrls);
-    const authCallback = this.relayAuth.getAuthCallback();
+    const authCallback = this.relayAuth.getAuthCallback(
+      options.auth ? { force: true } : undefined
+    );
     return this.#pool.publish(filteredUrls, event, { onauth: authCallback });
   }
 
   private handlePublishResults(
     relayUrls: string[],
-    results: PromiseSettledResult<string>[]
+    results: PromiseSettledResult<string>[],
+    authAttempted = false
   ): PublishRelayResult[] {
     return results.map((result, index) => {
       const relayUrl = relayUrls[index];
@@ -714,7 +755,12 @@ export class RelayPoolService {
         reason: errorMsg,
       });
 
-      if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
+      // Only blacklist after an actual AUTH attempt failed. Without a callback,
+      // auth-required rejects are expected and must not permanently exclude the relay.
+      if (
+        authAttempted &&
+        (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:'))
+      ) {
         this.relayAuth.markAuthFailed(relayUrl, errorMsg);
       }
 

@@ -210,4 +210,68 @@ describe('RelayPoolService request queue', () => {
     expect(relaysServiceMock.recordConnectionRetry).toHaveBeenCalledWith('wss://relay.example');
     expect(relaysServiceMock.updateRelayConnection).toHaveBeenCalledWith('wss://relay.example', false);
   });
+
+  it('passes forced onauth when get is called with auth: true', async () => {
+    const authCallback = vi.fn();
+    relayAuthServiceMock.getAuthCallback.mockReturnValue(authCallback);
+    poolGetMock.mockResolvedValueOnce(null);
+
+    await service.get(['wss://auth.inbox/'], { kinds: [1059] }, 5000, { auth: true });
+
+    expect(relayAuthServiceMock.filterAuthFailedRelays).toHaveBeenCalledWith(
+      ['wss://auth.inbox/'],
+      { allowAuthRequired: true }
+    );
+    expect(relayAuthServiceMock.getAuthCallback).toHaveBeenCalledWith({ force: true });
+    expect(poolGetMock).toHaveBeenCalledWith(
+      ['wss://auth.inbox/'],
+      { kinds: [1059] },
+      { maxWait: 5000, onauth: authCallback }
+    );
+  });
+
+  it('does not attach onauth when get is called without auth option', async () => {
+    poolGetMock.mockResolvedValueOnce(null);
+
+    await service.get(['wss://nos.lol'], { kinds: [1] }, 5000);
+
+    expect(relayAuthServiceMock.getAuthCallback).not.toHaveBeenCalled();
+    expect(poolGetMock).toHaveBeenCalledWith(
+      ['wss://nos.lol'],
+      { kinds: [1] },
+      { maxWait: 5000 }
+    );
+  });
+
+  it('forces auth callback for publishWithTracking when auth: true', () => {
+    const authCallback = vi.fn();
+    relayAuthServiceMock.getAuthCallback.mockReturnValue(authCallback);
+    poolPublishMock.mockReturnValueOnce([Promise.resolve('ok')]);
+
+    service.publishWithTracking(['wss://auth.inbox/'], {} as never, { auth: true });
+
+    expect(relayAuthServiceMock.filterAuthFailedRelays).toHaveBeenCalledWith(
+      ['wss://auth.inbox/'],
+      { allowAuthRequired: true }
+    );
+    expect(relayAuthServiceMock.getAuthCallback).toHaveBeenCalledWith({ force: true });
+    expect(poolPublishMock).toHaveBeenCalledWith(
+      ['wss://auth.inbox/'],
+      {},
+      { onauth: authCallback }
+    );
+  });
+
+  it('does not blacklist auth-required failures when no auth callback was used', async () => {
+    relayAuthServiceMock.getAuthCallback.mockReturnValue(undefined);
+    poolPublishMock.mockReturnValueOnce([
+      Promise.reject(new Error('auth-required: authentication required')),
+    ]);
+
+    await expect(service.publish(['wss://auth.inbox/'], {} as never, 100)).rejects.toThrow(
+      'auth-required: authentication required'
+    );
+
+    expect(relayAuthServiceMock.markAuthFailed).not.toHaveBeenCalled();
+  });
 });

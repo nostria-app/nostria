@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Retransmisiones de mensajes\n",
     "settings.relays.message-relays-description": "Relés utilizados para recibir mensajes directos (NIP-17)\n",
     "settings.relays.no-message-relays": "No hay retransmisiones de mensajes configuradas. Sincronice con los relés de su cuenta o agregue uno manualmente.\n",
-    "settings.relays.sync-with-account": "Sincronización con retransmisiones de cuenta\n",
     "settings.relays.add-message-relay-url": "URL de retransmisión (wss://...)\n",
     "settings.relays.deprecated.title": "Advertencia de Obsolescencia",
     "settings.relays.deprecated.description": "Tu lista de seguimiento contiene una lista de relés. Esto está obsoleto en el protocolo.",

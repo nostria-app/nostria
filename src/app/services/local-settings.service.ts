@@ -158,7 +158,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   locale: 'en',
   maxRelaysPerUser: 4,
   relayDiscoveryMode: 'outbox',
-  autoRelayAuth: false,
+  autoRelayAuth: true,
   addClientTag: true,
   showClientTag: true,
   trustEnabled: true,
@@ -382,9 +382,9 @@ export class LocalSettingsService {
           // who don't have this property yet
           featuredFeedCardsEnabled:
             stored.featuredFeedCardsEnabled !== undefined ? stored.featuredFeedCardsEnabled : true,
-          // Explicitly ensure autoRelayAuth defaults to false for existing users
-          // who don't have this property yet (most users don't use authentication)
-          autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
+          // Default autoRelayAuth to true for users who don't have this property yet
+          // so AUTH-gated relays (NIP-17 inboxes, NIP-29 groups) work out of the box.
+          autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : true,
           // Ensure contentFilter exists for existing users
           contentFilter: {
             ...DEFAULT_CONTENT_FILTER,

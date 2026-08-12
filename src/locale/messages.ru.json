@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Реле сообщений\n",
     "settings.relays.message-relays-description": "Реле, используемые для приема прямых сообщений (NIP-17)\n",
     "settings.relays.no-message-relays": "Ретрансляции сообщений не настроены. Синхронизируйте с реле своей учетной записи или добавьте его вручную.\n",
-    "settings.relays.sync-with-account": "Синхронизация с реле учетной записи\n",
     "settings.relays.add-message-relay-url": "URL-адрес ретрансляции (wss://...)\n",
     "settings.relays.deprecated.title": "Предупреждение об устаревшем",
     "settings.relays.deprecated.description": "Ваш список подписок содержит список реле. Это устарело в протоколе.",

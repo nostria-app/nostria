@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Ukudluliselwa Komlayezo\n",
     "settings.relays.message-relays-description": "Ukudluliselwa okusetshenziselwa ukwamukela imilayezo eqondile (NIP-17)\n",
     "settings.relays.no-message-relays": "Akukho ukudluliselwa komlayezo okulungisiwe. Vumelanisa ne-akhawunti yakho edluliswayo noma wengeze ngokwakho.\n",
-    "settings.relays.sync-with-account": "Vumelanisa ne-Akhawunti Edluliselwe\n",
     "settings.relays.add-message-relay-url": "I-URL yokudlulisela (wss://...)\n",
     "settings.relays.deprecated.title": "Isexwayiso Sokudala",
     "settings.relays.deprecated.description": "Uhlu lwakho lokulandela luqukethe uhlu lwama-relay. Lokhu sekudala ku-protocol.",

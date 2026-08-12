@@ -15,7 +15,7 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
         <mat-slide-toggle [checked]="localSettings.autoRelayAuth()" (change)="toggleAutoRelayAuth()">
         </mat-slide-toggle>
       </div>
-      <p class="setting-description" i18n="@@settings.auto-relay-auth.description">Automatically authenticate with relays that require authentication. When disabled, relays that require authentication will not be used.</p>
+      <p class="setting-description" i18n="@@settings.auto-relay-auth.description">Automatically authenticate with relays that require authentication. Direct messages always authenticate when your account can sign. When disabled for general browsing, auth-required feed relays are skipped.</p>
     </div>
   `,
   styles: [`

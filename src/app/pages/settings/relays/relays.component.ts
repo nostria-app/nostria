@@ -46,6 +46,7 @@ import { Relay } from '../../../services/relays/relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { RelayAuthService } from '../../../services/relays/relay-auth.service';
+import { DEFAULT_DM_RELAYS } from '../../../services/relays/default-dm-relays';
 import { EventRepublishService } from '../../../services/event-republish.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -113,18 +114,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // New signals for deprecated following list relay cleanup feature
   showFollowingRelayCleanup = signal(false);
   isCleaningFollowingList = signal(false);
-  // Show DM relay update card unless already matching
-  showUpdateDMRelays = signal(false);
-
   // Message relays (kind 10050)
   messageRelays = signal<string[]>([]);
   newMessageRelayUrl = signal('');
-
-  messageRelaysSynced = computed(() => {
-    const accountUrls = new Set(this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls()));
-    const msgUrls = new Set(this.utilities.normalizeRelayUrls(this.messageRelays()));
-    return accountUrls.size === msgUrls.size && [...accountUrls].every(u => msgUrls.has(u));
-  });
 
   // Template references for tooltip content
   @ViewChild('userRelaysInfoContent')
@@ -224,7 +216,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
         await this.loadKnownDeadAccountRelays(pubkey);
       } else {
         this.showFollowingRelayCleanup.set(false);
-        this.showUpdateDMRelays.set(false);
         this.hasMalformedRelayList.set(false);
         this.knownDeadAccountRelays.set([]);
       }
@@ -290,15 +281,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   private async checkDirectMessageRelayList(pubkey: string) {
     try {
-      // Get current user relay list (kind 10002) from storage (already have in memory as this.relay.relays)
-      const userRelayUrls = this.utilities.normalizeRelayUrls(
-        this.accountRelay.getRelayUrls().map(r => r)
-      );
-
       // 1. Load from local database first (instant)
       const cachedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
       if (cachedEvent) {
-        this.applyDmRelayEvent(cachedEvent, userRelayUrls);
+        this.applyDmRelayEvent(cachedEvent);
       }
 
       // 2. Fetch from relays in the background for potentially newer data
@@ -310,38 +296,29 @@ export class RelaysComponent implements OnInit, OnDestroy {
       if (relayEvent) {
         // Only update if this is newer than what we loaded from the database
         if (!cachedEvent || relayEvent.event.created_at > cachedEvent.created_at) {
-          this.applyDmRelayEvent(relayEvent.event, userRelayUrls);
+          this.applyDmRelayEvent(relayEvent.event);
           // Save the newer event to the database for next time
           await this.database.saveReplaceableEvent(relayEvent.event);
         }
       } else if (!cachedEvent) {
         // No data from database or relays
         this.messageRelays.set([]);
-        this.showUpdateDMRelays.set(userRelayUrls.length > 0);
       }
     } catch (err) {
       this.logger.error('Failed to check DM relay list', err);
       if (this.messageRelays().length === 0) {
         this.messageRelays.set([]);
-        this.showUpdateDMRelays.set(true);
       }
     }
   }
 
-  private applyDmRelayEvent(event: NostrEvent, userRelayUrls: string[]) {
+  private applyDmRelayEvent(event: NostrEvent) {
     const dmRelayUrls = event.tags
       .filter(t => t[0] === 'relay' && t[1])
       .map(t => t[1]);
     const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
 
     this.messageRelays.set(normalizedDMUrls);
-
-    // Compare sets (unordered)
-    const setA = new Set(userRelayUrls);
-    const setB = new Set(normalizedDMUrls);
-    const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
-
-    this.showUpdateDMRelays.set(!same);
   }
 
   // Check for malformed kind 10002 relay list with 'relay' tags instead of 'r' tags
@@ -940,15 +917,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     });
   }
 
-  async updateDirectMessageRelayList() {
-    const relayUrls = this.relays().map(relay => {
-      return relay;
-    });
-    const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
-    await this.publishMessageRelayList(normalizedUrls);
-    this.showMessage('Message relays synced with account relays');
-  }
-
   async addMessageRelay(): Promise<void> {
     const url = this.newMessageRelayUrl().trim();
     if (!url || !url.startsWith('wss://')) {
@@ -986,12 +954,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.showMessage('Message relay order updated');
   }
 
-  async syncMessageRelaysWithAccount(): Promise<void> {
-    const accountUrls = this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls());
-    await this.publishMessageRelayList(accountUrls);
-    this.showMessage('Message relays synced with account relays');
-  }
-
   private async publishMessageRelayList(relayUrls: string[]): Promise<void> {
     const relayTags = this.nostr.createTags('relay', relayUrls);
     const pubkey = this.accountState.pubkey();
@@ -1009,7 +971,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     await this.database.saveEvent(signedEvent);
 
     this.messageRelays.set(relayUrls);
-    this.showUpdateDMRelays.set(false);
     this.logger.info('DM relay list updated successfully');
   }
 
@@ -1328,8 +1289,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
       await this.publish();
 
-      this.logger.info('Automatically setting DM relays to match account relays');
-      await this.updateDirectMessageRelayList();
+      // Auth-friendly NIP-17 inbox defaults (separate from account relays)
+      this.logger.info('Publishing default auth-friendly DM relays', {
+        relays: DEFAULT_DM_RELAYS,
+      });
+      const defaultDmRelays = this.utilities.normalizeRelayUrls([...DEFAULT_DM_RELAYS]);
+      await this.publishMessageRelayList(defaultDmRelays);
 
       this.showMessage('Successfully added the default relay setup');
       this.isSettingUpNostriaRelays.set(false);
