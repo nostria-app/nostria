@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "메시지 릴레이\n",
     "settings.relays.message-relays-description": "다이렉트 메시지 수신에 사용되는 릴레이(NIP-17)\n",
     "settings.relays.no-message-relays": "구성된 메시지 릴레이가 없습니다. 계정 릴레이와 동기화하거나 수동으로 추가하세요.\n",
-    "settings.relays.sync-with-account": "계정 릴레이와 동기화\n",
     "settings.relays.add-message-relay-url": "릴레이 URL(wss://...)\n",
     "settings.relays.deprecated.title": "더 이상 사용되지 않는 경고",
     "settings.relays.deprecated.description": "다음 목록에는 릴레이 목록이 포함되어 있습니다. 이는 프로토콜에서 더 이상 사용되지 않습니다.",

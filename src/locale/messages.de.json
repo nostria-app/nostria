@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Nachrichtenrelais\n",
     "settings.relays.message-relays-description": "Relays zum Empfangen von Direktnachrichten (NIP-17)\n",
     "settings.relays.no-message-relays": "Keine Nachrichtenrelais konfiguriert. Synchronisieren Sie es mit Ihren Konto-Relays oder fügen Sie eines manuell hinzu.\n",
-    "settings.relays.sync-with-account": "Synchronisierung mit Konto-Relays\n",
     "settings.relays.add-message-relay-url": "Relay-URL (wss://...)\n",
     "settings.relays.deprecated.title": "Veraltete Warnung",
     "settings.relays.deprecated.description": "Ihre folgende Liste enthält eine Liste von Relais. Dies ist im Protokoll veraltet.",

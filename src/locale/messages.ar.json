@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "مرحلات الرسائل\n",
     "settings.relays.message-relays-description": "المرحلات المستخدمة لاستقبال الرسائل المباشرة (NIP-17)\n",
     "settings.relays.no-message-relays": "لم يتم تكوين مرحلات الرسائل. قم بالمزامنة مع مرحلات حسابك أو قم بإضافة واحدة يدويًا.\n",
-    "settings.relays.sync-with-account": "المزامنة مع مرحلات الحساب\n",
     "settings.relays.add-message-relay-url": "عنوان URL للترحيل (wss://...)\n",
     "settings.relays.deprecated.title": "تحذير مهمل",
     "settings.relays.deprecated.description": "تحتوي قائمة المتابعة الخاصة بك على قائمة مُرحّلات. هذا مهمل في البروتوكول.",

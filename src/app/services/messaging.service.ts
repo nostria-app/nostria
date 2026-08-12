@@ -23,6 +23,9 @@ import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SettingsService } from './settings.service';
 
+/** Force NIP-42 auth on DM relay reads/subscribes (AUTH-gated kind 1059 inboxes). */
+const DM_AUTHED = { auth: true } as const;
+
 // Define interfaces for our DM data structures
 interface Chat {
   id: string;
@@ -1458,8 +1461,8 @@ export class MessagingService implements NostriaService {
         return;
       }
 
-      // Query for incoming messages
-      const incomingEvents = await this.pool.query(allRelays, filterIncoming, 15000);
+      // Query for incoming messages (AUTH required for NIP-17 inbox relays)
+      const incomingEvents = await this.pool.query(allRelays, filterIncoming, 15000, DM_AUTHED);
       this.logger.info(`Found ${incomingEvents.length} incoming events during refresh`);
 
       for (const event of incomingEvents) {
@@ -1467,7 +1470,7 @@ export class MessagingService implements NostriaService {
       }
 
       // Query for outgoing NIP-04 messages (outgoing NIP-44 are already caught via #p tag)
-      const outgoingEvents = await this.pool.query(accountRelays, filterOutgoing, 15000);
+      const outgoingEvents = await this.pool.query(accountRelays, filterOutgoing, 15000, DM_AUTHED);
       this.logger.info(`Found ${outgoingEvents.length} outgoing NIP-04 events during refresh`);
 
       for (const event of outgoingEvents) {
@@ -1870,8 +1873,8 @@ export class MessagingService implements NostriaService {
         relays: uniqueRelays,
       });
 
-      // Query all additional relays for messages
-      const events = await this.pool.query(uniqueRelays, filter, 10000);
+      // Query all additional relays for messages (AUTH required for NIP-17 inbox relays)
+      const events = await this.pool.query(uniqueRelays, filter, 10000, DM_AUTHED);
 
       this.logger.info(`Found ${events.length} events from additional relays`);
 
@@ -2228,10 +2231,10 @@ export class MessagingService implements NostriaService {
     };
 
     // Subscribe to messages where we're tagged (incoming + our outgoing NIP-44)
-    const sub1 = this.pool.subscribe(allRelays, filterTagged, processEvent);
+    const sub1 = this.pool.subscribe(allRelays, filterTagged, processEvent, DM_AUTHED);
 
     // Subscribe to our outgoing NIP-04 messages
-    const sub2 = this.pool.subscribe(accountRelays, filterAuthored, processEvent);
+    const sub2 = this.pool.subscribe(accountRelays, filterAuthored, processEvent, DM_AUTHED);
 
     // Create combined subscription object
     const combinedSub = {
@@ -2683,8 +2686,8 @@ export class MessagingService implements NostriaService {
 
     try {
       const [receivedEvents, sentEvents] = await Promise.all([
-        this.pool.query(allRelays, filterReceived, 15000),
-        this.pool.query(allRelays, filterSent, 15000),
+        this.pool.query(allRelays, filterReceived, 15000, DM_AUTHED),
+        this.pool.query(allRelays, filterSent, 15000, DM_AUTHED),
       ]);
 
       for (const event of receivedEvents) {

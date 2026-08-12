@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "Relai Pesan\n",
     "settings.relays.message-relays-description": "Relay yang digunakan untuk menerima pesan langsung (NIP-17)\n",
     "settings.relays.no-message-relays": "Tidak ada relai pesan yang dikonfigurasi. Sinkronkan dengan relay akun Anda atau tambahkan secara manual.\n",
-    "settings.relays.sync-with-account": "Sinkronisasi dengan Relai Akun\n",
     "settings.relays.add-message-relay-url": "URL Relai (wss://...)\n",
     "settings.relays.deprecated.title": "Peringatan Tidak Berlaku Lagi\n",
     "settings.relays.deprecated.description": "Daftar berikut Anda berisi daftar {$INTERPOLATION} relay. Ini tidak digunakan lagi dalam protokol.",

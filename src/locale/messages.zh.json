@@ -977,7 +977,6 @@
     "settings.relays.message-relays": "消息中继\n",
     "settings.relays.message-relays-description": "用于接收直接消息的中继 (NIP-17)\n",
     "settings.relays.no-message-relays": "未配置消息中继。与您的帐户中继同步或手动添加一个。\n",
-    "settings.relays.sync-with-account": "与帐户中继同步\n",
     "settings.relays.add-message-relay-url": "中继 URL (wss://...)\n",
     "settings.relays.deprecated.title": "已弃用警告",
     "settings.relays.deprecated.description": "您的以下列表包含继电器列表。这在协议中已被弃用。",

@@ -258,7 +258,7 @@ export class SettingsRegistryService {
     {
       id: 'auto-relay-auth',
       title: $localize`:@@settings.auto-relay-auth.title:Relay Authentication`,
-      description: $localize`:@@settings.auto-relay-auth.description:Automatically authenticate with relays that require authentication`,
+      description: $localize`:@@settings.auto-relay-auth.description:Automatically authenticate with relays that require authentication. Direct messages always authenticate when your account can sign. When disabled for general browsing, auth-required feed relays are skipped.`,
       keywords: ['relay', 'authentication', 'auto', 'auth', 'nip-42'],
       section: 'network',
       sectionTitle: $localize`:@@settings.sections.network:Relays & Network`,

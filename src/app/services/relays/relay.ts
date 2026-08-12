@@ -1007,10 +1007,13 @@ export abstract class RelayServiceBase {
                 this.logger.warn(`Relay ${relayUrl} returned empty error - treating as auth-required`);
               }
               this.logger.error(`Relay ${relayUrl} failed: ${errorMsg}`);
-              // Check for NIP-42 auth failures using proper prefixes
-              // auth-required: means client needs to authenticate first
-              // restricted: means client authenticated but key is not authorized (e.g., not paid, not whitelisted)
-              if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
+              // Only blacklist after an actual AUTH attempt. Without a callback,
+              // auth-required rejects are expected and must not permanently exclude the relay.
+              // restricted: means client authenticated but key is not authorized.
+              if (
+                authCallback &&
+                (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:'))
+              ) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
               throw new Error(`${relayUrl}: ${errorMsg}`);

@@ -210,17 +210,11 @@
           }
         </mat-list>
         } @else {
-        <p class="empty-message" i18n="@@settings.relays.no-message-relays">No message relays configured. Sync with your
-          account relays or add one manually.</p>
+        <p class="empty-message" i18n="@@settings.relays.no-message-relays">No message relays configured. Add an
+          auth-friendly inbox relay manually (NIP-17 kind 1059).</p>
         }
 
         <div class="message-relay-actions">
-          @if (!messageRelaysSynced()) {
-          <button mat-stroked-button (click)="syncMessageRelaysWithAccount()">
-            <mat-icon>sync</mat-icon>
-            <span i18n="@@settings.relays.sync-with-account">Sync with Account Relays</span>
-          </button>
-          }
           <div class="flex-container add-relay-container">
             <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
               <mat-label i18n="@@settings.relays.add-message-relay-url">Relay URL (wss://...)</mat-label>

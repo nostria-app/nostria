@@ -56,10 +56,13 @@ export class RelayAuthService {
    * Get the `onauth` callback to use with nostr-tools SimplePool operations.
    * Returns undefined if signing is not available (e.g., preview account) or if
    * automatic relay authentication is disabled.
+   *
+   * Pass `{ force: true }` for operations that must authenticate regardless of the
+   * auto-auth setting (NIP-17 DM inbox relays, NIP-29 private groups, etc.).
    */
-  getAuthCallback(): AuthCallback | undefined {
-    // Check if automatic relay authentication is disabled
-    if (!this.localSettings.autoRelayAuth()) {
+  getAuthCallback(options?: { force?: boolean }): AuthCallback | undefined {
+    // Check if automatic relay authentication is disabled (unless forced)
+    if (!options?.force && !this.localSettings.autoRelayAuth()) {
       this.logger.debug('[RelayAuthService] Automatic relay authentication is disabled');
       return undefined;
     }
@@ -207,25 +210,29 @@ export class RelayAuthService {
 
   /**
    * Filter out relays that have failed authentication from a list.
-   * When auto-authentication is disabled, also filter out relays that require authentication.
+   * When auto-authentication is disabled, also filter out relays that require authentication
+   * unless `allowAuthRequired` is set (used when the caller forces NIP-42 auth).
    */
-  filterAuthFailedRelays(relayUrls: string[]): string[] {
-    const autoAuthEnabled = this.localSettings.autoRelayAuth();
-    
+  filterAuthFailedRelays(
+    relayUrls: string[],
+    options?: { allowAuthRequired?: boolean }
+  ): string[] {
+    const autoAuthEnabled = this.localSettings.autoRelayAuth() || options?.allowAuthRequired === true;
+
     return relayUrls.filter(url => {
       const normalizedUrl = this.utilities.normalizeRelayUrl(url);
-      
+
       // Always filter out relays that have failed auth
       if (this.failedAuthRelays().has(normalizedUrl)) {
         return false;
       }
-      
+
       // If auto-auth is disabled, also filter out relays that require authentication
       if (!autoAuthEnabled && this.authRequiredRelays().has(normalizedUrl)) {
         this.logger.debug(`[RelayAuthService] Filtering out relay requiring auth (auto-auth disabled): ${normalizedUrl}`);
         return false;
       }
-      
+
       return true;
     });
   }
