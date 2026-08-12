@@ -15,12 +15,12 @@
           @let listFeed = activeListFeed();
           <div class="feed-selector-active list-feed-active">
             <mat-icon class="selector-icon">people</mat-icon>
-            <span class="selector-label">{{ listFeed?.title || 'List Feed' }}</span>
+            <span class="selector-label">{{ listFeed?.title || listFeedFallbackLabel }}</span>
             <span class="selector-count">{{ listFeed?.pubkeys?.length || 0 }}</span>
             @if (listColumn?.isLoadingFromRelays()) {
             <mat-spinner diameter="18" class="selector-spinner"></mat-spinner>
             }
-            <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="selector-close">
+            <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" i18n-matTooltip="@@feeds.close-list" class="selector-close">
               <mat-icon>close</mat-icon>
             </button>
           </div>
@@ -29,7 +29,7 @@
           <button class="feed-selector-button" mat-button [matMenuTriggerFor]="feedMenu"
             [class.has-selection]="activeFeed()">
             <mat-icon class="selector-icon">{{ feedIcon() }}</mat-icon>
-            <span class="selector-label">{{ feedLabel() }}</span>
+            <span class="selector-label">{{ localizedActiveFeedLabel() }}</span>
             <mat-icon class="selector-arrow" iconPositionEnd>expand_more</mat-icon>
           </button>
 
@@ -39,7 +39,7 @@
             <button mat-menu-item (click)="selectFeed(feed.id)"
               [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
               <mat-icon>{{ feed.icon }}</mat-icon>
-              <span>{{ feed.label }}</span>
+              <span>{{ localizedFeedName(feed) }}</span>
             </button>
             }
             @if (primaryFeeds().length > 0 && customFeeds().length > 0) {
@@ -49,7 +49,7 @@
             <button mat-menu-item (click)="selectFeed(feed.id)"
               [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
               <mat-icon>{{ feed.icon }}</mat-icon>
-              <span>{{ feed.label }}</span>
+              <span>{{ localizedFeedName(feed) }}</span>
             </button>
             }
           </mat-menu>
@@ -77,7 +77,7 @@
 
         <!-- Filter button with overlay panel - only for authenticated users -->
         @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
-        <app-filter-button [active]="hasActiveFilters()" tooltip="Filter content" title="Filter content">
+        <app-filter-button [active]="hasActiveFilters()" [tooltip]="filterContentLabel" [title]="filterContentLabel">
           <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
             [mentionedMode]="listMentionedMode()" [currentListFilter]="currentListFilter()"
             (kindsChanged)="onKindsChanged($event)" (showRepliesChanged)="onShowRepliesChanged($event)"
@@ -89,7 +89,7 @@
 
         <!-- Feed menu with all actions - only for authenticated users -->
         @if (app.authenticated()) {
-        <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
+        <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options" i18n-matTooltip="@@feeds.options">
           <mat-icon>more_vert</mat-icon>
         </button>
 
@@ -98,7 +98,7 @@
           <!-- Public Relay Feeds - shown only on small screens (mobile responsive) -->
           <button mat-menu-item (click)="relayFeedMenu.openMenu()" class="show-small">
             <mat-icon>dns</mat-icon>
-            <span>Public Relay Feeds</span>
+            <span i18n="@@feeds.public-relay-feeds">Public Relay Feeds</span>
           </button>
           <mat-divider class="show-small"></mat-divider>
 
@@ -106,12 +106,12 @@
           @if ((feed || showListFeed()) && !showRelayFeed()) {
           <button mat-menu-item (click)="refreshCurrentFeed()">
             <mat-icon>refresh</mat-icon>
-            <span>Refresh Content</span>
+            <span i18n="@@feeds.refresh">Refresh Content</span>
           </button>
           @if (settings.settings().aiEnabled && settings.settings().aiSpeechEnabled) {
           <button mat-menu-item [matMenuTriggerFor]="feedReadAloudMenu">
             <mat-icon>record_voice_over</mat-icon>
-            <span>Read feed aloud</span>
+            <span i18n="@@feeds.read-aloud">Read feed aloud</span>
           </button>
           }
           <mat-divider></mat-divider>
@@ -120,7 +120,7 @@
           <!-- Add Feed -->
           <button mat-menu-item (click)="addNewFeed()">
             <mat-icon>add</mat-icon>
-            <span>Add Feed</span>
+            <span i18n="@@feeds.add">Add Feed</span>
           </button>
 
           <mat-divider></mat-divider>
@@ -129,17 +129,17 @@
           <button mat-menu-item (click)="editCurrentFeed()"
             [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
             <mat-icon>edit</mat-icon>
-            <span>Edit Feed</span>
+            <span i18n="@@feeds.edit">Edit Feed</span>
           </button>
           <button mat-menu-item (click)="deleteCurrentFeed()"
             [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
             <mat-icon>delete</mat-icon>
-            <span>Delete Feed</span>
+            <span i18n="@@feeds.delete">Delete Feed</span>
           </button>
           <mat-divider></mat-divider>
           <button mat-menu-item (click)="resetFeeds()">
             <mat-icon>restore</mat-icon>
-            <span>Reset Feeds</span>
+            <span i18n="@@feeds.reset">Reset Feeds</span>
           </button>
         </mat-menu>
 
@@ -196,10 +196,10 @@
               <mat-icon>tag</mat-icon>
               <span class="dynamic-feed-label">{{ dynFeed.label }}</span>
               @if (dynFeed.customInterestHashtags && dynFeed.customInterestHashtags.length > 1) {
-              <span class="dynamic-feed-count">({{ dynFeed.customInterestHashtags.length }} hashtags)</span>
+              <span class="dynamic-feed-count" i18n="@@feeds.hashtag-count">({{ dynFeed.customInterestHashtags.length }} hashtags)</span>
               }
             </div>
-            <button mat-icon-button (click)="closeDynamicFeed()" matTooltip="Close dynamic feed">
+            <button mat-icon-button (click)="closeDynamicFeed()" matTooltip="Close dynamic feed" i18n-matTooltip="@@feeds.close-dynamic">
               <mat-icon>close</mat-icon>
             </button>
           </div>
@@ -216,8 +216,8 @@
             <div class="no-results-state">
               <div class="no-results-content">
                 <mat-icon class="no-results-icon">search_off</mat-icon>
-                <h3>No posts found</h3>
-                <p>
+                <h3 i18n="@@feeds.no-posts">No posts found</h3>
+                <p i18n="@@feeds.no-posts-for">
                   No posts found for {{ dynFeed.label }}. Try checking back later.
                 </p>
               </div>
@@ -253,7 +253,7 @@
                   <span></span>
                   <span></span>
                 </div>
-                <span class="loading-text">Loading posts...</span>
+                <span class="loading-text" i18n="@@feeds.loading-posts">Loading posts...</span>
               </div>
             </div>
             } @else {
@@ -271,7 +271,7 @@
               <div class="load-more-rendered-events">
                 <button mat-stroked-button (click)="loadMoreRenderedEvents(dynFeed.id)" class="load-more-button">
                   <mat-icon>expand_more</mat-icon>
-                  Show more
+                  <ng-container i18n="@@feeds.show-more">Show more</ng-container>
                 </button>
               </div>
               }
@@ -296,7 +296,7 @@
           <div class="new-posts-floating">
             <button mat-raised-button color="primary" (click)="loadNewPosts(feed.id)" class="new-posts-button">
               <mat-icon>arrow_upward</mat-icon>
-              {{ getPendingEventsCount(feed.id) }} new {{ getPendingEventsCount(feed.id) === 1 ? 'note' : 'notes' }}
+              {{ newNotesLabel(getPendingEventsCount(feed.id)) }}
             </button>
           </div>
           }
@@ -304,7 +304,7 @@
           <!-- Filters Section -->
           @if (showAdvancedFilters()) {
           <div class="filters-section">
-            <h3>Filter by tags</h3>
+            <h3 i18n="@@feeds.filter-by-tags">Filter by tags</h3>
             <div class="tag-chips">
               @for (tag of availableTags(); track $index) {
               <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
@@ -323,14 +323,14 @@
             <div class="empty-following-state">
               <div class="empty-state-content">
                 <mat-icon class="empty-state-icon">group_add</mat-icon>
-                <h3>You're not following anyone yet</h3>
-                <p>
+                <h3 i18n="@@feeds.empty-following.title">You're not following anyone yet</h3>
+                <p i18n="@@feeds.empty-following.body">
                   Start building your network by following interesting people.
                   Let's discover profiles using Starter Packs!
                 </p>
                 <button mat-raised-button color="primary" (click)="navigateToPeople()" class="discover-people-btn">
                   <mat-icon>explore</mat-icon>
-                  Discover People
+                  <span i18n="@@feeds.discover-people">Discover People</span>
                 </button>
               </div>
             </div>
@@ -342,17 +342,17 @@
             <div class="no-results-state">
               <div class="no-results-content">
                 <mat-icon class="no-results-icon">search_off</mat-icon>
-                <h3>No results found</h3>
+                <h3 i18n="@@feeds.no-results">No results found</h3>
                 <p>
                   @if (feed.source === 'search' && feed.searchQuery) {
-                  No posts found matching "{{ feed.searchQuery }}".
+                  <span i18n="@@feeds.no-search-results">No posts found matching "{{ feed.searchQuery }}".</span>
                   } @else {
-                  No posts found for this feed. Try adjusting the feed settings or check back later.
+                  <span i18n="@@feeds.no-feed-results">No posts found for this feed. Try adjusting the feed settings or check back later.</span>
                   }
                 </p>
                 <button mat-stroked-button (click)="refreshFeed(feed)">
                   <mat-icon>refresh</mat-icon>
-                  Try Again
+                  <span i18n="@@feeds.try-again">Try Again</span>
                 </button>
               </div>
             </div>
@@ -389,7 +389,7 @@
                   <span></span>
                   <span></span>
                 </div>
-                <span class="loading-text">Loading content...</span>
+                <span class="loading-text" i18n="@@feeds.loading-content">Loading content...</span>
               </div>
             </div>
             } @else {
@@ -410,7 +410,7 @@
               <div class="load-more-rendered-events">
                 <button mat-stroked-button (click)="loadMoreRenderedEvents(feed.id)" class="load-more-button">
                   <mat-icon>expand_more</mat-icon>
-                  Show more
+                  <ng-container i18n="@@feeds.show-more">Show more</ng-container>
                 </button>
               </div>
               }
@@ -433,7 +433,7 @@
             columnHasMore && columnHasMore()) {
             <div class="column-loading-more">
               <mat-spinner diameter="24"></mat-spinner>
-              <span class="loading-more-text">Loading more...</span>
+              <span class="loading-more-text" i18n="@@feeds.loading-more">Loading more...</span>
             </div>
             }
             }
@@ -447,7 +447,7 @@
         <div class="empty-columns-state">
           <div class="empty-state-content">
             <mat-spinner diameter="48"></mat-spinner>
-            <div class="loading-text">Loading feeds...</div>
+            <div class="loading-text" i18n="@@feeds.loading">Loading feeds...</div>
           </div>
         </div>
         }
@@ -457,13 +457,13 @@
         <div class="empty-columns-state">
           <div class="empty-state-content">
             <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
-            <h2>No feeds added</h2>
-            <p>
+            <h2 i18n="@@feeds.empty.title">No feeds added</h2>
+            <p i18n="@@feeds.empty.body">
               Create your first feed to start organizing and viewing content from various sources.
             </p>
             <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
               <mat-icon>add</mat-icon>
-              Add Your First Feed
+              <span i18n="@@feeds.empty.add">Add Your First Feed</span>
             </button>
           </div>
         </div>
@@ -486,7 +486,7 @@
 
   <!-- Scroll to top button - fixed position -->
   @if (showScrollToTop()) {
-  <button mat-mini-fab class="scroll-to-top-btn" (click)="scrollToTop()" matTooltip="Scroll to top">
+  <button mat-mini-fab class="scroll-to-top-btn" (click)="scrollToTop()" matTooltip="Scroll to top" i18n-matTooltip="@@feeds.scroll-to-top">
     <mat-icon>arrow_upward</mat-icon>
   </button>
   }

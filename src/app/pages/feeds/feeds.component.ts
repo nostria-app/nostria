@@ -75,6 +75,7 @@ import { FeaturedFeedCardComponent } from './featured-feed-card/featured-feed-ca
 import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../services/featured-feed-cards.service';
 import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
 import { SettingsService } from '../../services/settings.service';
+import { localizedFeedLabel } from '../../utils/feed-labels';
 
 // NavLink interface removed because it was unused.
 
@@ -370,11 +371,14 @@ export class FeedsComponent implements OnDestroy {
     return activeFeed ? activeFeed.icon : 'dynamic_feed';
   });
 
+  readonly listFeedFallbackLabel = $localize`:@@feeds.list-feed:List Feed`;
+  readonly filterContentLabel = $localize`:@@feeds.filter-content:Filter content`;
+
   feedLabel = computed(() => {
     // Show dynamic feed label when active
     const dynFeed = this.dynamicFeed();
     if (dynFeed) {
-      return dynFeed.label || 'Hashtag Feed';
+      return dynFeed.label || $localize`:@@feeds.hashtag-feed:Hashtag Feed`;
     }
     // Show relay domain when relay feed is active
     const relayDomain = this.activeRelayDomain();
@@ -382,8 +386,20 @@ export class FeedsComponent implements OnDestroy {
       return relayDomain;
     }
     const activeFeed = this.activeFeed();
-    return activeFeed ? activeFeed.label : 'Select Feed';
+    return activeFeed ? localizedFeedLabel(activeFeed) : $localize`:@@feeds.select:Select Feed`;
   });
+
+  localizedActiveFeedLabel = computed(() => this.feedLabel());
+
+  localizedFeedName(feed: FeedConfig): string {
+    return localizedFeedLabel(feed);
+  }
+
+  newNotesLabel(count: number): string {
+    return count === 1
+      ? $localize`:@@feeds.new-note:${count}:count: new note`
+      : $localize`:@@feeds.new-notes:${count}:count: new notes`;
+  }
 
   // Computed signal to check if a feed has actual events to display
   feedHasEvents = computed(() => {

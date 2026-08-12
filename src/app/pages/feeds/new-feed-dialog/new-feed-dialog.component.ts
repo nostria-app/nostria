@@ -50,10 +50,7 @@ const NOSTR_KIND_VALUES = [
   30000, 30001, 30023, 30024, 30078, 32100, 34139, 34235, 34236, 36787,
 ];
 
-const NOSTR_KINDS = NOSTR_KIND_VALUES.map(value => ({
-  value,
-  label: `${getKindLabel(value)} (${value})`,
-}));
+
 
 @Component({
   selector: 'app-new-feed-dialog',
@@ -150,7 +147,20 @@ export class NewFeedDialogComponent {
 
   // Available options
   feedTypes = signal(this.feedService.getFeedTypes());
-  nostrKinds = signal(NOSTR_KINDS);
+  nostrKinds = signal(this.buildNostrKinds());
+
+  dialogTitle(): string {
+    return this.isEditMode()
+      ? $localize`:@@feeds.dialog.edit:Edit Feed`
+      : $localize`:@@feeds.dialog.create:Create New Feed`;
+  }
+
+  private buildNostrKinds(): { value: number; label: string }[] {
+    return NOSTR_KIND_VALUES.map(value => ({
+      value,
+      label: `${getKindLabel(value)} (${value})`,
+    }));
+  }
 
   // Get following users
   followingUsers = computed(() => {

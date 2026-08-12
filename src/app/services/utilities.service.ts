@@ -9,6 +9,8 @@ import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
 import { encode } from 'blurhash';
 import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
+import { formatCompactRelativeTime, formatNever } from '../utils/relative-time';
+import { getAngularLocaleCode } from '../utils/supported-locales';
 
 /**
  * Represents a relay entry with its read/write markers per NIP-65.
@@ -2406,23 +2408,7 @@ export class UtilitiesService {
    * @returns Human-readable relative time string
    */
   getRelativeTime(timestamp: number, includeAgo = true): string {
-    const now = this.currentDate();
-    const diff = now - timestamp;
-
-    if (diff < 0) return 'in the future';
-
-    const minute = 60;
-    const hour = minute * 60;
-    const day = hour * 24;
-    const week = day * 7;
-
-    const suffix = includeAgo ? ' ago' : '';
-
-    if (diff < minute) return 'just now';
-    if (diff < hour) return `${Math.floor(diff / minute)}m${suffix}`;
-    if (diff < day) return `${Math.floor(diff / hour)}h${suffix}`;
-    if (diff < week) return `${Math.floor(diff / day)}d${suffix}`;
-    return `${Math.floor(diff / week)}w${suffix}`;
+    return formatCompactRelativeTime(timestamp, includeAgo);
   }
 
   /**
@@ -2432,7 +2418,7 @@ export class UtilitiesService {
    * @returns Human-readable time string
    */
   formatRelativeTime(timestamp: number, maxRelativeDays = 7): string {
-    if (timestamp === 0) return 'never';
+    if (timestamp === 0) return formatNever();
 
     const now = this.currentDate();
     const diff = now - timestamp;
@@ -2442,7 +2428,7 @@ export class UtilitiesService {
       return this.getRelativeTime(timestamp);
     }
 
-    return new Date(timestamp * 1000).toLocaleDateString();
+    return new Date(timestamp * 1000).toLocaleDateString(getAngularLocaleCode($localize.locale));
   }
 
   // ============================================================================

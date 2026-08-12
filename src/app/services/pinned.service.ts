@@ -289,14 +289,18 @@ export class PinnedService {
    * Get tooltip text based on pin status
    */
   getPinTooltip(eventId: string): string {
-    return this.isPinned(eventId) ? 'Unpin note' : 'Pin note';
+    return this.isPinned(eventId)
+      ? $localize`:@@event.pin.unpin-note:Unpin note`
+      : $localize`:@@event.pin.pin-note:Pin note`;
   }
 
   /**
    * Get tooltip text based on article pin status
    */
   getArticlePinTooltip(articleCoordinate: string): string {
-    return this.isArticlePinned(articleCoordinate) ? 'Unpin article' : 'Pin article';
+    return this.isArticlePinned(articleCoordinate)
+      ? $localize`:@@event.pin.unpin-article:Unpin article`
+      : $localize`:@@event.pin.pin-article:Pin article`;
   }
 
   /**

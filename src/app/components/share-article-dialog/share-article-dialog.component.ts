@@ -74,19 +74,19 @@ export interface ShareArticleDialogData {
         <button class="prominent-action-button repost-button" (click)="createRepost()" [disabled]="isRepostInProgress()">
           @if (isRepostInProgress()) {
           <mat-spinner diameter="16"></mat-spinner>
-          <span>Processing...</span>
+          <span i18n="@@share.processing">Processing...</span>
           } @else {
           <mat-icon>repeat</mat-icon>
           @if (hasReposted()) {
-          <span>Undo Repost</span>
+          <span i18n="@@event.repost.undo">Undo Repost</span>
           } @else {
-          <span>Repost</span>
+          <span i18n="@@event.repost.action">Repost</span>
           }
           }
         </button>
         <button class="prominent-action-button quote-button" (click)="createQuote()">
           <mat-icon>format_quote</mat-icon>
-          <span>Quote</span>
+          <span i18n="@@event.quote.action">Quote</span>
         </button>
       </div>
       <mat-divider></mat-divider>

@@ -47,26 +47,30 @@
         @if (!isOwnProfile()) {
         <button mat-menu-item (click)="sendMessage()">
           <mat-icon>message</mat-icon>
-          <span>Send private message</span>
+          <span i18n="@@profile.menu.message">Send private message</span>
         </button>
         }
         <button mat-menu-item (click)="toggleFavorite()">
           <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
-          <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
+          @if (isFavorite()) {
+          <span i18n="@@event.menu.unfavorite">Unfavorite</span>
+          } @else {
+          <span i18n="@@event.menu.favorite">Favorite</span>
+          }
         </button>
         <button mat-menu-item [matMenuTriggerFor]="followSetsMenu">
           <mat-icon>group_add</mat-icon>
-          <span>Add to list</span>
+          <span i18n="@@event.menu.add-to-list">Add to list</span>
         </button>
         <mat-divider></mat-divider>
         @if (!isOwnProfile()) {
         <button mat-menu-item (click)="reportProfile()">
           <mat-icon>flag</mat-icon>
-          <span>Report profile</span>
+          <span i18n="@@profile.menu.report">Report profile</span>
         </button>
         <button mat-menu-item (click)="blockUser()">
           <mat-icon>block</mat-icon>
-          <span>Block user</span>
+          <span i18n="@@profile.menu.block">Block user</span>
         </button>
         }
       </mat-menu>
@@ -82,7 +86,7 @@
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="createNewFollowSet()">
           <mat-icon>add_circle</mat-icon>
-          <span>Create new list</span>
+          <span i18n="@@event.menu.create-list">Create new list</span>
         </button>
       </mat-menu>
     </div>

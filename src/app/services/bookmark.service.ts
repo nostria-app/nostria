@@ -846,7 +846,9 @@ export class BookmarkService {
 
   // Helper method to get tooltip text based on bookmark status
   getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
+    return this.bookmarkEvents().find(b => b.id === id)
+      ? $localize`:@@event.bookmark.remove:Remove bookmark`
+      : $localize`:@@event.bookmark.add:Add bookmark`;
   }
 
   // Helper method to get icon based on bookmark status

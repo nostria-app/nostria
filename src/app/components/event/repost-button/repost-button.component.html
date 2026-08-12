@@ -1,6 +1,6 @@
 <button mat-icon-button [class.active]="!!repostByCurrentAccount()" [matMenuTriggerFor]="menu"
   [disabled]="isLoadingReposts() || !canRepostOrQuote()" (click)="$event.stopPropagation()" matTooltip="Repost"
-  matTooltipPosition="below">
+  i18n-matTooltip="@@event.repost.tooltip" matTooltipPosition="below">
   <mat-icon>repeat</mat-icon>
 </button>
 
@@ -9,16 +9,16 @@
   @if (canRepostOrQuote() && !!repostByCurrentAccount()) {
   <button mat-menu-item (click)="deleteRepost()">
     <mat-icon>repeat</mat-icon>
-    <span>Undo Repost</span>
+    <span i18n="@@event.repost.undo">Undo Repost</span>
   </button>
   } @else if (canRepostOrQuote()) {
   <button mat-menu-item (click)="createRepost()">
     <mat-icon>repeat</mat-icon>
-    <span>Repost</span>
+    <span i18n="@@event.repost.action">Repost</span>
   </button>
   <button mat-menu-item (click)="createQuote()">
     <mat-icon>format_quote</mat-icon>
-    <span>Quote</span>
+    <span i18n="@@event.quote.action">Quote</span>
   </button>
   }
 </ng-template>

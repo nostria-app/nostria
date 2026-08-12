@@ -657,24 +657,24 @@
                     @if (!message.isOutgoing && !isReactionMessage(message)) {
                     <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
                       <mat-icon>sentiment_satisfied</mat-icon>
-                      <span>React</span>
+                      <span i18n="@@messages.menu.react">React</span>
                     </button>
                     }
                     <button mat-menu-item (click)="setReplyTo(message)">
                       <mat-icon>reply</mat-icon>
-                      <span>Reply</span>
+                      <span i18n="@@event.actions.reply">Reply</span>
                     </button>
                     <button mat-menu-item (click)="forwardMessage(message)">
                       <mat-icon>forward</mat-icon>
-                      <span>Forward</span>
+                      <span i18n="@@messages.menu.forward">Forward</span>
                     </button>
                     <button mat-menu-item (click)="copyMessageContent(message)">
                       <mat-icon>content_copy</mat-icon>
-                      <span>Copy</span>
+                      <span i18n="@@event.menu.copy">Copy</span>
                     </button>
                     <button mat-menu-item (click)="showMessageDetails(message)">
                       <mat-icon>info</mat-icon>
-                      <span>Details</span>
+                      <span i18n="@@event.menu.details">Details</span>
                     </button>
                     @if (getMessageImageUrls(message).length > 0) {
                     <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
@@ -824,16 +824,16 @@
                 @if (!message.isOutgoing && !isReactionMessage(message)) {
                 <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
                   <mat-icon>sentiment_satisfied</mat-icon>
-                  <span>React</span>
+                  <span i18n="@@messages.menu.react">React</span>
                 </button>
                 }
                 <button mat-menu-item (click)="setReplyTo(message)">
                   <mat-icon>reply</mat-icon>
-                  <span>Reply</span>
+                  <span i18n="@@event.actions.reply">Reply</span>
                 </button>
                 <button mat-menu-item (click)="forwardMessage(message)">
                   <mat-icon>forward</mat-icon>
-                  <span>Forward</span>
+                  <span i18n="@@messages.menu.forward">Forward</span>
                 </button>
                 <button mat-menu-item (click)="copyMessageContent(message)">
                   <mat-icon>content_copy</mat-icon>

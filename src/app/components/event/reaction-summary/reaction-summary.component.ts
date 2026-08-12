@@ -86,10 +86,10 @@ export class ReactionSummaryComponent {
 
   tabLabel(tab: ReactionSummaryTab): string {
     switch (tab) {
-      case 'reactions': return 'Reactions';
-      case 'reposts': return 'Reposts';
-      case 'quotes': return 'Quotes';
-      case 'zaps': return 'Zaps';
+      case 'reactions': return $localize`:@@event.reactions.tab:Reactions`;
+      case 'reposts': return $localize`:@@event.reposts.tab:Reposts`;
+      case 'quotes': return $localize`:@@event.quotes.tab:Quotes`;
+      case 'zaps': return $localize`:@@event.zaps.tab:Zaps`;
     }
   }
 
@@ -196,7 +196,7 @@ export class ReactionSummaryComponent {
     try {
       const result = await this.reactionService.deleteReaction(reaction.event);
       if (!result.success) {
-        this.snackBar.open('Failed to delete reaction. Please try again.', 'Dismiss', { duration: 3000 });
+        this.snackBar.open($localize`:@@event.reactions.delete-failed:Failed to delete reaction. Please try again.`, $localize`:@@app.snackbar.dismiss:Dismiss`, { duration: 3000 });
         return;
       }
 
@@ -208,6 +208,10 @@ export class ReactionSummaryComponent {
       nextDeletingIds.delete(reaction.event.id);
       this.deletingReactionIds.set(nextDeletingIds);
     }
+  }
+
+  deleteReactionAriaLabel(content: string): string {
+    return $localize`:@@event.reactions.delete-aria:Delete reaction ${this.getReactionDisplay(content)}:reaction:`;
   }
 
   formatAmount(amount: number | null): string {

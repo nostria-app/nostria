@@ -42,37 +42,17 @@ interface MaxTagsAllowedOption {
  * All available content types with their Nostr kinds
  * Note: Articles are excluded as there's a dedicated Articles feature in the app
  */
-const CONTENT_TYPES: ContentType[] = [
-  { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: [1, 1111], icon: 'description' },
-  { id: 'articles', label: 'Articles', description: 'Long-form writing', kinds: [30023], icon: 'article' },
-  { id: 'polls', label: 'Polls', description: 'Polls and zap polls', kinds: [1068, 6969], icon: 'poll' },
-  { id: 'reposts', label: 'Reposts', description: 'Shared content from others', kinds: [6, 16], icon: 'repeat' },
-  { id: 'voicePosts', label: 'Audio Posts', description: 'Audio posts and music', kinds: [1222, 1244], icon: 'audiotrack' },
-  { id: 'photoPosts', label: 'Photo Posts', description: 'Image galleries', kinds: [20], icon: 'image' },
-  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: [21, 22, 34235, 34236], icon: 'movie' },
+const CONTENT_TYPE_DEFS: Omit<ContentType, 'label' | 'description'>[] = [
+  { id: 'posts', kinds: [1, 1111], icon: 'description' },
+  { id: 'articles', kinds: [30023], icon: 'article' },
+  { id: 'polls', kinds: [1068, 6969], icon: 'poll' },
+  { id: 'reposts', kinds: [6, 16], icon: 'repeat' },
+  { id: 'voicePosts', kinds: [1222, 1244], icon: 'audiotrack' },
+  { id: 'photoPosts', kinds: [20], icon: 'image' },
+  { id: 'videoPosts', kinds: [21, 22, 34235, 34236], icon: 'movie' },
 ];
 
-const TOGGLE_FILTER_OPTIONS: ToggleFilterOption[] = [
-  { id: 'showReplies', label: 'Show Replies', description: 'Comments on other posts', icon: 'reply' },
-];
-
-const MAX_TAGS_ALLOWED_OPTIONS: MaxTagsAllowedOption[] = [
-  { value: 5, label: '5' },
-  { value: 20, label: '20' },
-  { value: 'any', label: 'Any' },
-];
-
-const HIDE_WORDLE_OPTION: ToggleFilterOption = {
-  id: 'hideWordle',
-  label: 'Hide Wordle',
-  description: 'Filter out posts tagged wordle',
-  icon: 'grid_view',
-};
-
-/**
- * Get all standard kinds from CONTENT_TYPES (kinds that can be toggled via quick buttons)
- */
-const ALL_STANDARD_KINDS = CONTENT_TYPES.flatMap(t => t.kinds);
+const ALL_STANDARD_KINDS = CONTENT_TYPE_DEFS.flatMap(t => t.kinds);
 
 /**
  * Check if a kinds array represents a standard selection (subset of known content types)
@@ -99,17 +79,17 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       <div class="filter-column content-filter-column">
         @if (isListFeed()) {
           <div class="source-mode-section">
-            <div class="section-label">Show events where list members are</div>
+            <div class="section-label" i18n="@@feeds.filter.list-source">Show events where list members are</div>
             <mat-button-toggle-group
               [value]="currentMentionedMode() ? 'mentioned' : 'authored'"
               (change)="onSourceModeChange($event.value)">
               <mat-button-toggle value="authored">
                 <mat-icon>edit</mat-icon>
-                <span>Authored</span>
+                <span i18n="@@feeds.filter.authored">Authored</span>
               </mat-button-toggle>
               <mat-button-toggle value="mentioned">
                 <mat-icon>alternate_email</mat-icon>
-                <span>Mentioned</span>
+                <span i18n="@@feeds.filter.mentioned">Mentioned</span>
               </mat-button-toggle>
             </mat-button-toggle-group>
           </div>
@@ -120,21 +100,21 @@ function isStandardKindsSelection(kinds: number[]): boolean {
             <div class="notice-content">
               <mat-icon>tune</mat-icon>
               <div class="notice-text">
-                <span class="notice-title">Custom Filter Active</span>
-                <span class="notice-description">This feed has custom event kinds configured. Clear to use presets.</span>
+                <span class="notice-title" i18n="@@feeds.filter.custom-active">Custom Filter Active</span>
+                <span class="notice-description" i18n="@@feeds.filter.custom-description">This feed has custom event kinds configured. Clear to use presets.</span>
               </div>
             </div>
             <button mat-stroked-button class="clear-custom-btn" (click)="clearCustomFilter()">
               <mat-icon>clear</mat-icon>
-              Clear Custom
+              <ng-container i18n="@@feeds.filter.clear-custom">Clear Custom</ng-container>
             </button>
           </div>
         }
 
         <div class="combined-filter-header">
-          <span class="combined-filter-title">Content types</span>
+          <span class="combined-filter-title" i18n="@@feeds.filter.content-types">Content types</span>
           @if (hasCustomFilter()) {
-          <span class="combined-filter-status">Custom</span>
+          <span class="combined-filter-status" i18n="@@feeds.filter.custom">Custom</span>
           }
         </div>
 
@@ -173,7 +153,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 
         <div class="tag-limit-panel">
           <div class="tag-limit-header">
-            <span class="section-label">Tags allowed</span>
+            <span class="section-label" i18n="@@feeds.filter.tags-allowed">Tags allowed</span>
             <span class="tag-limit-value">{{ currentMaxTagsAllowedLabel() }}</span>
           </div>
           <mat-button-toggle-group
@@ -184,7 +164,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
             <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
             }
           </mat-button-toggle-group>
-          <p class="tag-limit-hint">Hide posts with more tags than this. Any disables the spam filter.</p>
+          <p class="tag-limit-hint" i18n="@@feeds.filter.tags-hint">Hide posts with more tags than this. Any disables the spam filter.</p>
         </div>
 
         <div class="toggle-option">
@@ -208,15 +188,15 @@ function isStandardKindsSelection(kinds: number[]): boolean {
             (click)="onWotFilterChange(!currentWotEnabled())">
             <mat-icon class="chip-icon">shield</mat-icon>
             <div class="chip-text">
-              <span class="chip-label">Web of Trust</span>
-              <span class="chip-description">Only show events from trusted users</span>
+              <span class="chip-label" i18n="@@feeds.filter.wot">Web of Trust</span>
+              <span class="chip-description" i18n="@@feeds.filter.wot-description">Only show events from trusted users</span>
             </div>
           </button>
 
           @if (currentWotEnabled()) {
           <div class="wot-slider-panel">
             <div class="wot-slider-header">
-              <span class="section-label">Min WoT rank</span>
+              <span class="section-label" i18n="@@feeds.filter.wot-min">Min WoT rank</span>
               <span class="wot-slider-value">{{ currentWotMinRankLabel() }}</span>
             </div>
             <mat-slider min="0" max="100" step="1" discrete>
@@ -227,7 +207,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
                 aria-label="Minimum Web of Trust rank"
                 (valueChange)="onWotMinRankChange($any($event))" />
             </mat-slider>
-            <p class="wot-slider-hint">0 includes authors with a positive trust rank.</p>
+            <p class="wot-slider-hint" i18n="@@feeds.filter.wot-hint">0 includes authors with a positive trust rank.</p>
           </div>
           }
         </div>
@@ -235,13 +215,13 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 
         <div class="actions-row">
           <button mat-stroked-button class="action-btn" (click)="selectAll()" [disabled]="hasCustomFilter()">
-            Select All
+            <ng-container i18n="@@feeds.filter.select-all">Select All</ng-container>
           </button>
           <button mat-stroked-button class="action-btn" (click)="clearAll()" [disabled]="hasCustomFilter()">
-            Clear All
+            <ng-container i18n="@@feeds.filter.clear-all">Clear All</ng-container>
           </button>
           <button mat-stroked-button class="action-btn" (click)="reset()">
-            Reset
+            <ng-container i18n="@@feeds.filter.reset">Reset</ng-container>
           </button>
         </div>
       </div>
@@ -250,9 +230,9 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 
       <div class="filter-column list-filter-column">
         <div class="combined-filter-header">
-          <span class="combined-filter-title">List filter</span>
+          <span class="combined-filter-title" i18n="@@feeds.filter.list-filter">List filter</span>
           @if (currentListFilter() !== 'following') {
-          <span class="combined-filter-status">Active</span>
+          <span class="combined-filter-status" i18n="@@feeds.filter.active">Active</span>
           }
         </div>
 
@@ -260,8 +240,8 @@ function isStandardKindsSelection(kinds: number[]): boolean {
           (click)="selectListFilter('following')">
           <mat-icon class="chip-icon">people</mat-icon>
           <div class="chip-text">
-            <span class="chip-label">Following</span>
-            <span class="chip-description">People you follow</span>
+            <span class="chip-label" i18n="@@feeds.following">Following</span>
+            <span class="chip-description" i18n="@@feeds.filter.following-description">People you follow</span>
           </div>
         </button>
 
@@ -270,8 +250,8 @@ function isStandardKindsSelection(kinds: number[]): boolean {
           (click)="selectListFilter('nostria-favorites')">
           <mat-icon class="chip-icon">star</mat-icon>
           <div class="chip-text">
-            <span class="chip-label">Favorites</span>
-            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+            <span class="chip-label" i18n="@@feeds.filter.favorites">Favorites</span>
+            <span class="chip-description">{{ peopleCountLabel(favorites.pubkeys.length) }}</span>
           </div>
         </button>
         }
@@ -284,7 +264,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
           <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
           <div class="chip-text">
             <span class="chip-label">{{ set.title }}</span>
-            <span class="chip-description">{{ set.pubkeys.length }} people</span>
+            <span class="chip-description">{{ peopleCountLabel(set.pubkeys.length) }}</span>
           </div>
         </button>
         }
@@ -292,7 +272,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 
         <div class="actions-row single-action-row">
           <button mat-stroked-button class="action-btn" (click)="resetListFilter()">
-            Reset
+            <ng-container i18n="@@feeds.filter.reset">Reset</ng-container>
           </button>
         </div>
       </div>
@@ -726,11 +706,40 @@ export class FeedFilterPanelComponent {
   currentMentionedMode = computed(() => this.mentionedMode());
 
   // Compute available content types (all types for now, could be filtered based on feed type)
-  availableContentTypes = computed(() => CONTENT_TYPES);
+  availableContentTypes = computed(() => this.contentTypes);
 
-  readonly toggleFilterOptions = TOGGLE_FILTER_OPTIONS;
-  readonly maxTagsAllowedOptions = MAX_TAGS_ALLOWED_OPTIONS;
-  readonly hideWordleOption = HIDE_WORDLE_OPTION;
+  readonly contentTypes: ContentType[] = [
+    { ...CONTENT_TYPE_DEFS[0], label: $localize`:@@feed.filter.posts:Posts`, description: $localize`:@@feed.filter.posts.description:Short text posts` },
+    { ...CONTENT_TYPE_DEFS[1], label: $localize`:@@feed.filter.articles:Articles`, description: $localize`:@@feed.filter.articles.description:Long-form writing` },
+    { ...CONTENT_TYPE_DEFS[2], label: $localize`:@@feed.filter.polls:Polls`, description: $localize`:@@feed.filter.polls.description:Polls and zap polls` },
+    { ...CONTENT_TYPE_DEFS[3], label: $localize`:@@feed.filter.reposts:Reposts`, description: $localize`:@@feed.filter.reposts.description:Shared content from others` },
+    { ...CONTENT_TYPE_DEFS[4], label: $localize`:@@feed.filter.audio:Audio Posts`, description: $localize`:@@feed.filter.audio.description:Audio posts and music` },
+    { ...CONTENT_TYPE_DEFS[5], label: $localize`:@@feed.filter.photos:Photo Posts`, description: $localize`:@@feed.filter.photos.description:Image galleries` },
+    { ...CONTENT_TYPE_DEFS[6], label: $localize`:@@feed.filter.videos:Video Posts`, description: $localize`:@@feed.filter.videos.description:Video posts and clips` },
+  ];
+
+  readonly toggleFilterOptions: ToggleFilterOption[] = [
+    { id: 'showReplies', label: $localize`:@@feed.filter.show-replies:Show Replies`, description: $localize`:@@feed.filter.show-replies.description:Comments on other posts`, icon: 'reply' },
+  ];
+
+  readonly maxTagsAllowedOptions: MaxTagsAllowedOption[] = [
+    { value: 5, label: '5' },
+    { value: 20, label: '20' },
+    { value: 'any', label: $localize`:@@feed.filter.tags.any:Any` },
+  ];
+
+  readonly hideWordleOption: ToggleFilterOption = {
+    id: 'hideWordle',
+    label: $localize`:@@feed.filter.hide-wordle:Hide Wordle`,
+    description: $localize`:@@feed.filter.hide-wordle.description:Filter out posts tagged wordle`,
+    icon: 'grid_view',
+  };
+
+  peopleCountLabel(count: number): string {
+    return count === 1
+      ? $localize`:@@feeds.filter.people-one:${count}:count: person`
+      : $localize`:@@feeds.filter.people-other:${count}:count: people`;
+  }
 
   favoritesSet = computed(() =>
     this.followSetsService.followSets().find(set => set.dTag === 'nostria-favorites') ?? null
@@ -949,7 +958,7 @@ export class FeedFilterPanelComponent {
       return;
     }
 
-    const allKinds = CONTENT_TYPES.flatMap(t => t.kinds);
+    const allKinds = CONTENT_TYPE_DEFS.flatMap(t => t.kinds);
     const uniqueKinds = [...new Set(allKinds)];
     this.updateKinds(uniqueKinds);
     this.updateShowReposts(true);

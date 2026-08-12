@@ -38,6 +38,7 @@ export interface InterestFeedSelection {
       mat-icon-button
       [matMenuTriggerFor]="listMenu"
       matTooltip="Interests"
+      i18n-matTooltip="@@feeds.interests"
       class="list-menu-trigger"
     >
       <mat-icon>tag</mat-icon>
@@ -46,7 +47,7 @@ export interface InterestFeedSelection {
     <mat-menu #listMenu="matMenu" class="list-feed-selector-menu">
       <div class="menu-header" role="presentation">
         <mat-icon>tag</mat-icon>
-        <span>Interests</span>
+        <span i18n="@@feeds.interests">Interests</span>
       </div>
 
       <mat-divider></mat-divider>
@@ -54,13 +55,13 @@ export interface InterestFeedSelection {
       @if (isLoadingInterests()) {
         <div class="loading-state" role="presentation">
           <mat-spinner diameter="24"></mat-spinner>
-          <span>Loading interests...</span>
+          <span i18n="@@feeds.interests.loading">Loading interests...</span>
         </div>
       } @else if (interestSets().length === 0) {
         <div class="empty-state" role="presentation">
           <mat-icon>tag</mat-icon>
-          <span>No interests found</span>
-          <span class="empty-hint">Add interests in Collections → Interests</span>
+          <span i18n="@@feeds.interests.empty">No interests found</span>
+          <span class="empty-hint" i18n="@@feeds.interests.empty-hint">Add interests in Collections → Interests</span>
         </div>
       } @else {
         <div class="list-items">
@@ -82,7 +83,7 @@ export interface InterestFeedSelection {
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="onClearSelection()">
           <mat-icon>close</mat-icon>
-          <span>Clear selection</span>
+          <span i18n="@@feeds.interests.clear">Clear selection</span>
         </button>
       }
     </mat-menu>

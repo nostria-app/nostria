@@ -78,7 +78,7 @@
               <span class="action-count like-hover-target" (mouseenter)="topReactionBtn.onDesktopMouseEnter()"
                 (mouseleave)="topReactionBtn.onDesktopMouseLeave()">{{ likes().length }}</span>
               }
-              <span class="action-text like-hover-target" (mouseenter)="topReactionBtn.onDesktopMouseEnter()"
+              <span class="action-text like-hover-target" i18n="@@event.actions.like" (mouseenter)="topReactionBtn.onDesktopMouseEnter()"
                 (mouseleave)="topReactionBtn.onDesktopMouseLeave()">Like</span>
             </div>
 
@@ -88,7 +88,7 @@
               @if (effectiveReplyCount() > 0) {
               <span class="action-count">{{ effectiveReplyCount() }}</span>
               }
-              <span class="action-text">Reply</span>
+              <span class="action-text" i18n="@@event.actions.reply">Reply</span>
             </div>
 
             <div class="action-button zap-action" (click)="topZapBtn.onClick($event); $event.stopPropagation()">
@@ -98,7 +98,7 @@
               @if (totalZapAmount() > 0) {
               <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
               }
-              <span class="action-text">Zap</span>
+              <span class="action-text" i18n="@@event.actions.zap">Zap</span>
             </div>
 
             <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
@@ -107,7 +107,7 @@
               @if (shareCount() > 0) {
               <span class="action-count">{{ shareCount() }}</span>
               }
-              <span class="action-text">Share</span>
+              <span class="action-text" i18n="@@event.actions.share">Share</span>
             </div>
 
             <div class="action-button bookmark-action" role="button"
@@ -116,7 +116,7 @@
               (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
               (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
               <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
-              <span class="action-text">Bookmark</span>
+              <span class="action-text" i18n="@@event.actions.bookmark">Bookmark</span>
             </div>
 
             @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
@@ -329,7 +329,7 @@
         <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
           (mouseleave)="reactionBtn.onDesktopMouseLeave()">{{ likes().length }}</span>
         }
-        <span class="action-text like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+        <span class="action-text like-hover-target" i18n="@@event.actions.like" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
           (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
       </div>
 
@@ -340,7 +340,7 @@
         @if (effectiveReplyCount() > 0) {
         <span class="action-count">{{ effectiveReplyCount() }}</span>
         }
-        <span class="action-text">Reply</span>
+        <span class="action-text" i18n="@@event.actions.reply">Reply</span>
       </div>
 
       <!-- Zap with sats -->
@@ -351,7 +351,7 @@
         @if (totalZapAmount() > 0) {
         <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
         }
-        <span class="action-text">Zap</span>
+        <span class="action-text" i18n="@@event.actions.zap">Zap</span>
       </div>
 
       <!-- Share with count (reposts + quotes) -->
@@ -361,7 +361,7 @@
         @if (shareCount() > 0) {
         <span class="action-count">{{ shareCount() }}</span>
         }
-        <span class="action-text">Share</span>
+        <span class="action-text" i18n="@@event.actions.share">Share</span>
       </div>
 
       <!-- Bookmark -->
@@ -370,7 +370,7 @@
         (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
         (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
-        <span class="action-text">Bookmark</span>
+        <span class="action-text" i18n="@@event.actions.bookmark">Bookmark</span>
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->

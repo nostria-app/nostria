@@ -89,7 +89,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
                 <div class="preview-action">
                   <mat-icon class="preview-icon">favorite_border</mat-icon>
                   <span class="preview-count">3</span>
-                  <span class="preview-text">Like</span>
+                  <span class="preview-text" i18n="@@event.actions.like">Like</span>
                 </div>
               </div>
               <span class="display-mode-label">{{ mode.label }}</span>
@@ -110,7 +110,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
                 <div class="preview-action">
                   <mat-icon class="preview-icon">favorite_border</mat-icon>
                   <span class="preview-count">3</span>
-                  <span class="preview-text">Like</span>
+                  <span class="preview-text" i18n="@@event.actions.like">Like</span>
                 </div>
               </div>
               <span class="display-mode-label">{{ mode.label }}</span>
@@ -182,9 +182,9 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly reactionEmojiOptions = REACTION_EMOJI_OPTIONS;
 
   readonly displayModes = [
-    { value: 'icons-and-labels', label: 'Icons & Labels' },
-    { value: 'icons-only', label: 'Icons Only' },
-    { value: 'labels-only', label: 'Labels Only' },
+    { value: 'icons-and-labels', label: $localize`:@@settings.action-buttons.icons-and-labels:Icons & Labels` },
+    { value: 'icons-only', label: $localize`:@@settings.action-buttons.icons-only:Icons Only` },
+    { value: 'labels-only', label: $localize`:@@settings.action-buttons.labels-only:Labels Only` },
   ];
 
   postsDisplayMode = computed(() => {

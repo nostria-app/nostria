@@ -225,7 +225,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
   isThreadInteractionBlocked = computed<boolean>(() => this.mode() === 'thread' && this.threadInteractionDisabled());
   threadInteractionBlockedTooltip = computed<string>(() => {
-    return this.threadInteractionDisabledReason() || 'Only accounts followed by the original poster can interact in this thread.';
+    return this.threadInteractionDisabledReason() || $localize`:@@event.thread.interaction-blocked:Only accounts followed by the original poster can interact in this thread.`;
   });
 
   // IntersectionObserver for lazy loading interactions

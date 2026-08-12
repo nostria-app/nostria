@@ -4755,7 +4755,31 @@ export class FeedService {
     return Object.entries(COLUMN_TYPES).map(([key, value]) => ({
       key: key as keyof typeof COLUMN_TYPES,
       ...value,
+      label: this.localizedColumnTypeLabel(key),
     }));
+  }
+
+  private localizedColumnTypeLabel(key: string): string {
+    switch (key) {
+      case 'notes':
+        return $localize`:@@feeds.type.notes:Notes`;
+      case 'articles':
+        return $localize`:@@feeds.type.articles:Articles`;
+      case 'photos':
+        return $localize`:@@feeds.type.photos:Photos`;
+      case 'videos':
+        return $localize`:@@feeds.type.videos:Videos`;
+      case 'music':
+        return $localize`:@@feeds.type.music:Music`;
+      case 'polls':
+        return $localize`:@@feeds.type.polls:Polls`;
+      case 'code':
+        return $localize`:@@feeds.type.code:Code`;
+      case 'custom':
+        return $localize`:@@feeds.type.custom:Custom`;
+      default:
+        return COLUMN_TYPES[key as keyof typeof COLUMN_TYPES]?.label ?? key;
+    }
   }
 
   /**

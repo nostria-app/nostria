@@ -55,6 +55,7 @@ import {
 } from './notifications-filter-panel/notifications-filter-panel.component';
 import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
+import { getAngularLocaleCode } from '../../utils/supported-locales';
 import { TrustService } from '../../services/trust.service';
 import { Subscription } from 'rxjs';
 import { UserRelayService } from '../../services/relays/user-relay';
@@ -989,7 +990,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return `${days}d`;
     } else {
       const date = new Date(timestamp);
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString(getAngularLocaleCode($localize.locale), {
         month: 'numeric',
         day: 'numeric',
         year: '2-digit',

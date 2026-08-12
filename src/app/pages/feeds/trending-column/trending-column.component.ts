@@ -127,32 +127,35 @@ export class TrendingColumnComponent implements OnDestroy {
   private displayCount = signal(PAGE_SIZE);
 
   sourceOptions: SelectOption<TrendingSource>[] = [
-    { value: 'network', label: 'Global (network)' },
-    { value: 'cached', label: 'Personal (cached)' },
+    { value: 'network', label: $localize`:@@feeds.trending.source.network:Global (network)` },
+    { value: 'cached', label: $localize`:@@feeds.trending.source.cached:Personal (cached)` },
   ];
 
   // Options for dropdowns
   hoursOptions: { value: TrendingHours; label: string }[] = [
-    { value: 1, label: '1 hour' },
-    { value: 4, label: '4 hours' },
-    { value: 12, label: '12 hours' },
-    { value: 24, label: '24 hours' },
-    { value: 48, label: '48 hours' },
+    { value: 1, label: $localize`:@@feeds.trending.hours.1:1 hour` },
+    { value: 4, label: $localize`:@@feeds.trending.hours.4:4 hours` },
+    { value: 12, label: $localize`:@@feeds.trending.hours.12:12 hours` },
+    { value: 24, label: $localize`:@@feeds.trending.hours.24:24 hours` },
+    { value: 48, label: $localize`:@@feeds.trending.hours.48:48 hours` },
   ];
 
   orderOptions: { value: TrendingOrder; label: string }[] = [
-    { value: 'replies', label: 'Most comments' },
-    { value: 'reposts', label: 'Most reposts' },
-    { value: 'reactions', label: 'Most likes' },
-    { value: 'zap_count', label: 'Most zaps' },
-    { value: 'zap_amount', label: 'Most zap sats' },
+    { value: 'replies', label: $localize`:@@feeds.trending.order.comments:Most comments` },
+    { value: 'reposts', label: $localize`:@@feeds.trending.order.reposts:Most reposts` },
+    { value: 'reactions', label: $localize`:@@feeds.trending.order.likes:Most likes` },
+    { value: 'zap_count', label: $localize`:@@feeds.trending.order.zaps:Most zaps` },
+    { value: 'zap_amount', label: $localize`:@@feeds.trending.order.sats:Most zap sats` },
   ];
 
   listOptions = computed<SelectOption<string>[]>(() => {
-    const options: SelectOption<string>[] = [{ value: 'all', label: 'All cached notes' }];
+    const options: SelectOption<string>[] = [{ value: 'all', label: $localize`:@@feeds.trending.list.all:All cached notes` }];
     const followingCount = this.accountState.followingList().length;
 
-    options.push({ value: 'following', label: `Following (${followingCount})` });
+    options.push({
+      value: 'following',
+      label: $localize`:@@feeds.trending.list.following:Following (${followingCount}:count:)`,
+    });
 
     for (const followSet of this.followSets.followSets()) {
       options.push({ value: `followset:${followSet.dTag}`, label: followSet.title });

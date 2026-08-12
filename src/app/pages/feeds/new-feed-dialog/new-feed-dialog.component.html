@@ -1,4 +1,4 @@
-<app-custom-dialog [title]="isEditMode() ? 'Edit Feed' : 'Create New Feed'" [disableEnterSubmit]="true"
+<app-custom-dialog [title]="dialogTitle()" [disableEnterSubmit]="true"
   [disableClose]="true" (closed)="onClose()">
 
   <div dialog-content>
@@ -9,8 +9,8 @@
         <div class="section basic-config-section">
           <!-- <h3>Feed Information</h3> -->
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Feed Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Feed" />
+            <mat-label i18n="@@feeds.dialog.name">Feed Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Feed" i18n-placeholder="@@feeds.dialog.name-placeholder" />
             <button mat-icon-button matSuffix type="button" [matMenuTriggerFor]="iconMenu" class="icon-picker-button">
               <mat-icon>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
             </button>
@@ -34,7 +34,7 @@
         @if (!isEditMode()) {
         <!-- Feed Type Selection -->
         <div class="section feed-type-section">
-          <h3>Feed Type</h3>
+          <h3 i18n="@@feeds.dialog.type">Feed Type</h3>
           <div class="feed-type-cards">
             @for (type of feedTypes(); track type.key) {
             <button type="button" class="feed-type-card" [class.selected]="selectedFeedType() === type.key"
@@ -49,7 +49,7 @@
 
         <!-- Content Configuration -->
         <div class="section content-config-section">
-          <h3>Content Configuration</h3>
+          <h3 i18n="@@feeds.dialog.content">Content Configuration</h3>
 
           <!-- Event Kinds Selection -->
           <div class="form-group">
@@ -59,7 +59,7 @@
             </p> -->
 
             <mat-form-field class="full-width" appearance="outline">
-              <mat-label>Event Kinds</mat-label>
+              <mat-label i18n="@@feeds.dialog.kinds">Event Kinds</mat-label>
               <mat-chip-grid #chipGrid aria-label="Event kinds selection">
                 @for (kind of selectedKinds(); track kind) {
                 <mat-chip-row (removed)="removeKind(kind)">
@@ -70,7 +70,7 @@
                 </mat-chip-row>
                 }
               </mat-chip-grid>
-              <input placeholder="Add event kind..." #kindInput [formControl]="kindInputControl"
+              <input placeholder="Add event kind..." i18n-placeholder="@@feeds.dialog.add-kind" #kindInput [formControl]="kindInputControl"
                 [matChipInputFor]="chipGrid" [matAutocomplete]="kindAutocomplete"
                 [matChipInputSeparatorKeyCodes]="separatorKeysCodes" (matChipInputTokenEnd)="addKind($event)" />
               <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
@@ -89,31 +89,31 @@
             <!-- <h4>Content Source</h4> -->
             <!-- <p class="section-description">Select source for events to include in this feed</p> -->
             <mat-form-field class="full-width" appearance="outline">
-              <mat-label>Content Source</mat-label>
+              <mat-label i18n="@@feeds.dialog.source">Content Source</mat-label>
               <mat-select formControlName="source">
                 <mat-option value="for-you">
                   <mat-icon>for_you</mat-icon>
-                  <span>For You</span>
+                  <span i18n="@@feeds.for-you">For You</span>
                 </mat-option>
                 <mat-option value="following">
                   <mat-icon>people</mat-icon>
-                  <span>Following</span>
+                  <span i18n="@@feeds.following">Following</span>
                 </mat-option>
                 <mat-option value="public">
                   <mat-icon>public</mat-icon>
-                  <span>Public</span>
+                  <span i18n="@@feeds.source.public">Public</span>
                 </mat-option>
                 <mat-option value="interests">
                   <mat-icon>tag</mat-icon>
-                  <span>Interests</span>
+                  <span i18n="@@feeds.interests">Interests</span>
                 </mat-option>
                 <mat-option value="search">
                   <mat-icon>search</mat-icon>
-                  <span>Search</span>
+                  <span i18n="@@feeds.source.search">Search</span>
                 </mat-option>
                 <mat-option value="custom">
                   <mat-icon>tune</mat-icon>
-                  <span>Custom</span>
+                  <span i18n="@@feeds.type.custom">Custom</span>
                 </mat-option>
               </mat-select>
             </mat-form-field>

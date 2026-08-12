@@ -7,9 +7,9 @@
           {{ publishedLabel() }}
         </a>
         @if (isEdited()) {
-        <span class="edited-indicator" [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
+        <span class="edited-indicator" [matTooltip]="editedTooltip()"
           matTooltipPosition="below">
-          (edited)
+          <ng-container i18n="@@event.header.edited">(edited)</ng-container>
         </span>
         }
         @if (hasPoW()) {
@@ -19,7 +19,7 @@
         </span>
         }
         @if (clientLogo()) {
-        <span class="header-client" [matTooltip]="'Published with ' + clientName()" matTooltipPosition="below">
+        <span class="header-client" [matTooltip]="publishedWithTooltip()" matTooltipPosition="below">
           <img [src]="clientLogo()!" [alt]="clientName() + ' logo'" class="client-logo" />
         </span>
         }

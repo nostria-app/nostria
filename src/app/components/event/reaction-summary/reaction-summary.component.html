@@ -14,7 +14,7 @@
     @switch (selectedTab()) {
     @case ('reactions') {
     @if (reactions().length === 0) {
-    <div class="empty-state">No reactions yet</div>
+    <div class="empty-state" i18n="@@event.reactions.empty">No reactions yet</div>
     } @else {
     <div class="content-list">
       @for (reaction of sortedReactions(); track reaction.event.id) {
@@ -27,8 +27,7 @@
               matTooltipPosition="above" [matTooltipTouchGestures]="'off'" [matTooltipHideDelay]="100"
               [matTooltipShowDelay]="150"
               [matTooltipDisabled]="isHandset() || getReactionRelayUrls(reaction).length === 0"
-              (click)="toggleReactionRelayTooltip(reaction, $event)">{{ reaction.event.created_at | ago:'short' }}
-              ago</button>
+              (click)="toggleReactionRelayTooltip(reaction, $event)">{{ reaction.event.created_at | ago:'short' }}</button>
 
             @if (isHandset() && isRelayTooltipOpen(reaction)) {
             <div class="reaction-relay-popover" (click)="$event.stopPropagation()">
@@ -41,7 +40,8 @@
           @if (canDeleteReaction(reaction)) {
           <button class="reaction-delete-toggle" type="button" [disabled]="deletingReactionIds().has(reaction.event.id)"
             (click)="deleteReaction(reaction, $event)"
-            [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)" title="Delete reaction">
+            [attr.aria-label]="deleteReactionAriaLabel(reaction.event.content)" title="Delete reaction"
+            i18n-title="@@event.reactions.delete">
             @if (getCustomEmojiUrl(reaction.event)) {
             <app-custom-emoji [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content"
               cssClass="reaction-emoji-img reaction-delete-emoji"
@@ -68,7 +68,7 @@
 
     @case ('reposts') {
     @if (reposts().length === 0) {
-    <div class="empty-state">No reposts yet</div>
+    <div class="empty-state" i18n="@@event.reposts.empty">No reposts yet</div>
     } @else {
     <div class="content-list">
       @for (repost of sortedReposts(); track repost.event.id) {
@@ -83,7 +83,7 @@
 
     @case ('quotes') {
     @if (quotes().length === 0) {
-    <div class="empty-state">No quotes yet</div>
+    <div class="empty-state" i18n="@@event.quotes.empty">No quotes yet</div>
     } @else {
     <div class="quotes-list">
       @for (quote of sortedQuotes(); track quote.event.id) {
@@ -92,7 +92,7 @@
         @if (getQuoteDisplayText(quote.event.content); as quoteText) {
         <div class="quote-content-minimal">{{ quoteText }}</div>
         } @else {
-        <div class="quote-content-minimal quote-content-empty">Quoted event reference</div>
+        <div class="quote-content-minimal quote-content-empty" i18n="@@event.quotes.reference">Quoted event reference</div>
         }
       </div>
       }
@@ -102,7 +102,7 @@
 
     @case ('zaps') {
     @if (zaps().length === 0) {
-    <div class="empty-state">No zaps yet</div>
+    <div class="empty-state" i18n="@@event.zaps.empty">No zaps yet</div>
     } @else {
     <div class="content-list">
       @for (zap of sortedZaps(); track zap.receipt.id) {
@@ -110,7 +110,7 @@
         <app-user-profile [pubkey]="zap.senderPubkey" view="compact"></app-user-profile>
         @if (zap.comment) {
         @if (isImageUrl(zap.comment)) {
-        <img [src]="zap.comment" class="zap-comment-image" alt="Zap image" loading="lazy"
+        <img [src]="zap.comment" class="zap-comment-image" alt="Zap image" i18n-alt="@@event.zaps.image" loading="lazy"
           (click)="openImagePreview(zap.comment, $event)" />
         } @else {
         <span class="zap-comment-inline">{{ zap.comment }}</span>

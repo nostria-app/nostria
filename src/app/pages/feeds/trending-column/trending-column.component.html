@@ -2,7 +2,7 @@
   <!-- Filter Options -->
   <div class="filter-options">
     <mat-form-field appearance="outline" class="filter-select">
-      <mat-label>Source</mat-label>
+      <mat-label i18n="@@feeds.trending.source">Source</mat-label>
       <mat-select [value]="selectedSource()" (selectionChange)="onSourceChange($event.value)">
         @for (option of sourceOptions; track option.value) {
         <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -12,7 +12,7 @@
 
     @if (selectedSource() === 'cached') {
     <mat-form-field appearance="outline" class="filter-select">
-      <mat-label>List</mat-label>
+      <mat-label i18n="@@feeds.trending.list">List</mat-label>
       <mat-select [value]="selectedList()" (selectionChange)="onListChange($event.value)">
         @for (option of listOptions(); track option.value) {
         <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -22,7 +22,7 @@
     }
 
     <mat-form-field appearance="outline" class="filter-select">
-      <mat-label>Time</mat-label>
+      <mat-label i18n="@@feeds.trending.time">Time</mat-label>
       <mat-select [value]="selectedHours()" (selectionChange)="onHoursChange($event.value)">
         @for (option of hoursOptions; track option.value) {
         <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -31,7 +31,7 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="filter-select">
-      <mat-label>Order by</mat-label>
+      <mat-label i18n="@@feeds.trending.order">Order by</mat-label>
       <mat-select [value]="selectedOrder()" (selectionChange)="onOrderChange($event.value)">
         @for (option of orderOptions; track option.value) {
         <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -44,7 +44,7 @@
       <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
     </div>
     } @else {
-    <button mat-icon-button (click)="refresh()" matTooltip="Refresh trending">
+    <button mat-icon-button (click)="refresh()" matTooltip="Refresh trending" i18n-matTooltip="@@feeds.trending.refresh">
       <mat-icon>refresh</mat-icon>
     </button>
     }

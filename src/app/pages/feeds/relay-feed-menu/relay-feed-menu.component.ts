@@ -44,7 +44,8 @@ export interface RelayInfo {
     <button
       mat-icon-button
       [matMenuTriggerFor]="relayMenu"
-      matTooltip="Public relay feeds"
+      matTooltip="Public Relay Feeds"
+      i18n-matTooltip="@@feeds.public-relay-feeds"
       class="relay-menu-trigger"
     >
       <mat-icon>dns</mat-icon>
@@ -53,8 +54,8 @@ export interface RelayInfo {
     <mat-menu #relayMenu="matMenu" class="relay-feed-menu">
       <div class="menu-header" role="presentation">
         <mat-icon>dns</mat-icon>
-        <span>Public Relay Feeds</span>
-        <button mat-icon-button (click)="onResetRelays(); $event.stopPropagation()" matTooltip="Reset to defaults" class="reset-btn">
+        <span i18n="@@feeds.public-relay-feeds">Public Relay Feeds</span>
+        <button mat-icon-button (click)="onResetRelays(); $event.stopPropagation()" matTooltip="Reset to defaults" i18n-matTooltip="@@feeds.relays.reset" class="reset-btn">
           <mat-icon>restore</mat-icon>
         </button>
       </div>
@@ -86,6 +87,7 @@ export interface RelayInfo {
               class="remove-btn"
               (click)="onRemoveRelay(relay, $event)"
               matTooltip="Remove"
+              i18n-matTooltip="@@common.remove"
             >
               <mat-icon>close</mat-icon>
             </button>
@@ -96,7 +98,7 @@ export interface RelayInfo {
 
       @if (relaySets().length > 0) {
         <mat-divider></mat-divider>
-        <div class="menu-section-label" role="presentation">Relay Sets</div>
+        <div class="menu-section-label" role="presentation" i18n="@@feeds.relay-sets">Relay Sets</div>
         <div class="relay-list">
           @for (set of relaySets(); track set.identifier) {
           <button
@@ -108,7 +110,7 @@ export interface RelayInfo {
               <mat-icon class="relay-item-icon-fallback">folder</mat-icon>
               <div class="relay-item-info">
                 <span class="relay-item-name">{{ set.name }}</span>
-                <span class="relay-item-url">{{ set.relays.length }} relays</span>
+                <span class="relay-item-url">{{ relayCountLabel(set.relays.length) }}</span>
               </div>
               @if (set.identifier === selectedSet()) {
               <mat-icon class="active-check">check</mat-icon>
@@ -123,7 +125,7 @@ export interface RelayInfo {
 
       <div class="add-relay-section" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
         <mat-form-field appearance="outline" class="add-relay-field">
-          <mat-label>Add relay</mat-label>
+          <mat-label i18n="@@feeds.add-relay">Add relay</mat-label>
           <input
             matInput
             [(ngModel)]="newRelayInput"
@@ -395,6 +397,12 @@ export class RelayFeedMenuComponent {
     } catch {
       this.logger.debug(`Failed to fetch info for ${domain}`);
     }
+  }
+
+  relayCountLabel(count: number): string {
+    return count === 1
+      ? $localize`:@@feeds.relay-count.one:${count}:count: relay`
+      : $localize`:@@feeds.relay-count.other:${count}:count: relays`;
   }
 
   getRelayName(domain: string): string {

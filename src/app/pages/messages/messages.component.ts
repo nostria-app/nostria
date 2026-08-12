@@ -435,7 +435,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   });
   selectedChatLastActiveLabel = computed(() => {
     const timestamp = this.selectedChatLastActiveAt();
-    return timestamp ? `Active ${this.utilities.getRelativeTime(timestamp)}` : '';
+    return timestamp
+      ? $localize`:@@messages.active:Active ${this.utilities.getRelativeTime(timestamp)}:time:`
+      : '';
   });
 
   // activePubkey = computed(() => this.selectedChat()?.pubkey || '');

@@ -1,9 +1,9 @@
 @if (view() === 'full') {
-<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" i18n-aria-label="@@event.menu.more-options" (click)="$event.stopPropagation()">
   <mat-icon>more_vert</mat-icon>
 </button>
 } @else {
-<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" i18n-aria-label="@@event.menu.more-options" (click)="$event.stopPropagation()">
   <mat-icon>more_vert</mat-icon>
 </button>
 }
@@ -12,18 +12,18 @@
 
   <button mat-menu-item [matMenuTriggerFor]="copyMenu">
     <mat-icon>content_copy</mat-icon>
-    Copy
+    <span i18n="@@event.menu.copy">Copy</span>
   </button>
   @if (canShowProfileMenu()) {
   <button mat-menu-item [matMenuTriggerFor]="profileMenu">
     <mat-icon>account_circle</mat-icon>
-    Profile
+    <span i18n="@@event.menu.profile">Profile</span>
   </button>
   }
   @if (hasMedia()) {
   <button mat-menu-item [matMenuTriggerFor]="mediaMenu">
     <mat-icon>perm_media</mat-icon>
-    Media
+    <span i18n="@@event.menu.media">Media</span>
   </button>
   }
   <mat-divider></mat-divider>
@@ -33,9 +33,9 @@
       {{ pinned.getPinIcon(event().id) }}
     </mat-icon>
     @if (pinned.isPinned(event().id)) {
-    Unpin
+    <span i18n="@@event.menu.unpin">Unpin</span>
     } @else {
-    Pin
+    <span i18n="@@event.menu.pin">Pin</span>
     }
   </button>
   }
@@ -45,15 +45,15 @@
       push_pin
     </mat-icon>
     @if (pinned.isArticlePinned(articleId())) {
-    Unpin
+    <span i18n="@@event.menu.unpin">Unpin</span>
     } @else {
-    Pin
+    <span i18n="@@event.menu.pin">Pin</span>
     }
   </button>
   }
   <button mat-menu-item (click)="shareEventDialog()">
     <mat-icon>share</mat-icon>
-    Share
+    <span i18n="@@event.actions.share">Share</span>
   </button>
   <button mat-menu-item (click)="onBookmarkClick($event)">
     <mat-icon
@@ -61,15 +61,11 @@
       matTooltipPosition="below">
       {{ bookmark.getBookmarkIcon(isArticle() ? articleId() : event().id, isArticle() ? 'a' : 'e') }}
     </mat-icon>
-    @if (bookmark.isBookmarkedInAnyList(isArticle() ? articleId() : event().id, isArticle() ? 'a' : 'e')) {
-    Bookmark
-    } @else {
-    Bookmark
-    }
+    <span i18n="@@event.actions.bookmark">Bookmark</span>
   </button>
   <button mat-menu-item [matMenuTriggerFor]="advancedMenu">
     <mat-icon>tune</mat-icon>
-    Advanced
+    <span i18n="@@event.menu.advanced">Advanced</span>
   </button>
   <!-- @if (showAiOptions()) {
   <mat-divider></mat-divider>
@@ -85,32 +81,36 @@
   @if (isOurEvent() && isTextNote()) {
   <button mat-menu-item (click)="editEvent()">
     <mat-icon>edit</mat-icon>
-    Edit
+    <span i18n="@@event.menu.edit">Edit</span>
   </button>
   }
   @if (isOurEvent()) {
   <button mat-menu-item (click)="deleteEvent()">
     <mat-icon>delete</mat-icon>
-    Delete
+    <span i18n="@@event.menu.delete">Delete</span>
   </button>
   }
 
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="reportContent()">
     <mat-icon>warning</mat-icon>
-    Report Content
+    <span i18n="@@event.menu.report">Report Content</span>
   </button>
   @if (event().pubkey !== accountState.pubkey()) {
   <button mat-menu-item (click)="blockUser()">
     <mat-icon>{{ isAuthorBlocked() ? 'check_circle' : 'block' }}</mat-icon>
-    <span>{{ isAuthorBlocked() ? 'Unblock User' : 'Block User' }}</span>
+    @if (isAuthorBlocked()) {
+    <span i18n="@@event.menu.unblock">Unblock User</span>
+    } @else {
+    <span i18n="@@event.menu.block">Block User</span>
+    }
   </button>
   }
   @if (showReadAloudOptions()) {
   <mat-divider></mat-divider>
   <button mat-menu-item [matMenuTriggerFor]="readAloudMenu" [disabled]="isReadingAloud()">
     <mat-icon>record_voice_over</mat-icon>
-    Read aloud
+    <span i18n="@@event.menu.read-aloud">Read aloud</span>
   </button>
   }
 
@@ -132,15 +132,15 @@
 
   <button mat-menu-item (click)="addMediaToQueue()">
     <mat-icon>playlist_add</mat-icon>
-    Add to Queue
+    <span i18n="@@event.menu.add-to-queue">Add to Queue</span>
   </button>
   <button mat-menu-item [matMenuTriggerFor]="playlistMenu">
     <mat-icon>video_library</mat-icon>
-    Add to Playlist
+    <span i18n="@@event.menu.add-to-playlist">Add to Playlist</span>
   </button>
   <button mat-menu-item (click)="playMediaInPlayer()">
     <mat-icon>play_circle</mat-icon>
-    Play in Media Player
+    <span i18n="@@event.menu.play-in-player">Play in Media Player</span>
   </button>
   </ng-template>
 </mat-menu>
@@ -149,15 +149,23 @@
 
   <button mat-menu-item (click)="toggleAuthorFollow()">
     <mat-icon>{{ isAuthorFollowed() ? 'person_remove' : 'person_add' }}</mat-icon>
-    {{ isAuthorFollowed() ? 'Unfollow' : 'Follow' }}
+    @if (isAuthorFollowed()) {
+    <span i18n="@@event.menu.unfollow">Unfollow</span>
+    } @else {
+    <span i18n="@@event.menu.follow">Follow</span>
+    }
   </button>
   <button mat-menu-item (click)="toggleAuthorFavorite()">
     <mat-icon>{{ isAuthorFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
-    {{ isAuthorFavorite() ? 'Unfavorite' : 'Favorite' }}
+    @if (isAuthorFavorite()) {
+    <span i18n="@@event.menu.unfavorite">Unfavorite</span>
+    } @else {
+    <span i18n="@@event.menu.favorite">Favorite</span>
+    }
   </button>
   <button mat-menu-item [matMenuTriggerFor]="profileListsMenu">
     <mat-icon>group_add</mat-icon>
-    Add to list
+    <span i18n="@@event.menu.add-to-list">Add to list</span>
   </button>
   </ng-template>
 </mat-menu>
@@ -173,7 +181,7 @@
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="createNewFollowSetForAuthor()">
     <mat-icon>add_circle</mat-icon>
-    Create new list
+    <span i18n="@@event.menu.create-list">Create new list</span>
   </button>
   </ng-template>
 </mat-menu>
@@ -182,24 +190,24 @@
 
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
-    Link
+    <span i18n="@@event.menu.copy-link">Link</span>
   </button>
   <button mat-menu-item (click)="layout.copyToClipboard($safeNavigationMigration(record()?.data), 'text')">
     <mat-icon>content_copy</mat-icon>
-    Text
+    <span i18n="@@event.menu.copy-text">Text</span>
   </button>
   <button mat-menu-item (click)="copyAsImage()">
     <mat-icon>image</mat-icon>
-    Screenshot
+    <span i18n="@@event.menu.copy-screenshot">Screenshot</span>
   </button>
   <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">
     <mat-icon>content_copy</mat-icon>
-    Note ID
+    <span i18n="@@event.menu.copy-note-id">Note ID</span>
   </button>
   @if (isArticle()) {
   <button mat-menu-item (click)="layout.copyToClipboard(articleId(), 'text')">
     <mat-icon>article</mat-icon>
-    Article ID
+    <span i18n="@@event.menu.copy-article-id">Article ID</span>
   </button>
   }
   <!-- <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
@@ -217,7 +225,7 @@
 
   <button mat-menu-item (click)="addMediaToPlaylist('watch-later')">
     <mat-icon>watch_later</mat-icon>
-    Watch Later
+    <span i18n="@@event.menu.watch-later">Watch Later</span>
   </button>
   @if (playlistService.userPlaylists().length > 0) {
   <mat-divider></mat-divider>
@@ -237,26 +245,26 @@
 
   <button mat-menu-item (click)="openEventDetails()">
     <mat-icon>info</mat-icon>
-    Details
+    <span i18n="@@event.menu.details">Details</span>
   </button>
   <button mat-menu-item (click)="layout.publishEvent(event())">
     <mat-icon>cell_tower</mat-icon>
-    Republish
+    <span i18n="@@event.menu.republish">Republish</span>
   </button>
   @if (hasImages()) {
   <button mat-menu-item (click)="openSaveToGifsDialog()">
     <mat-icon>gif_box</mat-icon>
-    Save to Gifs Set
+    <span i18n="@@event.menu.save-gifs">Save to Gifs Set</span>
   </button>
   }
   @if (isOurEvent() && isPremium()) {
   <button mat-menu-item (click)="goToNewsletter()">
     <mat-icon>mail</mat-icon>
-    Newsletter
+    <span i18n="@@menu.newsletter">Newsletter</span>
   </button>
   <button mat-menu-item (click)="goToEventAnalytics()">
     <mat-icon>analytics</mat-icon>
-    Analytics
+    <span i18n="@@menu.analytics">Analytics</span>
   </button>
   }
   </ng-template>

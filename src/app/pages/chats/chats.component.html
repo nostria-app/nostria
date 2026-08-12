@@ -447,12 +447,12 @@
                   <ng-template matMenuContent>
                     <button mat-menu-item (click)="setReplyTo(entry.data)">
                       <mat-icon>reply</mat-icon>
-                      <span>Reply</span>
+                      <span i18n="@@event.actions.reply">Reply</span>
                     </button>
                     @if (isAuthenticated()) {
                     <button mat-menu-item (click)="zapMessage(entry.data)">
                       <mat-icon>bolt</mat-icon>
-                      <span>Zap</span>
+                      <span i18n="@@event.actions.zap">Zap</span>
                     </button>
                     }
                     <button mat-menu-item (click)="copyMessageData(entry.data)">

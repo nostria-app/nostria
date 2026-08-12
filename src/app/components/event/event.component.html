@@ -7,7 +7,7 @@
 @if (isLoadingEvent()) {
 <div class="loading-container">
   <mat-spinner diameter="32"></mat-spinner>
-  <p class="loading-text">Loading event...</p>
+  <p class="loading-text" i18n="@@event.loading">Loading event...</p>
 </div>
 } @else if (isLocallyDeleted()) {
 <!-- Don't render events that were deleted locally after successful deletion publish -->
@@ -32,7 +32,7 @@
   <mat-card-content>
     <div class="loading-container">
       <mat-spinner diameter="24"></mat-spinner>
-      <p class="loading-text">Loading reposted event...</p>
+      <p class="loading-text" i18n="@@event.loading-repost">Loading reposted event...</p>
     </div>
   </mat-card-content>
 </mat-card>
@@ -51,7 +51,7 @@
     <app-event-menu [event]="item!.event" class="note-footer-right"></app-event-menu>
   </mat-card-header>
   <mat-card-content>
-    <p class="event-not-found">Could not load the reposted event</p>
+    <p class="event-not-found" i18n="@@event.repost-not-found">Could not load the reposted event</p>
   </mat-card-content>
 </mat-card>
 } @else if (targetItem && item) {
@@ -268,10 +268,10 @@
           <div class="reply-placeholder-content">
             @if (isLoadingRoot()) {
             <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
-            <span>Loading original post...</span>
+            <span i18n="@@event.loading-original">Loading original post...</span>
             } @else {
             <mat-icon>error_outline</mat-icon>
-            <span>Original post could not be loaded</span>
+            <span i18n="@@event.original-not-found">Original post could not be loaded</span>
             }
           </div>
         </mat-card-content>
@@ -286,10 +286,10 @@
           <div class="reply-placeholder-content">
             @if (isLoadingParent() || isLoadingRoot()) {
             <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
-            <span>Loading replied post...</span>
+            <span i18n="@@event.loading-replied">Loading replied post...</span>
             } @else {
             <mat-icon>error_outline</mat-icon>
-            <span>Replied post could not be loaded</span>
+            <span i18n="@@event.replied-not-found">Replied post could not be loaded</span>
             }
           </div>
         </mat-card-content>
@@ -457,7 +457,7 @@
     <!-- @if (isThreadedReply()) {
     <div class="thread-indicator">
       <hr />
-      <span>Thread continues</span>
+      <span i18n="@@event.thread-continues">Thread continues</span>
       <hr />
     </div>
     } -->
@@ -472,10 +472,10 @@
           <div class="reply-placeholder-content">
             @if (isLoadingParent()) {
             <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
-            <span>Loading immediate reply...</span>
+            <span i18n="@@event.loading-immediate-reply">Loading immediate reply...</span>
             } @else {
             <mat-icon>error_outline</mat-icon>
-            <span>Immediate reply could not be loaded</span>
+            <span i18n="@@event.immediate-reply-not-found">Immediate reply could not be loaded</span>
             }
           </div>
         </mat-card-content>
@@ -707,7 +707,7 @@
     @else if (item.event.kind === 3) {
     <div class="following-event">
       <mat-icon>people</mat-icon>
-      <span>Following {{ followingCount() }} accounts</span>
+      <span i18n="@@event.following-count">Following {{ followingCount() }} accounts</span>
     </div>
     }
     <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
@@ -892,7 +892,7 @@
     @else if (item.event.kind === 3) {
     <div class="following-event">
       <mat-icon>people</mat-icon>
-      <span>Following {{ followingCount() }} accounts</span>
+      <span i18n="@@event.following-count">Following {{ followingCount() }} accounts</span>
     </div>
     }
     <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
@@ -1076,7 +1076,7 @@
           (mouseleave)="reactionBtn.onDesktopMouseLeave()" [class.count-placeholder]="interactionsLoading() && likes().length === 0 && reactionCountHint() === 0"
           [attr.aria-hidden]="interactionsLoading() && likes().length === 0 && reactionCountHint() === 0 ? 'true' : null">{{ likesDisplay() || '00' }}</span>
         }
-        <span class="action-text like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+        <span class="action-text like-hover-target" i18n="@@event.actions.like" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
           (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
 
       </div>
@@ -1095,7 +1095,7 @@
           [class.count-bump]="replyCountAnimating()"
           [attr.aria-hidden]="interactionsLoading() && replyCount() === 0 ? 'true' : null">{{ replyCountDisplay() || '00' }}</span>
         }
-        <span class="action-text">Reply</span>
+        <span class="action-text" i18n="@@event.actions.reply">Reply</span>
       </div>
 
       @if (xLinkedPost(); as linkedPost) {
@@ -1121,7 +1121,7 @@
         <span class="action-count" [class.count-placeholder]="zapsLoading() && totalZapAmount() === 0 && zapCountHint() === 0"
           [attr.aria-hidden]="zapsLoading() && totalZapAmount() === 0 && zapCountHint() === 0 ? 'true' : null">{{ zapToolbarDisplay() || '00' }}</span>
         }
-        <span class="action-text">Zap</span>
+        <span class="action-text" i18n="@@event.actions.zap">Zap</span>
       </div>
 
       <!-- Share with count (reposts + quotes) -->
@@ -1136,7 +1136,7 @@
         <span class="action-count" [class.count-placeholder]="interactionsLoading() && shareCount() === 0"
           [attr.aria-hidden]="interactionsLoading() && shareCount() === 0 ? 'true' : null">{{ shareCountDisplay() || '00' }}</span>
         }
-        <span class="action-text">Share</span>
+        <span class="action-text" i18n="@@event.actions.share">Share</span>
       </div>
 
       <!-- Bookmark (inline) -->
@@ -1145,7 +1145,7 @@
         (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
         (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
-        <span class="action-text">Bookmark</span>
+        <span class="action-text" i18n="@@event.actions.bookmark">Bookmark</span>
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
@@ -1208,7 +1208,7 @@
   @if (loadingError()) {
   <p class="error-message">{{ loadingError() }}</p>
   } @else {
-  <p>Event not found</p>
+  <p i18n="@@event.not-found">Event not found</p>
   }
   <button mat-stroked-button (click)="retryLoadEvent()">
     <mat-icon>refresh</mat-icon>
