@@ -613,6 +613,90 @@ describe('EventService non-note reply extraction', () => {
   });
 });
 
+describe('EventService COUNT interaction hints', () => {
+  let service: EventService;
+  let countCalls: Array<{ relayUrls: string[]; filter: { kinds?: number[]; '#e'?: string[]; '#q'?: string[]; '#E'?: string[] } }>;
+  let onUpdateValues: Array<{ reactions: number; replies: number; zaps: number; reposts: number }>;
+
+  beforeEach(() => {
+    service = createEventServicePrototype();
+    countCalls = [];
+    onUpdateValues = [];
+
+    setPrivateField(service, 'interactionCountCache', new Map());
+    setPrivateField(service, 'logger', {
+      info: () => undefined,
+      error: () => undefined,
+      warn: () => undefined,
+      debug: () => undefined,
+    });
+    setPrivateField(service, 'userRelay', {
+      getInteractionRelayUrls: () => Promise.resolve(['wss://relay.damus.io/', 'wss://relay.primal.net/']),
+    });
+    setPrivateField(service, 'relayPool', {
+      count: (relayUrls: string[], filter: { kinds?: number[]; '#e'?: string[]; '#q'?: string[]; '#E'?: string[] }) => {
+        countCalls.push({ relayUrls, filter });
+        const kinds = filter.kinds ?? [];
+        if (kinds.includes(7)) {
+          return Promise.resolve({ count: 14, approximate: false });
+        }
+        if (kinds.includes(1) && filter['#e']) {
+          return Promise.resolve({ count: 5, approximate: false });
+        }
+        if (kinds.includes(9735)) {
+          return Promise.resolve({ count: 3, approximate: false });
+        }
+        if (kinds.includes(6)) {
+          return Promise.resolve({ count: 2, approximate: false });
+        }
+        return Promise.resolve({ count: 0, approximate: true });
+      },
+    });
+  });
+
+  it('counts canonical NIP-45 filters and publishes partial updates', async () => {
+    const result = await service.countEventInteractions(
+      'target-event-id',
+      kinds.ShortTextNote,
+      'target-pubkey',
+      {
+        onUpdate: (counts) => {
+          onUpdateValues.push({
+            reactions: counts.reactions,
+            replies: counts.replies,
+            zaps: counts.zaps,
+            reposts: counts.reposts,
+          });
+        },
+      },
+    );
+
+    expect(result.reactions).toBe(14);
+    expect(result.replies).toBe(5);
+    expect(result.zaps).toBe(3);
+    expect(result.reposts).toBe(2);
+    expect(countCalls.some(call => call.filter.kinds?.includes(7) && call.filter['#e']?.[0] === 'target-event-id')).toBe(true);
+    expect(countCalls.some(call => call.filter.kinds?.includes(9735))).toBe(true);
+    expect(onUpdateValues.length).toBeGreaterThan(0);
+    expect(onUpdateValues.at(-1)).toEqual({
+      reactions: 14,
+      replies: 5,
+      zaps: 3,
+      reposts: 2,
+    });
+  });
+
+  it('returns cached COUNT results without issuing another relay query', async () => {
+    await service.countEventInteractions('target-event-id', kinds.ShortTextNote, 'target-pubkey');
+    const firstCallCount = countCalls.length;
+
+    const cached = await service.countEventInteractions('target-event-id', kinds.ShortTextNote, 'target-pubkey');
+
+    expect(cached.reactions).toBe(14);
+    expect(countCalls.length).toBe(firstCallCount);
+  });
+});
+
 describe('EventService interaction cache duration', () => {
   let service: EventService;
 

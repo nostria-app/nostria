@@ -1,6 +1,7 @@
 import { inject, Injector, Service } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
+import { mergeRelayCountResponses, RelayCountResponse } from './relay-count';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
@@ -63,7 +64,7 @@ export class RelayPoolService {
   private readonly activeRequestsByRelay = new Map<string, number>();
   private readonly requestQueue: {
     id: string;
-    type: 'get' | 'query';
+    type: 'get' | 'query' | 'count';
     relayUrls: string[];
     priority: RelayRequestPriority;
     enqueuedAt: number;
@@ -78,7 +79,11 @@ export class RelayPoolService {
     return Math.max(0, priority - agingBoost);
   }
 
-  private inferRequestPriority(type: 'get' | 'query', filter: Filter): RelayRequestPriority {
+  private inferRequestPriority(type: 'get' | 'query' | 'count', filter: Filter): RelayRequestPriority {
+    if (type === 'count') {
+      return 0;
+    }
+
     const kinds = filter.kinds || [];
 
     // Direct lookups and note/thread content should bypass lower-value background fetches.
@@ -181,7 +186,7 @@ export class RelayPoolService {
 
   private enqueueRequest<T>(
     requestId: string,
-    type: 'get' | 'query',
+    type: 'get' | 'query' | 'count',
     relayUrls: string[],
     priority: RelayRequestPriority,
     operation: () => Promise<T>
@@ -769,6 +774,146 @@ export class RelayPoolService {
 
       return { relayUrl, success: false, error: errorMsg };
     });
+  }
+
+  /**
+   * NIP-45 COUNT across relays known to support it.
+   * Unknown relays are classified first (NIP-11, then a timed live probe).
+   * Relays that do not speak COUNT, such as older strfry, are skipped.
+   */
+  async count(
+    relayUrls: string[],
+    filter: Filter,
+    timeoutMs = 2000,
+  ): Promise<RelayCountResponse> {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'count');
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      return { count: 0, approximate: true };
+    }
+
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    if (filteredUrls.length === 0) {
+      return { count: 0, approximate: true };
+    }
+
+    this.addRelays(filteredUrls);
+    await this.ensureCountSupport(filteredUrls, timeoutMs);
+
+    const capableUrls = this.relaysService.getKnownCountCapableRelays(filteredUrls);
+    if (capableUrls.length === 0) {
+      return { count: 0, approximate: true };
+    }
+
+    const requestId = this.subscriptionManager.registerRequest(
+      capableUrls,
+      'RelayPoolService',
+      this.poolInstanceId,
+    );
+
+    return this.enqueueRequest(requestId, 'count', capableUrls, 0, async () => {
+      try {
+        const responses = await Promise.all(
+          capableUrls.map(url => this.countOnRelay(url, filter, timeoutMs)),
+        );
+        return mergeRelayCountResponses(responses);
+      } catch (error) {
+        this.logger.debug('[RelayPoolService] COUNT failed:', error);
+        return { count: 0, approximate: true };
+      } finally {
+        this.subscriptionManager.unregisterRequest(requestId, capableUrls);
+      }
+    });
+  }
+
+  async ensureCountSupport(relayUrls: string[], timeoutMs = 2000): Promise<void> {
+    const uniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(relayUrls);
+    if (uniqueUrls.length === 0) {
+      return;
+    }
+
+    await this.relaysService.primeCountSupport(uniqueUrls);
+
+    const unclassified = this.relaysService.getUnclassifiedCountRelays(uniqueUrls);
+    if (unclassified.length === 0) {
+      return;
+    }
+
+    await Promise.all(unclassified.map(url => this.probeCountSupport(url, timeoutMs)));
+  }
+
+  private async probeCountSupport(url: string, timeoutMs: number): Promise<boolean> {
+    if (this.relaysService.isCountSupportFresh(url)) {
+      return this.relaysService.getCountSupport(url) === true;
+    }
+
+    // Cheap filter: we only care whether the relay answers COUNT.
+    const probeFilter: Filter = {
+      kinds: [0],
+      authors: ['0'.repeat(64)],
+    };
+
+    const response = await this.countOnRelay(url, probeFilter, timeoutMs, true);
+    const supported = response !== null;
+    this.relaysService.setCountSupport(url, supported, 'probe');
+    return supported;
+  }
+
+  private async countOnRelay(
+    url: string,
+    filter: Filter,
+    timeoutMs: number,
+    isProbe = false,
+  ): Promise<RelayCountResponse | null> {
+    type CountRelay = {
+      countWithHLL: (
+        filters: Filter[],
+        params: { id?: string | null },
+      ) => Promise<{ count: number; hll?: string }>;
+      openCountRequests: Map<string, { reject: (reason?: unknown) => void }>;
+    };
+
+    let relay: CountRelay;
+    try {
+      relay = await this.#pool.ensureRelay(url, {
+        connectionTimeout: Math.min(timeoutMs, 1500),
+      }) as unknown as CountRelay;
+    } catch (error) {
+      this.logger.debug('[RelayPoolService] COUNT connect failed:', url, error);
+      return null;
+    }
+
+    const requestId = `${isProbe ? 'count-probe' : 'count'}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+    let timedOut = false;
+    const timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      const pending = relay.openCountRequests.get(requestId);
+      if (pending) {
+        pending.reject(new Error('count timeout'));
+        relay.openCountRequests.delete(requestId);
+      }
+    }, timeoutMs);
+
+    try {
+      const payload = await relay.countWithHLL([filter], { id: requestId });
+      if (timedOut) {
+        return null;
+      }
+
+      this.relaysService.updateRelayConnection(url, true);
+      return {
+        count: typeof payload.count === 'number' ? payload.count : 0,
+        approximate: false,
+        hll: payload.hll,
+      };
+    } catch (error) {
+      if (!timedOut && !isProbe) {
+        this.logger.debug('[RelayPoolService] COUNT rejected:', url, error);
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
   }
 
   /**

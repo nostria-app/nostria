@@ -272,3 +272,120 @@ describe('RelayPoolService request queue', () => {
     expect(relayAuthServiceMock.markAuthFailed).not.toHaveBeenCalled();
   });
 });
+
+describe('RelayPoolService COUNT', () => {
+  let service: RelayPoolService;
+  let countWithHllMock: ReturnType<typeof vi.fn>;
+  let ensureRelayMock: ReturnType<typeof vi.fn>;
+  let getKnownCountCapableRelays: ReturnType<typeof vi.fn>;
+  let requestCounter = 0;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    requestCounter = 0;
+    countWithHllMock = vi.fn().mockResolvedValue({ count: 9 });
+    ensureRelayMock = vi.fn().mockResolvedValue({
+      countWithHLL: countWithHllMock,
+      openCountRequests: new Map(),
+    });
+    getKnownCountCapableRelays = vi.fn((urls: string[]) => urls.filter(url => url.includes('damus')));
+
+    await TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        RelayPoolService,
+        {
+          provide: RelaysService,
+          useValue: {
+            getAllRelayStats: vi.fn().mockReturnValue(new Map()),
+            addRelay: vi.fn(),
+            incrementEventCount: vi.fn(),
+            recordConnectionRetry: vi.fn(),
+            updateRelayConnection: vi.fn(),
+            primeCountSupport: vi.fn().mockResolvedValue(undefined),
+            getUnclassifiedCountRelays: vi.fn().mockReturnValue([]),
+            getKnownCountCapableRelays,
+            isCountSupportFresh: vi.fn().mockReturnValue(true),
+            getCountSupport: vi.fn((url: string) => url.includes('damus')),
+            setCountSupport: vi.fn(),
+          },
+        },
+        {
+          provide: SubscriptionManagerService,
+          useValue: {
+            registerRequest: vi.fn(() => `req-${++requestCounter}`),
+            unregisterRequest: vi.fn(),
+            updateConnectionStatus: vi.fn(),
+          },
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+          },
+        },
+        {
+          provide: RelayAuthService,
+          useValue: {
+            filterAuthFailedRelays: vi.fn((relayUrls: string[]) => relayUrls),
+            getAuthCallback: vi.fn(),
+            markAuthFailed: vi.fn(),
+          },
+        },
+        {
+          provide: UtilitiesService,
+          useValue: {
+            getUniqueNormalizedRelayUrls: vi.fn((relayUrls: string[]) => relayUrls),
+          },
+        },
+        { provide: LocalSettingsService, useValue: {} },
+        {
+          provide: PoolService,
+          useValue: {
+            pool: {
+              get: vi.fn(),
+              publish: vi.fn(),
+              ensureRelay: ensureRelayMock,
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+
+    service = TestBed.inject(RelayPoolService);
+  });
+
+  it('sends COUNT only to relays known to support NIP-45', async () => {
+    const result = await service.count(
+      ['wss://relay.damus.io', 'wss://relay.primal.net'],
+      { kinds: [7], '#e': ['event-id'] },
+    );
+
+    expect(getKnownCountCapableRelays).toHaveBeenCalledWith([
+      'wss://relay.damus.io',
+      'wss://relay.primal.net',
+    ]);
+    expect(ensureRelayMock).toHaveBeenCalledTimes(1);
+    expect(ensureRelayMock).toHaveBeenCalledWith('wss://relay.damus.io', expect.any(Object));
+    expect(countWithHllMock).toHaveBeenCalledWith(
+      [{ kinds: [7], '#e': ['event-id'] }],
+      expect.objectContaining({ id: expect.stringMatching(/^count:/) }),
+    );
+    expect(result.count).toBe(9);
+  });
+
+  it('returns a zero count when no relay supports COUNT', async () => {
+    getKnownCountCapableRelays.mockReturnValue([]);
+
+    const result = await service.count(
+      ['wss://relay.primal.net'],
+      { kinds: [7], '#e': ['event-id'] },
+    );
+
+    expect(ensureRelayMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ count: 0, approximate: true });
+  });
+});

@@ -27,6 +27,7 @@ import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService, ReactionEvents, SharedInteractionSnapshot, ThreadedEvent } from '../../services/event';
+import { resolveDisplayedInteractionCount } from '../../services/relays/relay-count';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { ReactionService } from '../../services/reaction.service';
@@ -1103,7 +1104,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   zapCount = computed<number>(() => {
-    return this.zaps().length;
+    return Math.max(this.zaps().length, this.zapCountHint());
   });
 
   // Reposts and quotes state
@@ -1121,6 +1122,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   hasMoreReplies = signal<boolean>(false);
   hasMoreZaps = signal<boolean>(false);
 
+  // NIP-45 COUNT hints. Applied as soon as COUNT returns so the feed can show
+  // counters before the full interaction events arrive.
+  readonly reactionCountHint = signal(0);
+  readonly replyCountHint = signal(0);
+  readonly repostCountHint = signal(0);
+  readonly quoteCountHint = signal(0);
+  readonly zapCountHint = signal(0);
+
   // Build threaded replies from internally loaded reply events for passing to thread view
   private threadedRepliesFromInteractions = computed<ThreadedEvent[]>(() => {
     const events = this._replyEventsInternal();
@@ -1136,16 +1145,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (fromParent !== undefined) {
       return fromParent;
     }
-    return this._replyCountInternal();
+    return Math.max(this._replyCountInternal(), this.replyCountHint());
   });
 
   // Count of reposts only (quotes are shown separately)
   repostCount = computed<number>(() => {
-    return this.reposts().length;
+    return Math.max(this.reposts().length, this.repostCountHint());
   });
 
   quoteCount = computed<number>(() => {
-    return this.quotes().length;
+    return Math.max(this.quotes().length, this.quoteCountHint());
   });
 
   // Combined reposts + quotes count for the Share button
@@ -1155,20 +1164,28 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Display-friendly counter strings that show "10+" when the query limit was hit
   likesDisplay = computed<string>(() => {
-    const count = this.likes().length;
-    if (count === 0) return '';
-    if (this.hasMoreReactions()) return `${count - 1}+`;
-    return `${count}`;
+    return resolveDisplayedInteractionCount(
+      this.likes().length,
+      this.reactionCountHint(),
+      this.hasMoreReactions(),
+    );
   });
 
   replyCountDisplay = computed<string>(() => {
-    const count = this.replyCount();
-    if (count === 0) return '';
-    if (this.hasMoreReplies()) return `${count - 1}+`;
-    return `${count}`;
+    return resolveDisplayedInteractionCount(
+      this.replyCountFromParent() ?? this._replyCountInternal(),
+      this.replyCountFromParent() === undefined ? this.replyCountHint() : 0,
+      this.hasMoreReplies(),
+    );
   });
 
   shareCountDisplay = computed<string>(() => {
+    const loaded = this.reposts().length + this.quotes().length;
+    const hint = this.repostCountHint() + this.quoteCountHint();
+    if (hint > loaded) {
+      return `${hint}`;
+    }
+
     const total = this.shareCount();
     if (total === 0) return '';
     const overflowCount = (this.hasMoreReposts() ? 1 : 0) + (this.hasMoreQuotes() ? 1 : 0);
@@ -1177,6 +1194,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return `${displayCount}+`;
     }
     return `${total}`;
+  });
+
+  zapToolbarDisplay = computed<string>(() => {
+    const sats = this.totalZapAmount();
+    if (sats > 0) {
+      return this.formatZapAmount(sats) + (this.hasMoreZaps() ? '+' : '');
+    }
+
+    const hint = this.zapCountHint();
+    if (hint > 0) {
+      return `${hint}`;
+    }
+
+    return '';
   });
 
   interactionsLoading = computed<boolean>(() => {
@@ -1213,7 +1244,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       || this.replyCount() > 0
       || this.repostCount() > 0
       || this.quoteCount() > 0
-      || this.totalZapAmount() > 0;
+      || this.totalZapAmount() > 0
+      || this.reactionCountHint() > 0
+      || this.zapCountHint() > 0;
   });
 
   // Check if this is a repost event (kind 6 or 16)
@@ -2033,6 +2066,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.hasMoreReplies.set(false);
     this.hasMoreQuotes.set(false);
     this.hasMoreZaps.set(false);
+    this.reactionCountHint.set(0);
+    this.replyCountHint.set(0);
+    this.repostCountHint.set(0);
+    this.quoteCountHint.set(0);
+    this.zapCountHint.set(0);
     this._replyCountInternal.set(0);
     this._replyEventsInternal.set([]);
     this.isLoadingReactions.set(false);
@@ -2550,6 +2588,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (this.mode() === 'timeline') {
       await Promise.allSettled([
+        this.loadInteractionCounts(signal, loadGeneration),
         this.loadAllInteractions(false, signal, loadGeneration),
         this.loadLatestEditForEvent(),
       ]);
@@ -2562,6 +2601,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     await Promise.allSettled([
+      this.loadInteractionCounts(signal, loadGeneration),
       this.loadAllInteractions(false, signal, loadGeneration),
       this.loadZaps(signal, loadGeneration),
       this.loadLatestEditForEvent(),
@@ -2569,6 +2609,59 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
       this.scheduleVisibleInteractionRetry();
+    }
+  }
+
+  private async loadInteractionCounts(
+    signal?: AbortSignal,
+    loadGeneration?: number,
+  ): Promise<void> {
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) {
+      return;
+    }
+
+    const targetEventId = targetRecordData.event.id;
+    const skipReplies = this.replyCountFromParent() !== undefined;
+
+    try {
+      await this.eventService.countEventInteractions(
+        targetEventId,
+        targetRecordData.event.kind,
+        targetRecordData.event.pubkey,
+        {
+          skipReplies,
+          includeZaps: true,
+          includeQuotes: this.mode() === 'timeline',
+          signal,
+          onUpdate: (counts) => {
+            if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
+              return;
+            }
+
+            if (counts.reactions > this.reactionCountHint()) {
+              this.reactionCountHint.set(counts.reactions);
+            }
+            if (!skipReplies) {
+              const replyHint = counts.replies + counts.comments;
+              if (replyHint > this.replyCountHint()) {
+                this.replyCountHint.set(replyHint);
+              }
+            }
+            if (counts.reposts > this.repostCountHint()) {
+              this.repostCountHint.set(counts.reposts);
+            }
+            if (counts.quotes > this.quoteCountHint()) {
+              this.quoteCountHint.set(counts.quotes);
+            }
+            if (counts.zaps > this.zapCountHint()) {
+              this.zapCountHint.set(counts.zaps);
+            }
+          },
+        },
+      );
+    } catch (error) {
+      this.logger.debug('[Loading Interactions] COUNT failed:', error);
     }
   }
 

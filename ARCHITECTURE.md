@@ -193,6 +193,7 @@ Nostria implements the following Nostr Implementation Possibilities (NIPs):
 | NIP-36       | Sensitive Content                 | ✅ Implemented |
 | NIP-42       | Relay Authentication              | ✅ Implemented |
 | NIP-44       | Encrypted Payloads (Gift Wrap)    | ✅ Implemented |
+| NIP-45       | Event Counts                      | ✅ Implemented |
 | NIP-46       | Nostr Remote Signing              | ✅ Implemented |
 | NIP-47       | Nostr Wallet Connect              | ✅ Implemented |
 | NIP-50       | Keywords filter (Search)          | ✅ Implemented |
@@ -689,8 +690,18 @@ RelayServiceBase (relay.ts)
 
 RelayPoolService           - Shared connection pool
 SubscriptionManagerService - Global subscription coordination
-RelaysService              - Relay statistics and configuration
+RelaysService              - Relay statistics, NIP-11, and NIP-45 COUNT capability
 ```
+
+### NIP-45 Event Counts
+
+Observed relays in IndexedDB (`observedRelays`) store whether the relay speaks `COUNT`:
+
+- `supportsCount`, `countCheckedAt`, `countCheckSource` (`nip11` or live `probe`)
+- NIP-11 `supported_nips` including 45 is the fast path (strfry 1.1+)
+- Relays that reject `COUNT` (older strfry, e.g. `wss://relay.primal.net`) are tagged `supportsCount: false` and never sent COUNT
+
+Feed cards fire COUNT in parallel with the existing interaction REQ. COUNT updates reaction / reply / zap / repost badges immediately; the REQ still loads the actual events for emoji breakdowns and the thread pane.
 
 ### AccountRelayService
 

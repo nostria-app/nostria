@@ -5,6 +5,7 @@ import { ObservedRelayStats, Nip11Info } from '../database.service';
 import { DatabaseService } from '../database.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { LoggerService } from '../logger.service';
+import { RelayCountCheckSource, relayAdvertisesCountSupport } from './relay-count';
 
 export interface RelayStats {
   url: string;
@@ -87,6 +88,13 @@ export class RelaysService {
   private readonly NIP11_STORAGE_KEY = 'nostria_nip11_cache';
   // Cache expiry time (24 hours in milliseconds)
   private readonly NIP11_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+  private readonly COUNT_SUPPORT_PROBE_TTL_SECONDS = 7 * 24 * 60 * 60;
+  private readonly COUNT_SUPPORT_NIP11_TTL_SECONDS = 24 * 60 * 60;
+  private readonly countSupport = new Map<string, {
+    supported: boolean;
+    checkedAt: number;
+    source: RelayCountCheckSource;
+  }>();
 
   // Signals for reactive updates
   readonly relayStatsSignal = signal<Map<string, RelayStats>>(new Map());
@@ -143,6 +151,7 @@ export class RelaysService {
       for (const entry of data.entries) {
         if (now - entry.timestamp < this.NIP11_CACHE_EXPIRY_MS) {
           this.nip11Cache.set(entry.url, entry.info);
+          this.applyCountSupportFromNip11(entry.url, entry.info, false);
         }
       }
     } catch (error) {
@@ -456,6 +465,7 @@ export class RelaysService {
       // Filter out insecure ws:// relays - only allow wss://
       const secureRelays = observedRelays.filter(relay => this.utilities.isSecureRelayUrl(relay.url));
       this.observedRelaysSignal.set(secureRelays);
+      this.hydrateCountSupportFromObservedRelays(secureRelays);
     } catch (error) {
       this.logger.error('Failed to load observed relays from storage:', error);
     }
@@ -523,9 +533,19 @@ export class RelaysService {
       const observedStats = this.toObservedRelayStats(stats);
 
       if (existing) {
-        // Preserve the first observed time and merge with existing NIP-11 info
+        // Preserve the first observed time and merge with existing NIP-11 / COUNT info
         observedStats.firstObserved = existing['firstObserved'] as number;
         observedStats.nip11 = existing['nip11'] as Nip11Info | undefined;
+        observedStats.supportsCount = existing['supportsCount'] as boolean | undefined;
+        observedStats.countCheckedAt = existing['countCheckedAt'] as number | undefined;
+        observedStats.countCheckSource = existing['countCheckSource'] as RelayCountCheckSource | undefined;
+      }
+
+      const countSupport = this.countSupport.get(stats.url);
+      if (countSupport) {
+        observedStats.supportsCount = countSupport.supported;
+        observedStats.countCheckedAt = countSupport.checkedAt;
+        observedStats.countCheckSource = countSupport.source;
       }
 
       await this.database.saveObservedRelay(observedStats as unknown as Record<string, unknown>);
@@ -637,6 +657,7 @@ export class RelaysService {
       const result = await fetchPromise;
       // Cache the result (even if null/failed)
       this.nip11Cache.set(normalizedUrl, result);
+      this.applyCountSupportFromNip11(normalizedUrl, result, true);
       // Save successful fetches to localStorage
       if (result !== null) {
         this.saveNip11CacheToStorage();
@@ -691,5 +712,165 @@ export class RelaysService {
    */
   clearAllNip11Cache(): void {
     this.nip11Cache.clear();
+  }
+
+  /**
+   * Whether a relay is known to speak NIP-45 COUNT.
+   * `undefined` means we have not classified it yet.
+   */
+  getCountSupport(url: string): boolean | undefined {
+    const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+    if (!normalizedUrl) {
+      return undefined;
+    }
+
+    const cached = this.countSupport.get(normalizedUrl);
+    if (cached && this.isCountSupportEntryFresh(cached)) {
+      return cached.supported;
+    }
+
+    const nip11 = this.nip11Cache.get(normalizedUrl);
+    if (nip11) {
+      return relayAdvertisesCountSupport(nip11.supported_nips);
+    }
+
+    return cached?.supported;
+  }
+
+  isCountSupportFresh(url: string): boolean {
+    const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+    if (!normalizedUrl) {
+      return false;
+    }
+
+    const cached = this.countSupport.get(normalizedUrl);
+    return !!cached && this.isCountSupportEntryFresh(cached);
+  }
+
+  setCountSupport(
+    url: string,
+    supported: boolean,
+    source: RelayCountCheckSource,
+  ): void {
+    const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const checkedAt = this.utilities.currentDate();
+    this.countSupport.set(normalizedUrl, { supported, checkedAt, source });
+    void this.persistCountSupport(normalizedUrl, supported, checkedAt, source);
+  }
+
+  getKnownCountCapableRelays(urls: string[]): string[] {
+    return this.utilities.getUniqueNormalizedRelayUrls(urls)
+      .filter(url => this.getCountSupport(url) === true);
+  }
+
+  getUnclassifiedCountRelays(urls: string[]): string[] {
+    return this.utilities.getUniqueNormalizedRelayUrls(urls)
+      .filter(url => this.getCountSupport(url) === undefined);
+  }
+
+  /**
+   * Classify COUNT support from cached or freshly fetched NIP-11 documents.
+   * Does not send COUNT — live probing belongs in RelayPoolService.
+   */
+  async primeCountSupport(urls: string[]): Promise<void> {
+    const uniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(urls);
+    await Promise.all(uniqueUrls.map(async url => {
+      if (this.isCountSupportFresh(url)) {
+        return;
+      }
+
+      const cached = this.nip11Cache.get(url);
+      if (cached) {
+        this.applyCountSupportFromNip11(url, cached, true);
+        return;
+      }
+
+      await this.fetchNip11Info(url);
+    }));
+  }
+
+  private isCountSupportEntryFresh(entry: {
+    checkedAt: number;
+    source: RelayCountCheckSource;
+  }): boolean {
+    const ageSeconds = this.utilities.currentDate() - entry.checkedAt;
+    const ttl = entry.source === 'probe'
+      ? this.COUNT_SUPPORT_PROBE_TTL_SECONDS
+      : this.COUNT_SUPPORT_NIP11_TTL_SECONDS;
+    return ageSeconds >= 0 && ageSeconds < ttl;
+  }
+
+  private applyCountSupportFromNip11(
+    url: string,
+    info: Nip11RelayInfo | Nip11Info | null,
+    persist: boolean,
+  ): void {
+    if (!info) {
+      return;
+    }
+
+    const existing = this.countSupport.get(url);
+    if (existing && this.isCountSupportEntryFresh(existing) && existing.source === 'probe') {
+      return;
+    }
+
+    const supported = relayAdvertisesCountSupport(info.supported_nips);
+    const checkedAt = this.utilities.currentDate();
+    this.countSupport.set(url, { supported, checkedAt, source: 'nip11' });
+
+    if (persist) {
+      void this.persistCountSupport(url, supported, checkedAt, 'nip11');
+    }
+  }
+
+  private hydrateCountSupportFromObservedRelays(relays: ObservedRelayStats[]): void {
+    for (const relay of relays) {
+      if (typeof relay.supportsCount !== 'boolean' || !relay.countCheckedAt) {
+        continue;
+      }
+
+      const existing = this.countSupport.get(relay.url);
+      if (existing && existing.checkedAt >= relay.countCheckedAt) {
+        continue;
+      }
+
+      this.countSupport.set(relay.url, {
+        supported: relay.supportsCount,
+        checkedAt: relay.countCheckedAt,
+        source: relay.countCheckSource ?? 'probe',
+      });
+    }
+  }
+
+  private async persistCountSupport(
+    url: string,
+    supported: boolean,
+    checkedAt: number,
+    source: RelayCountCheckSource,
+  ): Promise<void> {
+    if (!this.database.initialized()) {
+      return;
+    }
+
+    try {
+      const existing = await this.database.getObservedRelay(url) as unknown as ObservedRelayStats | undefined;
+      if (!existing) {
+        return;
+      }
+
+      await this.database.saveObservedRelay({
+        ...existing,
+        supportsCount: supported,
+        countCheckedAt: checkedAt,
+        countCheckSource: source,
+        lastUpdated: this.utilities.currentDate(),
+      } as unknown as Record<string, unknown>);
+    } catch (error) {
+      this.logger.debug('Failed to persist COUNT support for relay:', url, error);
+    }
   }
 }

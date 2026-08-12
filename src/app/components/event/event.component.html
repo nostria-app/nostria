@@ -1071,10 +1071,10 @@
           [reactionsFromParent]="reactions()" [disabled]="isThreadInteractionBlocked()"
           [enableDesktopHoverPicker]="true" (reactionChanged)="loadReactions(true)"
           view="icon"></app-reaction-button>
-        @if (likes().length > 0 || interactionsLoading()) {
+        @if (likes().length > 0 || reactionCountHint() > 0 || interactionsLoading()) {
         <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
-          (mouseleave)="reactionBtn.onDesktopMouseLeave()" [class.count-placeholder]="interactionsLoading() && likes().length === 0"
-          [attr.aria-hidden]="interactionsLoading() && likes().length === 0 ? 'true' : null">{{ likesDisplay() || '00' }}</span>
+          (mouseleave)="reactionBtn.onDesktopMouseLeave()" [class.count-placeholder]="interactionsLoading() && likes().length === 0 && reactionCountHint() === 0"
+          [attr.aria-hidden]="interactionsLoading() && likes().length === 0 && reactionCountHint() === 0 ? 'true' : null">{{ likesDisplay() || '00' }}</span>
         }
         <span class="action-text like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
           (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
@@ -1117,9 +1117,9 @@
           [recipientPubkey]="targetItem.event.pubkey" [disabled]="isThreadInteractionBlocked()"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-        @if (totalZapAmount() > 0 || zapsLoading()) {
-        <span class="action-count" [class.count-placeholder]="zapsLoading() && totalZapAmount() === 0"
-          [attr.aria-hidden]="zapsLoading() && totalZapAmount() === 0 ? 'true' : null">{{ totalZapAmount() > 0 ? formatZapAmount(totalZapAmount()) + (hasMoreZaps() ? '+' : '') : '00' }}</span>
+        @if (totalZapAmount() > 0 || zapCountHint() > 0 || zapsLoading()) {
+        <span class="action-count" [class.count-placeholder]="zapsLoading() && totalZapAmount() === 0 && zapCountHint() === 0"
+          [attr.aria-hidden]="zapsLoading() && totalZapAmount() === 0 && zapCountHint() === 0 ? 'true' : null">{{ zapToolbarDisplay() || '00' }}</span>
         }
         <span class="action-text">Zap</span>
       </div>
@@ -1149,7 +1149,7 @@
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
-      @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0 || engagementLoading())) {
+      @if (!compact() && (likes().length > 0 || reactionCountHint() > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0 || engagementLoading())) {
       <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
         [class.engagement-loading]="engagementLoading()" [class.engagement-ready]="engagementReady()"
         (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"

@@ -457,6 +457,34 @@ export class UserRelayService {
   }
 
   /**
+   * Relays used for interaction discovery (reactions, replies, zaps).
+   * Matches getEventsByKindsAndEventTag: author outbox + optional account relays.
+   */
+  async getInteractionRelayUrls(
+    pubkey: string | string[],
+    includeAccountRelays = true,
+  ): Promise<string[]> {
+    const pubkeys = (Array.isArray(pubkey) ? pubkey : [pubkey])
+      .filter((pk): pk is string => !!pk && typeof pk === 'string');
+
+    if (pubkeys.length === 0) {
+      return [];
+    }
+
+    const allRelayUrls = new Set<string>();
+    for (const pk of pubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      this.getRelaysForPubkey(pk).forEach(url => allRelayUrls.add(url));
+    }
+
+    if (includeAccountRelays || allRelayUrls.size === 0) {
+      this.getAccountRelayFallbackUrls().forEach(url => allRelayUrls.add(url));
+    }
+
+    return this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+  }
+
+  /**
    * Get events by kind and quote tag (#q filter)
    * Used to find quote reposts (NIP-18) that reference a specific event
    * @param pubkey The pubkey(s) whose relays to query

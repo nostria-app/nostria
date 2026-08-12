@@ -149,6 +149,7 @@ export class AccountRelayService extends RelayServiceBase {
         this.init(relayUrls);
       }
       this.activeAccountPubkey.set(pubkey);
+      void this.relaysService.primeCountSupport(this.getRelayUrls());
 
       return {
         relayUrls,

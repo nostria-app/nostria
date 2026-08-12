@@ -200,6 +200,10 @@ export interface ObservedRelayStats {
   authenticationRequired?: boolean; // If true, relay indicated it requires authentication
   lastAuthAttempt?: number; // timestamp of last authentication attempt in seconds
   authFailureReason?: string; // Reason for authentication failure (e.g., "rejected", "timeout", "no_signer")
+  // NIP-45 COUNT support (verified via live probe or NIP-11 supported_nips)
+  supportsCount?: boolean;
+  countCheckedAt?: number; // timestamp in seconds
+  countCheckSource?: 'probe' | 'nip11';
 }
 
 // Interface for pubkey-relay mapping stored in IndexedDB

@@ -15,6 +15,11 @@ import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { SubscriptionCacheService } from './subscription-cache.service';
 import { RelayPoolService } from './relays/relay-pool';
+import { UserRelayService } from './relays/user-relay';
+import {
+  createEmptyInteractionCounts,
+  EventInteractionCounts,
+} from './relays/relay-count';
 // CommentEditorDialogComponent is dynamically imported to break circular dependency
 import type { CommentEditorDialogData } from '../components/comment-editor-dialog/comment-editor-dialog.component';
 import { CustomDialogService } from './custom-dialog.service';
@@ -155,6 +160,7 @@ export class EventService {
   private readonly subscriptionCache = inject(SubscriptionCacheService);
   private readonly accountState = inject(AccountStateService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly userRelay = inject(UserRelayService);
   private readonly mediaService = inject(MediaService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly imageCacheService = inject(ImageCacheService);
@@ -1191,6 +1197,106 @@ export class EventService {
   static readonly INTERACTION_QUERY_LIMIT = 11;
   private static readonly TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 30 * 1000;
   private static readonly EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 5 * 1000;
+  private static readonly INTERACTION_COUNT_CACHE_TIMEOUT_MS = 15 * 1000;
+  private readonly interactionCountCache = new Map<string, {
+    value: EventInteractionCounts;
+    expiresAt: number;
+  }>();
+
+  /**
+   * NIP-45 COUNT for feed counters. Fires cheap COUNT requests on relays that
+   * support it and reports each bucket as soon as that COUNT returns.
+   * Does not replace loading the actual interaction events.
+   */
+  async countEventInteractions(
+    eventId: string,
+    eventKind: number,
+    pubkey: string,
+    options: {
+      skipReplies?: boolean;
+      includeZaps?: boolean;
+      includeQuotes?: boolean;
+      signal?: AbortSignal;
+      onUpdate?: (counts: EventInteractionCounts) => void;
+    } = {},
+  ): Promise<EventInteractionCounts> {
+    const counts = createEmptyInteractionCounts();
+    const cacheKey = `${eventId}:${eventKind}:${options.skipReplies ? 'no-replies' : 'replies'}:${options.includeZaps === false ? 'no-zaps' : 'zaps'}:${options.includeQuotes === false ? 'no-quotes' : 'quotes'}`;
+    const cached = this.interactionCountCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      options.onUpdate?.(cached.value);
+      return cached.value;
+    }
+
+    if (options.signal?.aborted) {
+      return counts;
+    }
+
+    let relayUrls: string[] = [];
+    try {
+      relayUrls = await this.userRelay.getInteractionRelayUrls(pubkey, true);
+    } catch (error) {
+      this.logger.debug('Failed to resolve COUNT relays:', error);
+    }
+
+    if (relayUrls.length === 0 || options.signal?.aborted) {
+      return counts;
+    }
+
+    const publish = () => {
+      if (options.signal?.aborted) {
+        return;
+      }
+      options.onUpdate?.({ ...counts });
+    };
+
+    const countFilter = async (
+      key: keyof EventInteractionCounts,
+      filter: Filter,
+    ): Promise<void> => {
+      try {
+        const result = await this.relayPool.count(relayUrls, filter, 2000);
+        if (options.signal?.aborted) {
+          return;
+        }
+        counts[key] = result.count;
+        publish();
+      } catch (error) {
+        this.logger.debug(`COUNT ${key} failed for ${eventId.substring(0, 8)}:`, error);
+      }
+    };
+
+    const jobs: Promise<void>[] = [
+      countFilter('reactions', { kinds: [kinds.Reaction], '#e': [eventId] }),
+      countFilter('reposts', { kinds: [kinds.Repost, kinds.GenericRepost], '#e': [eventId] }),
+    ];
+
+    if (!options.skipReplies) {
+      jobs.push(countFilter('replies', { kinds: [kinds.ShortTextNote], '#e': [eventId] }));
+      if (eventKind !== kinds.ShortTextNote) {
+        jobs.push(countFilter('comments', { kinds: [1111], '#E': [eventId] }));
+      }
+    }
+
+    if (options.includeZaps !== false) {
+      jobs.push(countFilter('zaps', { kinds: [9735], '#e': [eventId] }));
+    }
+
+    if (options.includeQuotes !== false) {
+      jobs.push(countFilter('quotes', { kinds: [kinds.ShortTextNote, 1111], '#q': [eventId] }));
+    }
+
+    await Promise.allSettled(jobs);
+
+    if (!options.signal?.aborted) {
+      this.interactionCountCache.set(cacheKey, {
+        value: { ...counts },
+        expiresAt: Date.now() + EventService.INTERACTION_COUNT_CACHE_TIMEOUT_MS,
+      });
+    }
+
+    return counts;
+  }
 
   /**
    * Load event interactions (reactions, reposts, reports, replies) with optional limits.

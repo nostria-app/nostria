@@ -265,6 +265,9 @@ export class RelayAuthService {
         firstObserved: existing?.firstObserved ?? now,
         lastUpdated: now,
         nip11: existing?.nip11,
+        supportsCount: existing?.supportsCount,
+        countCheckedAt: existing?.countCheckedAt,
+        countCheckSource: existing?.countCheckSource,
         // Authentication fields
         authenticationRequired: authStatus.authenticationRequired ?? existing?.authenticationRequired,
         authenticationFailed: authStatus.authenticationFailed ?? existing?.authenticationFailed,
