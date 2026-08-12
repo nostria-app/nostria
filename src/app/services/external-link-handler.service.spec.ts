@@ -248,5 +248,16 @@ describe('ExternalLinkHandlerService', () => {
         '/music/song', trackNaddr
       ]);
     });
+
+    it('should handle nostria.app NIP-29 group routes', () => {
+      const url = 'https://nostria.app/g/chat.wisp.talk/pligeiproul?invite=abc';
+      const result = service.handleLinkClick(url);
+
+      expect(result).toBe(true);
+      expect(routerSpy.navigate).toHaveBeenCalledWith(
+        ['/g', 'chat.wisp.talk', 'pligeiproul'],
+        { queryParams: { invite: 'abc' } }
+      );
+    });
   });
 });

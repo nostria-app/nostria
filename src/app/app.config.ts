@@ -41,6 +41,7 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { DesktopUpdaterService } from './services/desktop-updater.service';
 import { ExternalLinkService } from './services/external-link.service';
+import { Nip29InviteLinkService } from './services/nip29-invite-link.service';
 import {
   detectPreferredLocale,
   getAngularLocaleCode,
@@ -113,6 +114,9 @@ export const appConfig: ApplicationConfig = {
       inject(DesktopUpdaterService).initialize();
     }),
     provideAppInitializer(() => clearTauriServiceWorkerState()),
+    provideAppInitializer(() => {
+      inject(Nip29InviteLinkService).initialize();
+    }),
     provideAppInitializer(() => {
       inject(ExternalLinkService).initialize();
     }),

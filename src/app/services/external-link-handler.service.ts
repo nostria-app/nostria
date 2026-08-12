@@ -115,7 +115,12 @@ export class ExternalLinkHandlerService {
       const nostriaRoute = this.handleNostriaAppRoute(path);
       if (nostriaRoute) {
         this.logger.info('[ExternalLinkHandler] Navigating to nostria route:', nostriaRoute);
-        this.router.navigate(nostriaRoute);
+        const invite = urlObj.searchParams.get('invite');
+        if (invite && nostriaRoute[0] === '/g') {
+          this.router.navigate(nostriaRoute, { queryParams: { invite } });
+        } else {
+          this.router.navigate(nostriaRoute);
+        }
         return true;
       }
 
@@ -238,6 +243,13 @@ export class ExternalLinkHandlerService {
     if (usernameMatch) {
       const [, username] = usernameMatch;
       return ['/u', username];
+    }
+
+    // NIP-29 group: /g/:slug/:groupId
+    const groupMatch = path.match(/^\/g\/([^/]+)\/([^/]+)$/i);
+    if (groupMatch) {
+      const [, slug, groupId] = groupMatch;
+      return ['/g', slug, groupId];
     }
 
     // Messages: /messages/:id

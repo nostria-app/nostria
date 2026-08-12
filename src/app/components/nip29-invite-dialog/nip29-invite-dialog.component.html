@@ -1,0 +1,30 @@
+<div dialog-content class="nip29-invite-dialog">
+  @if (invite; as link) {
+  <p class="dialog-copy" i18n="@@nip29.invite.message">This link opens a community on {{ link.clientName }}. Open it in Nostria, or continue to the original app?</p>
+
+  <dl class="invite-meta">
+    <div class="invite-meta-row">
+      <dt i18n="@@nip29.invite.group-label">Group</dt>
+      <dd>{{ link.groupId }}</dd>
+    </div>
+    <div class="invite-meta-row">
+      <dt i18n="@@nip29.invite.relay-label">Relay</dt>
+      <dd>{{ relayLabel(link.relaySlug) }}</dd>
+    </div>
+    @if (link.inviteCode) {
+    <div class="invite-meta-row">
+      <dt i18n="@@nip29.invite.code-label">Invite code</dt>
+      <dd>{{ link.inviteCode }}</dd>
+    </div>
+    }
+  </dl>
+  }
+</div>
+
+<div dialog-actions>
+  <button mat-button type="button" (click)="openExternal()">
+    <mat-icon>open_in_new</mat-icon>
+    <span i18n="@@nip29.invite.open-external">Open in {{ invite?.clientName }}</span>
+  </button>
+  <button mat-flat-button type="button" class="primary-action" (click)="openInNostria()" i18n="@@nip29.invite.open-nostria">Open in Nostria</button>
+</div>

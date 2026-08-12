@@ -20,6 +20,7 @@ import { ProfileHoverCardComponent } from '../user-profile/hover-card/profile-ho
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
+import { Nip29InviteLinkService } from '../../services/nip29-invite-link.service';
 import { LayoutService } from '../../services/layout.service';
 
 interface BioToken {
@@ -112,6 +113,7 @@ export class BioContentComponent implements OnDestroy {
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
+  private nip29InviteLinks = inject(Nip29InviteLinkService);
 
   private _tokens = signal<BioToken[]>([]);
   tokens = computed(() => this._tokens());
@@ -326,6 +328,10 @@ export class BioContentComponent implements OnDestroy {
   }
 
   onUrlClick(url: string, event: MouseEvent): void {
+    if (this.nip29InviteLinks.tryHandle(url, event)) {
+      return;
+    }
+
     const handled = this.externalLinkHandler.handleLinkClick(url, event);
     if (handled) {
       event.preventDefault();

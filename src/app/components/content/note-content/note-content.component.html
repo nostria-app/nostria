@@ -485,12 +485,13 @@
 } @else if (token.type === 'url') {
 @if (token.previewTitle || token.previewSiteName || token.previewLoading || token.previewError) {
 <a class="preview-link" [href]="token.content" target="_blank" rel="noopener noreferrer" [matTooltip]="token.content"
-  [attr.aria-label]="getUrlButtonAriaLabel(token)">
+  [attr.aria-label]="getUrlButtonAriaLabel(token)" (click)="onUrlClick(token.content, $event)">
   <span class="preview-link-label">{{ getUrlButtonLabel(token) }}</span>
   <mat-icon class="preview-link-icon">open_in_new</mat-icon>
 </a>
 } @else {
-<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>
+<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
+  (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
 }
 }
 }

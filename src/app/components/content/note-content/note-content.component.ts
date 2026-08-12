@@ -32,6 +32,7 @@ import { ZapPollEventComponent } from '../../event-types/zap-poll-event.componen
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
+import { Nip29InviteLinkService } from '../../../services/nip29-invite-link.service';
 import { LayoutService } from '../../../services/layout.service';
 import { RssParserService } from '../../../services/rss-parser.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
@@ -131,6 +132,7 @@ export class NoteContentComponent implements OnDestroy {
   private imagePlaceholder = inject(ImagePlaceholderService);
   private tauriImage = inject(TauriImageService);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
+  private nip29InviteLinks = inject(Nip29InviteLinkService);
   private rssParser = inject(RssParserService);
   private mediaPlayer = inject(MediaPlayerService);
   private parsing = inject(ParsingService);
@@ -2014,6 +2016,10 @@ export class NoteContentComponent implements OnDestroy {
    * Handle URL click - route internally if domain is configured
    */
   onUrlClick(url: string, event: MouseEvent): void {
+    if (this.nip29InviteLinks.tryHandle(url, event)) {
+      return;
+    }
+
     const handled = this.externalLinkHandler.handleLinkClick(url, event);
 
     if (handled) {

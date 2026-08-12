@@ -1,6 +1,7 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { isTauri } from '@tauri-apps/api/core';
+import { isNip29InviteUrl } from '../utils/nip29-invite-url';
 
 @Service()
 export class ExternalLinkService {
@@ -50,7 +51,7 @@ export class ExternalLinkService {
     }
 
     const href = anchor.getAttribute('href');
-    if (!href || !this.shouldOpenExternally(href)) {
+    if (!href || isNip29InviteUrl(href, window.location.href) || !this.shouldOpenExternally(href)) {
       return;
     }
 
