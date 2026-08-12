@@ -1,11 +1,24 @@
+import { TestBed } from '@angular/core/testing';
+import { DomSanitizer } from '@angular/platform-browser';
 import { UtilitiesService } from './utilities.service';
+import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
+import { LoggerService } from './logger.service';
+import { RegionService } from './region.service';
 
 describe('UtilitiesService Event Classification', () => {
   let service: UtilitiesService;
 
   beforeEach(() => {
-    // Create a minimal service instance for testing event classification methods
-    service = new UtilitiesService();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DomSanitizer, useValue: {} },
+        { provide: IgnoredRelayAuditService, useValue: {} },
+        { provide: LoggerService, useValue: {} },
+        { provide: RegionService, useValue: {} },
+      ],
+    });
+
+    service = TestBed.inject(UtilitiesService);
   });
 
   describe('isReplaceableEvent', () => {

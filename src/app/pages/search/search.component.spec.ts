@@ -39,6 +39,7 @@ describe('SearchComponent', () => {
         {
           provide: FollowingService,
           useValue: {
+            activate: vi.fn(),
             searchProfiles: vi.fn().mockReturnValue([]),
             toNostrRecords: vi.fn().mockReturnValue([]),
           },

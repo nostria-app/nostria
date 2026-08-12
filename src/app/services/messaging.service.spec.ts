@@ -1,7 +1,5 @@
-// @vitest-environment jsdom
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { computeDirectChatId, MessagingService } from './messaging.service';
@@ -26,8 +24,6 @@ interface MessagingServicePrivate {
 
 describe('MessagingService', () => {
     let service: MessagingService;
-
-    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
     // Mock services
     const mockNostrService = {

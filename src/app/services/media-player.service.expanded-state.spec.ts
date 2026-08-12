@@ -4,7 +4,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaItem } from '../interfaces';
 import { AccountLocalStateService } from './account-local-state.service';
@@ -14,6 +13,9 @@ import { LayoutService } from './layout.service';
 import { LocalStorageService } from './local-storage.service';
 import { MediaPlayerService } from './media-player.service';
 import { OfflineMusicService } from './offline-music.service';
+import { NativeMediaSessionService } from './native-media-session.service';
+import { SettingsService } from './settings.service';
+import { UserStatusService } from './user-status.service';
 import { UtilitiesService } from './utilities.service';
 import { WakeLockService } from './wake-lock.service';
 
@@ -30,8 +32,6 @@ describe('MediaPlayerService expanded state switching', () => {
     title: 'Test',
     artist: 'Artist',
   };
-
-  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
@@ -54,6 +54,16 @@ describe('MediaPlayerService expanded state switching', () => {
         { provide: OfflineMusicService, useValue: { getCachedAudioUrl: async (url: string) => url } },
         { provide: AccountStateService, useValue: { pubkey: () => null } },
         { provide: AccountLocalStateService, useValue: {} },
+        { provide: UserStatusService, useValue: {} },
+        { provide: SettingsService, useValue: { settings: signal({ publishMusicStatus: false }) } },
+        {
+          provide: NativeMediaSessionService,
+          useValue: {
+            isAndroidRuntime: () => false,
+            setActionHandler: vi.fn(),
+            setPlaybackStateHandler: vi.fn(),
+          },
+        },
         { provide: DomSanitizer, useValue: { bypassSecurityTrustResourceUrl: (url: string) => url } },
         { provide: Router, useValue: {} },
       ],

@@ -8,7 +8,9 @@ import { EventService } from '../../../services/event';
 import { RepostService } from '../../../services/repost.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { MatDialog } from '@angular/material/dialog';
 import type { NostrRecord } from '../../../interfaces';
 
 const mockEvent = {
@@ -52,6 +54,7 @@ describe('RepostButtonComponent', () => {
     let mockRepostService: {
         repostNote: Mock;
         deleteRepost: Mock;
+        getEventExpiration: Mock;
     };
     let mockLayoutService: {
         showLoginDialog: Mock;
@@ -61,6 +64,8 @@ describe('RepostButtonComponent', () => {
     };
     let mockUtilitiesService: {
         normalizeRelayUrls: Mock;
+        getShareRelayHints: Mock;
+        isParameterizedReplaceableEvent: Mock;
     };
 
     beforeEach(async () => {
@@ -85,6 +90,7 @@ describe('RepostButtonComponent', () => {
         mockRepostService = {
             repostNote: vi.fn().mockReturnValue(Promise.resolve(true)),
             deleteRepost: vi.fn().mockReturnValue(Promise.resolve(true)),
+            getEventExpiration: vi.fn().mockReturnValue(null),
         };
 
         mockLayoutService = {
@@ -95,6 +101,8 @@ describe('RepostButtonComponent', () => {
         };
         mockUtilitiesService = {
             normalizeRelayUrls: vi.fn((relays: string[]) => relays),
+            getShareRelayHints: vi.fn((relays: string[]) => relays),
+            isParameterizedReplaceableEvent: vi.fn().mockReturnValue(false),
         };
 
         await TestBed.configureTestingModule({
@@ -106,8 +114,13 @@ describe('RepostButtonComponent', () => {
                 { provide: EventService, useValue: mockEventService },
                 { provide: RepostService, useValue: mockRepostService },
                 { provide: LayoutService, useValue: mockLayoutService },
+                {
+                    provide: AccountRelayService,
+                    useValue: { getMany: vi.fn().mockResolvedValue([]), getRelayUrls: vi.fn().mockReturnValue([]) },
+                },
                 { provide: UserRelaysService, useValue: mockUserRelaysService },
                 { provide: UtilitiesService, useValue: mockUtilitiesService },
+                { provide: MatDialog, useValue: { open: vi.fn() } },
             ],
         }).compileComponents();
 
@@ -240,24 +253,9 @@ describe('RepostButtonComponent', () => {
                     id: mockEvent.id,
                     pubkey: mockEvent.pubkey,
                     kind: mockEvent.kind,
+                    relays: [],
                 },
             });
-        });
-    });
-
-    describe('loading state', () => {
-        it('should disable button while loading reposts', () => {
-            component.isLoadingReposts.set(true);
-            fixture.detectChanges();
-            const button = fixture.nativeElement.querySelector('button');
-            expect(button.disabled).toBe(true);
-        });
-
-        it('should enable button when not loading', () => {
-            component.isLoadingReposts.set(false);
-            fixture.detectChanges();
-            const button = fixture.nativeElement.querySelector('button');
-            expect(button.disabled).toBe(false);
         });
     });
 

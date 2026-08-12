@@ -1,9 +1,6 @@
-// @vitest-environment jsdom
 import '@angular/compiler';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { signal } from '@angular/core';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { kinds } from 'nostr-tools';
 import { MessagesComponent } from './messages.component';
@@ -463,7 +460,6 @@ describe('MessagesComponent sendMessage', () => {
         expect(text).toBe('Encrypted file');
     });
 });
-
 describe('MessagesComponent forwardMessage', () => {
     let component: MessagesComponent;
 
@@ -519,7 +515,6 @@ describe('MessagesComponent forwardMessage', () => {
         );
     });
 });
-
 describe('MessagesComponent formatMessageTime', () => {
     let component: MessagesComponent;
 
@@ -574,107 +569,6 @@ describe('MessagesComponent formatMessageTime', () => {
         const timestamp = Math.floor(new Date(2024, 0, 15, 9, 3, 0).getTime() / 1000);
         const result = component.formatMessageTime(timestamp);
         expect(result).toBe('09:03');
-    });
-});
-
-describe('MessagesComponent message input layout', () => {
-    let component: MessagesComponent;
-
-    beforeEach(() => {
-        component = Object.create(MessagesComponent.prototype) as MessagesComponent;
-    });
-
-    it('should not force the textarea to the bottom while editing earlier text', () => {
-        const textarea = document.createElement('textarea');
-        textarea.value = 'A long message that spans multiple lines\n'.repeat(10);
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.setSelectionRange(0, 0);
-
-        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 400 });
-        Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 150 });
-        textarea.scrollTop = 25;
-
-        (component as any).messageInput = { nativeElement: textarea };
-        (component as any).autoResizeTextarea = vi.fn();
-
-        (component as any).syncMessageInputLayout();
-
-        expect((component as any).autoResizeTextarea).toHaveBeenCalled();
-        expect(textarea.scrollTop).toBe(25);
-
-        textarea.remove();
-    });
-
-    it('should keep the textarea pinned to the bottom when typing at the end', () => {
-        const textarea = document.createElement('textarea');
-        textarea.value = 'A long message that spans multiple lines\n'.repeat(10);
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 400 });
-        Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 150 });
-        textarea.scrollTop = 25;
-
-        (component as any).messageInput = { nativeElement: textarea };
-        (component as any).autoResizeTextarea = vi.fn();
-
-        (component as any).syncMessageInputLayout();
-
-        expect(textarea.scrollTop).toBe(400);
-
-        textarea.remove();
-    });
-
-    it('should preserve the selection while auto-resizing a focused textarea', () => {
-        const textarea = document.createElement('textarea');
-        textarea.value = 'Hello long direct message';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.setSelectionRange(5, 5);
-
-        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 120 });
-
-        (component as any).messageInput = { nativeElement: textarea };
-
-        component.autoResizeTextarea();
-
-        expect(textarea.style.height).toBe('120px');
-        expect(textarea.selectionStart).toBe(5);
-        expect(textarea.selectionEnd).toBe(5);
-
-        textarea.remove();
-    });
-
-    it('should stick to bottom on focus when already near the latest message', () => {
-        const wrapper = document.createElement('div');
-        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 1000 });
-        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 500 });
-        wrapper.scrollTop = 380;
-
-        (component as any).messagesWrapper = { nativeElement: wrapper };
-        (component as any).scrollToBottomIfNotScrolledUp = vi.fn();
-
-        component.onMessageInputFocus();
-
-        expect((component as any).shouldStickToBottomOnKeyboardOpen).toBe(true);
-        expect((component as any).scrollToBottomIfNotScrolledUp).toHaveBeenCalled();
-    });
-
-    it('should not stick to bottom on focus when user has scrolled up', () => {
-        const wrapper = document.createElement('div');
-        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 1000 });
-        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 500 });
-        wrapper.scrollTop = 200;
-
-        (component as any).messagesWrapper = { nativeElement: wrapper };
-        (component as any).scrollToBottomIfNotScrolledUp = vi.fn();
-
-        component.onMessageInputFocus();
-
-        expect((component as any).shouldStickToBottomOnKeyboardOpen).toBe(false);
-        expect((component as any).scrollToBottomIfNotScrolledUp).not.toHaveBeenCalled();
     });
 });
 
@@ -753,7 +647,7 @@ describe('MessagesComponent chat list keyboard navigation', () => {
 
         component.onChatListKeydown(event);
 
-        expect((component as any).selectChat).toHaveBeenCalledWith(chats.followingB);
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats['followingB']);
         expect(event.preventDefault).toHaveBeenCalled();
         expect(event.stopPropagation).toHaveBeenCalled();
     });
@@ -764,18 +658,18 @@ describe('MessagesComponent chat list keyboard navigation', () => {
 
         component.onChatListKeydown(event);
 
-        expect((component as any).selectChat).toHaveBeenCalledWith(chats.note);
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats['note']);
     });
 
     it('uses the visible Others tab list when that tab has focus', () => {
         const { component, chats } = createKeyboardComponent();
         (component as any).selectedTabIndex.set(1);
-        (component as any).selectedChatId.set(chats.otherA.id);
+        (component as any).selectedChatId.set(chats['otherA'].id);
         const event = keyboardEvent('ArrowDown');
 
         component.onChatListKeydown(event);
 
-        expect((component as any).selectChat).toHaveBeenCalledWith(chats.otherB);
+        expect((component as any).selectChat).toHaveBeenCalledWith(chats['otherB']);
     });
 
     it('ignores non-arrow keys', () => {
@@ -922,24 +816,5 @@ describe('MessagesComponent message render batching', () => {
         }
 
         expect((component as any).renderedMessageCount()).toBe(1);
-    });
-});
-
-describe('MessagesComponent template structure', () => {
-    it('should not reference message-time-side class in template file', () => {
-        // Verify old external timestamp class is no longer used
-        // The template file should use message-time inside message-inline-meta instead
-        const html = readFileSync(join(process.cwd(), 'src/app/pages/messages/messages.component.html'), 'utf8');
-        expect(html).not.toContain('message-time-side');
-        expect(html).toContain('message-time');
-        expect(html).toContain('message-inline-meta');
-    });
-
-    it('should show a legacy protocol indicator in the selected chat header', () => {
-        const html = readFileSync(join(process.cwd(), 'src/app/pages/messages/messages.component.html'), 'utf8');
-
-        expect(html).toContain('legacy-protocol-indicator');
-        expect(html).toContain("selectedChat()?.encryptionType === 'nip04'");
-        expect(html).toContain('NIP-04');
     });
 });

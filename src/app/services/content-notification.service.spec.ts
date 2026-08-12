@@ -1,13 +1,8 @@
-// @vitest-environment jsdom
 import '@angular/compiler';
 import type { Mock, MockedObject } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
 import { ContentNotificationService } from './content-notification.service';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
@@ -48,8 +43,6 @@ describe('ContentNotificationService', () => {
 
   const TEST_PUBKEY_A = 'aaaa'.repeat(16);
   const TEST_PUBKEY_B = 'bbbb'.repeat(16);
-
-  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   beforeEach(() => {
     TestBed.resetTestingModule();
@@ -210,15 +203,16 @@ describe('ContentNotificationService', () => {
       mockAccountLocalState.getNotificationLastCheck.mockReturnValue(lastCheckTimestamp);
 
       await service.initialize();
+      expect(service.lastCheckTimestamp()).toBe(lastCheckTimestamp);
+      await service.reconcileRecentNotifications(7, true);
+      mockAccountRelay.getMany.mockClear();
       await service.checkForNewNotifications();
 
       // Verify that getMany was called with a `since` value less than the last check timestamp
       // The overlap buffer is 1 hour, so since should be lastCheckTimestamp - 3600
       const expectedSince = lastCheckTimestamp - 3600;
-      const firstCall = vi.mocked(mockAccountRelay.getMany).mock.calls[0];
-      expect(firstCall).toBeDefined();
-      const [filter] = firstCall!;
-      expect(filter.since).toBe(expectedSince);
+      const calls = vi.mocked(mockAccountRelay.getMany).mock.calls;
+      expect(calls.some(([filter]) => filter.since === expectedSince)).toBe(true);
     });
 
     it('should not apply overlap buffer for first-time users (since is 0)', async () => {

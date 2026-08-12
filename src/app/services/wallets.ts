@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injector, signal, runInInjectionContext, Service } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injector, signal, runInInjectionContext, Service } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { AccountLocalStateService, AccountWallet } from './account-local-state.service';
@@ -17,6 +17,7 @@ export class Wallets {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly injector = inject(Injector);
   private readonly logger = inject(LoggerService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Cached reference to avoid repeated lookups
   private _accountState: AccountStateServiceType | null = null;
@@ -40,7 +41,8 @@ export class Wallets {
     // Note: We don't log wallet data as it contains secrets
 
     // Defer initialization to avoid circular dependency during construction
-    setTimeout(() => this.initialize(), 0);
+    const initializationTimer = setTimeout(() => this.initialize(), 0);
+    this.destroyRef.onDestroy(() => clearTimeout(initializationTimer));
   }
 
   /**

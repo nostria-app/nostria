@@ -27,7 +27,7 @@ describe('PlatformService', () => {
       expect(service.hasModifierKey(event)).toBe(true);
     });
 
-    it('should return false for Alt key on Mac (should use Cmd)', () => {
+    it('should return true for Option key on Mac', () => {
       // Mock Mac platform
       service.isMac.set(true);
       
@@ -37,10 +37,10 @@ describe('PlatformService', () => {
         ctrlKey: false,
       });
 
-      expect(service.hasModifierKey(event)).toBe(false);
+      expect(service.hasModifierKey(event)).toBe(true);
     });
 
-    it('should return true for Cmd (Meta) key on Mac', () => {
+    it('should return false for Cmd (Meta) key on Mac', () => {
       // Mock Mac platform
       service.isMac.set(true);
       
@@ -50,7 +50,7 @@ describe('PlatformService', () => {
         ctrlKey: false,
       });
 
-      expect(service.hasModifierKey(event)).toBe(true);
+      expect(service.hasModifierKey(event)).toBe(false);
     });
 
     it('should return false for Cmd (Meta) key on Windows/Linux', () => {
@@ -73,14 +73,14 @@ describe('PlatformService', () => {
       expect(service.getModifierKeyDisplay()).toBe('Alt');
     });
 
-    it('should return "Cmd" for Mac (text mode)', () => {
+    it('should return "Option" for Mac (text mode)', () => {
       service.isMac.set(true);
-      expect(service.getModifierKeyDisplay(false)).toBe('Cmd');
+      expect(service.getModifierKeyDisplay(false)).toBe('Option');
     });
 
-    it('should return "⌘" for Mac (symbol mode)', () => {
+    it('should return "⌥" for Mac (symbol mode)', () => {
       service.isMac.set(true);
-      expect(service.getModifierKeyDisplay(true)).toBe('⌘');
+      expect(service.getModifierKeyDisplay(true)).toBe('⌥');
     });
   });
 
@@ -92,12 +92,12 @@ describe('PlatformService', () => {
 
     it('should format shortcut for Mac (text mode)', () => {
       service.isMac.set(true);
-      expect(service.formatShortcut('C', false)).toBe('Cmd+C');
+      expect(service.formatShortcut('C', false)).toBe('Option+C');
     });
 
     it('should format shortcut for Mac (symbol mode)', () => {
       service.isMac.set(true);
-      expect(service.formatShortcut('C', true)).toBe('⌘+C');
+      expect(service.formatShortcut('C', true)).toBe('⌥+C');
     });
   });
 });

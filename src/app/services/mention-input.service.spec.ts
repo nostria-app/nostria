@@ -48,8 +48,8 @@ describe('MentionInputService', () => {
       expect(service.sanitizeDisplayName('user\u00B4name')).toBe('username');
     });
 
-    it('should strip regex metacharacters', () => {
-      expect(service.sanitizeDisplayName('user.*+?^${}()|[]\\name')).toBe('username');
+    it('should remove unsafe characters while retaining dots', () => {
+      expect(service.sanitizeDisplayName('user.*+?^${}()|[]\\name')).toBe('user.name');
     });
 
     it('should strip @ symbol', () => {

@@ -33,9 +33,9 @@ describe('LiveStreamBroadcastService', () => {
   });
 
   it('should strip end-of-candidates from WHIP answers', () => {
-    const normalizeWhipAnswerSdp = (service as unknown as {
-      normalizeWhipAnswerSdp: (sdp: string) => { sdp: string; removedLines: string[] };
-    }).normalizeWhipAnswerSdp;
+    const normalizeWhipAnswerSdp = (sdp: string) => (service as unknown as {
+      normalizeWhipAnswerSdp: (value: string) => { sdp: string; removedLines: string[] };
+    }).normalizeWhipAnswerSdp(sdp);
 
     const normalizedSdp = normalizeWhipAnswerSdp([
       'v=0',
@@ -61,9 +61,9 @@ describe('LiveStreamBroadcastService', () => {
   });
 
   it('should normalize line endings for WHIP answers', () => {
-    const normalizeWhipAnswerSdp = (service as unknown as {
-      normalizeWhipAnswerSdp: (sdp: string) => { sdp: string; removedLines: string[] };
-    }).normalizeWhipAnswerSdp;
+    const normalizeWhipAnswerSdp = (sdp: string) => (service as unknown as {
+      normalizeWhipAnswerSdp: (value: string) => { sdp: string; removedLines: string[] };
+    }).normalizeWhipAnswerSdp(sdp);
 
     const normalizedSdp = normalizeWhipAnswerSdp('v=0\no=- 0 0 IN IP4 127.0.0.1\ns=-\nt=0 0\nm=audio 9 UDP/TLS/RTP/SAVPF 111');
 
@@ -71,9 +71,9 @@ describe('LiveStreamBroadcastService', () => {
   });
 
   it('should remove invalid non-SDP lines from WHIP answers', () => {
-    const normalizeWhipAnswerSdp = (service as unknown as {
-      normalizeWhipAnswerSdp: (sdp: string) => { sdp: string; removedLines: string[] };
-    }).normalizeWhipAnswerSdp;
+    const normalizeWhipAnswerSdp = (sdp: string) => (service as unknown as {
+      normalizeWhipAnswerSdp: (value: string) => { sdp: string; removedLines: string[] };
+    }).normalizeWhipAnswerSdp(sdp);
 
     const normalizedSdp = normalizeWhipAnswerSdp([
       'v=0',
@@ -99,9 +99,9 @@ describe('LiveStreamBroadcastService', () => {
   });
 
   it('should reject WHIP answers that do not contain the required SDP envelope', () => {
-    const normalizeWhipAnswerSdp = (service as unknown as {
-      normalizeWhipAnswerSdp: (sdp: string) => { sdp: string; removedLines: string[] };
-    }).normalizeWhipAnswerSdp;
+    const normalizeWhipAnswerSdp = (sdp: string) => (service as unknown as {
+      normalizeWhipAnswerSdp: (value: string) => { sdp: string; removedLines: string[] };
+    }).normalizeWhipAnswerSdp(sdp);
 
     expect(() => normalizeWhipAnswerSdp('a=end-of-candidates\nnot-sdp')).toThrow(
       'WHIP endpoint returned an invalid SDP answer',
@@ -134,12 +134,24 @@ describe('LiveStreamBroadcastService', () => {
       close: vi.fn(),
     };
 
-    vi.stubGlobal('RTCPeerConnection', vi.fn(() => peerConnection));
+    vi.stubGlobal('RTCPeerConnection', class {
+      constructor() {
+        return peerConnection;
+      }
+    });
 
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
-        text: vi.fn().mockResolvedValue('v=0\na=end-of-candidates\n'),
+        text: vi.fn().mockResolvedValue([
+          'v=0',
+          'o=- 0 0 IN IP4 127.0.0.1',
+          's=-',
+          't=0 0',
+          'm=audio 9 UDP/TLS/RTP/SAVPF 111',
+          'a=end-of-candidates',
+          '',
+        ].join('\n')),
         headers: new Headers({ location: '/whip/resource/browser-session' }),
       })
       .mockResolvedValueOnce({

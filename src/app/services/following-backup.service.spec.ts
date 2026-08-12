@@ -5,15 +5,29 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { DatabaseService } from './database.service';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 
 describe('FollowingBackupService', () => {
   let service: FollowingBackupService;
   let mockNostrService: Pick<NostrService, 'createEvent' | 'signAndPublish'>;
   let mockLoggerService: Pick<LoggerService, 'info' | 'warn' | 'error' | 'debug'>;
-  let mockAccountStateService: Pick<AccountStateService, 'pubkey' | 'followingList' | 'followingListLoaded'>;
+  let mockAccountStateService: Omit<
+    Pick<AccountStateService, 'pubkey' | 'followingList' | 'followingListLoaded'>,
+    'pubkey'
+  > & {
+    pubkey: WritableSignal<string>;
+  };
   let mockLocalStorageService: Pick<LocalStorageService, 'getItem' | 'setItem' | 'removeItem'>;
   let mockDatabaseService: Pick<DatabaseService, 'getEventByPubkeyAndKind'>;
+  const accountPubkey = 'a'.repeat(64);
+
+  function loadBackups(backups: unknown): void {
+    vi.mocked(mockLocalStorageService.getItem).mockReturnValue(
+      backups === null ? null : JSON.stringify(backups),
+    );
+    mockAccountStateService.pubkey.set(accountPubkey);
+    TestBed.flushEffects();
+  }
 
   beforeEach(() => {
     // Create mock services
@@ -60,7 +74,7 @@ describe('FollowingBackupService', () => {
   });
 
   it('should return empty array when no backups exist', () => {
-    vi.mocked(mockLocalStorageService.getItem).mockReturnValue(null);
+    loadBackups(null);
     const backups = service.getBackups();
     expect(backups).toEqual([]);
   });
@@ -74,7 +88,7 @@ describe('FollowingBackupService', () => {
         event: { id: 'event1' } as any,
       },
     ];
-    vi.mocked(mockLocalStorageService.getItem).mockReturnValue(JSON.stringify(mockBackups));
+    loadBackups({ [accountPubkey]: mockBackups });
     const backups = service.getBackups();
     expect(backups.length).toBe(1);
     expect(backups[0].id).toBe('test-1');
@@ -82,6 +96,8 @@ describe('FollowingBackupService', () => {
 
   it('should handle invalid JSON in localStorage', () => {
     vi.mocked(mockLocalStorageService.getItem).mockReturnValue('invalid json');
+    mockAccountStateService.pubkey.set(accountPubkey);
+    TestBed.flushEffects();
     const backups = service.getBackups();
     expect(backups).toEqual([]);
     expect(mockLoggerService.error).toHaveBeenCalled();
@@ -102,15 +118,19 @@ describe('FollowingBackupService', () => {
         event: { id: 'event2' } as any,
       },
     ];
-    vi.mocked(mockLocalStorageService.getItem).mockReturnValue(JSON.stringify(mockBackups));
+    loadBackups({ [accountPubkey]: mockBackups });
 
     const result = service.deleteBackup('test-1');
 
     expect(result).toBe(true);
-    expect(mockLocalStorageService.setItem).toHaveBeenCalledWith('nostria-following-history', expect.stringContaining('test-2'));
+    expect(mockLocalStorageService.setItem).toHaveBeenCalledWith(
+      'nostria-following-history',
+      expect.stringMatching(new RegExp(`"${accountPubkey}".*test-2`)),
+    );
   });
 
   it('should clear all backups', () => {
+    loadBackups({ [accountPubkey]: [] });
     service.clearAllBackups();
     expect(mockLocalStorageService.removeItem).toHaveBeenCalledWith('nostria-following-history');
   });

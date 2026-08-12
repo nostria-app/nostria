@@ -24,7 +24,7 @@
 
 Nostria's testing strategy combines:
 
-- **Unit Tests**: Karma/Jasmine for component and service testing
+- **Unit Tests**: Vitest in Chromium for component and service testing
 - **E2E Tests**: Playwright for end-to-end user flow testing
 - **AI-Optimized Automation**: Special utilities for LLM-driven test execution
 

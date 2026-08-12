@@ -53,14 +53,14 @@
 
 ---
 
-## 3. Commands
+## 5. Commands
 
 ### Works
 
 ```bash
 npm start                     # dev server, http://localhost:4200
 npm run build                 # prod build (SSR) — the real type/template check
-npm test                      # unit tests: Vitest + chromium, all 190+ specs
+npm test                      # unit tests: Vitest + chromium
 npm run test:e2e              # Playwright, all projects
 npm run schemas               # Nostr event schema validation (@nostrability/schemata)
 npm run gen:i18n              # extract i18n -> src/locale/messages.json
@@ -88,28 +88,18 @@ First run on a fresh checkout: `npx playwright install chromium` — unit tests 
 
 Consequence: **there is no automated style gate.** Match the formatting of the file you're editing: 2-space indent, single quotes, semicolons, ~100 col, CRLF, trailing newline. Do not introduce a formatter unless asked.
 
-### The unit suite is red — know the baseline before you panic
-
-As of v4.1.67: **~407 failing / 1434 tests, 64 failing spec files.** Almost all are stale hand-rolled mocks (`Object.create(Svc.prototype)` + `Object.assign({...})`) that drifted from the implementations they fake — `X is not a function` — plus a handful of specs written for a Node/jsdom environment (`// @vitest-environment jsdom`, `node:fs`) that can't run because `angular.json` pins `browsers: ["chromium"]`.
-
-So:
-
-- **A red suite is not evidence you broke something.** Compare before/after on the specs you touched; a new failure in an unrelated file is signal, an old one isn't.
-- Don't open a repo-wide test-repair project unless asked. Fix the specs adjacent to your change.
-- One exception is worth escalating immediately: a **TypeScript error in any spec file blocks the entire suite**, because `tsconfig.spec.json` type-checks all of `src/**/*.spec.ts` as one program. `--include` / `--exclude` do not narrow the type-check. One bad cast in one spec = zero tests run anywhere. If `ng test` reports compile errors, fix those first, whatever file they're in.
-
 ### Verification loop (definition of done)
 
-1. `ng test --include <the specs you touched> --watch=false` — catches logic + DI regressions. Read it against the baseline above.
+1. `ng test --include <the specs you touched> --watch=false` — catches logic and DI regressions.
 2. `npm run build` — the authoritative type + template check (`strictTemplates` catches template errors nothing else will). Run it before claiming a non-trivial change works.
-3. Touched routing / SSR / `DataResolver` / meta tags → run the social-preview check (§12).
+3. Touched routing / SSR / `DataResolver` / meta tags → run the social-preview check (§14).
 4. Touched auth, relays, or publishing → run the relevant `e2e/tests/**` file.
 
 Never report success on unrun code. If you couldn't run something, say which step you skipped and why.
 
 ---
 
-## 4. Angular
+## 6. Angular
 
 ```typescript
 @Component({
@@ -130,28 +120,28 @@ export class ExampleComponent {
 Hard rules:
 
 - Standalone only. Never write `standalone: true` — it's the default. No NgModules.
-- `ChangeDetectionStrategy.OnPush` on every component — 433/433 currently comply.
+- `ChangeDetectionStrategy.OnPush` on every component.
 - No `@HostBinding` / `@HostListener` — use `host: {}` in the decorator.
 - No `ngClass` / `ngStyle` — use `[class.x]` / `[style.x]` bindings.
 - `NgOptimizedImage` for static images (not base64, not blob/object URLs).
-- Don't import `CommonModule` in new code. Import the specific pipe/directive. (82 legacy files still do; don't mass-migrate.)
-- Lazy-load routes with `loadComponent` / `loadChildren` — `app.routes.ts` has 160 lazy entries; a new eagerly-imported page is a regression.
+- Don't import `CommonModule` in new code. Import the specific pipe/directive.
+- Lazy-load routes with `loadComponent` / `loadChildren`; a new eagerly-imported page is a regression.
 
 **Signals:**
 
 - `signal()` for state, `computed()` for anything derived. Never store a derived value in a second signal that you sync manually.
 - `set()` / `update()` only. `mutate()` does not exist.
 - Expose state as `readonly x = this._x.asReadonly()` from services.
-- **`effect()` is a last resort.** There are already 236 of them; most should have been `computed()`. Legitimate uses: DOM/browser API sync, logging, persistence. Writing signals inside an effect to derive state is a bug waiting to happen — reach for `computed()` first, and `untracked()` when you deliberately need to read without subscribing.
+- **`effect()` is a last resort.** Legitimate uses: DOM/browser API sync, logging, persistence. Writing signals inside an effect to derive state is a bug waiting to happen — reach for `computed()` first, and `untracked()` when you deliberately need to read without subscribing.
 - Zoneless: async callbacks (`setTimeout`, `fetch.then`, WebSocket handlers) must land in a signal write, or the UI won't update.
 
-**Services:** `@Injectable({ providedIn: 'root' })`, `inject()`, one responsibility. `src/app/services/` already has ~190 services — check whether one exists before adding another.
+**Services:** `@Injectable({ providedIn: 'root' })`, `inject()`, one responsibility. Check for an existing service before adding another.
 
 **HTTP:** use `fetch`, not `HttpClient` (the exception is the generated `src/app/api/` client and the NIP-98 interceptor).
 
 ---
 
-## 5. Templates
+## 7. Templates
 
 ```html
 @if (event(); as e) {
@@ -170,7 +160,7 @@ Hard rules:
 
 ---
 
-## 6. Styling (Material 3)
+## 8. Styling (Material 3)
 
 ```scss
 background: var(--mat-sys-surface-container);
@@ -188,15 +178,15 @@ border: 1px solid var(--mat-sys-outline-variant);
 
 ---
 
-## 7. Dialogs
+## 9. Dialogs
 
 - New dialogs: `CustomDialogService` → `CustomDialogComponent` (`src/app/services/custom-dialog.service.ts`). It handles the native back button/gesture, which matters on Tauri mobile.
-- `MatDialog` is still used in ~109 legacy files. That is history, not a pattern to copy — don't mass-migrate it either.
+- Existing `MatDialog` usage is legacy, not a pattern to copy. Do not mass-migrate it either.
 - **Never** native `confirm()` / `alert()` / `prompt()`. Use an app dialog or a snackbar.
 
 ---
 
-## 8. i18n (mandatory for user-facing text)
+## 10. i18n (mandatory for user-facing text)
 
 Every user-visible string ships translated into 20 locales.
 
@@ -209,7 +199,7 @@ Every user-visible string ships translated into 20 locales.
 
 ---
 
-## 9. SSR, PWA & platform safety
+## 11. SSR, PWA & platform safety
 
 The app server-renders and hydrates, and also runs inside Tauri. Guard every browser/native API:
 
@@ -221,11 +211,11 @@ if (this.isBrowser) { /* window, document, localStorage, IndexedDB, WebSocket, n
 - Module-scope access to `window`/`document`/`localStorage` crashes the SSR build. Same for `IntersectionObserver`, `matchMedia`, `crypto.subtle`.
 - Tauri-only code paths must be gated (see `isTauri()` usage in `app.config.ts`) — the same bundle serves web.
 - Hydration is on (`provideClientHydration` with event replay). DOM manipulation during initial render causes hydration mismatches.
-- Touching SSR/routing/meta generation → §12 is mandatory.
+- Touching SSR/routing/meta generation → §14 is mandatory.
 
 ---
 
-## 10. Nostr
+## 12. Nostr
 
 - **Timestamps are SECONDS.** `Math.floor(Date.now() / 1000)`. `Date.now()` is a bug.
 - Follow the NIPs. When implementing a kind or tag, cite the NIP number in a comment.
@@ -236,9 +226,9 @@ if (this.isBrowser) { /* window, document, localStorage, IndexedDB, WebSocket, n
 
 ---
 
-## 11. TypeScript
+## 13. TypeScript
 
-- No implicit `any`. Prefer `unknown` + narrowing. (~77 files still have `: any` — don't add to the pile.)
+- No implicit `any`. Prefer `unknown` + narrowing.
 - Prefer inference; annotate boundaries (public APIs, return types of exported functions), not locals.
 - Discriminated unions over optional-field soup. `satisfies` over casts. Type predicates over `as`.
 - No one-line wrappers that only cast or rename.
@@ -247,7 +237,7 @@ if (this.isBrowser) { /* window, document, localStorage, IndexedDB, WebSocket, n
 
 ---
 
-## 12. Social preview regression check
+## 14. Social preview regression check
 
 Required after changes to SSR, routing, `DataResolver`, or metadata generation:
 
@@ -259,7 +249,7 @@ Pass = event/profile/article-specific tags. Fail = homepage fallback (`Nostria -
 
 ---
 
-## 13. Testing
+## 15. Testing
 
 ### Unit (Vitest, browser mode)
 
@@ -275,10 +265,16 @@ TestBed.configureTestingModule({
 });
 ```
 
-- **Prefer `TestBed` + provider overrides.** The `Object.create(Svc.prototype)` + `Object.assign({ dep: {…} })` pattern used across this repo bypasses DI and is exactly why 64 spec files rot silently — the fake drifts, TypeScript never notices.
+- Specs run with isolation enabled. Do not depend on TestBed, overlays, timers, or browser globals created by another spec file.
+- **Prefer `TestBed` + provider overrides.** Avoid `Object.create(Svc.prototype)` plus `Object.assign({ dep: {…} })`; it bypasses DI and allows incomplete fakes to drift from their real dependencies.
 - If you must fake a dependency, type the fake (`satisfies Pick<RelayService, 'publish'>`) so a signature change breaks the build instead of the test run.
 - Never access a `private` member off a service instance to assert on it (`service['dep']` / `service.dep`) — capture the mock in a local `const` and assert on that.
 - Test behavior and edge cases. Skip `should create` filler.
+- `tsconfig.spec.json` type-checks all browser specs together; `--include` scopes execution but does not hide unrelated TypeScript errors.
+
+### Node-only schema validation
+
+`src/app/services/schemata-validation.spec.ts` uses Node APIs and is intentionally excluded from the Chromium suite. Run it with `npm run schemas`; do not add `node:*`, jsdom, `zone.js/testing`, `fakeAsync`, or test-environment initialization to browser specs.
 
 ### E2E (Playwright)
 
@@ -296,7 +292,7 @@ Results land in `test-results/` (`test-summary.json`, `results.json`, `logs/`, `
 
 ---
 
-## 14. Project structure
+## 16. Project structure
 
 ```
 src/app/
@@ -307,7 +303,7 @@ src/app/
 ├── models/
 ├── pages/        # lazy-loaded route components
 ├── pipes/
-├── services/     # ~190 singletons — search before adding
+├── services/     # singletons — search before adding
 ├── utils/
 └── workers/      # web workers
 e2e/              # Playwright specs, fixtures, page objects, helpers
@@ -318,13 +314,13 @@ docs/             # long-form notes (see §16)
 
 ---
 
-## 15. Command Palette
+## 17. Command Palette
 
 Ctrl+K is a primary navigation surface. **Any new route or top-level feature must register a command** in `src/app/components/command-palette-dialog/`, including its i18n'd label. A feature that isn't reachable from the palette is unfinished.
 
 ---
 
-## 16. Docs & commits
+## 18. Docs & commits
 
 - **Default: write no Markdown file.** Explain in the response instead. `docs/` has 46 files, most of them agent-generated implementation reports nobody reads — don't add to that.
 - Write a doc only when explicitly asked, or when a fix is genuinely non-obvious and durable (protocol quirks, SSR/hydration traps, platform workarounds). Put it in `docs/`.
@@ -334,7 +330,7 @@ Ctrl+K is a primary navigation surface. **Any new route or top-level feature mus
 
 ---
 
-## 17. References
+## 19. References
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system design, relay strategy, state, SSR
 - [TESTING.md](./TESTING.md) — full E2E guide

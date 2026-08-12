@@ -344,7 +344,7 @@ describe('EventService limited interaction loading', () => {
     setPrivateField(service, 'VALID_REPORT_TYPES', new Set(['spam', 'other']));
   });
 
-  it('should use one widened combined query for timeline interaction loading', async () => {
+  it('should query reactions and replies independently for timeline interaction loading', async () => {
     resolvedRecords = [
       createRecord({
         id: 'reaction-1',
@@ -386,7 +386,7 @@ describe('EventService limited interaction loading', () => {
       false,
     );
 
-    expect(getEventsByKindsAndEventTagCalls.length).toBe(1);
+    expect(getEventsByKindsAndEventTagCalls.length).toBe(2);
     const [calledPubkey, calledKinds, calledEventId, calledOptions] = getEventsByKindsAndEventTagCalls.at(-1) as [
       string,
       number[],
@@ -401,20 +401,20 @@ describe('EventService limited interaction loading', () => {
     ];
 
     expect(calledPubkey).toBe('target-pubkey');
-    expect(calledKinds).toEqual([
-      kinds.Reaction,
-      kinds.Repost,
-      kinds.Report,
-      kinds.ShortTextNote,
-      1111,
-      1244,
-    ]);
+    expect(calledKinds).toEqual([kinds.ShortTextNote, 1111]);
     expect(calledEventId).toBe('target-event-id');
-    expect(calledOptions.limit).toBe(44);
+    expect(calledOptions.limit).toBe(33);
     expect(calledOptions.includeAccountRelays).toBe(true);
     expect(calledOptions.cache).toBe(true);
     expect(calledOptions.save).toBe(true);
     expect(calledOptions.invalidateCache).toBe(false);
+    expect(getEventsByKindsAndEventTagCalls[0]?.[1]).toEqual([
+      kinds.Reaction,
+      kinds.Repost,
+      kinds.Report,
+      1244,
+    ]);
+    expect((getEventsByKindsAndEventTagCalls[0]?.[3] as { limit?: number }).limit).toBe(44);
     expect(result.reactions.events.map((record) => record.event.id)).toEqual(['reaction-1']);
     expect(result.reposts.map((record) => record.event.id)).toEqual(['repost-1']);
     expect(result.replyCount).toBe(1);

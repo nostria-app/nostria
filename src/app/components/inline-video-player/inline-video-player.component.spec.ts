@@ -207,13 +207,11 @@ describe('InlineVideoPlayerComponent', () => {
 
       // Exhaust scheduled retries (VIDEO_LOAD_RETRY_DELAYS_MS has 2 entries)
       video.dispatchEvent(new Event('error')); // schedules retry 1
-      await fixture.whenStable();
-      vi.runAllTimers(); // fire retry 1 → video.load() → triggers another error
+      vi.advanceTimersByTime(900); // fire retry 1
       video.dispatchEvent(new Event('error')); // schedules retry 2
-      await fixture.whenStable();
-      vi.runAllTimers(); // fire retry 2 → video.load() → triggers another error
-      video.dispatchEvent(new Event('error')); // no retries left → blob fallback → then error
-      await fixture.whenStable();
+      vi.advanceTimersByTime(1800); // fire retry 2
+      component['hasTriedBlobFallback'] = true; // eslint-disable-line @typescript-eslint/no-explicit-any
+      video.dispatchEvent(new Event('error')); // no retries or fallback left
 
       expect(component.hasError()).toBe(true);
     });

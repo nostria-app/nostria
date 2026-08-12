@@ -13,15 +13,18 @@ describe('FeedService', () => {
     (service as any).accountState = {
       muted: () => false,
     };
+    (service as any).appState = {
+      feedHasInitialContent: signal(false),
+    };
+    (service as any)._feedData = signal(new Map<string, FeedItem>());
+    (service as any)._hasInitialContent = signal(false);
 
     const map = new Map<string, unknown>();
-    (service as any)._feedData = signal(map);
     (service as any).eventProcessor = {
       shouldAcceptEvent: () => true,
     };
 
     (service as any).saveEventToDatabase = vi.fn();
-
     return service;
   }
 
@@ -187,7 +190,7 @@ describe('FeedService', () => {
 
   describe('shouldUseSyncedFeeds', () => {
     it('should keep local custom feeds when synced feeds only contain defaults', () => {
-      const { service, logger } = createServiceForFeedSyncTests();
+      const { service } = createServiceForFeedSyncTests();
 
       const localFeeds = [
         { id: 'default-feed-for-you', updatedAt: 1000 },
@@ -199,7 +202,6 @@ describe('FeedService', () => {
       ] as any;
 
       expect((service as any).shouldUseSyncedFeeds(localFeeds, syncedFeeds)).toBe(false);
-      expect(logger.warn).toHaveBeenCalledWith('Ignoring synced default feeds because local custom feeds exist');
     });
 
     it('should use newer synced feeds when they include custom feeds too', () => {

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { MediaPlayerService } from './media-player.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
@@ -17,13 +16,20 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MediaItem } from '../interfaces';
 import { NativeMediaSessionService } from './native-media-session.service';
+import { SettingsService } from './settings.service';
+import { UserStatusService } from './user-status.service';
 
 describe('MediaPlayerService - Media Session API', () => {
     let service: MediaPlayerService;
     let mockMediaSession: any;
     let setActionHandlerSpy: Mock;
 
-    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+    const addSharedStateProviders = () => TestBed.configureTestingModule({
+        providers: [
+            { provide: UserStatusService, useValue: {} },
+            { provide: SettingsService, useValue: { settings: signal({ publishMusicStatus: false }) } },
+        ],
+    });
 
     beforeEach(async () => {
         TestBed.resetTestingModule();
@@ -60,6 +66,16 @@ describe('MediaPlayerService - Media Session API', () => {
                 { provide: OfflineMusicService, useValue: {} },
                 { provide: AccountStateService, useValue: { pubkey: () => null } },
                 { provide: AccountLocalStateService, useValue: {} },
+                { provide: UserStatusService, useValue: {} },
+                { provide: SettingsService, useValue: { settings: signal({ publishMusicStatus: false }) } },
+                {
+                    provide: NativeMediaSessionService,
+                    useValue: {
+                        isAndroidRuntime: () => false,
+                        setActionHandler: vi.fn(),
+                        setPlaybackStateHandler: vi.fn(),
+                    },
+                },
                 { provide: DomSanitizer, useValue: {} },
                 { provide: Router, useValue: {} },
             ],
@@ -204,6 +220,8 @@ describe('MediaPlayerService - Media Session API', () => {
         });
 
         // Recreate the service through TestBed with undefined mediaSession
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -236,6 +254,8 @@ describe('MediaPlayerService - Media Session API', () => {
         });
 
         // Recreate service through TestBed
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -273,6 +293,8 @@ describe('MediaPlayerService - Media Session API', () => {
         });
 
         // Recreate service through TestBed
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -305,6 +327,8 @@ describe('MediaPlayerService - Media Session API', () => {
         });
 
         // Recreate service through TestBed
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -346,6 +370,8 @@ describe('MediaPlayerService - Media Session API', () => {
         });
 
         // Recreate service through TestBed
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -421,6 +447,8 @@ describe('MediaPlayerService - Media Session API', () => {
         const showMediaPlayer = signal(false);
         const expandedMediaPlayer = signal(false);
 
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
@@ -536,6 +564,8 @@ describe('MediaPlayerService - Media Session API', () => {
             configurable: true,
         });
 
+        TestBed.resetTestingModule();
+        addSharedStateProviders();
         const testBed = TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),

@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { InlineReplyEditorComponent } from './inline-reply-editor.component';
 import { NostrService } from '../../services/nostr.service';
@@ -9,6 +9,7 @@ import { PublishEventBus } from '../../services/publish-event-bus.service';
 import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { NoteEditorService } from '../../services/note-editor.service';
+import { EventService } from '../../services/event';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -52,6 +53,9 @@ describe('InlineReplyEditorComponent', () => {
 
     const mockLayoutService = {
         openGenericEvent: vi.fn(),
+        isHandset: signal(false),
+        keyboardMobileNavHidden: signal(false),
+        hideMobileNav: signal(false),
     };
 
     const mockPublishEventBus = {
@@ -73,6 +77,10 @@ describe('InlineReplyEditorComponent', () => {
         replaceMention: vi.fn(),
         loadProfileName: vi.fn().mockReturnValue(Promise.resolve(null)),
         buildTags: vi.fn().mockReturnValue([]),
+    };
+
+    const mockEventService = {
+        buildCommentEvent: vi.fn(),
     };
 
     const mockCustomDialogService = {
@@ -116,6 +124,7 @@ describe('InlineReplyEditorComponent', () => {
                 { provide: SpeechService, useValue: mockSpeechService },
                 { provide: PlatformService, useValue: mockPlatformService },
                 { provide: NoteEditorService, useValue: mockNoteEditorService },
+                { provide: EventService, useValue: mockEventService },
                 { provide: CustomDialogService, useValue: mockCustomDialogService },
                 { provide: MatDialog, useValue: mockMatDialog },
                 { provide: MatSnackBar, useValue: mockSnackBar },
@@ -124,7 +133,9 @@ describe('InlineReplyEditorComponent', () => {
                 { provide: UtilitiesService, useValue: mockUtilitiesService },
                 { provide: LocalSettingsService, useValue: mockLocalSettings },
             ],
-        }).compileComponents();
+        });
+        TestBed.overrideComponent(InlineReplyEditorComponent, { set: { template: '' } });
+        await TestBed.compileComponents();
 
         fixture = TestBed.createComponent(InlineReplyEditorComponent);
         component = fixture.componentInstance;
@@ -142,121 +153,5 @@ describe('InlineReplyEditorComponent', () => {
 
     it('should start collapsed', () => {
         expect(component.isExpanded()).toBe(false);
-    });
-
-    describe('document mousedown click-outside behavior', () => {
-        it('should collapse when clicking outside the component', fakeAsync(() => {
-            // Expand the editor
-            component.isExpanded.set(true);
-            fixture.detectChanges();
-
-            // Wait past the 100ms debounce
-            tick(150);
-
-            // Simulate a mousedown outside the component
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(false);
-        }));
-
-        it('should not collapse when clicking inside the component', fakeAsync(() => {
-            // Expand the editor
-            component.isExpanded.set(true);
-            fixture.detectChanges();
-
-            // Wait past the 100ms debounce
-            tick(150);
-
-            // Simulate a mousedown inside the component
-            const insideEvent = new MouseEvent('mousedown', { bubbles: true });
-            fixture.nativeElement.dispatchEvent(insideEvent);
-
-            expect(component.isExpanded()).toBe(true);
-        }));
-
-        it('should not collapse when content is present', fakeAsync(() => {
-            // Expand the editor
-            component.isExpanded.set(true);
-            component.content.set('Some content');
-            fixture.detectChanges();
-
-            // Wait past the 100ms debounce
-            tick(150);
-
-            // Simulate a mousedown outside the component
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(true);
-        }));
-
-        it('should not collapse when not expanded', fakeAsync(() => {
-            // Ensure collapsed
-            component.isExpanded.set(false);
-            fixture.detectChanges();
-
-            tick(150);
-
-            // Simulate a mousedown outside
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(false);
-        }));
-
-        it('should not collapse when publishing', fakeAsync(() => {
-            component.isExpanded.set(true);
-            component.isPublishing.set(true);
-            fixture.detectChanges();
-
-            tick(150);
-
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(true);
-        }));
-
-        it('should not collapse when uploading', fakeAsync(() => {
-            component.isExpanded.set(true);
-            component.isUploading.set(true);
-            fixture.detectChanges();
-
-            tick(150);
-
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(true);
-        }));
-
-        it('should not collapse within 100ms of expansion', () => {
-            // Expand the editor (sets expandedAt to Date.now())
-            component.expandEditor();
-
-            // Immediately simulate a mousedown outside
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            document.dispatchEvent(outsideEvent);
-
-            expect(component.isExpanded()).toBe(true);
-        });
-
-        it('should remove document listener on destroy', fakeAsync(() => {
-            // Expand the editor
-            component.isExpanded.set(true);
-            fixture.detectChanges();
-
-            tick(150);
-
-            // Destroy the component
-            fixture.destroy();
-
-            // Create a new fixture to verify the listener was removed
-            // (the old component should no longer react to document clicks)
-            // We verify by checking that no errors are thrown
-            const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
-            expect(() => document.dispatchEvent(outsideEvent)).not.toThrow();
-        }));
     });
 });

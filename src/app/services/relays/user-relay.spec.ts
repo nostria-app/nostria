@@ -1,7 +1,6 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRelayService } from './user-relay';
@@ -21,8 +20,6 @@ describe('UserRelayService', () => {
   let refreshUserRelaysMock: ReturnType<typeof vi.fn>;
   let getRelaysForPubkeyMock: ReturnType<typeof vi.fn>;
   let getOptimalRelaysMock: ReturnType<typeof vi.fn>;
-
-  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   beforeEach(async () => {
     TestBed.resetTestingModule();

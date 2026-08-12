@@ -5,10 +5,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
 import { NotificationsComponent } from './notifications.component';
 import { NotificationService } from '../../services/notification.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -48,6 +44,7 @@ describe('NotificationsComponent', () => {
     isCheckingNotifications: ReturnType<typeof signal<boolean>>;
     stopPolling: Mock;
     startPolling: Mock;
+    reconcileRecentNotifications: Mock;
     markNotificationsCleared: Mock;
     markNotificationsReadWatermark: Mock;
   };
@@ -55,8 +52,6 @@ describe('NotificationsComponent', () => {
     setNotificationLastCheck: Mock;
     getNotificationClearedAt: Mock;
   };
-
-  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   function createMockNotification(overrides: Partial<Notification> = {}): Notification {
     return {
@@ -95,6 +90,7 @@ describe('NotificationsComponent', () => {
       isCheckingNotifications: signal(false),
       stopPolling: vi.fn(),
       startPolling: vi.fn(),
+      reconcileRecentNotifications: vi.fn().mockResolvedValue(undefined),
       markNotificationsCleared: vi.fn(),
       markNotificationsReadWatermark: vi.fn(),
     };
@@ -124,6 +120,7 @@ describe('NotificationsComponent', () => {
       error: vi.fn(),
     };
     const mockTwoColumnLayout = {
+      hasRightContent: signal(false),
       setSplitView: vi.fn(),
     };
     const mockTrustService = {

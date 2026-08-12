@@ -11,6 +11,7 @@ import { SettingsService } from './settings.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
+import { MessagingService } from './messaging.service';
 
 describe('ReportingService', () => {
   describe('stripNostrUrisAndUrls', () => {
@@ -296,6 +297,7 @@ describe('ReportingService', () => {
           { provide: PublishService, useValue: mockPublishService },
           { provide: AccountRelayService, useValue: mockAccountRelayService },
           { provide: DatabaseService, useValue: mockDatabaseService },
+          { provide: MessagingService, useValue: {} },
         ],
       });
 

@@ -17,6 +17,9 @@ import { ApplicationService } from '../../services/application.service';
 import { isTauri } from '@tauri-apps/api/core';
 
 vi.mock('@tauri-apps/api/core', () => ({
+  addPluginListener: vi.fn(),
+  convertFileSrc: vi.fn((assetPath: string) => assetPath),
+  invoke: vi.fn(),
   isTauri: vi.fn(() => false),
 }));
 
@@ -82,6 +85,7 @@ describe('LoginDialogComponent', () => {
           provide: LayoutService, useValue: {
             openTermsOfUse: vi.fn(),
             handleTermsDialogClose: vi.fn(),
+            showTermsDialog: signal(false),
             isMobile: vi.fn().mockReturnValue(false),
           }
         },
@@ -193,6 +197,7 @@ describe('LoginDialogComponent', () => {
           provide: LayoutService, useValue: {
             openTermsOfUse: vi.fn(),
             handleTermsDialogClose: vi.fn(),
+            showTermsDialog: signal(false),
             isMobile: vi.fn().mockReturnValue(false),
           }
         },

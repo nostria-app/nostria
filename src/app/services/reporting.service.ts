@@ -235,7 +235,7 @@ export class ReportingService {
    */
   static wordMatchesMutedWord(text: string, mutedWord: string): boolean {
     const escaped = mutedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    const regex = new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'iu');
     return regex.test(text);
   }
 

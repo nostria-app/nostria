@@ -1,5 +1,6 @@
 import type { MockedObject } from "vitest";
 import { TestBed } from '@angular/core/testing';
+import { nip19 } from 'nostr-tools';
 import { ResolveNostrPipe } from './resolve-nostr.pipe';
 import { DataService } from '../services/data.service';
 import { UtilitiesService } from '../services/utilities.service';
@@ -12,7 +13,7 @@ describe('ResolveNostrPipe', () => {
   beforeEach(() => {
     const dataServiceSpy = {
       getCachedProfile: vi.fn().mockName("DataService.getCachedProfile"),
-      getProfile: vi.fn().mockName("DataService.getProfile")
+      getProfile: vi.fn().mockResolvedValue(undefined).mockName("DataService.getProfile")
     };
     const utilitiesServiceSpy = {
       getTruncatedNpub: vi.fn().mockName("UtilitiesService.getTruncatedNpub")
@@ -74,8 +75,7 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:nprofile to display name when profile is cached', () => {
-    // Use a valid nprofile identifier  
-    const nprofile = 'nprofile1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpcag4mn';
+    const nprofile = nip19.nprofileEncode({ pubkey: 'a'.repeat(64) });
     const text = `Mentioned by nostr:${nprofile}`;
     const mockProfile = {
       data: {
@@ -90,8 +90,7 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:note to shortened event ID', () => {
-    // Use a valid note identifier
-    const noteId = 'note1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3yv97v';
+    const noteId = nip19.noteEncode('b'.repeat(64));
     const text = `Reacted to nostr:${noteId}`;
 
     const result = pipe.transform(text);
@@ -100,8 +99,7 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:nevent to shortened event ID', () => {
-    // Use a valid nevent identifier
-    const nevent = 'nevent1qvzqqqqqqypzqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqy9ev3d';
+    const nevent = nip19.neventEncode({ id: 'c'.repeat(64) });
     const text = `Replied to nostr:${nevent}`;
 
     const result = pipe.transform(text);
@@ -110,7 +108,9 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should handle multiple nostr identifiers in the same text', () => {
-    const text = 'nostr:npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8 mentioned you in nostr:note1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3yv97v';
+    const npub = nip19.npubEncode('d'.repeat(64));
+    const note = nip19.noteEncode('e'.repeat(64));
+    const text = `nostr:${npub} mentioned you in nostr:${note}`;
 
     dataService.getCachedProfile.mockReturnValue(undefined);
     utilitiesService.getTruncatedNpub.mockReturnValue('npub10jvs...');

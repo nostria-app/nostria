@@ -66,6 +66,9 @@ function createComponent(): YouTubeComponent {
     (component as any).app = {
         authenticated: signal(true),
     };
+    (component as any).logger = {
+        error: vi.fn(),
+    };
 
     return component;
 }

@@ -15,17 +15,20 @@ describe('MediaPublishDialogComponent', () => {
   let fixture: ComponentFixture<MediaPublishDialogComponent>;
   const dialogRefClose = vi.fn();
   const confirmationDialogOpen = vi.fn();
+  const mediaServers = vi.fn<() => string[]>();
 
   beforeEach(async () => {
     dialogRefClose.mockReset();
     confirmationDialogOpen.mockReset();
+    mediaServers.mockReset();
+    mediaServers.mockReturnValue(['https://media.example']);
     confirmationDialogOpen.mockReturnValue({
       afterClosed: () => ({
         subscribe: vi.fn(),
       }),
     });
 
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [MediaPublishDialogComponent],
       providers: [
         provideZonelessChangeDetection(),
@@ -48,7 +51,7 @@ describe('MediaPublishDialogComponent', () => {
           provide: MediaService,
           useValue: {
             load: vi.fn().mockResolvedValue(undefined),
-            mediaServers: vi.fn(() => ['https://media.example']),
+            mediaServers,
           },
         },
         { provide: UtilitiesService, useValue: { extractThumbnailFromVideo: vi.fn() } },
@@ -62,7 +65,9 @@ describe('MediaPublishDialogComponent', () => {
         },
         { provide: LoggerService, useValue: { error: vi.fn() } },
       ],
-    }).compileComponents();
+    });
+    TestBed.overrideProvider(MatDialog, { useValue: { open: confirmationDialogOpen } });
+    await TestBed.compileComponents();
 
     fixture = TestBed.createComponent(MediaPublishDialogComponent);
     component = fixture.componentInstance;
@@ -109,8 +114,7 @@ describe('MediaPublishDialogComponent', () => {
   });
 
   it('warns instead of closing with media publish options when no media server is configured for kind 20', async () => {
-    const mediaService = TestBed.inject(MediaService) as { mediaServers: ReturnType<typeof vi.fn> };
-    mediaService.mediaServers.mockReturnValue([]);
+    mediaServers.mockReturnValue([]);
 
     component.kind.set(20);
 

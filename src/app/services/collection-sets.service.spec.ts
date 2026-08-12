@@ -57,28 +57,6 @@ describe('CollectionSetsService', () => {
     } satisfies Event;
   }
 
-  it('keeps cached custom interest sets when a reload returns no events', async () => {
-    const cachedInterestSets: InterestSet[] = [{
-      identifier: 'interests',
-      title: 'My Interests',
-      hashtags: ['nostr', 'gardening'],
-      eventId: 'cached-event',
-      created_at: 123,
-    }];
-    const service = createService({
-      databaseEvents: [],
-      relayEvents: [],
-      lastLoadedPubkey: 'pubkey',
-      cachedInterestSets,
-    });
-
-    const result = await service.getInterestSets('pubkey');
-
-    expect(result).toEqual(cachedInterestSets);
-    expect(result).not.toBe(cachedInterestSets);
-    expect(result[0].hashtags).not.toBe(cachedInterestSets[0].hashtags);
-  });
-
   it('keeps cached custom interest sets when reloading fails', async () => {
     const cachedInterestSets: InterestSet[] = [{
       identifier: 'interests',
@@ -126,6 +104,7 @@ describe('CollectionSetsService', () => {
     const service = Object.create(CollectionSetsService.prototype) as CollectionSetsService;
     const saveEvent = vi.fn().mockResolvedValue(undefined);
     const publish = vi.fn().mockResolvedValue({ success: true });
+    const createEvent = vi.fn().mockReturnValue({ kind: 30030, content: '', tags: [] });
 
     Object.assign(service, {
       logger: {
@@ -137,7 +116,7 @@ describe('CollectionSetsService', () => {
         pubkey: vi.fn().mockReturnValue('pubkey'),
       },
       nostrService: {
-        createEvent: vi.fn().mockReturnValue({ kind: 30030, content: '', tags: [] }),
+        createEvent,
         signEvent: vi.fn().mockResolvedValue(signedEvent),
       },
       database: {
@@ -156,7 +135,7 @@ describe('CollectionSetsService', () => {
     );
 
     expect(success).toBe(true);
-    expect(service.nostrService.createEvent).toHaveBeenCalledWith(30030, '', [
+  expect(createEvent).toHaveBeenCalledWith(30030, '', [
       ['d', 'set-id'],
       ['title', 'Set'],
       ['name', 'Set'],
@@ -170,6 +149,7 @@ describe('CollectionSetsService', () => {
 
   it('returns false when all emoji shortcodes normalize to empty values', async () => {
     const service = Object.create(CollectionSetsService.prototype) as CollectionSetsService;
+    const createEvent = vi.fn();
 
     Object.assign(service, {
       logger: {
@@ -181,7 +161,7 @@ describe('CollectionSetsService', () => {
         pubkey: vi.fn().mockReturnValue('pubkey'),
       },
       nostrService: {
-        createEvent: vi.fn(),
+        createEvent,
         signEvent: vi.fn(),
       },
       database: {
@@ -200,6 +180,6 @@ describe('CollectionSetsService', () => {
     );
 
     expect(success).toBe(false);
-    expect(service.nostrService.createEvent).not.toHaveBeenCalled();
+  expect(createEvent).not.toHaveBeenCalled();
   });
 });

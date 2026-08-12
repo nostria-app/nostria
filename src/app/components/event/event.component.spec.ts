@@ -74,9 +74,11 @@ describe('EventComponent reply interaction helpers', () => {
     reposts: () => [];
     reports: () => { events: []; data: Map<string, number> };
     quotes: () => [];
+    zaps: () => [];
     hasMoreReactions: () => boolean;
     hasMoreReposts: () => boolean;
     hasMoreQuotes: () => boolean;
+    hasMoreZaps: ReturnType<typeof signal<boolean>>;
     eventService: { publishInteractionSnapshot: ReturnType<typeof vi.fn> };
     triggerReplyCountAnimation: ReturnType<typeof vi.fn>;
   };
@@ -87,6 +89,7 @@ describe('EventComponent reply interaction helpers', () => {
     const replyCountSignal = signal(0);
     const replyEventsSignal = signal<Event[]>([]);
     const hasMoreRepliesSignal = signal(false);
+    const hasMoreZapsSignal = signal(false);
 
     componentLike = {
       _replyCountInternal: replyCountSignal,
@@ -98,9 +101,11 @@ describe('EventComponent reply interaction helpers', () => {
       reposts: () => [],
       reports: () => ({ events: [], data: new Map() }),
       quotes: () => [],
+      zaps: () => [],
       hasMoreReactions: () => false,
       hasMoreReposts: () => false,
       hasMoreQuotes: () => false,
+      hasMoreZaps: hasMoreZapsSignal,
       eventService: { publishInteractionSnapshot },
       triggerReplyCountAnimation,
     };

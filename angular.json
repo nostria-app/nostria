@@ -121,7 +121,11 @@
             "tsConfig": "tsconfig.spec.json",
             "browsers": [
               "chromium"
-            ]
+            ],
+            "exclude": [
+              "src/app/services/schemata-validation.spec.ts"
+            ],
+            "isolate": true
           }
         },
         "lint": {

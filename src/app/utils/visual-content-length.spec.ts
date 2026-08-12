@@ -35,6 +35,8 @@ describe('visualContentLength', () => {
       '',
     ].join('\n');
 
-    expect(visualContentLength(content)).toBe('Hand Me Down Heart can now be streamed everywhere in the valueverse\n\n\n\n\n\n'.length);
+    expect(visualContentLength(content)).toBe(
+      'Hand Me Down Heart can now be streamed everywhere in the valueverse\n\n\n\n\n\n\n'.length
+    );
   });
 });

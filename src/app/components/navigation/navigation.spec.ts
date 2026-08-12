@@ -1,10 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NavigationComponent } from './navigation';
 import { RouteDataService } from '../../services/route-data.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { LayoutService } from '../../services/layout.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import type { HomeDestination } from '../../services/local-settings.service';
 
 describe('NavigationComponent', () => {
@@ -43,9 +46,12 @@ describe('NavigationComponent', () => {
       imports: [NavigationComponent],
       providers: [
         { provide: Router, useValue: mockRouter },
+        { provide: ActivatedRoute, useValue: { data: of({}) } },
         { provide: RouteDataService, useValue: mockRouteDataService },
         { provide: LocalSettingsService, useValue: mockLocalSettings },
         { provide: PanelNavigationService, useValue: mockPanelNav },
+        { provide: LayoutService, useValue: { mediaPlayerInToolbar: signal(false) } },
+        { provide: MediaPlayerService, useValue: { hasQueue: signal(false), current: signal(undefined) } },
       ],
     }).compileComponents();
 
@@ -109,15 +115,14 @@ describe('NavigationComponent', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/f']);
     });
 
-    it('should navigate to home when homeDestination is home', () => {
+    it('should not navigate when already at the configured home destination', () => {
       // Setup
       homeDestinationSignal.set('home');
 
       // Execute
       component.navigateToHome();
 
-      // Verify
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
     it('should convert articles to absolute path', () => {

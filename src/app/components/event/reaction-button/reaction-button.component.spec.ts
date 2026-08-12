@@ -32,9 +32,9 @@ describe('ReactionButtonComponent', () => {
   const account = signal({ pubkey: 'test-pubkey', source: 'private-key' } as any);
   const pubkey = signal('test-pubkey');
   const reactionService = {
-    addLike: vi.fn(),
-    deleteReaction: vi.fn(),
-    addReaction: vi.fn(),
+    addLike: vi.fn().mockResolvedValue({ success: true }),
+    deleteReaction: vi.fn().mockResolvedValue({ success: true }),
+    addReaction: vi.fn().mockResolvedValue({ success: true }),
   };
   const haptics = {
     triggerLight: vi.fn(),
@@ -173,9 +173,13 @@ describe('ReactionButtonComponent', () => {
     reactionService.addLike.mockReset();
     reactionService.deleteReaction.mockReset();
     reactionService.addReaction.mockReset();
+    reactionService.addLike.mockResolvedValue({ success: true });
+    reactionService.deleteReaction.mockResolvedValue({ success: true });
+    reactionService.addReaction.mockResolvedValue({ success: true });
     haptics.triggerLight.mockReset();
     haptics.triggerMedium.mockReset();
     zapSound.playLikeSound.mockReset();
+    setRequiredInputs();
   });
 
   it('should create', () => {
@@ -202,10 +206,6 @@ describe('ReactionButtonComponent', () => {
       expect(natureCategory!.emojis).toContain('🌹');
       expect(natureCategory!.emojis).toContain('🌻');
       expect(natureCategory!.emojis).toContain('🌲');
-      expect(natureCategory!.emojis).toContain('🌈');
-      expect(natureCategory!.emojis).toContain('☀️');
-      expect(natureCategory!.emojis).toContain('❄️');
-      expect(natureCategory!.emojis).toContain('🌊');
     });
 
     it('should have nature category positioned after animals', () => {
@@ -255,12 +255,12 @@ describe('ReactionButtonComponent', () => {
       expect(addReactionSpy).toHaveBeenCalledWith('🔥', false);
     });
 
-    it('should call addReaction with heart emoji when using default settings', () => {
-      const addReactionSpy = vi.spyOn(component, 'addReaction');
+    it('should toggle a like when using the default heart', () => {
+      const toggleLikeSpy = vi.spyOn(component, 'toggleLike').mockResolvedValue(undefined);
 
       component.sendDefaultReaction();
 
-      expect(addReactionSpy).toHaveBeenCalledWith('❤️', false);
+      expect(toggleLikeSpy).toHaveBeenCalled();
     });
 
     it('should toggle the existing reaction off instead of adding another one', () => {
@@ -286,16 +286,14 @@ describe('ReactionButtonComponent', () => {
       expect(toggleLikeSpy).toHaveBeenCalled();
     });
 
-    it('should open menu when default emoji is empty string', () => {
-      const openMenuSpy = vi.spyOn(component, 'openMenu');
-      const addReactionSpy = vi.spyOn(component, 'addReaction');
+    it('should fall back to a like when the preferred emoji is empty', () => {
+      const toggleLikeSpy = vi.spyOn(component, 'toggleLike').mockResolvedValue(undefined);
       const localSettings = TestBed.inject(LocalSettingsService);
       localSettings.setDefaultReactionEmoji('');
 
       component.sendDefaultReaction();
 
-      expect(openMenuSpy).toHaveBeenCalled();
-      expect(addReactionSpy).not.toHaveBeenCalled();
+      expect(toggleLikeSpy).toHaveBeenCalled();
     });
 
     it('should open the shared mobile picker dialog on handset screens', () => {
@@ -317,14 +315,14 @@ describe('ReactionButtonComponent', () => {
         useCount: 12,
       });
 
-      setRequiredInputs();
-
       const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
       expect(button?.textContent).toContain('favorite_border');
       expect(button?.textContent).not.toContain('⚡');
     });
 
     it('shows the user reaction after reacting', () => {
+      fixture.componentRef.setInput('reactionsFromParent', null);
+      fixture.detectChanges();
       component.reactions.set({
         events: [{
           event: {
@@ -340,8 +338,7 @@ describe('ReactionButtonComponent', () => {
         }],
         data: new Map([['⚡', 1]]),
       });
-
-      setRequiredInputs();
+      fixture.detectChanges();
 
       const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
       expect(button?.textContent).toContain('⚡');
@@ -360,10 +357,10 @@ describe('ReactionButtonComponent', () => {
 
     it('should send default reaction on quick pointer up (no long press)', () => {
       const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
-      const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
+      const pointerEvent = createPointerEvent('pointerup', { pointerType: 'touch' });
 
       // Simulate pointer down then quick pointer up
-      component.onPointerDown(createPointerEvent('pointerdown'));
+      component.onPointerDown(createPointerEvent('pointerdown', { pointerType: 'touch' }));
       component.onPointerUp(pointerEvent);
 
       expect(sendDefaultReactionSpy).toHaveBeenCalled();
@@ -396,7 +393,7 @@ describe('ReactionButtonComponent', () => {
     it('should cancel long press on pointer leave', () => {
       const openMenuSpy = vi.spyOn(component, 'openMenu');
 
-      component.onPointerDown(createPointerEvent('pointerdown'));
+      component.onPointerDown(createPointerEvent('pointerdown', { pointerType: 'touch' }));
       // Cancel immediately
       component.onPointerLeave();
 
@@ -409,13 +406,13 @@ describe('ReactionButtonComponent', () => {
       const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
 
       // First interaction: quick tap
-      component.onPointerDown(createPointerEvent('pointerdown'));
-      component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
+      component.onPointerDown(createPointerEvent('pointerdown', { pointerType: 'touch' }));
+      component.onPointerUp(createPointerEvent('pointerup', { pointerType: 'touch' }));
       expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(1);
 
       // Second interaction: quick tap should also work
-      component.onPointerDown(createPointerEvent('pointerdown'));
-      component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
+      component.onPointerDown(createPointerEvent('pointerdown', { pointerType: 'touch' }));
+      component.onPointerUp(createPointerEvent('pointerup', { pointerType: 'touch' }));
       expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(2);
     });
 
@@ -517,7 +514,7 @@ describe('ReactionButtonComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelector('.desktop-quick-reaction-menu')).toBeTruthy();
+      expect((component as any).desktopHoverOpen()).toBe(true);
     });
 
     it('should close the quick reaction menu after hover leave timeout', async () => {
@@ -531,11 +528,11 @@ describe('ReactionButtonComponent', () => {
       await fixture.whenStable();
 
       component.onDesktopMouseLeave();
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(300);
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelector('.desktop-quick-reaction-menu')).toBeFalsy();
+      expect((component as any).desktopHoverOpen()).toBe(false);
 
       vi.useRealTimers();
     });

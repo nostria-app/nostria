@@ -21,7 +21,7 @@ describe('MessagingService live subscriptions', () => {
   let subscribeMock: ReturnType<typeof vi.fn>;
 
   const pubkey = signal('my-pubkey');
-  const account = signal({ pubkey: 'my-pubkey', source: 'preview' as const });
+  const account = signal({ pubkey: 'my-pubkey', source: 'nsec' as const });
 
   const logger = {
     debug: vi.fn(),
@@ -63,6 +63,7 @@ describe('MessagingService live subscriptions', () => {
           useValue: {
             pubkey,
             account,
+            canUseDirectMessages: signal(true),
           },
         },
         {
@@ -138,7 +139,7 @@ describe('MessagingService live subscriptions', () => {
       tags: [['p', 'my-pubkey']],
     });
 
-    const messages = service.getChatMessages('peer-pubkey');
+    const messages = service.getChatMessages('peer-pubkey-nip44');
     expect(messages).toHaveLength(1);
     expect(messages[0].id).toBe('inner-message-id');
     expect(messages[0].content).toBe('hello from peer');
@@ -172,7 +173,7 @@ describe('MessagingService live subscriptions', () => {
       encryptionType: 'nip44',
     });
 
-    const [message] = service.getChatMessages('peer-pubkey');
+    const [message] = service.getChatMessages('peer-pubkey-nip44');
     expect(message.pending).toBe(false);
     expect(message.received).toBe(true);
     expect(message.failed).toBe(false);
@@ -218,8 +219,8 @@ describe('MessagingService live subscriptions', () => {
       tags: [['p', 'my-pubkey']],
     });
 
-    const chat = service.getChat('peer-pubkey');
-    const [message] = service.getChatMessages('peer-pubkey');
+    const chat = service.getChat('peer-pubkey-nip44');
+    const [message] = service.getChatMessages('peer-pubkey-nip44');
 
     expect(chat?.unreadCount).toBe(0);
     expect(message.read).toBe(true);
@@ -230,7 +231,12 @@ describe('MessagingService live subscriptions', () => {
       id: 'structured-message-id',
       pubkey: 'peer-pubkey',
       created_at: 1_700_000_200,
-      content: '{"c":"nip04","type":100,"msg":"Rendered text","name":"{\"user\":\"sondreb\",\"content\":\"Quoted content\"}"}',
+      content: JSON.stringify({
+        c: 'nip04',
+        type: 100,
+        msg: 'Rendered text',
+        name: JSON.stringify({ user: 'sondreb', content: 'Quoted content' }),
+      }),
       isOutgoing: false,
       tags: [['p', 'my-pubkey']],
       pending: false,
@@ -239,7 +245,7 @@ describe('MessagingService live subscriptions', () => {
       encryptionType: 'nip04',
     });
 
-    const [message] = service.getChatMessages('peer-pubkey');
+    const [message] = service.getChatMessages('peer-pubkey-nip04');
     expect(message.content).toBe('Rendered text');
     expect(message.quotedReplyContent).toBe('Quoted content');
     expect(message.quotedReplyAuthor).toBe('sondreb');

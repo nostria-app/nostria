@@ -2174,7 +2174,7 @@ export class MessagingService implements NostriaService {
           };
 
           const groupInfo = this.buildGroupInfo(target, unwrappedMessage.tags || [], unwrappedMessage.created_at);
-          this.addMessageToChat(target.chatId, directMessage, groupInfo);
+          await this.addResolvedMessageToChat(target.chatId, directMessage, groupInfo);
         } else if (event.kind === kinds.EncryptedDirectMessage) {
           // Handle NIP-04 legacy encrypted message
           const unwrappedMessage = await this.unwrapNip04MessageInternal(event);

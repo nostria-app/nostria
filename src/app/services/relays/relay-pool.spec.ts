@@ -1,7 +1,6 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RelayPoolService } from './relay-pool';
@@ -30,8 +29,6 @@ describe('RelayPoolService request queue', () => {
     markAuthFailed: ReturnType<typeof vi.fn>;
   };
   let requestCounter = 0;
-
-  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   beforeEach(async () => {
     TestBed.resetTestingModule();

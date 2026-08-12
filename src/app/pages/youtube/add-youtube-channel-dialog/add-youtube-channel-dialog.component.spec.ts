@@ -26,6 +26,9 @@ function createComponent(): AddYouTubeChannelDialogComponent {
     (component as any).corsProxy = {
         fetchText: vi.fn().mockResolvedValue(''),
     };
+    (component as any).logger = {
+        error: vi.fn(),
+    };
 
     return component;
 }
@@ -323,7 +326,7 @@ describe('AddYouTubeChannelDialogComponent', () => {
             expect(component.image).toBe('https://custom-image.com/avatar.jpg');
         });
 
-        it('should save and close when channel title is already set', async () => {
+        it('should not fetch again when channel title is already set', async () => {
             const component = createComponent();
             component.channelInput = '@NASA';
             component.channelTitle.set('NASA');
@@ -333,7 +336,8 @@ describe('AddYouTubeChannelDialogComponent', () => {
 
             await component.fetchAndValidate();
 
-            expect((component as any).dialogRef.close).toHaveBeenCalled();
+            expect((component as any).corsProxy.fetchText).not.toHaveBeenCalled();
+            expect((component as any).dialogRef.close).not.toHaveBeenCalled();
         });
 
         it('should set error when resolve fails', async () => {

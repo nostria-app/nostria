@@ -14,7 +14,13 @@ describe('NoteEditorService', () => {
         NoteEditorService,
         { provide: DataService, useValue: {} },
         { provide: MentionInputService, useValue: {} },
-        { provide: UtilitiesService, useValue: { buildImetaTag: () => null } },
+        {
+          provide: UtilitiesService,
+          useValue: {
+            buildImetaTag: () => null,
+            isParameterizedReplaceableEvent: (kind: number) => kind >= 30000 && kind < 40000,
+          },
+        },
       ],
     });
 
@@ -36,7 +42,7 @@ describe('NoteEditorService', () => {
       content: `check nostr:${nevent}`,
     });
 
-    expect(tags).toContain(['q', eventId, relay, pubkey]);
+    expect(tags).toContainEqual(['q', eventId, relay, pubkey]);
   });
 
   it('should include relay hint in q tag for nostr:naddr references', () => {
@@ -56,7 +62,7 @@ describe('NoteEditorService', () => {
       content: `read nostr:${naddr}`,
     });
 
-    expect(tags).toContain(['q', `${kind}:${pubkey}:${identifier}`, relay, pubkey]);
+    expect(tags).toContainEqual(['q', `${kind}:${pubkey}:${identifier}`, relay, pubkey]);
   });
 
   it('should enrich existing q tag with relay hint from nostr:nevent', () => {
@@ -92,6 +98,6 @@ describe('NoteEditorService', () => {
       content: 'quote track',
     });
 
-    expect(tags).toContain(['q', `${kind}:${pubkey}:${identifier}`, '', pubkey]);
+    expect(tags).toContainEqual(['q', `${kind}:${pubkey}:${identifier}`, '', pubkey]);
   });
 });

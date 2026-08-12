@@ -1944,24 +1944,31 @@ export class MediaPlayerService implements OnInitialized {
       if (this.canUseNativeAndroidAudio(audioSource, file) && !this.shouldPreferHtmlGaplessAudio(file)) {
         this.nativeAndroidAudioSource = audioSource;
         this.nativeAndroidAudioFallbackAttempted = false;
-        await this.nativeMediaSession.playAudio({
-          source: this.normalizeNativeAudioSource(audioSource),
-          title: currentFile.title,
-          artist: currentFile.artist,
-          album: 'Nostria',
-          artworkUrl: currentFile.artwork,
-          position: podcastPosition,
-          playbackSpeed: this.playbackRate(),
-          canPrev: this.canPrevious(),
-          canNext: this.canNext(),
-          canSeek: this.canSeekCurrentItem(file),
-        });
+        try {
+          await this.nativeMediaSession.playAudio({
+            source: this.normalizeNativeAudioSource(audioSource),
+            title: currentFile.title,
+            artist: currentFile.artist,
+            album: 'Nostria',
+            artworkUrl: currentFile.artwork,
+            position: podcastPosition,
+            playbackSpeed: this.playbackRate(),
+            canPrev: this.canPrevious(),
+            canNext: this.canNext(),
+            canSeek: this.canSeekCurrentItem(file),
+          });
 
-        this.nativeAndroidAudioActive = true;
-        this.currentTimeSig.set(podcastPosition);
-        this.durationSig.set(0);
-        this._isPaused.set(false);
-        this.audio = undefined;
+          this.nativeAndroidAudioActive = true;
+          this.currentTimeSig.set(podcastPosition);
+          this.durationSig.set(0);
+          this._isPaused.set(false);
+          this.audio = undefined;
+        } catch (error) {
+          console.warn('Native Android audio playback failed, falling back to HTML audio:', error);
+          this.nativeAndroidAudioSource = undefined;
+          this.nativeAndroidAudioFallbackAttempted = true;
+          await this.startHtmlAudioPlayback(file, audioSource, prioritizeImmediateStart);
+        }
       } else {
         this.nativeAndroidAudioSource = undefined;
         this.nativeAndroidAudioFallbackAttempted = false;

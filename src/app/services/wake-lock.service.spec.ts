@@ -8,13 +8,18 @@ describe('WakeLockService', () => {
     let service: WakeLockService;
     let mockWakeLock: any;
     let mockWakeLockSentinel: any;
+    let releaseListener: (() => void) | undefined;
 
     beforeEach(async () => {
         // Mock WakeLock API
         mockWakeLockSentinel = {
             released: false,
             release: vi.fn().mockReturnValue(Promise.resolve()),
-            addEventListener: vi.fn(),
+            addEventListener: vi.fn((eventName: string, listener: () => void) => {
+                if (eventName === 'release') {
+                    releaseListener = listener;
+                }
+            }),
         };
 
         mockWakeLock = {
@@ -75,6 +80,7 @@ describe('WakeLockService', () => {
             configurable: true,
         });
         document.dispatchEvent(new Event('visibilitychange'));
+        releaseListener?.();
 
         // Simulate page becoming visible again
         Object.defineProperty(document, 'visibilityState', {
@@ -97,8 +103,16 @@ describe('WakeLockService', () => {
             configurable: true,
         });
 
-        // Create a new service instance
-        const newService = new WakeLockService();
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+            providers: [
+                provideZonelessChangeDetection(),
+                WakeLockService,
+                { provide: UtilitiesService, useValue: { isBrowser: () => true } },
+                { provide: LoggerService, useValue: { debug: vi.fn(), error: vi.fn() } },
+            ],
+        });
+        const newService = TestBed.inject(WakeLockService);
 
         // Should not throw errors
         await expect(newService.enable()).resolves.not.toThrow();

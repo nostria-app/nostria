@@ -6,6 +6,17 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { EventHeaderComponent } from './header.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
+import { DataService } from '../../../services/data.service';
+import { DeleteEventService } from '../../../services/delete-event.service';
+import { EventService } from '../../../services/event';
+import { LayoutService } from '../../../services/layout.service';
+import { LocalSettingsService } from '../../../services/local-settings.service';
+import { LoggerService } from '../../../services/logger.service';
+import { NostrService } from '../../../services/nostr.service';
+import { PowService } from '../../../services/pow.service';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { kinds } from 'nostr-tools';
 
 describe('EventHeaderComponent', () => {
@@ -28,8 +39,8 @@ describe('EventHeaderComponent', () => {
   const fixedNowSeconds = Math.floor(fixedNowMs / 1000);
 
   const mockEvent = {
-    id: 'test-event-id',
-    pubkey: 'test-pubkey',
+    id: 'b'.repeat(64),
+    pubkey: 'a'.repeat(64),
     created_at: fixedNowSeconds - (11 * 60 * 60),
     kind: kinds.ShortTextNote,
     tags: [],
@@ -61,8 +72,27 @@ describe('EventHeaderComponent', () => {
         provideAnimationsAsync(),
         { provide: AccountStateService, useValue: mockAccountState },
         { provide: UtilitiesService, useValue: mockUtilities },
+        { provide: LayoutService, useValue: {} },
+        { provide: DataService, useValue: { toRecord: vi.fn().mockReturnValue(null) } },
+        { provide: NostrService, useValue: {} },
+        { provide: EventService, useValue: {} },
+        { provide: LoggerService, useValue: { error: vi.fn() } },
+        { provide: PowService, useValue: { countLeadingZeroBits: vi.fn().mockReturnValue(0) } },
+        { provide: LocalSettingsService, useValue: { showClientTag: signal(false) } },
+        { provide: DeleteEventService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+        { provide: MatSnackBar, useValue: {} },
+        {
+          provide: UserRelaysService,
+          useValue: {
+            getRelaysForPubkey: vi.fn().mockReturnValue([]),
+            ensureRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
-    }).compileComponents();
+    });
+    TestBed.overrideComponent(EventHeaderComponent, { set: { template: '' } });
+    await TestBed.compileComponents();
 
     fixture = TestBed.createComponent(EventHeaderComponent);
     component = fixture.componentInstance;
@@ -74,7 +104,7 @@ describe('EventHeaderComponent', () => {
   });
 
   it('should detect own event when pubkeys match', () => {
-    mockAccountState.pubkey.set('test-pubkey');
+    mockAccountState.pubkey.set(mockEvent.pubkey);
     expect(component.isOurEvent()).toBe(true);
   });
 
@@ -103,24 +133,15 @@ describe('EventHeaderComponent', () => {
   });
 
   it('should show published age when the event has no expiration', () => {
-    fixture.detectChanges();
-
-    const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
-
-    expect(dateLink.textContent?.trim()).toBe('11 hours ago');
-    expect(fixture.nativeElement.querySelector('.expiration-label')).toBeNull();
+    expect(component.publishedLabel()).toBe('11 hours ago');
+    expect(component.expirationLabel()).toBe('');
   });
 
   it('should show expiration as a second line when the event has a future expiration', () => {
     const expirationTimestamp = fixedNowSeconds + (3 * 60 * 60);
     mockUtilities.getEventExpiration.mockReturnValue(expirationTimestamp);
 
-    fixture.detectChanges();
-
-    const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
-    const expirationLabel = fixture.nativeElement.querySelector('.expiration-label') as HTMLElement;
-
-    expect(dateLink.textContent?.trim()).toBe('11 hours ago');
-    expect(expirationLabel.textContent?.trim()).toBe('Expires in 3 hours');
+    expect(component.publishedLabel()).toBe('11 hours ago');
+    expect(component.expirationLabel()).toBe('Expires in 3 hours');
   });
 });

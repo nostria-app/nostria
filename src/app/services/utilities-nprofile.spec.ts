@@ -1,5 +1,10 @@
+import { TestBed } from '@angular/core/testing';
+import { DomSanitizer } from '@angular/platform-browser';
 import { UtilitiesService } from './utilities.service';
 import { nip19 } from 'nostr-tools';
+import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
+import { LoggerService } from './logger.service';
+import { RegionService } from './region.service';
 
 describe('UtilitiesService nprofile handling', () => {
   let service: UtilitiesService;
@@ -9,7 +14,16 @@ describe('UtilitiesService nprofile handling', () => {
   const testRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
 
   beforeEach(() => {
-    service = new UtilitiesService();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DomSanitizer, useValue: {} },
+        { provide: IgnoredRelayAuditService, useValue: {} },
+        { provide: LoggerService, useValue: {} },
+        { provide: RegionService, useValue: {} },
+      ],
+    });
+
+    service = TestBed.inject(UtilitiesService);
   });
 
   describe('isValidPubkey', () => {
