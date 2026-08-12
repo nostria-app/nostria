@@ -74,5 +74,6 @@ describe('RelaysService COUNT support', () => {
     await Promise.resolve();
     expect(savedRelays.some(relay => relay['url'] === 'wss://relay.damus.io/' && relay['supportsCount'] === true)).toBe(true);
     expect(savedRelays.some(relay => relay['url'] === 'wss://relay.primal.net/' && relay['supportsCount'] === false)).toBe(true);
+    expect(service.getCachedCountCapableRelays()).toEqual(['wss://relay.damus.io/']);
   });
 });

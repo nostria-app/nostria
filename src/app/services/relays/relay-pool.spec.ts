@@ -386,6 +386,6 @@ describe('RelayPoolService COUNT', () => {
     );
 
     expect(ensureRelayMock).not.toHaveBeenCalled();
-    expect(result).toEqual({ count: 0, approximate: true });
+    expect(result).toEqual({ count: 0, approximate: true, queriedRelays: 0 });
   });
 });

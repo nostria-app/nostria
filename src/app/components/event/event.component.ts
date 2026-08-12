@@ -2129,6 +2129,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       (isIntersecting) => {
         if (isIntersecting) {
           this.hasBeenActuallyVisible = true;
+          if (this.hasLoadedInteractions() && this.hasEmptyFeedEngagement()) {
+            this.scheduleVisibleInteractionRetry();
+          }
         }
       },
       {
@@ -2341,11 +2344,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    const hasReactions = this.reactions().events.length > 0;
+    const hasReactions = this.reactions().events.length > 0 || this.reactionCountHint() > 0;
     const hasReposts = this.reposts().length > 0;
     const hasReplies = this.replyCount() > 0;
     const hasQuotes = this.quotes().length > 0;
-    const hasZaps = this.zaps().length > 0;
+    const hasZaps = this.zaps().length > 0 || this.zapCountHint() > 0;
     const hasAnyEngagementLoaded = hasReactions || hasReposts || hasReplies || hasQuotes || hasZaps;
 
     if (hasAnyEngagementLoaded) {
@@ -2373,6 +2376,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const observerRoot = this.resolveObserverRoot(element);
     const priority = this.getInteractionPreloadPriority(observerRoot);
     return priority <= 0 || this.shouldForceInitialBatchPreload(element);
+  }
+
+  private hasEmptyFeedEngagement(): boolean {
+    return this.likes().length === 0
+      && this.replyCount() === 0
+      && this.repostCount() === 0
+      && this.quoteCount() === 0
+      && this.zaps().length === 0
+      && this.reactionCountHint() === 0
+      && this.zapCountHint() === 0;
   }
 
   private async retryVisibleTimelineInteractions(currentEventId: string): Promise<void> {
@@ -2635,7 +2648,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           includeQuotes: this.mode() === 'timeline',
           signal,
           onUpdate: (counts) => {
-            if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
+            if (this.targetRecord()?.event.id !== targetEventId) {
               return;
             }
 

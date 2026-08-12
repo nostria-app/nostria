@@ -631,25 +631,25 @@ describe('EventService COUNT interaction hints', () => {
       debug: () => undefined,
     });
     setPrivateField(service, 'userRelay', {
-      getInteractionRelayUrls: () => Promise.resolve(['wss://relay.damus.io/', 'wss://relay.primal.net/']),
+      getCountRelayUrls: () => Promise.resolve(['wss://relay.damus.io/', 'wss://relay.primal.net/']),
     });
     setPrivateField(service, 'relayPool', {
       count: (relayUrls: string[], filter: { kinds?: number[]; '#e'?: string[]; '#q'?: string[]; '#E'?: string[] }) => {
         countCalls.push({ relayUrls, filter });
         const kinds = filter.kinds ?? [];
         if (kinds.includes(7)) {
-          return Promise.resolve({ count: 14, approximate: false });
+          return Promise.resolve({ count: 14, approximate: false, queriedRelays: 1 });
         }
         if (kinds.includes(1) && filter['#e']) {
-          return Promise.resolve({ count: 5, approximate: false });
+          return Promise.resolve({ count: 5, approximate: false, queriedRelays: 1 });
         }
         if (kinds.includes(9735)) {
-          return Promise.resolve({ count: 3, approximate: false });
+          return Promise.resolve({ count: 3, approximate: false, queriedRelays: 1 });
         }
         if (kinds.includes(6)) {
-          return Promise.resolve({ count: 2, approximate: false });
+          return Promise.resolve({ count: 2, approximate: false, queriedRelays: 1 });
         }
-        return Promise.resolve({ count: 0, approximate: true });
+        return Promise.resolve({ count: 0, approximate: true, queriedRelays: 1 });
       },
     });
   });
@@ -684,6 +684,21 @@ describe('EventService COUNT interaction hints', () => {
       zaps: 3,
       reposts: 2,
     });
+  });
+
+  it('ignores COUNT responses that never reached a capable relay', async () => {
+    setPrivateField(service, 'relayPool', {
+      count: () => Promise.resolve({ count: 0, approximate: true, queriedRelays: 0 }),
+    });
+
+    const result = await service.countEventInteractions(
+      'uncountable-event',
+      kinds.ShortTextNote,
+      'target-pubkey',
+    );
+
+    expect(result.reactions).toBe(0);
+    expect(result.replies).toBe(0);
   });
 
   it('returns cached COUNT results without issuing another relay query', async () => {
@@ -721,7 +736,7 @@ describe('EventService interaction cache duration', () => {
     expect(cacheDuration).toBeUndefined();
   });
 
-  it('should short-cache empty timeline interaction results', () => {
+  it('should not cache empty timeline interaction results', () => {
     const emptyInteractions: EventInteractions = {
       reactions: { events: [], data: new Map() },
       reposts: [],
@@ -735,7 +750,7 @@ describe('EventService interaction cache duration', () => {
       service as unknown as { getInteractionCacheDuration: (limit: number | undefined, result: EventInteractions) => number | undefined }
     ).getInteractionCacheDuration(11, emptyInteractions);
 
-    expect(cacheDuration).toBe(5000);
+    expect(cacheDuration).toBe(0);
   });
 
   it('should use a shorter ttl for non-empty timeline interaction results', () => {

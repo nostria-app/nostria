@@ -6,6 +6,7 @@ export interface RelayCountResponse {
   count: number;
   approximate?: boolean;
   hll?: string;
+  queriedRelays?: number;
 }
 
 export interface EventInteractionCounts {
@@ -34,7 +35,7 @@ export function relayAdvertisesCountSupport(supportedNips: number[] | undefined)
 
 /**
  * Merge COUNT responses from multiple relays.
- * Uses the NIP-45 max-of-raw-counts rule, and prefers a HyperLogLog estimate
+ * Uses the NIP-45 max-of-raw-counts rule and prefers a HyperLogLog estimate
  * when any relay returned compatible `hll` registers.
  */
 export function mergeRelayCountResponses(

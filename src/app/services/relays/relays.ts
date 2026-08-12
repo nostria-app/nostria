@@ -767,6 +767,20 @@ export class RelaysService {
       .filter(url => this.getCountSupport(url) === true);
   }
 
+  /**
+   * Relays already classified as COUNT-capable, regardless of the current query set.
+   * Used as a fallback when an event author's optimal relays do not speak NIP-45.
+   */
+  getCachedCountCapableRelays(): string[] {
+    const urls: string[] = [];
+    for (const [url, entry] of this.countSupport) {
+      if (entry.supported && this.isCountSupportEntryFresh(entry)) {
+        urls.push(url);
+      }
+    }
+    return urls;
+  }
+
   getUnclassifiedCountRelays(urls: string[]): string[] {
     return this.utilities.getUniqueNormalizedRelayUrls(urls)
       .filter(url => this.getCountSupport(url) === undefined);

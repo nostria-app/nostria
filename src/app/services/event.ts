@@ -1196,7 +1196,6 @@ export class EventService {
    */
   static readonly INTERACTION_QUERY_LIMIT = 11;
   private static readonly TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 30 * 1000;
-  private static readonly EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 5 * 1000;
   private static readonly INTERACTION_COUNT_CACHE_TIMEOUT_MS = 15 * 1000;
   private readonly interactionCountCache = new Map<string, {
     value: EventInteractionCounts;
@@ -1234,31 +1233,30 @@ export class EventService {
 
     let relayUrls: string[] = [];
     try {
-      relayUrls = await this.userRelay.getInteractionRelayUrls(pubkey, true);
+      relayUrls = await this.userRelay.getCountRelayUrls(pubkey);
     } catch (error) {
       this.logger.debug('Failed to resolve COUNT relays:', error);
     }
 
-    if (relayUrls.length === 0 || options.signal?.aborted) {
+    if (relayUrls.length === 0) {
       return counts;
     }
 
     const publish = () => {
-      if (options.signal?.aborted) {
-        return;
-      }
       options.onUpdate?.({ ...counts });
     };
 
+    let queriedAnyRelay = false;
     const countFilter = async (
       key: keyof EventInteractionCounts,
       filter: Filter,
     ): Promise<void> => {
       try {
         const result = await this.relayPool.count(relayUrls, filter, 2000);
-        if (options.signal?.aborted) {
+        if ((result.queriedRelays ?? 0) === 0) {
           return;
         }
+        queriedAnyRelay = true;
         counts[key] = result.count;
         publish();
       } catch (error) {
@@ -1288,7 +1286,8 @@ export class EventService {
 
     await Promise.allSettled(jobs);
 
-    if (!options.signal?.aborted) {
+    const hasPositiveCount = Object.values(counts).some(value => value > 0);
+    if (queriedAnyRelay && hasPositiveCount) {
       this.interactionCountCache.set(cacheKey, {
         value: { ...counts },
         expiresAt: Date.now() + EventService.INTERACTION_COUNT_CACHE_TIMEOUT_MS,
@@ -1372,7 +1371,10 @@ export class EventService {
     }
 
     if (this.isInteractionResultEmpty(result)) {
-      return EventService.EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS;
+      // Empty feed results are usually timeouts or the wrong relay slice, not
+      // proof the event has no engagement. Caching them made visible retries
+      // and the detail pane the only way to recover.
+      return 0;
     }
 
     return EventService.TIMELINE_INTERACTION_CACHE_TIMEOUT_MS;

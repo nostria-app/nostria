@@ -53,6 +53,9 @@ describe('UserRelayService', () => {
           provide: RelaysService,
           useValue: {
             getOptimalRelays: getOptimalRelaysMock,
+            getKnownCountCapableRelays: vi.fn((urls: string[]) => urls.filter(url => url.includes('damus') || url.includes('user-relay-a'))),
+            getCachedCountCapableRelays: vi.fn().mockReturnValue(['wss://relay.damus.io/']),
+            getConnectedRelays: vi.fn().mockReturnValue(['wss://relay.damus.io/', 'wss://relay.primal.net/']),
           },
         },
         {
@@ -86,6 +89,7 @@ describe('UserRelayService', () => {
           provide: UtilitiesService,
           useValue: {
             preferredRelays: ['wss://preferred-a', 'wss://preferred-b', 'wss://preferred-c'],
+            getUniqueNormalizedRelayUrls: (urls: string[]) => [...new Set(urls)],
           },
         },
       ],
@@ -162,5 +166,15 @@ describe('UserRelayService', () => {
       ['wss://user-relay-a'],
       { authors: ['author-pubkey'], kinds: [1] }
     );
+  });
+
+  it('collects COUNT relays from the full author set plus known COUNT-capable relays', async () => {
+    getRelaysForPubkeyMock.mockReturnValue(['wss://user-relay-a', 'wss://user-relay-b']);
+
+    const urls = await service.getCountRelayUrls('author-pubkey');
+
+    expect(getOptimalRelaysMock).not.toHaveBeenCalled();
+    expect(urls).toContain('wss://user-relay-a');
+    expect(urls).toContain('wss://relay.damus.io/');
   });
 });

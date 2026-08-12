@@ -463,6 +463,7 @@ export class UserRelayService {
   async getInteractionRelayUrls(
     pubkey: string | string[],
     includeAccountRelays = true,
+    options: { optimize?: boolean } = {},
   ): Promise<string[]> {
     const pubkeys = (Array.isArray(pubkey) ? pubkey : [pubkey])
       .filter((pk): pk is string => !!pk && typeof pk === 'string');
@@ -481,7 +482,30 @@ export class UserRelayService {
       this.getAccountRelayFallbackUrls().forEach(url => allRelayUrls.add(url));
     }
 
-    return this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    const resolved = Array.from(allRelayUrls);
+    return options.optimize === false ? resolved : this.getEffectiveRelayUrls(resolved);
+  }
+
+  /**
+   * Relays to ask for NIP-45 COUNT. Uses the full author+account set (not the
+   * 4-relay optimal slice), then fills in other known COUNT-capable relays so
+   * feed counters are not stuck at 0 just because the author's outbox is old
+   * strfry / primal.
+   */
+  async getCountRelayUrls(pubkey: string | string[]): Promise<string[]> {
+    const authorAndAccount = await this.getInteractionRelayUrls(pubkey, true, { optimize: false });
+    const capableFromAuthor = this.relaysService.getKnownCountCapableRelays(authorAndAccount);
+
+    const extras = this.relaysService.getKnownCountCapableRelays([
+      ...this.relaysService.getCachedCountCapableRelays(),
+      ...this.relaysService.getConnectedRelays(),
+      ...this.getAccountRelayFallbackUrls(),
+    ]);
+
+    return this.utilities.getUniqueNormalizedRelayUrls([
+      ...capableFromAuthor,
+      ...extras,
+    ]).slice(0, 8);
   }
 
   /**

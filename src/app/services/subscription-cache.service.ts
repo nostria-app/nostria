@@ -137,6 +137,10 @@ export class SubscriptionCacheService implements OnDestroy {
    * Store result in cache
    */
   setCachedResult(key: string, data: unknown, cacheDurationMs?: number): void {
+    if (cacheDurationMs === 0) {
+      return;
+    }
+
     const ttl = cacheDurationMs ?? this.cacheTimeout;
     const cached: CachedResult = {
       data,

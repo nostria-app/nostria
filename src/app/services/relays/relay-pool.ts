@@ -789,12 +789,12 @@ export class RelayPoolService {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'count');
     const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
-      return { count: 0, approximate: true };
+      return { count: 0, approximate: true, queriedRelays: 0 };
     }
 
     const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
-      return { count: 0, approximate: true };
+      return { count: 0, approximate: true, queriedRelays: 0 };
     }
 
     this.addRelays(filteredUrls);
@@ -802,7 +802,7 @@ export class RelayPoolService {
 
     const capableUrls = this.relaysService.getKnownCountCapableRelays(filteredUrls);
     if (capableUrls.length === 0) {
-      return { count: 0, approximate: true };
+      return { count: 0, approximate: true, queriedRelays: 0 };
     }
 
     const requestId = this.subscriptionManager.registerRequest(
@@ -816,10 +816,12 @@ export class RelayPoolService {
         const responses = await Promise.all(
           capableUrls.map(url => this.countOnRelay(url, filter, timeoutMs)),
         );
-        return mergeRelayCountResponses(responses);
+        const merged = mergeRelayCountResponses(responses);
+        const queriedRelays = responses.filter(response => response !== null).length;
+        return { ...merged, queriedRelays };
       } catch (error) {
         this.logger.debug('[RelayPoolService] COUNT failed:', error);
-        return { count: 0, approximate: true };
+        return { count: 0, approximate: true, queriedRelays: 0 };
       } finally {
         this.subscriptionManager.unregisterRequest(requestId, capableUrls);
       }
