@@ -29,6 +29,7 @@ Nostria's testing strategy combines:
 - **AI-Optimized Automation**: Special utilities for LLM-driven test execution
 
 The E2E testing setup is specifically designed to enable AI assistants (like GitHub Copilot) to:
+
 - Execute tests and analyze results
 - Capture and interpret screenshots and videos
 - Collect console logs for debugging
@@ -134,15 +135,15 @@ test-results/
 
 ### NPM Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run test:e2e` | Run all E2E tests in headless mode |
-| `npm run test:e2e:ui` | Open Playwright UI for interactive testing |
-| `npm run test:e2e:headed` | Run tests with visible browser |
-| `npm run test:e2e:debug` | Debug mode with step-through |
-| `npm run test:e2e:ai` | AI-optimized run (full artifacts) |
-| `npm run test:e2e:report` | View HTML test report |
-| `npm run test:e2e:codegen` | Record tests via browser |
+| Command                    | Description                                |
+| -------------------------- | ------------------------------------------ |
+| `npm run test:e2e`         | Run all E2E tests in headless mode         |
+| `npm run test:e2e:ui`      | Open Playwright UI for interactive testing |
+| `npm run test:e2e:headed`  | Run tests with visible browser             |
+| `npm run test:e2e:debug`   | Debug mode with step-through               |
+| `npm run test:e2e:ai`      | AI-optimized run (full artifacts)          |
+| `npm run test:e2e:report`  | View HTML test report                      |
+| `npm run test:e2e:codegen` | Record tests via browser                   |
 
 ### Direct Playwright Commands
 
@@ -165,10 +166,10 @@ npx playwright test --project=mobile-chrome
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BASE_URL` | `http://localhost:4200` | App URL to test |
-| `CI` | - | Set in CI environments (affects retries) |
+| Variable   | Default                 | Description                              |
+| ---------- | ----------------------- | ---------------------------------------- |
+| `BASE_URL` | `http://localhost:4200` | App URL to test                          |
+| `CI`       | -                       | Set in CI environments (affects retries) |
 
 ---
 
@@ -206,6 +207,7 @@ ls test-results/logs/
 #### 3. Understanding Test Output
 
 The `test-summary.json` provides:
+
 ```json
 {
   "endTime": "2024-01-15T10:30:00.000Z",
@@ -221,6 +223,7 @@ The `test-summary.json` provides:
 #### 4. Viewing Screenshots
 
 Screenshots are saved with descriptive names:
+
 ```
 test-results/screenshots/
 ├── home-page-loaded-2024-01-15T10-30-00.png
@@ -231,6 +234,7 @@ test-results/screenshots/
 #### 5. Debugging Failures
 
 For failed tests:
+
 1. Check `test-results/results.json` for error messages
 2. View screenshots in `test-results/screenshots/`
 3. Watch video recordings in `test-results/videos/`
@@ -245,15 +249,15 @@ import { AIPageAnalyzer } from '../helpers/ai-automation';
 
 test('analyze page', async ({ page }) => {
   const analyzer = new AIPageAnalyzer(page);
-  
+
   // Capture complete page state
   const state = await analyzer.capturePageState();
   console.log(JSON.stringify(state, null, 2));
-  
+
   // Get action recommendations
   const recommendations = await analyzer.getActionRecommendations();
   console.log('Recommended actions:', recommendations);
-  
+
   // Save state to file
   await analyzer.saveStateToFile('my-test');
 });
@@ -268,7 +272,7 @@ import { SemanticActions } from '../helpers/ai-automation';
 
 test('user flow', async ({ page }) => {
   const actions = new SemanticActions(page);
-  
+
   await actions.clickButton('Create Note');
   await actions.fillInput('Content', 'Hello, Nostr!');
   await actions.clickButton('Publish');
@@ -305,14 +309,14 @@ test.describe('Feature Name', () => {
   test('should do something', async ({ page, waitForNostrReady, captureScreenshot }) => {
     // Wait for app to be ready
     await waitForNostrReady();
-    
+
     // Perform actions
     const homePage = new HomePage(page);
     await homePage.clickCreateNote();
-    
+
     // Assert
     await expect(page.locator('.note-dialog')).toBeVisible();
-    
+
     // Capture screenshot for AI analysis
     await captureScreenshot('after-clicking-create');
   });
@@ -322,20 +326,20 @@ test.describe('Feature Name', () => {
 ### Using Custom Fixtures
 
 ```typescript
-test('with console logs', async ({ 
-  page, 
-  waitForNostrReady, 
+test('with console logs', async ({
+  page,
+  waitForNostrReady,
   captureScreenshot,
   saveConsoleLogs,
-  getConsoleLogs 
+  getConsoleLogs,
 }) => {
   await page.goto('/');
   await waitForNostrReady();
-  
+
   // Get current console logs
   const logs = getConsoleLogs();
   console.log('Console output:', logs);
-  
+
   // Save logs to file
   await saveConsoleLogs('my-test-name');
 });
@@ -348,10 +352,10 @@ import { NostrTestUtils } from '../fixtures';
 
 test('nostr events', async ({ page }) => {
   const nostrUtils = new NostrTestUtils(page);
-  
+
   // Wait for specific event kind
   await nostrUtils.waitForEventKind(1); // Kind 1 = notes
-  
+
   // Get visible notes
   const notes = await nostrUtils.getVisibleNotes();
   expect(notes.length).toBeGreaterThan(0);
@@ -364,15 +368,15 @@ test('nostr events', async ({ page }) => {
 
 ### Available Page Objects
 
-| Class | Description | Key Methods |
-|-------|-------------|-------------|
-| `HomePage` | Main feed/home | `goto()`, `getNoteCount()`, `clickCreateNote()` |
-| `ProfilePage` | User profile | `goto(pubkey)`, `getDisplayName()`, `clickFollow()` |
-| `MessagesPage` | Direct messages | `goto()`, `selectConversation()`, `sendMessage()` |
-| `SettingsPage` | User settings | `goto()`, `toggleTheme()`, `save()` |
-| `LoginPage` | Account login | `goto()`, `loginWithNsec()`, `clickExtensionLogin()` |
-| `MusicPage` | Music player | `goto()`, `playFirstTrack()`, `isPlaying()` |
-| `CommandPalette` | Command palette | `open()`, `search()`, `executeCommand()` |
+| Class            | Description     | Key Methods                                          |
+| ---------------- | --------------- | ---------------------------------------------------- |
+| `HomePage`       | Main feed/home  | `goto()`, `getNoteCount()`, `clickCreateNote()`      |
+| `ProfilePage`    | User profile    | `goto(pubkey)`, `getDisplayName()`, `clickFollow()`  |
+| `MessagesPage`   | Direct messages | `goto()`, `selectConversation()`, `sendMessage()`    |
+| `SettingsPage`   | User settings   | `goto()`, `toggleTheme()`, `save()`                  |
+| `LoginPage`      | Account login   | `goto()`, `loginWithNsec()`, `clickExtensionLogin()` |
+| `MusicPage`      | Music player    | `goto()`, `playFirstTrack()`, `isPlaying()`          |
+| `CommandPalette` | Command palette | `open()`, `search()`, `executeCommand()`             |
 
 ### Example Usage
 
@@ -381,11 +385,11 @@ import { HomePage, ProfilePage, CommandPalette } from '../pages';
 
 test('navigate via command palette', async ({ page }) => {
   await page.goto('/');
-  
+
   const commandPalette = new CommandPalette(page);
   await commandPalette.open();
   await commandPalette.executeCommand('Settings');
-  
+
   // Now on settings page
   await expect(page).toHaveURL(/settings/);
 });
@@ -424,34 +428,29 @@ export class MyNewPage extends BasePage {
 
 ### Available Fixtures
 
-| Fixture | Type | Description |
-|---------|------|-------------|
-| `page` | Page | Standard Playwright page with console logging |
-| `consoleLogs` | ConsoleLogEntry[] | Collected console logs |
-| `captureScreenshot` | Function | Save named screenshot |
-| `waitForNostrReady` | Function | Wait for app to initialize |
-| `clearConsoleLogs` | Function | Clear collected logs |
-| `getConsoleLogs` | Function | Get current logs |
-| `saveConsoleLogs` | Function | Save logs to JSON file |
+| Fixture             | Type              | Description                                   |
+| ------------------- | ----------------- | --------------------------------------------- |
+| `page`              | Page              | Standard Playwright page with console logging |
+| `consoleLogs`       | ConsoleLogEntry[] | Collected console logs                        |
+| `captureScreenshot` | Function          | Save named screenshot                         |
+| `waitForNostrReady` | Function          | Wait for app to initialize                    |
+| `clearConsoleLogs`  | Function          | Clear collected logs                          |
+| `getConsoleLogs`    | Function          | Get current logs                              |
+| `saveConsoleLogs`   | Function          | Save logs to JSON file                        |
 
 ### Custom Fixture Example
 
 ```typescript
 import { test, expect } from '../fixtures';
 
-test('using fixtures', async ({ 
-  page,
-  captureScreenshot,
-  waitForNostrReady,
-  saveConsoleLogs,
-}) => {
+test('using fixtures', async ({ page, captureScreenshot, waitForNostrReady, saveConsoleLogs }) => {
   await page.goto('/');
   await waitForNostrReady();
-  
+
   await captureScreenshot('initial-state');
-  
+
   // ... test actions ...
-  
+
   await saveConsoleLogs('test-console-output');
 });
 ```
@@ -467,34 +466,34 @@ Key configuration options:
 ```typescript
 export default defineConfig({
   testDir: './e2e',
-  timeout: 60_000,                    // Test timeout
-  expect: { timeout: 10_000 },        // Assertion timeout
-  
+  timeout: 60_000, // Test timeout
+  expect: { timeout: 10_000 }, // Assertion timeout
+
   use: {
     baseURL: 'http://localhost:4200',
-    screenshot: 'on',                 // Always capture screenshots
-    video: 'retain-on-failure',       // Videos only on failure
-    trace: 'retain-on-failure',       // Traces only on failure
+    screenshot: 'on', // Always capture screenshots
+    video: 'retain-on-failure', // Videos only on failure
+    trace: 'retain-on-failure', // Traces only on failure
   },
-  
+
   webServer: {
-    command: 'npm run start',         // Auto-start app
+    command: 'npm run start', // Auto-start app
     url: 'http://localhost:4200',
-    reuseExistingServer: true,        // Reuse if running
+    reuseExistingServer: true, // Reuse if running
   },
 });
 ```
 
 ### Projects
 
-| Project | Use Case |
-|---------|----------|
-| `chromium` | Primary desktop testing |
-| `firefox` | Firefox browser testing |
-| `webkit` | Safari/WebKit testing |
-| `mobile-chrome` | Mobile responsive testing |
-| `mobile-safari` | iOS responsive testing |
-| `ai-debug` | Maximum artifact collection |
+| Project         | Use Case                    |
+| --------------- | --------------------------- |
+| `chromium`      | Primary desktop testing     |
+| `firefox`       | Firefox browser testing     |
+| `webkit`        | Safari/WebKit testing       |
+| `mobile-chrome` | Mobile responsive testing   |
+| `mobile-safari` | iOS responsive testing      |
+| `ai-debug`      | Maximum artifact collection |
 
 ### Running Specific Projects
 
@@ -520,15 +519,16 @@ npx playwright test --project=ai-debug
 await captureScreenshot('descriptive-name');
 
 // Or use page method directly
-await page.screenshot({ 
+await page.screenshot({
   path: 'test-results/screenshots/my-screenshot.png',
-  fullPage: true 
+  fullPage: true,
 });
 ```
 
 ### Videos
 
 Videos are recorded automatically based on config:
+
 - `'on'`: Always record
 - `'retain-on-failure'`: Keep only for failed tests
 - `'off'`: Never record
@@ -564,6 +564,7 @@ npm run test:e2e:debug
 ```
 
 This opens the Playwright Inspector where you can:
+
 - Step through tests
 - View selectors
 - Time-travel through test steps
@@ -575,6 +576,7 @@ npm run test:e2e:ui
 ```
 
 Features:
+
 - Watch mode (re-run on changes)
 - Visual test timeline
 - DOM snapshot inspection
@@ -585,11 +587,11 @@ Features:
 ```typescript
 test('debug with logs', async ({ page, getConsoleLogs }) => {
   await page.goto('/');
-  
+
   // Print all console messages
   const logs = getConsoleLogs();
   console.log('Page console output:');
-  logs.forEach(log => console.log(`[${log.type}] ${log.text}`));
+  logs.forEach((log) => console.log(`[${log.type}] ${log.text}`));
 });
 ```
 
@@ -600,8 +602,8 @@ Screenshots are automatically captured on test failure. For manual capture:
 ```typescript
 test.afterEach(async ({ page }, testInfo) => {
   if (testInfo.status === 'failed') {
-    await page.screenshot({ 
-      path: `test-results/failures/${testInfo.title}.png` 
+    await page.screenshot({
+      path: `test-results/failures/${testInfo.title}.png`,
     });
   }
 });
@@ -623,20 +625,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        
+
       - name: Run E2E tests
         run: npm run test:e2e
-        
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -680,6 +682,7 @@ BASE_URL=https://staging.nostria.app npm run test:e2e
 ### Selector Strategy
 
 Priority order for selectors:
+
 1. `data-testid` attributes (most stable)
 2. Semantic roles (`getByRole`)
 3. Text content (`getByText`)
@@ -688,16 +691,16 @@ Priority order for selectors:
 
 ```typescript
 // Best - uses test ID
-page.locator('[data-testid="submit-button"]')
+page.locator('[data-testid="submit-button"]');
 
 // Good - uses semantic role
-page.getByRole('button', { name: 'Submit' })
+page.getByRole('button', { name: 'Submit' });
 
 // Okay - uses visible text
-page.getByText('Submit')
+page.getByText('Submit');
 
 // Avoid - fragile
-page.locator('.btn-primary.large')
+page.locator('.btn-primary.large');
 ```
 
 ### Adding Test IDs
@@ -706,9 +709,7 @@ When developing new features, add `data-testid` attributes:
 
 ```html
 <!-- In Angular template -->
-<button data-testid="create-note-button" (click)="createNote()">
-  Create Note
-</button>
+<button data-testid="create-note-button" (click)="createNote()">Create Note</button>
 ```
 
 ---
@@ -737,10 +738,10 @@ npm run test:e2e:visual:update
 
 ### Test Specs
 
-| Spec | Description |
-|------|-------------|
-| `theme-consistency.spec.ts` | 5 pages in light & dark mode, contrast validation |
-| `responsive-layout.spec.ts` | 3 pages at mobile/tablet/desktop, layout transitions |
+| Spec                        | Description                                                         |
+| --------------------------- | ------------------------------------------------------------------- |
+| `theme-consistency.spec.ts` | 5 pages in light & dark mode, contrast validation                   |
+| `responsive-layout.spec.ts` | 3 pages at mobile/tablet/desktop, layout transitions                |
 | `component-gallery.spec.ts` | Individual component screenshots (sidenav, cards, buttons, dialogs) |
 
 ### Baseline Screenshot Management
@@ -789,6 +790,7 @@ The `TEST_NSEC` environment variable provides a Nostr private key (in `nsec1...`
 ### Creating a Test Account
 
 1. **Generate a new keypair** using any Nostr key generator:
+
    ```bash
    # Using nostr-tools (the same library used by the test suite)
    node -e "
@@ -801,6 +803,7 @@ The `TEST_NSEC` environment variable provides a Nostr private key (in `nsec1...`
    ```
 
 2. **Add to `.env`**:
+
    ```bash
    echo "TEST_NSEC=nsec1your_generated_key_here" > .env
    ```
@@ -831,6 +834,7 @@ test('authenticated feature', async ({ authenticatedPage }) => {
 ### Running Without TEST_NSEC
 
 If `TEST_NSEC` is not set, the test suite automatically generates a throwaway keypair for each run. This means:
+
 - The test account has no relay history, no profile, no follows
 - Tests that depend on existing data (like "following feed shows content") will see empty states
 - This is still useful for testing UI rendering, navigation, and error handling
@@ -842,6 +846,7 @@ If `TEST_NSEC` is not set, the test suite automatically generates a throwaway ke
 ### Centralized Test Data (`e2e/fixtures/test-data.ts`)
 
 Contains constants for:
+
 - **Well-known profiles**: npubs for Jack Dorsey, fiatjaf, hodlbod (read-only profile viewing tests)
 - **Relay URLs**: Primary, secondary, and invalid relay URLs for connection testing
 - **Sample content**: Pre-defined note content for creation tests (short, long, with mentions, XSS payloads, etc.)
@@ -854,6 +859,7 @@ Contains constants for:
 ### Mock Events (`e2e/fixtures/mock-events.ts`)
 
 Factory functions for creating Nostr events with valid structure:
+
 - `createMockProfileEvent()` — Kind 0 profile metadata
 - `createMockNoteEvent()` — Kind 1 text note
 - `createMockReplyEvent()` — Kind 1 reply
@@ -868,6 +874,7 @@ Factory functions for creating Nostr events with valid structure:
 ### Test Isolation (`e2e/fixtures/test-isolation.ts`)
 
 Functions to prevent test pollution:
+
 - `resetAppState(page)` — Full reset: localStorage, sessionStorage, IndexedDB, service workers
 - `clearNostriaStorage(page)` — Clear only Nostria-specific keys
 - `setupCleanEnvironment(page, options)` — Set up clean state with optional theme/storage config
@@ -882,13 +889,15 @@ Functions to prevent test pollution:
 #### Tests timeout waiting for app
 
 **Solution**: Ensure the dev server is running or increase timeout:
+
 ```typescript
 test.setTimeout(120_000); // 2 minutes
 ```
 
 #### Element not found
 
-**Solution**: 
+**Solution**:
+
 1. Check if element exists in DOM
 2. Verify selector is correct
 3. Wait for element: `await element.waitFor()`
@@ -896,6 +905,7 @@ test.setTimeout(120_000); // 2 minutes
 #### Flaky tests
 
 **Solution**:
+
 1. Add proper waiting
 2. Use `waitForNostrReady()`
 3. Consider network conditions
@@ -904,6 +914,7 @@ test.setTimeout(120_000); // 2 minutes
 #### Screenshots are blank
 
 **Solution**: Ensure page is fully loaded before capture:
+
 ```typescript
 await page.waitForLoadState('networkidle');
 await captureScreenshot('name');
@@ -965,6 +976,7 @@ test('should show notifications page @auth', async ({ authenticatedPage: page })
 ### Step-by-Step
 
 1. **Generate a test keypair** (do NOT use your real account):
+
    ```bash
    node -e "
      const { generateSecretKey, getPublicKey } = require('nostr-tools/pure');
@@ -977,16 +989,19 @@ test('should show notifications page @auth', async ({ authenticatedPage: page })
    ```
 
 2. **Create `.env`** in the project root:
+
    ```
    TEST_NSEC=nsec1your_generated_key_here
    ```
 
 3. **Start the dev server** (if not already running):
+
    ```bash
    npm run start
    ```
 
 4. **Run authenticated tests**:
+
    ```bash
    # Run only tests tagged @auth
    npm run test:e2e:auth
@@ -1030,14 +1045,14 @@ await saveConsoleLogs('my-test-name');
 
 The `consoleAnalyzer` fixture categorizes logs into:
 
-| Category | What It Captures |
-|----------|-----------------|
-| `errors` | `console.error`, `pageerror`, unhandled exceptions |
-| `warnings` | `console.warn` messages |
-| `nostrLogs` | Logs containing Nostr prefixes: `[AccountStateService]`, `[RelayService]`, `[SubscriptionCache]`, etc. |
-| `angularLogs` | Angular-specific messages (`NG0`, `ExpressionChanged`) |
-| `networkLogs` | Network failures (`net::`, `ERR_`) |
-| `debugLogs` | General `console.log`/`console.debug` |
+| Category      | What It Captures                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| `errors`      | `console.error`, `pageerror`, unhandled exceptions                                                     |
+| `warnings`    | `console.warn` messages                                                                                |
+| `nostrLogs`   | Logs containing Nostr prefixes: `[AccountStateService]`, `[RelayService]`, `[SubscriptionCache]`, etc. |
+| `angularLogs` | Angular-specific messages (`NG0`, `ExpressionChanged`)                                                 |
+| `networkLogs` | Network failures (`net::`, `ERR_`)                                                                     |
+| `debugLogs`   | General `console.log`/`console.debug`                                                                  |
 
 ### ConsoleAnalyzer Class (`e2e/helpers/console-analyzer.ts`)
 
@@ -1057,9 +1072,9 @@ const report = analyzer.generateReport();
 import { ConsoleAnalyzer } from '../../helpers/console-analyzer';
 
 const analyzer = new ConsoleAnalyzer(logs);
-analyzer.expectNoUnexpectedErrors();   // Fails on unexpected errors
-analyzer.expectNoAngularErrors();      // Fails on Angular errors
-analyzer.expectRelayConnections(2);    // Expects at least 2 relay connections
+analyzer.expectNoUnexpectedErrors(); // Fails on unexpected errors
+analyzer.expectNoAngularErrors(); // Fails on Angular errors
+analyzer.expectRelayConnections(2); // Expects at least 2 relay connections
 ```
 
 ### Reading Reports
@@ -1090,18 +1105,18 @@ Console analysis reports are JSON files in `test-results/reports/`:
 
 The performance testing suite (`e2e/tests/performance/`) collects these metrics:
 
-| Metric | Source | Good Threshold |
-|--------|--------|---------------|
-| **LCP** (Largest Contentful Paint) | PerformanceObserver | < 2.5s |
-| **FID** (First Input Delay) | PerformanceObserver | < 100ms |
-| **CLS** (Cumulative Layout Shift) | PerformanceObserver | < 0.1 |
-| **TTFB** (Time to First Byte) | Navigation Timing API | < 800ms |
-| **FCP** (First Contentful Paint) | PerformanceObserver | < 1.8s |
-| **DOM Content Loaded** | Navigation Timing API | — |
-| **Load Complete** | Navigation Timing API | — |
-| **JS Bundle Size** | Resource Timing API | < 500KB per file |
-| **Total Bundle Size** | Resource Timing API | — |
-| **Memory Usage** | `performance.memory` (Chrome) | < 50MB growth |
+| Metric                             | Source                        | Good Threshold   |
+| ---------------------------------- | ----------------------------- | ---------------- |
+| **LCP** (Largest Contentful Paint) | PerformanceObserver           | < 2.5s           |
+| **FID** (First Input Delay)        | PerformanceObserver           | < 100ms          |
+| **CLS** (Cumulative Layout Shift)  | PerformanceObserver           | < 0.1            |
+| **TTFB** (Time to First Byte)      | Navigation Timing API         | < 800ms          |
+| **FCP** (First Contentful Paint)   | PerformanceObserver           | < 1.8s           |
+| **DOM Content Loaded**             | Navigation Timing API         | —                |
+| **Load Complete**                  | Navigation Timing API         | —                |
+| **JS Bundle Size**                 | Resource Timing API           | < 500KB per file |
+| **Total Bundle Size**              | Resource Timing API           | —                |
+| **Memory Usage**                   | `performance.memory` (Chrome) | < 50MB growth    |
 
 ### Running Performance Tests
 
@@ -1115,13 +1130,13 @@ npm run test:e2e:report:full
 
 ### Output Files
 
-| File | Location | Content |
-|------|----------|---------|
-| Page load times | `test-results/metrics/page-load-*.json` | Navigation timing per route |
-| Web Vitals | `test-results/metrics/web-vitals-*.json` | LCP, FID, CLS, FCP, TTFB |
-| Bundle sizes | `test-results/metrics/bundle-size-*.json` | Per-resource sizes, total |
-| Memory timeline | `test-results/metrics/memory-*.json` | Heap snapshots over time |
-| Relay performance | `test-results/metrics/relay-perf-*.json` | Connection/latency times |
+| File              | Location                                  | Content                     |
+| ----------------- | ----------------------------------------- | --------------------------- |
+| Page load times   | `test-results/metrics/page-load-*.json`   | Navigation timing per route |
+| Web Vitals        | `test-results/metrics/web-vitals-*.json`  | LCP, FID, CLS, FCP, TTFB    |
+| Bundle sizes      | `test-results/metrics/bundle-size-*.json` | Per-resource sizes, total   |
+| Memory timeline   | `test-results/metrics/memory-*.json`      | Heap snapshots over time    |
+| Relay performance | `test-results/metrics/relay-perf-*.json`  | Connection/latency times    |
 
 ### Using the `performanceMetrics` Fixture
 
@@ -1220,13 +1235,13 @@ const summary = monitor.getSummary();
 
 The WebSocket monitor categorizes Nostr protocol messages:
 
-| Message | Direction | Description |
-|---------|-----------|-------------|
-| `REQ` | Client → Relay | Subscription request with filters |
-| `EVENT` | Relay → Client | Event delivery |
-| `EOSE` | Relay → Client | End of stored events |
-| `NOTICE` | Relay → Client | Relay notice/error |
-| `CLOSE` | Client → Relay | Close subscription |
+| Message  | Direction      | Description                       |
+| -------- | -------------- | --------------------------------- |
+| `REQ`    | Client → Relay | Subscription request with filters |
+| `EVENT`  | Relay → Client | Event delivery                    |
+| `EOSE`   | Relay → Client | End of stored events              |
+| `NOTICE` | Relay → Client | Relay notice/error                |
+| `CLOSE`  | Client → Relay | Close subscription                |
 
 ### Network Test Output
 
@@ -1286,6 +1301,7 @@ If the secret is not configured, tests fall back to auto-generated keypairs.
 ### Reading PR Test Comments
 
 When a PR triggers the E2E workflow, a comment is posted with:
+
 - Total tests, passed/failed counts
 - Link to the full report artifact
 - Performance regression warnings (if any)
@@ -1294,6 +1310,7 @@ When a PR triggers the E2E workflow, a comment is posted with:
 ### Artifacts
 
 All test results are uploaded as GitHub Actions artifacts:
+
 - `playwright-report` — HTML report
 - `test-results` — JSON data, screenshots, console logs, metrics
 
@@ -1305,16 +1322,16 @@ All test results are uploaded as GitHub Actions artifacts:
 
 Every test should be tagged for filtering:
 
-| Tag | When to Use |
-|-----|-------------|
-| `@public` | Test doesn't require authentication |
-| `@auth` | Test requires a logged-in account (use `authenticatedPage` fixture) |
-| `@smoke` | Critical path — include in fast CI checks |
-| `@metrics` | Collects performance/metrics data |
-| `@network` | Monitors network/WebSocket behavior |
-| `@security` | Security-focused validation |
-| `@a11y` | Accessibility checks |
-| `@visual` | Visual regression screenshots |
+| Tag         | When to Use                                                         |
+| ----------- | ------------------------------------------------------------------- |
+| `@public`   | Test doesn't require authentication                                 |
+| `@auth`     | Test requires a logged-in account (use `authenticatedPage` fixture) |
+| `@smoke`    | Critical path — include in fast CI checks                           |
+| `@metrics`  | Collects performance/metrics data                                   |
+| `@network`  | Monitors network/WebSocket behavior                                 |
+| `@security` | Security-focused validation                                         |
+| `@a11y`     | Accessibility checks                                                |
+| `@visual`   | Visual regression screenshots                                       |
 
 Tags go in the `test.describe()` title:
 
@@ -1324,16 +1341,16 @@ test.describe('My Feature @auth @smoke', () => { ... });
 
 ### Fixture Selection Guide
 
-| Need | Fixture |
-|------|---------|
-| Logged-in page | `authenticatedPage` |
+| Need                | Fixture                                       |
+| ------------------- | --------------------------------------------- |
+| Logged-in page      | `authenticatedPage`                           |
 | Console log capture | `saveConsoleLogs` (auto-available via `page`) |
-| Performance data | `performanceMetrics` |
-| Network tracking | `networkMonitor` |
-| Log analysis | `consoleAnalyzer` |
-| Memory monitoring | `memoryMonitor` |
-| Screenshots | `captureScreenshot` |
-| App ready wait | `waitForNostrReady` |
+| Performance data    | `performanceMetrics`                          |
+| Network tracking    | `networkMonitor`                              |
+| Log analysis        | `consoleAnalyzer`                             |
+| Memory monitoring   | `memoryMonitor`                               |
+| Screenshots         | `captureScreenshot`                           |
+| App ready wait      | `waitForNostrReady`                           |
 
 ### Test Structure Template
 
@@ -1342,11 +1359,14 @@ import { test, expect } from '../../fixtures';
 import { TIMEOUTS } from '../../fixtures/test-data';
 
 async function waitForAppReady(page: import('@playwright/test').Page) {
-  await page.waitForFunction(() => {
-    const appRoot = document.querySelector('app-root');
-    if (!appRoot) return false;
-    return !!document.querySelector('mat-sidenav-content, .main-content, main');
-  }, { timeout: TIMEOUTS.appReady });
+  await page.waitForFunction(
+    () => {
+      const appRoot = document.querySelector('app-root');
+      if (!appRoot) return false;
+      return !!document.querySelector('mat-sidenav-content, .main-content, main');
+    },
+    { timeout: TIMEOUTS.appReady },
+  );
   await page.waitForTimeout(TIMEOUTS.stabilize);
 }
 
@@ -1390,13 +1410,13 @@ The app currently has no `data-testid` attributes. Use these selectors in priori
 
 Test specs in `e2e/tests/resilience/` verify the app handles adverse conditions:
 
-| Spec | What It Tests |
-|------|---------------|
-| `offline.spec.ts` | Network disconnect/reconnect, cached content persistence |
-| `slow-network.spec.ts` | Throttled 3G via CDP, loading states, timeout handling |
-| `relay-failures.spec.ts` | All relays blocked, graceful degradation, no infinite retries |
-| `large-data.spec.ts` | Long text, deep scroll, virtual scroll stress, emoji content |
-| `concurrent-tabs.spec.ts` | Multiple tabs, localStorage sync, race conditions |
+| Spec                      | What It Tests                                                 |
+| ------------------------- | ------------------------------------------------------------- |
+| `offline.spec.ts`         | Network disconnect/reconnect, cached content persistence      |
+| `slow-network.spec.ts`    | Throttled 3G via CDP, loading states, timeout handling        |
+| `relay-failures.spec.ts`  | All relays blocked, graceful degradation, no infinite retries |
+| `large-data.spec.ts`      | Long text, deep scroll, virtual scroll stress, emoji content  |
+| `concurrent-tabs.spec.ts` | Multiple tabs, localStorage sync, race conditions             |
 
 ---
 
@@ -1404,11 +1424,11 @@ Test specs in `e2e/tests/resilience/` verify the app handles adverse conditions:
 
 Test specs in `e2e/tests/security/` validate security properties:
 
-| Spec | What It Tests |
-|------|---------------|
-| `key-exposure.spec.ts` | Private key not in DOM, console, network, URLs, visible text, cookies |
-| `xss-vectors.spec.ts` | XSS payloads in inputs, sanitization of rendered content, Angular injection |
-| `csp-compliance.spec.ts` | Security headers, CSP violations, inline scripts/handlers, eval usage |
+| Spec                     | What It Tests                                                               |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `key-exposure.spec.ts`   | Private key not in DOM, console, network, URLs, visible text, cookies       |
+| `xss-vectors.spec.ts`    | XSS payloads in inputs, sanitization of rendered content, Angular injection |
+| `csp-compliance.spec.ts` | Security headers, CSP violations, inline scripts/handlers, eval usage       |
 
 ### Pre-commit Hook
 
@@ -1421,4 +1441,4 @@ chmod +x .git/hooks/pre-commit
 
 ---
 
-*This document should be kept up to date as the testing infrastructure evolves.*
+_This document should be kept up to date as the testing infrastructure evolves._

@@ -135,7 +135,7 @@ describe('CollectionSetsService', () => {
     );
 
     expect(success).toBe(true);
-  expect(createEvent).toHaveBeenCalledWith(30030, '', [
+    expect(createEvent).toHaveBeenCalledWith(30030, '', [
       ['d', 'set-id'],
       ['title', 'Set'],
       ['name', 'Set'],
@@ -180,6 +180,6 @@ describe('CollectionSetsService', () => {
     );
 
     expect(success).toBe(false);
-  expect(createEvent).not.toHaveBeenCalled();
+    expect(createEvent).not.toHaveBeenCalled();
   });
 });
