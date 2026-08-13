@@ -1,0 +1,132 @@
+<app-custom-dialog [title]="title" headerIcon="mic" [disableClose]="isSaving()" [width]="'600px'" [maxWidth]="'95vw'"
+  (closed)="close(null)">
+  <div dialog-content>
+    @if (!hasMediaServers() && !audioUrl()) {
+    <div class="media-server-warning">
+      <div class="warning-content">
+        <mat-icon>warning</mat-icon>
+        <span i18n="@@podcasts.publish.mediaServerHint">Configure a media server to upload episode audio, or use an existing URL.</span>
+      </div>
+      <button mat-flat-button type="button" (click)="navigateToMediaSettings()" i18n="@@podcasts.publish.configureServer">
+        Configure media server
+      </button>
+    </div>
+    }
+
+    <form [formGroup]="form">
+      <div class="audio-section" [class.audio-section-centered]="!showFullForm()">
+        @if (!showFullForm()) {
+        <div class="initial-upload-header">
+          <mat-icon>podcasts</mat-icon>
+          <h3 i18n="@@podcasts.publish.uploadTitle">Upload your episode</h3>
+          <p i18n="@@podcasts.publish.uploadHint">Choose or drag and drop an audio file to get started</p>
+        </div>
+        } @else {
+        <label class="field-label" i18n="@@podcasts.publish.audioFile">Audio file</label>
+        }
+
+        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" [class.audio-upload-large]="!showFullForm()"
+          (dragover)="onAudioDragOver($event)" (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
+          @if (isUploadingAudio()) {
+          <div class="uploading-indicator">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span i18n="@@podcasts.publish.uploading">Uploading audio...</span>
+          </div>
+          } @else if (audioFile(); as file) {
+          <div class="audio-selected">
+            <div class="audio-selected-header">
+              <mat-icon>audio_file</mat-icon>
+              <span>{{ file.name }}</span>
+              <button mat-icon-button type="button" (click)="selectAudioFile()" [attr.aria-label]="changeAudioLabel">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </div>
+            <span class="pending-upload-hint" i18n="@@podcasts.publish.localHint">Local audio stays on this device until you publish.</span>
+            @if (audioPreviewUrl()) {
+            <audio class="audio-preview" controls preload="metadata" [src]="audioPreviewUrl()"
+              (click)="$event.stopPropagation()"></audio>
+            }
+          </div>
+          } @else if (audioUrl()) {
+          <div class="audio-selected">
+            <div class="audio-selected-header">
+              <mat-icon>audio_file</mat-icon>
+              <span class="audio-url-display">{{ audioUrl() }}</span>
+              <button mat-stroked-button type="button" (click)="selectAudioFile()">
+                <mat-icon>upload</mat-icon>
+                <span i18n="@@podcasts.publish.replace">Replace</span>
+              </button>
+            </div>
+            <audio class="audio-preview" controls preload="metadata" [src]="audioUrl()"
+              (click)="$event.stopPropagation()"></audio>
+          </div>
+          } @else {
+          <div class="drop-zone" [class.drop-zone-large]="!showFullForm()" (click)="selectAudioFile()">
+            <mat-icon>cloud_upload</mat-icon>
+            <span class="drop-text" i18n="@@podcasts.publish.dropHere">Drag and drop audio here</span>
+            <span class="or-text" i18n="@@podcasts.publish.or">or</span>
+            <button mat-stroked-button type="button" i18n="@@podcasts.publish.browse">Browse files</button>
+            <span class="supported-formats" i18n="@@podcasts.publish.formats">Supported: MP3, WAV, AAC, OGG, M4A</span>
+          </div>
+          <div class="source-actions">
+            <button mat-stroked-button type="button" (click)="openAudioLibrary(); $event.stopPropagation()">
+              <mat-icon>perm_media</mat-icon>
+              <span i18n="@@podcasts.publish.library">Media library</span>
+            </button>
+            <button mat-button type="button" (click)="toggleExternalUrlInput($event)">
+              <mat-icon>link</mat-icon>
+              <span i18n="@@podcasts.publish.useUrl">Use an audio URL</span>
+            </button>
+          </div>
+          @if (showExternalUrlInput()) {
+          <div class="external-url-input" (click)="$event.stopPropagation()">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label i18n="@@podcasts.publish.audio">Audio URL</mat-label>
+              <input matInput type="url" [value]="externalUrlValue()"
+                (input)="externalUrlValue.set($any($event.target).value)" placeholder="https://..." />
+            </mat-form-field>
+            <div class="external-url-actions">
+              <button mat-button type="button" (click)="toggleExternalUrlInput($event)" i18n="@@common.cancel">Cancel</button>
+              <button mat-flat-button type="button" (click)="applyExternalUrl()" [disabled]="!externalUrlValue()"
+                i18n="@@podcasts.publish.continue">Continue</button>
+            </div>
+          </div>
+          }
+          }
+        </div>
+      </div>
+
+      @if (showFullForm()) {
+      <mat-form-field appearance="outline" class="full">
+        <mat-label i18n="@@podcasts.publish.title">Episode title</mat-label>
+        <input matInput formControlName="title" />
+      </mat-form-field>
+
+      <app-image-input
+        [label]="coverLabel"
+        shape="square"
+        [value]="coverImage()"
+        (valueChange)="coverImage.set($event)"
+      />
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label i18n="@@podcasts.publish.description">Description</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label i18n="@@podcasts.publish.notes">Show notes</mat-label>
+        <textarea matInput formControlName="content" rows="6"></textarea>
+      </mat-form-field>
+      }
+    </form>
+  </div>
+  <div dialog-actions>
+    <button mat-button (click)="close(null)" [disabled]="isSaving()" i18n="@@common.cancel">Cancel</button>
+    <button mat-flat-button (click)="publish()" [disabled]="form.invalid || !showFullForm() || isSaving() || isUploadingAudio()">
+      @if (isSaving() || isUploadingAudio()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      }
+      <span i18n="@@podcasts.publish.submit">Publish episode</span>
+    </button>
+  </div>
+</app-custom-dialog>

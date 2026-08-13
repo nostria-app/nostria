@@ -117,7 +117,7 @@ import {
     }
     .panel-title { margin: 0; font-size: 1.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .panel-header-spacer { flex: 1; }
-    .page { padding: 1rem 1rem 120px; display: flex; flex-direction: column; gap: 1.5rem; }
+    .page { padding: 1rem 1rem 120px; display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
     .hero { display: flex; gap: 1.25rem; }
     .cover {
       width: 180px; height: 180px; border-radius: 16px; overflow: hidden; flex-shrink: 0;
@@ -132,14 +132,39 @@ import {
       border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer;
       color: var(--mat-sys-primary);
     }
-    p { margin: 0; color: var(--mat-sys-on-surface-variant); }
+    p {
+      margin: 0;
+      color: var(--mat-sys-on-surface-variant);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
     .progress {
       height: 4px; border-radius: 999px; background: var(--mat-sys-surface-container-high);
       span { display: block; height: 100%; background: var(--mat-sys-primary); border-radius: inherit; }
     }
     .progress-label { font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); }
-    .notes { color: var(--mat-sys-on-surface); line-height: 1.6; }
+    .notes {
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      color: var(--mat-sys-on-surface);
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+
+      :where(a, code, span) {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      pre {
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+    }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 3rem 1rem; color: var(--mat-sys-on-surface-variant); }
     @media (max-width: 600px) {
       .hero { flex-direction: column; }

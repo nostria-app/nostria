@@ -129,7 +129,11 @@ import {
     }
     .hero-info { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
     h1 { margin: 0; font-size: 1.75rem; color: var(--mat-sys-on-surface); }
-    p, a { color: var(--mat-sys-on-surface-variant); }
+    p, a {
+      color: var(--mat-sys-on-surface-variant);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .hero-actions { display: flex; align-items: center; gap: 1rem; }
     .count { color: var(--mat-sys-on-surface-variant); }
     .empty { display: flex; justify-content: center; padding: 3rem 1rem; color: var(--mat-sys-on-surface-variant); }

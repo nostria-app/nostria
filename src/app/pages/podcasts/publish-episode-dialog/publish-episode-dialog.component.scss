@@ -1,0 +1,229 @@
+.full {
+  width: 100%;
+}
+
+app-image-input {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.media-server-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: var(--mat-sys-corner-small);
+  background-color: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+
+  .warning-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      color: var(--mat-sys-error);
+    }
+
+    span {
+      color: var(--mat-sys-on-error-container);
+    }
+  }
+}
+
+.field-label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface);
+  margin-bottom: 0.5rem;
+}
+
+.audio-section {
+  margin-bottom: 1.5rem;
+
+  &.audio-section-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem 0;
+  }
+}
+
+.initial-upload-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+
+  mat-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    color: var(--mat-sys-primary);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.audio-upload {
+  border-radius: var(--mat-sys-corner-medium);
+
+  &.audio-upload-large {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  &.drag-over .drop-zone {
+    border-color: var(--mat-sys-primary);
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  }
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  border: 2px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--mat-sys-outline);
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  &.drop-zone-large {
+    padding: 3rem 2rem;
+    gap: 0.75rem;
+
+    mat-icon {
+      font-size: 3.5rem;
+      width: 3.5rem;
+      height: 3.5rem;
+    }
+  }
+
+  mat-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .drop-text {
+    color: var(--mat-sys-on-surface);
+    font-size: 0.9375rem;
+  }
+
+  .or-text {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.8125rem;
+  }
+
+  .supported-formats {
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.external-url-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.external-url-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.uploading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-small);
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.audio-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-small);
+
+  .audio-selected-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    button {
+      margin-left: auto;
+    }
+  }
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .audio-url-display {
+    font-size: 0.8125rem;
+    color: var(--mat-sys-on-surface-variant);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .pending-upload-hint {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: normal;
+  }
+
+  .audio-preview {
+    width: 100%;
+    height: 32px;
+  }
+}

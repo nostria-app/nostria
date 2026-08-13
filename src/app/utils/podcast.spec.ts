@@ -1,4 +1,6 @@
 import {
+  buildPodcastEpisodeTags,
+  buildPodcastShowTags,
   episodeMatchesQuery,
   formatPodcastDuration,
   getPodcastAudio,
@@ -116,5 +118,29 @@ describe('podcast utils', () => {
     expect(formatPodcastDuration(75)).toBe('1:15');
     expect(formatPodcastDuration(3661)).toBe('1:01:01');
     expect(formatPodcastDuration(0)).toBeUndefined();
+  });
+
+  it('builds NIP-F4 show and episode tags', () => {
+    expect(buildPodcastShowTags({
+      title: 'Relay Talk',
+      description: 'Weekly',
+      imageUrl: 'https://cdn.example.com/show.jpg',
+      website: 'https://example.com',
+    })).toEqual([
+      ['title', 'Relay Talk'],
+      ['description', 'Weekly'],
+      ['image', 'https://cdn.example.com/show.jpg'],
+      ['website', 'https://example.com'],
+    ]);
+
+    expect(buildPodcastEpisodeTags({
+      title: 'Episode 1',
+      audioUrl: 'https://cdn.example.com/ep.mp3',
+      audioType: 'audio/mpeg',
+      imageUrl: 'not-a-url',
+    })).toEqual([
+      ['title', 'Episode 1'],
+      ['audio', 'https://cdn.example.com/ep.mp3', 'audio/mpeg'],
+    ]);
   });
 });

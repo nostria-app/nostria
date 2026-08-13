@@ -44,6 +44,10 @@
     <mat-icon>edit</mat-icon>
     <span i18n="@@podcasts.menu.editShow">Edit show details</span>
   </button>
+  <button mat-menu-item (click)="openImportRss()">
+    <mat-icon>rss_feed</mat-icon>
+    <span i18n="@@podcasts.menu.importRss">Import from RSS</span>
+  </button>
 </mat-menu>
 
 <div class="podcasts-container">
@@ -165,4 +169,7 @@
 }
 @if (showEditShowDialog()) {
   <app-edit-show-dialog (closed)="onEditShowClosed($event)" />
+}
+@if (showImportRssDialog()) {
+  <app-import-podcast-rss-dialog (closed)="onImportRssClosed($event)" />
 }

@@ -1,0 +1,166 @@
+<app-custom-dialog [title]="dialogTitle" headerIcon="rss_feed" [disableClose]="isPublishing()" [width]="'700px'"
+  [maxWidth]="'95vw'" (closed)="cancel()">
+  <div dialog-content>
+    <p class="dialog-subtitle" i18n="@@podcasts.import.subtitle">
+      Paste a podcast RSS feed URL to review episodes, edit details, and publish the ones you want.
+    </p>
+
+    @if (!hasFetched()) {
+    <div class="rss-input-section">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label i18n="@@podcasts.import.url">RSS feed URL</mat-label>
+        <input matInput [ngModel]="rssUrl()" (ngModelChange)="rssUrl.set($event)" placeholder="https://example.com/podcast.rss" [disabled]="isFetching()" />
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="fetchRss()" [disabled]="isFetching() || !rssUrl()">
+        @if (isFetching()) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <mat-icon>download</mat-icon>
+        }
+        <span i18n="@@podcasts.import.fetch">Fetch</span>
+      </button>
+    </div>
+    <p class="hint-text" i18n="@@podcasts.import.hint">Supports podcast RSS feeds with audio enclosures (iTunes / Podcast Index).</p>
+    } @else if (!showPreview()) {
+    <div class="fetched-content">
+      <section class="show-section">
+        <div class="section-header">
+          <span class="section-title" i18n="@@podcasts.import.showDetails">Show details</span>
+          <mat-slide-toggle [checked]="publishShow()" (change)="publishShow.set($event.checked)">
+            <span i18n="@@podcasts.import.publishShow">Publish show metadata</span>
+          </mat-slide-toggle>
+        </div>
+
+        <div class="show-fields" [class.disabled]="!publishShow()">
+          <app-image-input
+            [label]="showCoverLabel"
+            shape="square"
+            [value]="showInfo().imageUrl"
+            (valueChange)="updateShow({ imageUrl: $event })"
+          />
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.show.titleField">Show title</mat-label>
+            <input matInput [value]="showInfo().title" (input)="updateShow({ title: $any($event.target).value })"
+              [disabled]="!publishShow()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.show.website">Website</mat-label>
+            <input matInput [value]="showInfo().website" (input)="updateShow({ website: $any($event.target).value })"
+              [disabled]="!publishShow()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.show.description">Description</mat-label>
+            <textarea matInput rows="4" [value]="showInfo().description"
+              (input)="updateShow({ description: $any($event.target).value })" [disabled]="!publishShow()"></textarea>
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="episodes-section">
+        <div class="section-header">
+          <span class="section-title">
+            <span i18n="@@podcasts.import.episodes">Episodes</span>
+            <span class="section-count">{{ selectedCount() }} / {{ episodeCount() }}</span>
+          </span>
+          <div class="header-actions">
+            <button mat-stroked-button type="button" (click)="selectAll(true)" i18n="@@podcasts.import.selectAll">Select all</button>
+            <button mat-stroked-button type="button" (click)="selectAll(false)" i18n="@@podcasts.import.selectNone">Select none</button>
+            <button mat-stroked-button type="button" (click)="expandAll(true)" i18n="@@podcasts.import.expandAll">Expand all</button>
+            <button mat-stroked-button type="button" (click)="expandAll(false)" i18n="@@podcasts.import.collapseAll">Collapse all</button>
+          </div>
+        </div>
+
+        <div class="episodes-list">
+          @for (episode of episodes(); track episode.guid; let i = $index) {
+          <div class="episode-item" [class.expanded]="episode.expanded" [class.unselected]="!episode.selected">
+            <div class="episode-collapsed">
+              <mat-checkbox [checked]="episode.selected" (change)="toggleSelected(i, $event.checked)"
+                (click)="$event.stopPropagation()" [aria-label]="selectEpisodeLabel"></mat-checkbox>
+              <button type="button" class="episode-toggle" (click)="toggleExpanded(i)">
+                <span class="episode-number">{{ i + 1 }}</span>
+                <span class="episode-info">
+                  <span class="episode-title">{{ episode.title }}</span>
+                  <span class="episode-meta">
+                    @if (episode.duration) {
+                    <span>{{ episode.duration }}</span>
+                    }
+                    <span class="episode-url">{{ episode.audioUrl }}</span>
+                  </span>
+                </span>
+                <mat-icon>{{ episode.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+
+            @if (episode.expanded) {
+            <div class="episode-expanded">
+              <app-image-input
+                [label]="episodeCoverLabel"
+                shape="square"
+                [value]="episode.imageUrl"
+                (valueChange)="updateEpisode(i, { imageUrl: $event })"
+              />
+              <mat-form-field appearance="outline" class="full">
+                <mat-label i18n="@@podcasts.publish.title">Episode title</mat-label>
+                <input matInput [value]="episode.title" (input)="updateEpisode(i, { title: $any($event.target).value })" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label i18n="@@podcasts.publish.audio">Audio URL</mat-label>
+                <input matInput [value]="episode.audioUrl"
+                  (input)="updateEpisode(i, { audioUrl: $any($event.target).value })" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label i18n="@@podcasts.publish.description">Description</mat-label>
+                <textarea matInput rows="3" [value]="episode.description"
+                  (input)="updateEpisode(i, { description: $any($event.target).value })"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label i18n="@@podcasts.publish.notes">Show notes</mat-label>
+                <textarea matInput rows="5" [value]="episode.notes"
+                  (input)="updateEpisode(i, { notes: $any($event.target).value })"></textarea>
+              </mat-form-field>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </section>
+    </div>
+    } @else {
+    <div class="event-preview-section">
+      <div class="section-header">
+        <span class="section-title" i18n="@@podcasts.import.preview">Event preview</span>
+        <span class="section-count">{{ previewEvents().length }}</span>
+      </div>
+      <div class="event-preview-list">
+        @for (event of previewEvents(); track $index) {
+        <div class="event-preview-item">
+          <pre class="event-json">{{ event | json }}</pre>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    @if (hasFetched()) {
+    <button mat-stroked-button type="button" (click)="goBack()" [disabled]="isPublishing()" i18n="@@common.back">Back</button>
+    <button mat-stroked-button type="button" (click)="togglePreview()" [disabled]="isPublishing() || !canPublish()">
+      <mat-icon>{{ showPreview() ? 'visibility_off' : 'data_object' }}</mat-icon>
+      @if (showPreview()) {
+      <span i18n="@@podcasts.import.hideEvents">Hide events</span>
+      } @else {
+      <span i18n="@@podcasts.import.showEvents">Preview events</span>
+      }
+    </button>
+    <button mat-flat-button type="button" (click)="publish()" [disabled]="!canPublish()">
+      @if (isPublishing()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      }
+      <span>{{ publishLabel() }}</span>
+    </button>
+    } @else {
+    <button mat-button type="button" (click)="cancel()" i18n="@@common.cancel">Cancel</button>
+    }
+  </div>
+</app-custom-dialog>

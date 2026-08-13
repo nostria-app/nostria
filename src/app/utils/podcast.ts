@@ -168,3 +168,63 @@ export function formatPodcastDuration(totalSeconds?: number | null): string | un
 
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
+
+export interface PodcastShowDraft {
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  website?: string;
+}
+
+export interface PodcastEpisodeDraft {
+  title: string;
+  audioUrl: string;
+  audioType?: string;
+  imageUrl?: string;
+  description?: string;
+}
+
+/** NIP-F4 kind 10154 tags. */
+export function buildPodcastShowTags(draft: PodcastShowDraft): string[][] {
+  const title = draft.title.trim();
+  const tags: string[][] = [['title', title]];
+  const description = draft.description?.trim();
+  if (description) {
+    tags.push(['description', description]);
+  }
+
+  const imageUrl = draft.imageUrl?.trim();
+  if (imageUrl && isValidHttpUrl(imageUrl)) {
+    tags.push(['image', imageUrl]);
+  }
+
+  const website = draft.website?.trim();
+  if (website && isValidHttpUrl(website)) {
+    tags.push(['website', website]);
+  }
+
+  return tags;
+}
+
+/** NIP-F4 kind 54 tags. */
+export function buildPodcastEpisodeTags(draft: PodcastEpisodeDraft): string[][] {
+  const title = draft.title.trim();
+  const audioUrl = draft.audioUrl.trim();
+  const audioType = draft.audioType?.trim();
+  const tags: string[][] = [
+    ['title', title],
+    audioType ? ['audio', audioUrl, audioType] : ['audio', audioUrl],
+  ];
+
+  const description = draft.description?.trim();
+  if (description) {
+    tags.push(['description', description]);
+  }
+
+  const imageUrl = draft.imageUrl?.trim();
+  if (imageUrl && isValidHttpUrl(imageUrl)) {
+    tags.push(['image', imageUrl]);
+  }
+
+  return tags;
+}

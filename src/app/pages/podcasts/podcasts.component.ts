@@ -19,6 +19,7 @@ import { PodcastShowEventComponent } from '../../components/event-types/podcast-
 import { PodcastSettingsDialogComponent } from './podcast-settings-dialog/podcast-settings-dialog.component';
 import { PublishEpisodeDialogComponent } from './publish-episode-dialog/publish-episode-dialog.component';
 import { EditShowDialogComponent } from './edit-show-dialog/edit-show-dialog.component';
+import { ImportPodcastRssDialogComponent } from './import-podcast-rss-dialog/import-podcast-rss-dialog.component';
 import { episodeMatchesQuery, getPodcastTitle, showMatchesQuery } from '../../utils/podcast';
 
 const SECTION_LIMIT = 12;
@@ -42,6 +43,7 @@ const CURATED_FILTER = 'curated';
     PodcastSettingsDialogComponent,
     PublishEpisodeDialogComponent,
     EditShowDialogComponent,
+    ImportPodcastRssDialogComponent,
   ],
   templateUrl: './podcasts.component.html',
   styleUrl: './podcasts.component.scss',
@@ -68,6 +70,7 @@ export class PodcastsComponent implements OnDestroy {
   readonly showSettingsDialog = signal(false);
   readonly showPublishDialog = signal(false);
   readonly showEditShowDialog = signal(false);
+  readonly showImportRssDialog = signal(false);
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild('podcastsContent') podcastsContent?: ElementRef<HTMLDivElement>;
@@ -246,6 +249,10 @@ export class PodcastsComponent implements OnDestroy {
     this.showEditShowDialog.set(true);
   }
 
+  openImportRss(): void {
+    this.showImportRssDialog.set(true);
+  }
+
   onSettingsClosed(result: { saved: boolean } | null): void {
     this.showSettingsDialog.set(false);
     if (result?.saved) {
@@ -263,6 +270,13 @@ export class PodcastsComponent implements OnDestroy {
 
   onEditShowClosed(result: { published: boolean } | null): void {
     this.showEditShowDialog.set(false);
+    if (result?.published) {
+      this.refresh();
+    }
+  }
+
+  onImportRssClosed(result: { published: boolean } | null): void {
+    this.showImportRssDialog.set(false);
     if (result?.published) {
       this.refresh();
     }

@@ -5,17 +5,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { ImageInputComponent } from '../../../components/image-input/image-input.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DatabaseService } from '../../../services/database.service';
 import { NostrService } from '../../../services/nostr.service';
 import { PodcastDataService } from '../../../services/podcast-data.service';
 import {
+  buildPodcastShowTags,
   getPodcastDescription,
   getPodcastImage,
   getPodcastTitle,
   getPodcastWebsites,
-  isValidHttpUrl,
   PODCAST_METADATA_KIND,
 } from '../../../utils/podcast';
 
@@ -24,6 +25,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CustomDialogComponent,
+    ImageInputComponent,
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -37,10 +39,12 @@ import {
             <mat-label i18n="@@podcasts.show.titleField">Show title</mat-label>
             <input matInput formControlName="title" />
           </mat-form-field>
-          <mat-form-field appearance="outline" class="full">
-            <mat-label i18n="@@podcasts.show.image">Cover image URL</mat-label>
-            <input matInput formControlName="image" />
-          </mat-form-field>
+          <app-image-input
+            [label]="coverLabel"
+            shape="square"
+            [value]="imageUrl()"
+            (valueChange)="imageUrl.set($event)"
+          />
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.show.website">Website</mat-label>
             <input matInput formControlName="website" />
@@ -59,7 +63,10 @@ import {
       </div>
     </app-custom-dialog>
   `,
-  styles: [`.full { width: 100%; }`],
+  styles: [`
+    .full { width: 100%; }
+    app-image-input { display: block; margin-bottom: 1rem; }
+  `],
 })
 export class EditShowDialogComponent implements OnInit {
   closed = output<{ published: boolean } | null>();
@@ -73,10 +80,11 @@ export class EditShowDialogComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
 
   readonly title = $localize`:@@podcasts.show.dialogTitle:Show details`;
+  readonly coverLabel = $localize`:@@podcasts.show.cover:Cover image`;
   readonly isSaving = signal(false);
+  readonly imageUrl = signal('');
   readonly form = this.fb.nonNullable.group({
     title: ['', Validators.required],
-    image: [''],
     website: [''],
     description: [''],
   });
@@ -88,10 +96,10 @@ export class EditShowDialogComponent implements OnInit {
     if (!show) return;
     this.form.patchValue({
       title: getPodcastTitle(show) || '',
-      image: getPodcastImage(show) || '',
       website: getPodcastWebsites(show)[0] || '',
       description: getPodcastDescription(show) || '',
     });
+    this.imageUrl.set(getPodcastImage(show) || '');
   }
 
   async publish(): Promise<void> {
@@ -104,10 +112,12 @@ export class EditShowDialogComponent implements OnInit {
     const value = this.form.getRawValue();
     this.isSaving.set(true);
     try {
-      const tags: string[][] = [['title', value.title.trim()]];
-      if (value.description.trim()) tags.push(['description', value.description.trim()]);
-      if (value.image.trim() && isValidHttpUrl(value.image.trim())) tags.push(['image', value.image.trim()]);
-      if (value.website.trim() && isValidHttpUrl(value.website.trim())) tags.push(['website', value.website.trim()]);
+      const tags = buildPodcastShowTags({
+        title: value.title,
+        description: value.description,
+        imageUrl: this.imageUrl(),
+        website: value.website,
+      });
 
       const signed = await this.nostr.signEvent({
         kind: PODCAST_METADATA_KIND,
