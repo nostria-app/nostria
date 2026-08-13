@@ -23,6 +23,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { DateToggleComponent } from '../../../components/date-toggle/date-toggle.component';
 import { PodcastEpisodeMenuComponent } from '../../../components/podcast-episode-menu/podcast-episode-menu.component';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
@@ -32,6 +33,7 @@ import { MediaItem } from '../../../interfaces';
 import {
   formatPodcastDuration,
   getPodcastDescription,
+  getPodcastDurationSeconds,
   getPodcastImage,
   getPodcastTitle,
   getPrimaryPodcastAudioUrl,
@@ -47,6 +49,7 @@ import {
     MatProgressSpinnerModule,
     MatTooltipModule,
     UserProfileComponent,
+    DateToggleComponent,
     PodcastEpisodeMenuComponent,
     EventActionsToolbarComponent,
     CommentsListComponent,
@@ -88,6 +91,12 @@ import {
           <div class="hero-info">
             <h1>{{ title() }}</h1>
             <button type="button" class="show-link" (click)="openShow()">{{ showTitle() }}</button>
+            <div class="hero-meta">
+              <app-date-toggle [date]="episode()!.created_at"></app-date-toggle>
+              @if (durationLabel()) {
+                <span>{{ durationLabel() }}</span>
+              }
+            </div>
             <app-user-profile [pubkey]="episode()!.pubkey" mode="list"></app-user-profile>
             @if (description()) {
               <p>{{ description() }}</p>
@@ -166,6 +175,13 @@ import {
     .show-link {
       border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer;
       color: var(--mat-sys-primary);
+    }
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
     }
     p {
       margin: 0;
@@ -274,6 +290,14 @@ export class PodcastEpisodeComponent {
     const progress = this.mediaPlayer.getPodcastProgress(this.audioUrl());
     if (!progress) return '';
     return `${formatPodcastDuration(progress.position) || '0:00'} / ${formatPodcastDuration(progress.duration) || ''}`;
+  });
+  readonly durationLabel = computed(() => {
+    const episode = this.episode();
+    if (!episode) {
+      return '';
+    }
+    const progress = this.mediaPlayer.getPodcastProgress(this.audioUrl());
+    return formatPodcastDuration(progress?.duration ?? getPodcastDurationSeconds(episode) ?? null) || '';
   });
   readonly playLabel = $localize`:@@podcasts.action.play:Play`;
   readonly pauseLabel = $localize`:@@podcasts.action.pause:Pause`;

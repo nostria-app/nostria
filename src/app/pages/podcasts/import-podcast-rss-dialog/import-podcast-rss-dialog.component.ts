@@ -15,6 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, finalizeEvent, kinds, type UnsignedEvent } from 'nostr-tools';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { DateToggleComponent } from '../../../components/date-toggle/date-toggle.component';
 import { ImageInputComponent } from '../../../components/image-input/image-input.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
@@ -87,6 +88,7 @@ function isPodcastIdentityMode(value: string): value is PodcastIdentityMode {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CustomDialogComponent,
+    DateToggleComponent,
     ImageInputComponent,
     FormsModule,
     JsonPipe,
@@ -234,11 +236,15 @@ export class ImportPodcastRssDialogComponent {
       }
 
       this.showInfo.set(feed.show);
-      this.episodes.set(feed.episodes.map(episode => ({
-        ...episode,
-        selected: true,
-        expanded: false,
-      })));
+      this.episodes.set(
+        [...feed.episodes]
+          .sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
+          .map(episode => ({
+            ...episode,
+            selected: true,
+            expanded: false,
+          }))
+      );
       this.publishShow.set(!!feed.show.title);
       this.clearGeneratedIdentity();
       this.hasFetched.set(true);
@@ -655,6 +661,8 @@ export class ImportPodcastRssDialogComponent {
           audioType: episode.audioType,
           imageUrl: episode.imageUrl || show.imageUrl,
           description: episode.description,
+          episode: episode.episode,
+          duration: episode.durationSeconds ?? undefined,
         }),
         content: episode.notes.trim(),
       });

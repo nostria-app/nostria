@@ -235,10 +235,13 @@
               <mat-checkbox [checked]="episode.selected" (change)="toggleSelected(i, $event.checked)"
                 (click)="$event.stopPropagation()" [aria-label]="selectEpisodeLabel"></mat-checkbox>
               <button type="button" class="episode-toggle" (click)="toggleExpanded(i)">
-                <span class="episode-number">{{ i + 1 }}</span>
+                <span class="episode-number">{{ episode.episode || (i + 1) }}</span>
                 <span class="episode-info">
                   <span class="episode-title">{{ episode.title }}</span>
                   <span class="episode-meta">
+                    @if (episode.publishedAt) {
+                    <app-date-toggle [date]="episode.publishedAt"></app-date-toggle>
+                    }
                     @if (episode.duration) {
                     <span>{{ episode.duration }}</span>
                     }

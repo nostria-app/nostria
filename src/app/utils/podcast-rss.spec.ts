@@ -14,6 +14,7 @@ const SAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
       <guid>ep-1</guid>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
       <itunes:subtitle>First show</itunes:subtitle>
+      <itunes:episode>696</itunes:episode>
       <itunes:duration>3661</itunes:duration>
       <itunes:image href="https://cdn.example.com/ep1.jpg" />
       <content:encoded><![CDATA[<p>Show notes with a https://very-long.example.com/path/that/should-be-editable</p>]]></content:encoded>
@@ -51,11 +52,15 @@ describe('podcast RSS parser', () => {
       imageUrl: 'https://cdn.example.com/ep1.jpg',
       description: 'First show',
       notes: 'Show notes with a https://very-long.example.com/path/that/should-be-editable',
+      episode: '696',
       duration: '1:01:01',
+      durationSeconds: 3661,
       publishedAt: Math.floor(Date.parse('Mon, 01 Jan 2024 12:00:00 GMT') / 1000),
     });
     expect(feed.episodes[1].title).toBe('Episode Two');
     expect(feed.episodes[1].description).toBe('Second episode');
+    expect(feed.episodes[1].episode).toBe('');
+    expect(feed.episodes[1].durationSeconds).toBeNull();
   });
 
   it('rejects empty and invalid feeds', () => {

@@ -6,6 +6,8 @@ import {
   getPodcastAudio,
   getPodcastAuthors,
   getPodcastDescription,
+  getPodcastDurationSeconds,
+  getPodcastEpisodeNumber,
   getPodcastImage,
   getPodcastTitle,
   getPrimaryPodcastAudioUrl,
@@ -138,9 +140,28 @@ describe('podcast utils', () => {
       audioUrl: 'https://cdn.example.com/ep.mp3',
       audioType: 'audio/mpeg',
       imageUrl: 'not-a-url',
+      episode: '696',
+      duration: 4197,
     })).toEqual([
       ['title', 'Episode 1'],
       ['audio', 'https://cdn.example.com/ep.mp3', 'audio/mpeg'],
+      ['episode', '696'],
+      ['duration', '4197'],
     ]);
+  });
+
+  it('reads episode number and duration tags', () => {
+    const episode = event({
+      kind: PODCAST_EPISODE_KIND,
+      tags: [
+        ['title', 'Episode 1'],
+        ['audio', 'https://cdn.example.com/ep.mp3'],
+        ['episode', '696'],
+        ['duration', '4197'],
+      ],
+    });
+
+    expect(getPodcastEpisodeNumber(episode)).toBe('696');
+    expect(getPodcastDurationSeconds(episode)).toBe(4197);
   });
 });

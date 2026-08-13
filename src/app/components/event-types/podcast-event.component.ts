@@ -16,6 +16,7 @@ import { MediaItem } from '../../interfaces';
 import {
   formatPodcastDuration,
   getPodcastDescription,
+  getPodcastDurationSeconds,
   getPodcastImage,
   getPodcastTitle,
   getPrimaryPodcastAudioUrl,
@@ -61,6 +62,12 @@ export type PodcastEventMode = 'list' | 'card' | 'row';
             </button>
           </div>
           <a class="show" [href]="showHref()" (click)="openShow($event)">{{ showTitle() }}</a>
+          <div class="card-meta">
+            <app-date-toggle [date]="event().created_at"></app-date-toggle>
+            @if (durationLabel()) {
+              <span>{{ durationLabel() }}</span>
+            }
+          </div>
         </div>
       </div>
     } @else if (mode() === 'row') {
@@ -81,6 +88,7 @@ export type PodcastEventMode = 'list' | 'card' | 'row';
           <a class="row-title" [href]="episodeHref()" (click)="openDetails($event)">{{ title() }}</a>
           <a class="row-show" [href]="showHref()" (click)="openShow($event)">{{ showTitle() }}</a>
         </div>
+        <app-date-toggle class="row-date" [date]="event().created_at"></app-date-toggle>
         <span class="row-duration">{{ durationLabel() }}</span>
         <button mat-icon-button [matMenuTriggerFor]="episodeMenu.menu" (click)="$event.stopPropagation()" aria-label="More options">
           <mat-icon>more_horiz</mat-icon>
@@ -253,6 +261,15 @@ export type PodcastEventMode = 'list' | 'card' | 'row';
 
         &:hover { color: var(--mat-sys-primary); text-decoration: underline; }
       }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+      }
     }
 
     .podcast-row {
@@ -319,6 +336,11 @@ export type PodcastEventMode = 'list' | 'card' | 'row';
 
         &:hover { color: var(--mat-sys-primary); text-decoration: underline; }
       }
+      .row-date {
+        flex-shrink: 0;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
       .row-duration {
         color: var(--mat-sys-on-surface-variant);
         font-variant-numeric: tabular-nums;
@@ -452,7 +474,7 @@ export class PodcastEventComponent {
 
   readonly durationLabel = computed(() => {
     const progress = this.mediaPlayer.getPodcastProgress(this.audioUrl());
-    return formatPodcastDuration(progress?.duration ?? null) || '';
+    return formatPodcastDuration(progress?.duration ?? getPodcastDurationSeconds(this.event()) ?? null) || '';
   });
 
   async play(domEvent: Event): Promise<void> {

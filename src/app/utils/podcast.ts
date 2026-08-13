@@ -112,6 +112,20 @@ export function getPrimaryPodcastAudioUrl(event: Event | UnsignedEvent): string 
   return getPodcastAudio(event)[0]?.url;
 }
 
+export function getPodcastEpisodeNumber(event: Event | UnsignedEvent): string | undefined {
+  return tagValue(event, 'episode');
+}
+
+export function getPodcastDurationSeconds(event: Event | UnsignedEvent): number | undefined {
+  const raw = tagValue(event, 'duration');
+  if (!raw) {
+    return undefined;
+  }
+
+  const seconds = parseInt(raw, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+}
+
 export function isValidPodcastEpisode(event: Event | UnsignedEvent): boolean {
   return event.kind === PODCAST_EPISODE_KIND
     && !!getPodcastTitle(event)
@@ -182,6 +196,8 @@ export interface PodcastEpisodeDraft {
   audioType?: string;
   imageUrl?: string;
   description?: string;
+  episode?: string;
+  duration?: number;
 }
 
 /** NIP-F4 kind 10154 tags. */
@@ -224,6 +240,15 @@ export function buildPodcastEpisodeTags(draft: PodcastEpisodeDraft): string[][] 
   const imageUrl = draft.imageUrl?.trim();
   if (imageUrl && isValidHttpUrl(imageUrl)) {
     tags.push(['image', imageUrl]);
+  }
+
+  const episode = draft.episode?.trim();
+  if (episode) {
+    tags.push(['episode', episode]);
+  }
+
+  if (draft.duration != null && Number.isFinite(draft.duration) && draft.duration > 0) {
+    tags.push(['duration', String(Math.floor(draft.duration))]);
   }
 
   return tags;

@@ -17,7 +17,9 @@ export interface ParsedPodcastEpisode {
   description: string;
   notes: string;
   publishedAt: number | null;
+  episode: string;
   duration: string;
+  durationSeconds: number | null;
 }
 
 export interface ParsedPodcastFeed {
@@ -83,7 +85,8 @@ export function parsePodcastRssFeed(xml: string): ParsedPodcastFeed {
     const description = subtitle || truncateText(notes, 280);
     const pubDate = textContent(item, 'pubDate');
     const guid = textContent(item, 'guid') || audioUrl;
-    const duration = formatRssDuration(itunesText(item, 'duration'));
+    const rawDuration = itunesText(item, 'duration');
+    const durationSeconds = parseRssDurationToSeconds(rawDuration);
 
     episodes.push({
       guid,
@@ -94,7 +97,9 @@ export function parsePodcastRssFeed(xml: string): ParsedPodcastFeed {
       description,
       notes,
       publishedAt: parseRssDate(pubDate),
-      duration,
+      episode: itunesText(item, 'episode'),
+      duration: formatRssDuration(rawDuration),
+      durationSeconds,
     });
   });
 
