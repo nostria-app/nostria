@@ -180,7 +180,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       label: $localize`:@@command.nav.podcasts:Open Podcasts`,
       icon: 'podcasts',
       action: () => this.router.navigate(['/podcasts']),
-      keywords: ['podcasts', 'episodes', 'shows', 'audio', 'listen']
+      keywords: ['podcasts', 'episodes', 'shows', 'publishers', 'audio', 'listen']
+    },
+    {
+      id: 'nav-podcasts-publishers',
+      label: $localize`:@@command.nav.podcastsPublishers:Open Podcast Publishers`,
+      icon: 'person',
+      action: () => this.router.navigate(['/podcasts/publishers']),
+      keywords: ['podcasts', 'publishers', 'authors', 'maintainers']
     },
     {
       id: 'nav-streams',

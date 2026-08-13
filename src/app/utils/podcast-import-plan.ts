@@ -1,4 +1,4 @@
-import { AUTHORED_PODCASTS_KIND } from './podcast';
+import { AUTHORED_PODCASTS_KIND, isValidHttpUrl } from './podcast';
 
 export type ImportEventSigner = 'identity' | 'account';
 
@@ -60,4 +60,28 @@ export function readProfileLightningAddress(profile: { data?: unknown; event?: {
   }
 
   return '';
+}
+
+export function publishedPodcastAudioUrls(events: { tags: string[][] }[]): Set<string> {
+  const urls = new Set<string>();
+  for (const event of events) {
+    for (const tag of event.tags) {
+      const url = tag[0] === 'audio' ? tag[1]?.trim() : '';
+      if (url && isValidHttpUrl(url)) {
+        urls.add(url);
+      }
+    }
+  }
+  return urls;
+}
+
+export function selectUnpublishedEpisodes<T extends { audioUrl: string; selected: boolean }>(
+  episodes: T[],
+  publishedUrls: Iterable<string>,
+): T[] {
+  const published = new Set(Array.from(publishedUrls, url => url.trim()).filter(Boolean));
+  return episodes.map(episode => ({
+    ...episode,
+    selected: !published.has(episode.audioUrl.trim()),
+  }));
 }

@@ -1,4 +1,4 @@
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import type { PodcastShowDraft } from './podcast';
 
@@ -26,7 +26,54 @@ export interface GeneratedPodcastKeypair {
 }
 
 export function generatePodcastKeypair(): GeneratedPodcastKeypair {
-  const secretKey = generateSecretKey();
+  return keypairFromSecret(generateSecretKey());
+}
+
+export function parsePodcastIdentitySecret(input: string): GeneratedPodcastKeypair {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('Empty identity');
+  }
+
+  if (trimmed.startsWith('nsec')) {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type !== 'nsec') {
+      throw new Error('Invalid nsec');
+    }
+    return keypairFromSecret(decoded.data);
+  }
+
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return keypairFromSecret(hexToBytes(trimmed));
+  }
+
+  throw new Error('Invalid nsec or private key');
+}
+
+export function parsePodcastIdentityJson(json: string): GeneratedPodcastKeypair {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error('Invalid credentials file format');
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid credentials file format');
+  }
+
+  const credentials = parsed as Record<string, unknown>;
+  if (typeof credentials['nsec'] === 'string') {
+    return parsePodcastIdentitySecret(credentials['nsec']);
+  }
+  if (typeof credentials['privkey'] === 'string') {
+    return parsePodcastIdentitySecret(credentials['privkey']);
+  }
+
+  throw new Error('Invalid credentials file format');
+}
+
+function keypairFromSecret(secretKey: Uint8Array): GeneratedPodcastKeypair {
   const pubkey = getPublicKey(secretKey);
   return {
     secretKey,

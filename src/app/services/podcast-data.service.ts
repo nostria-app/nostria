@@ -10,6 +10,7 @@ import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 import { DEFAULT_PODCAST_RELAYS } from '../utils/podcast-default-relays';
 import {
+  AUTHORED_PODCASTS_KIND,
   isValidPodcastEpisode,
   isValidPodcastShow,
   PODCAST_EPISODE_KIND,
@@ -39,6 +40,7 @@ export class PodcastDataService {
 
   readonly episodes = signal<Event[]>([]);
   readonly shows = signal<Event[]>([]);
+  readonly publishers = signal<Event[]>([]);
   readonly loading = signal(true);
   readonly podcastRelays = signal<string[]>([]);
 
@@ -46,10 +48,14 @@ export class PodcastDataService {
 
   private episodeMap = new Map<string, Event>();
   private showMap = new Map<string, Event>();
+  private publisherMap = new Map<string, Event>();
   private episodeSubscription: { close: () => void } | null = null;
   private showSubscription: { close: () => void } | null = null;
+  private publisherSubscription: { close: () => void } | null = null;
   private initialized = false;
   private lastAuthorKey = '';
+  private readonly showRefreshInFlight = new Map<string, Promise<void>>();
+  private readonly publisherRefreshInFlight = new Map<string, Promise<void>>();
 
   async ensureInitialized(): Promise<void> {
     if (this.initialized) {
@@ -70,6 +76,13 @@ export class PodcastDataService {
       .sort((a, b) => b.created_at - a.created_at);
   }
 
+  getCachedShowAndEpisodes(pubkey: string): { show: Event | null; episodes: Event[] } {
+    return {
+      show: this.getShow(pubkey) ?? null,
+      episodes: this.getEpisodesForShow(pubkey),
+    };
+  }
+
   async refresh(authors: string[] | null): Promise<void> {
     await this.ensureInitialized();
     this.startSubscriptions(authors);
@@ -78,8 +91,41 @@ export class PodcastDataService {
   stopSubscriptions(): void {
     this.episodeSubscription?.close();
     this.showSubscription?.close();
+    this.publisherSubscription?.close();
     this.episodeSubscription = null;
     this.showSubscription = null;
+    this.publisherSubscription = null;
+  }
+
+  getPublisher(pubkey: string): Event | undefined {
+    return this.publisherMap.get(pubkey);
+  }
+
+  getPublisherShowPubkeys(pubkey: string): string[] {
+    const event = this.getPublisher(pubkey);
+    return event ? this.getPublisherShowPubkeysFromEvent(event) : [];
+  }
+
+  getShowsForPublisher(pubkey: string): Event[] {
+    return this.getPublisherShowPubkeys(pubkey)
+      .map(showPubkey => this.getShow(showPubkey))
+      .filter((show): show is Event => !!show);
+  }
+
+  addPublisher(event: Event): boolean {
+    if (!this.acceptPublisher(event)) {
+      return false;
+    }
+
+    const existing = this.publisherMap.get(event.pubkey);
+    if (existing && existing.created_at >= event.created_at) {
+      return false;
+    }
+
+    this.publisherMap.set(event.pubkey, event);
+    this.publishers.set(Array.from(this.publisherMap.values()));
+    void this.database.saveReplaceableEvent(event);
+    return true;
   }
 
   addEpisode(event: Event): boolean {
@@ -148,11 +194,29 @@ export class PodcastDataService {
     return true;
   }
 
+  private acceptPublisher(event: Event): boolean {
+    if (event.kind !== AUTHORED_PODCASTS_KIND) {
+      return false;
+    }
+    if (this.getPublisherShowPubkeysFromEvent(event).length === 0) {
+      return false;
+    }
+    if (this.reporting.isUserBlocked(event.pubkey) || this.reporting.isContentBlocked(event)) {
+      return false;
+    }
+    return true;
+  }
+
+  private getPublisherShowPubkeysFromEvent(event: Event): string[] {
+    return this.utilities.getPTagsValuesFromEvent(event).filter(pubkey => !!pubkey);
+  }
+
   private async loadFromDatabase(): Promise<void> {
     try {
-      const [cachedEpisodes, cachedShows] = await Promise.all([
+      const [cachedEpisodes, cachedShows, cachedPublishers] = await Promise.all([
         this.database.getEventsByKind(PODCAST_EPISODE_KIND),
         this.database.getEventsByKind(PODCAST_METADATA_KIND),
+        this.database.getEventsByKind(AUTHORED_PODCASTS_KIND),
       ]);
 
       for (const episode of cachedEpisodes) {
@@ -175,10 +239,21 @@ export class PodcastDataService {
         }
       }
 
+      for (const publisher of cachedPublishers) {
+        if (!this.acceptPublisher(publisher)) {
+          continue;
+        }
+        const existing = this.publisherMap.get(publisher.pubkey);
+        if (!existing || publisher.created_at > existing.created_at) {
+          this.publisherMap.set(publisher.pubkey, publisher);
+        }
+      }
+
       this.episodes.set(Array.from(this.episodeMap.values()));
       this.shows.set(Array.from(this.showMap.values()));
+      this.publishers.set(Array.from(this.publisherMap.values()));
 
-      if (this.episodeMap.size > 0 || this.showMap.size > 0) {
+      if (this.episodeMap.size > 0 || this.showMap.size > 0 || this.publisherMap.size > 0) {
         this.loading.set(false);
       }
     } catch (error) {
@@ -276,8 +351,9 @@ export class PodcastDataService {
 
     let episodesLoaded = false;
     let showsLoaded = false;
+    let publishersLoaded = false;
     const checkLoaded = () => {
-      if (episodesLoaded && showsLoaded) {
+      if (episodesLoaded && showsLoaded && publishersLoaded) {
         this.loading.set(false);
       }
     };
@@ -290,6 +366,10 @@ export class PodcastDataService {
       showsLoaded = true;
       checkLoaded();
     }, 5000);
+    const publisherTimeout = setTimeout(() => {
+      publishersLoaded = true;
+      checkLoaded();
+    }, 5000);
 
     const episodeFilter: Filter = {
       kinds: [PODCAST_EPISODE_KIND],
@@ -299,9 +379,14 @@ export class PodcastDataService {
       kinds: [PODCAST_METADATA_KIND],
       limit: SUBSCRIPTION_LIMIT,
     };
+    const publisherFilter: Filter = {
+      kinds: [AUTHORED_PODCASTS_KIND],
+      limit: SUBSCRIPTION_LIMIT,
+    };
     if (authors !== null) {
       episodeFilter.authors = authors;
       showFilter.authors = authors;
+      publisherFilter.authors = authors;
     }
 
     this.episodeSubscription = this.pool.subscribe(relayUrls, episodeFilter, (event: Event) => {
@@ -321,37 +406,109 @@ export class PodcastDataService {
         checkLoaded();
       }
     });
+
+    this.publisherSubscription = this.pool.subscribe(relayUrls, publisherFilter, (event: Event) => {
+      this.addPublisher(event);
+      if (!publishersLoaded) {
+        clearTimeout(publisherTimeout);
+        publishersLoaded = true;
+        checkLoaded();
+      }
+    });
   }
 
   async queryShowAndEpisodes(pubkey: string): Promise<{ show: Event | null; episodes: Event[] }> {
     await this.ensureInitialized();
+    await this.refreshShowAndEpisodes(pubkey);
+    return this.getCachedShowAndEpisodes(pubkey);
+  }
 
-    const relayUrls = this.getRelayUrls();
-    if (relayUrls.length > 0) {
-      const [showEvents, episodeEvents] = await Promise.all([
-        this.pool.query(relayUrls, {
-          kinds: [PODCAST_METADATA_KIND],
-          authors: [pubkey],
-          limit: 1,
-        }, QUERY_TIMEOUT_MS),
-        this.pool.query(relayUrls, {
-          kinds: [PODCAST_EPISODE_KIND],
-          authors: [pubkey],
-          limit: 200,
-        }, QUERY_TIMEOUT_MS),
-      ]);
+  async refreshShowAndEpisodes(pubkey: string): Promise<void> {
+    await this.ensureInitialized();
 
-      for (const show of showEvents) {
-        this.addShow(show);
-      }
-      for (const episode of episodeEvents) {
-        this.addEpisode(episode);
-      }
+    const existing = this.showRefreshInFlight.get(pubkey);
+    if (existing) {
+      return existing;
     }
 
-    return {
-      show: this.getShow(pubkey) ?? null,
-      episodes: this.getEpisodesForShow(pubkey),
-    };
+    const work = this.fetchShowAndEpisodes(pubkey).finally(() => {
+      this.showRefreshInFlight.delete(pubkey);
+    });
+    this.showRefreshInFlight.set(pubkey, work);
+    return work;
+  }
+
+  private async fetchShowAndEpisodes(pubkey: string): Promise<void> {
+    const relayUrls = this.getRelayUrls();
+    if (relayUrls.length === 0) {
+      return;
+    }
+
+    const [showEvents, episodeEvents] = await Promise.all([
+      this.pool.query(relayUrls, {
+        kinds: [PODCAST_METADATA_KIND],
+        authors: [pubkey],
+        limit: 1,
+      }, QUERY_TIMEOUT_MS),
+      this.pool.query(relayUrls, {
+        kinds: [PODCAST_EPISODE_KIND],
+        authors: [pubkey],
+        limit: 200,
+      }, QUERY_TIMEOUT_MS),
+    ]);
+
+    for (const show of showEvents) {
+      this.addShow(show);
+    }
+    for (const episode of episodeEvents) {
+      this.addEpisode(episode);
+    }
+  }
+
+  async refreshPublisher(pubkey: string): Promise<void> {
+    await this.ensureInitialized();
+
+    const existing = this.publisherRefreshInFlight.get(pubkey);
+    if (existing) {
+      return existing;
+    }
+
+    const work = this.fetchPublisher(pubkey).finally(() => {
+      this.publisherRefreshInFlight.delete(pubkey);
+    });
+    this.publisherRefreshInFlight.set(pubkey, work);
+    return work;
+  }
+
+  private async fetchPublisher(pubkey: string): Promise<void> {
+    const relayUrls = this.getRelayUrls();
+    if (relayUrls.length === 0) {
+      return;
+    }
+
+    const publisherEvents = await this.pool.query(relayUrls, {
+      kinds: [AUTHORED_PODCASTS_KIND],
+      authors: [pubkey],
+      limit: 1,
+    }, QUERY_TIMEOUT_MS);
+
+    for (const event of publisherEvents) {
+      this.addPublisher(event);
+    }
+
+    const showPubkeys = this.getPublisherShowPubkeys(pubkey);
+    if (showPubkeys.length === 0) {
+      return;
+    }
+
+    const showEvents = await this.pool.query(relayUrls, {
+      kinds: [PODCAST_METADATA_KIND],
+      authors: showPubkeys,
+      limit: Math.max(showPubkeys.length, 1),
+    }, QUERY_TIMEOUT_MS);
+
+    for (const show of showEvents) {
+      this.addShow(show);
+    }
   }
 }

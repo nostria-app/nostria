@@ -2020,7 +2020,7 @@ export class AccountLocalStateService {
 
   getPodcastsListFilter(pubkey: string): string {
     const state = this.getAccountState(pubkey);
-    return state.podcastsListFilter || 'curated';
+    return state.podcastsListFilter || 'all';
   }
 
   setPodcastsListFilter(pubkey: string, filter: string): void {

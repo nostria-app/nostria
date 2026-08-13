@@ -21,7 +21,7 @@ import { ListFilterMenuComponent, ListFilterValue } from '../list-filter-menu/li
 })
 export class PodcastListFilterComponent {
   initialFilter = input<ListFilterValue | undefined>(undefined);
-  defaultFilter = input<ListFilterValue>('curated');
+  defaultFilter = input<ListFilterValue>('all');
   filterChanged = output<ListFilterValue>();
   readonly curatedLabel = $localize`:@@podcasts.filter.curated:Curated`;
   readonly curatedDescription = $localize`:@@podcasts.filter.curatedDescription:Shows with published metadata`;

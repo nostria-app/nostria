@@ -479,6 +479,18 @@ export const routes: Routes = [
     title: 'Favorite Podcasts',
   },
   {
+    path: 'podcasts/publishers',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastPublishersComponent),
+    title: 'Podcast Publishers',
+  },
+  {
+    path: 'podcasts/publisher/:pubkey',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastPublisherComponent),
+    title: 'Podcast Publisher',
+  },
+  {
     path: 'podcasts/show/:pubkey',
     loadComponent: () =>
       import('./pages/podcasts/podcast-route-components').then(m => m.PodcastShowComponent),
@@ -1024,6 +1036,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/podcasts/favorites/podcast-favorites.component').then(m => m.PodcastFavoritesComponent),
     title: 'Favorite Podcasts',
+  },
+  {
+    path: 'podcasts/publisher/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/podcasts/publisher/podcast-publisher.component').then(m => m.PodcastPublisherComponent),
+    title: 'Podcast Publisher',
   },
   {
     path: 'music/song/:encodedAddress',

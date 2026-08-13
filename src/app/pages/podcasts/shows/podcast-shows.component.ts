@@ -91,7 +91,7 @@ export class PodcastShowsComponent implements OnDestroy {
   readonly loading = this.podcastData.loading;
   readonly isAuthenticated = computed(() => this.app.authenticated());
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
-  readonly selectedListFilter = signal<ListFilterValue>(this.urlListFilter() || CURATED_FILTER);
+  readonly selectedListFilter = signal<ListFilterValue>(this.urlListFilter() || 'all');
   readonly searchQuery = signal('');
   readonly searchPlaceholder = $localize`:@@podcasts.searchShows:Search shows...`;
 

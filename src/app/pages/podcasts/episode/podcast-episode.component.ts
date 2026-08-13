@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SafeHtml } from '@angular/platform-browser';
@@ -18,8 +19,15 @@ import { PodcastDataService } from '../../../services/podcast-data.service';
 import { PodcastFavoritesService } from '../../../services/podcast-favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { UtilitiesService } from '../../../services/utilities.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { PodcastEpisodeMenuComponent } from '../../../components/podcast-episode-menu/podcast-episode-menu.component';
+import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
+import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
+import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { MediaItem } from '../../../interfaces';
 import {
   formatPodcastDuration,
@@ -40,6 +48,8 @@ import {
     MatTooltipModule,
     UserProfileComponent,
     PodcastEpisodeMenuComponent,
+    EventActionsToolbarComponent,
+    CommentsListComponent,
   ],
   template: `
     <div class="panel-header">
@@ -68,7 +78,9 @@ import {
         <div class="hero">
           <div class="cover">
             @if (image()) {
-              <img [src]="image()" [alt]="title()" />
+              <button type="button" class="cover-button" (click)="openCoverPreview()" [attr.aria-label]="title()">
+                <img [src]="image()" [alt]="title()" />
+              </button>
             } @else {
               <mat-icon>podcasts</mat-icon>
             }
@@ -101,9 +113,28 @@ import {
           </div>
         </div>
 
+        <app-event-actions-toolbar
+          [event]="episode()!"
+          bookmarkType="e"
+          likeTapBehavior="like"
+          (replyClick)="scrollToComments()"
+          (bookmarkClick)="onBookmarkClick($event)"
+          (shareClick)="shareEpisode()"
+        />
+
         @if (contentHtml()) {
           <article class="notes" [innerHTML]="contentHtml()"></article>
         }
+
+        <div class="comments-section" #commentsSection>
+          <app-comments-list
+            [event]="episode()!"
+            [autoExpand]="true"
+            [label]="commentsLabel"
+            [singularLabel]="commentLabel"
+            [allowedKinds]="[1111]"
+          />
+        </div>
       </div>
     }
   `,
@@ -125,6 +156,10 @@ import {
       display: flex; align-items: center; justify-content: center;
       img { width: 100%; height: 100%; object-fit: cover; }
       mat-icon { font-size: 72px; width: 72px; height: 72px; }
+      .cover-button {
+        padding: 0; border: 0; background: transparent; cursor: pointer;
+        display: flex; width: 100%; height: 100%;
+      }
     }
     .hero-info { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
     h1 { margin: 0; font-size: 1.75rem; color: var(--mat-sys-on-surface); }
@@ -144,6 +179,7 @@ import {
       span { display: block; height: 100%; background: var(--mat-sys-primary); border-radius: inherit; }
     }
     .progress-label { font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); }
+    .comments-section { min-width: 0; }
     .notes {
       min-width: 0;
       max-width: 100%;
@@ -186,6 +222,11 @@ export class PodcastEpisodeComponent {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
+  private utilities = inject(UtilitiesService);
+  private userRelays = inject(UserRelaysService);
+  private readonly commentsSection = viewChild<ElementRef<HTMLElement>>('commentsSection');
 
   readonly loading = signal(true);
   readonly episode = signal<NostrEvent | null>(null);
@@ -238,6 +279,8 @@ export class PodcastEpisodeComponent {
   readonly pauseLabel = $localize`:@@podcasts.action.pause:Pause`;
   readonly favoriteLabel = $localize`:@@podcasts.action.favorite:Favorite show`;
   readonly unfavoriteLabel = $localize`:@@podcasts.action.unfavorite:Unfavorite show`;
+  readonly commentsLabel = $localize`:@@podcasts.comments:Comments`;
+  readonly commentLabel = $localize`:@@podcasts.comment:Comment`;
 
   constructor() {
     void this.load();
@@ -313,6 +356,29 @@ export class PodcastEpisodeComponent {
     this.mediaPlayer.play(mediaItem);
   }
 
+  async openCoverPreview(): Promise<void> {
+    const url = this.image();
+    if (!url) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import(
+      '../../../components/media-preview-dialog/media-preview.component'
+    );
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: url,
+        mediaType: 'image',
+        mediaTitle: this.title(),
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   openShow(): void {
     const episode = this.episode();
     if (episode) {
@@ -324,6 +390,77 @@ export class PodcastEpisodeComponent {
     const episode = this.episode();
     if (!episode || !this.accountState.pubkey()) return;
     await this.favorites.toggleShow(episode.pubkey);
+  }
+
+  scrollToComments(): void {
+    this.commentsSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async shareEpisode(): Promise<void> {
+    const ev = this.episode();
+    if (!ev) {
+      return;
+    }
+
+    const encoded = await this.encodeNevent(ev);
+    const title = this.title();
+    const dialogData: ShareArticleDialogData = {
+      title,
+      summary: $localize`:@@podcasts.share.summary:Listen to ${title}:title:`,
+      image: this.image() || undefined,
+      url: `https://nostria.app/podcasts/episode/${encoded}`,
+      eventId: ev.id,
+      pubkey: ev.pubkey,
+      kind: ev.kind,
+      encodedId: encoded,
+      event: ev,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: $localize`:@@podcasts.action.share:Share`,
+      showCloseButton: true,
+      data: dialogData,
+      width: '560px',
+      maxWidth: 'min(560px, calc(100vw - 24px))',
+    });
+  }
+
+  async onBookmarkClick(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const ev = this.episode();
+    if (!ev) {
+      return;
+    }
+
+    await this.userRelays.ensureRelaysForPubkey(ev.pubkey);
+    const relayHint = this.userRelays.getRelaysForPubkey(ev.pubkey)[0];
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: ev.id,
+        type: 'e',
+        eventKind: ev.kind,
+        pubkey: ev.pubkey,
+        relay: relayHint,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
+  }
+
+  private async encodeNevent(ev: NostrEvent): Promise<string> {
+    try {
+      const relays = this.utilities.getShareRelayHints(
+        await this.userRelays.getUserRelaysForPublishing(ev.pubkey)
+      );
+      return nip19.neventEncode({
+        id: ev.id,
+        author: ev.pubkey,
+        kind: ev.kind,
+        relays: relays.length > 0 ? relays : undefined,
+      });
+    } catch {
+      return ev.id;
+    }
   }
 
   goBack(): void {

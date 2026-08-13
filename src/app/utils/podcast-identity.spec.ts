@@ -5,6 +5,8 @@ import {
   deriveShortProfileName,
   emptyPodcastProfile,
   generatePodcastKeypair,
+  parsePodcastIdentityJson,
+  parsePodcastIdentitySecret,
   profileToShowDraft,
 } from './podcast-identity';
 
@@ -19,6 +21,9 @@ describe('podcast identity', () => {
     expect(credentials.privkey).toMatch(/^[0-9a-f]{64}$/);
     expect(getPublicKey(secretKey)).toBe(pubkey);
     expect(nip19.decode(credentials.nsec).type).toBe('nsec');
+    expect(parsePodcastIdentitySecret(credentials.nsec).pubkey).toBe(pubkey);
+    expect(parsePodcastIdentitySecret(credentials.privkey).pubkey).toBe(pubkey);
+    expect(parsePodcastIdentityJson(JSON.stringify(credentials)).pubkey).toBe(pubkey);
   });
 
   it('serializes kind 0 content and copies profile fields onto show metadata', () => {
@@ -49,5 +54,18 @@ describe('podcast identity', () => {
       website: 'https://example.com',
     });
     expect(deriveShortProfileName('Relay Talk Show')).toBe('relaytalkshow');
+  });
+
+  it('parses identity JSON that only has a privkey and rejects invalid secrets', () => {
+    const { secretKey, pubkey } = generatePodcastKeypair();
+    const credentials = buildPodcastLoginCredentials(secretKey);
+
+    expect(parsePodcastIdentityJson(JSON.stringify({ privkey: credentials.privkey })).pubkey).toBe(pubkey);
+    expect(() => parsePodcastIdentitySecret('')).toThrow('Empty identity');
+    expect(() => parsePodcastIdentitySecret('npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq5sy4l2')).toThrow();
+    expect(() => parsePodcastIdentityJson('{')).toThrow('Invalid credentials file format');
+    expect(() => parsePodcastIdentityJson(JSON.stringify({ npub: credentials.npub }))).toThrow(
+      'Invalid credentials file format',
+    );
   });
 });

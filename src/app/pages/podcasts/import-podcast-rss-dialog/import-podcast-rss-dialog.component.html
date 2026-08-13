@@ -25,20 +25,104 @@
     @if (!showPreview()) {
     <div class="fetched-content">
       <section class="identity-section">
-        @if (isPremium()) {
         <div class="section-header">
           <span class="section-title">
             <mat-icon>vpn_key</mat-icon>
-            <span i18n="@@podcasts.import.identityTitle">Unique podcast identity</span>
+            <span i18n="@@podcasts.import.identityCardTitle">Podcast identity</span>
           </span>
-          <mat-slide-toggle [checked]="useUniqueIdentity()" (change)="toggleUniqueIdentity($event.checked)">
-            <span i18n="@@podcasts.import.createKeypair">Create a new key pair</span>
-          </mat-slide-toggle>
         </div>
-        @if (useUniqueIdentity()) {
-        <p class="identity-hint" i18n="@@podcasts.import.identityHint">
-          Each show gets its own npub. Events are signed with that key so you can publish many podcasts without switching accounts. Nostria does not save this key — download the login JSON if you want to keep it.
+
+        <input #identityFileInput type="file" hidden accept="application/json,.json" (change)="importIdentityFile($event)" />
+
+        <mat-radio-group class="identity-options" [value]="identityMode()" (change)="selectIdentityMode($event.value)">
+          <mat-radio-button value="current" class="identity-option" [class.selected]="identityMode() === 'current'">
+            <span class="option-label" i18n="@@podcasts.import.optionCurrent">Current identity</span>
+            <span class="option-description" i18n="@@podcasts.import.optionCurrentHint">Publish with your logged-in account.</span>
+          </mat-radio-button>
+          <mat-radio-button value="new" class="identity-option" [class.selected]="identityMode() === 'new'" [disabled]="!isPremium()">
+            <span class="option-label-row">
+              <span class="option-label" i18n="@@podcasts.import.optionNew">New identity (nsec)</span>
+              @if (!isPremium()) {
+              <span class="premium-badge" i18n="@@podcasts.import.premiumBadge">Premium</span>
+              }
+            </span>
+            <span class="option-description" i18n="@@podcasts.import.optionNewHint">Generate a dedicated key for this show.</span>
+          </mat-radio-button>
+          <mat-radio-button value="import" class="identity-option" [class.selected]="identityMode() === 'import'" [disabled]="!isPremium()">
+            <span class="option-label-row">
+              <span class="option-label" i18n="@@podcasts.import.optionImport">Import JSON</span>
+              @if (!isPremium()) {
+              <span class="premium-badge" i18n="@@podcasts.import.premiumBadge">Premium</span>
+              }
+            </span>
+            <span class="option-description" i18n="@@podcasts.import.optionImportHint">Reuse a downloaded identity file.</span>
+          </mat-radio-button>
+          <mat-radio-button value="nsec" class="identity-option" [class.selected]="identityMode() === 'nsec'" [disabled]="!isPremium()">
+            <span class="option-label-row">
+              <span class="option-label" i18n="@@podcasts.import.optionNsec">Use nsec</span>
+              @if (!isPremium()) {
+              <span class="premium-badge" i18n="@@podcasts.import.premiumBadge">Premium</span>
+              }
+            </span>
+            <span class="option-description" i18n="@@podcasts.import.optionNsecHint">Paste an existing nsec or hex key.</span>
+          </mat-radio-button>
+        </mat-radio-group>
+
+        @if (!isPremium()) {
+        <div class="premium-teaser">
+          <mat-icon>workspace_premium</mat-icon>
+          <div class="premium-teaser-copy">
+            <strong i18n="@@podcasts.import.premiumTitle">Premium: unique podcast identities</strong>
+            <p i18n="@@podcasts.import.premiumOptionsBody">
+              Generate a dedicated npub/nsec for this show, import a login JSON, or paste an nsec to publish without switching accounts.
+            </p>
+            <button mat-stroked-button type="button" (click)="upgradeToPremium()">
+              <mat-icon>stars</mat-icon>
+              <span i18n="@@podcasts.import.upgrade">Upgrade to Premium</span>
+            </button>
+          </div>
+        </div>
+        }
+
+        @if (identityMode() === 'current') {
+        <p class="identity-hint">
+          <span i18n="@@podcasts.import.currentIdentityHint">Events will be signed by your account.</span>
+          @if (accountNpub()) {
+          <code class="current-npub">{{ accountNpub() }}</code>
+          }
         </p>
+        }
+
+        @if (identityMode() === 'import') {
+        <div class="identity-actions">
+          <button mat-stroked-button type="button" (click)="identityFileInput.click()">
+            <mat-icon>upload_file</mat-icon>
+            <span i18n="@@podcasts.import.chooseJson">Choose JSON file</span>
+          </button>
+        </div>
+        }
+
+        @if (identityMode() === 'nsec') {
+        <div class="nsec-input">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.nsecField">nsec or hex private key</mat-label>
+            <input matInput type="password" [ngModel]="nsecInput()" (ngModelChange)="nsecInput.set($event)" autocomplete="off" />
+          </mat-form-field>
+          <button mat-flat-button type="button" (click)="applyNsecIdentity()" [disabled]="!nsecInput().trim()"
+            i18n="@@podcasts.import.applyIdentity">Use this identity</button>
+        </div>
+        }
+
+        @if (identityMode() !== 'current' && podcastNpub()) {
+        @if (identityImported()) {
+        <p class="identity-hint" i18n="@@podcasts.import.importedHint">
+          Using an imported podcast identity. Selected episodes will be signed with this key so you can publish the latest ones without switching accounts.
+        </p>
+        } @else {
+        <p class="identity-hint identity-warning" i18n="@@podcasts.import.identityKeyWarning">
+          Nostria does not save this key. Download the login JSON and store it somewhere safe. If you lose it, you can never update this podcast or publish more episodes to it.
+        </p>
+        }
         <div class="identity-npub">
           <code>{{ podcastNpub() }}</code>
           <button mat-icon-button type="button" (click)="copyNpub()" [matTooltip]="copyNpubLabel" [attr.aria-label]="copyNpubLabel">
@@ -49,7 +133,13 @@
             <span i18n="@@podcasts.import.downloadJson">Download JSON</span>
           </button>
         </div>
-        <div class="profile-fields">
+        <div class="section-header">
+          <span class="section-title" i18n="@@podcasts.import.profileDetails">Profile</span>
+          <mat-slide-toggle [checked]="publishProfile()" (change)="publishProfile.set($event.checked)">
+            <span i18n="@@podcasts.import.publishProfile">Publish profile</span>
+          </mat-slide-toggle>
+        </div>
+        <div class="profile-fields" [class.disabled]="!publishProfile()">
           <app-image-input
             [label]="profilePictureLabel"
             shape="circle"
@@ -59,41 +149,34 @@
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.displayName">Display name</mat-label>
             <input matInput [value]="profile().displayName"
-              (input)="updateDisplayName($any($event.target).value)" />
+              (input)="updateDisplayName($any($event.target).value)" [disabled]="!publishProfile()" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.profileAbout">About</mat-label>
             <textarea matInput rows="3" [value]="profile().about"
-              (input)="updateProfile({ about: $any($event.target).value })"></textarea>
+              (input)="updateProfile({ about: $any($event.target).value })" [disabled]="!publishProfile()"></textarea>
           </mat-form-field>
+          <div class="identity-actions">
+            <button mat-stroked-button type="button" (click)="appendUnofficialDisclaimer()">
+              <mat-icon>info</mat-icon>
+              <span i18n="@@podcasts.import.addDisclaimer">Add unofficial publisher disclaimer</span>
+            </button>
+          </div>
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.profileName">Name</mat-label>
-            <input matInput [value]="profile().name" (input)="updateShortName($any($event.target).value)" />
+            <input matInput [value]="profile().name" (input)="updateShortName($any($event.target).value)"
+              [disabled]="!publishProfile()" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.profileWebsite">Website</mat-label>
-            <input matInput [value]="profile().website" (input)="updateProfile({ website: $any($event.target).value })" />
+            <input matInput [value]="profile().website" (input)="updateProfile({ website: $any($event.target).value })"
+              [disabled]="!publishProfile()" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.lightningAddress">Bitcoin Lightning Address</mat-label>
             <input matInput [value]="profile().lud16" (input)="updateProfile({ lud16: $any($event.target).value })"
-              placeholder="name@wallet.com" />
+              placeholder="name@wallet.com" [disabled]="!publishProfile()" />
           </mat-form-field>
-        </div>
-        }
-        } @else {
-        <div class="premium-teaser">
-          <mat-icon>workspace_premium</mat-icon>
-          <div class="premium-teaser-copy">
-            <strong i18n="@@podcasts.import.premiumTitle">Premium: unique podcast identities</strong>
-            <p i18n="@@podcasts.import.premiumBody">
-              Generate a dedicated npub/nsec for this show, publish a kind 0 profile plus podcast events without logging in as that key, and download the credentials as a Nostria login JSON file. Import as many podcasts as you want from your current account.
-            </p>
-            <button mat-stroked-button type="button" (click)="upgradeToPremium()">
-              <mat-icon>stars</mat-icon>
-              <span i18n="@@podcasts.import.upgrade">Upgrade to Premium</span>
-            </button>
-          </div>
         </div>
         }
       </section>

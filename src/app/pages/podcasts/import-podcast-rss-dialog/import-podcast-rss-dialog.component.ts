@@ -1,6 +1,6 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { JsonPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -23,6 +24,7 @@ import { DiscoveryRelayService } from '../../../services/relays/discovery-relay'
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrService } from '../../../services/nostr.service';
+import { DataService } from '../../../services/data.service';
 import { PodcastDataService } from '../../../services/podcast-data.service';
 import { parsePodcastRssFeed, type ParsedPodcastEpisode, type ParsedPodcastShow } from '../../../utils/podcast-rss';
 import {
@@ -31,12 +33,17 @@ import {
   deriveShortProfileName,
   emptyPodcastProfile,
   generatePodcastKeypair,
+  parsePodcastIdentityJson,
+  parsePodcastIdentitySecret,
   profileToShowDraft,
+  type GeneratedPodcastKeypair,
   type PodcastProfileDraft,
 } from '../../../utils/podcast-identity';
 import {
   importEventSigner,
+  publishedPodcastAudioUrls,
   readProfileLightningAddress,
+  selectUnpublishedEpisodes,
   uniqueRelayUrls,
 } from '../../../utils/podcast-import-plan';
 import {
@@ -62,11 +69,17 @@ interface PodcastEventPreview {
   content: string;
 }
 
+type PodcastIdentityMode = 'current' | 'new' | 'import' | 'nsec';
+
 interface ResolvedIdentity {
   useIdentity: boolean;
   pubkey: string;
   npub: string;
   secretKey: Uint8Array | null;
+}
+
+function isPodcastIdentityMode(value: string): value is PodcastIdentityMode {
+  return value === 'current' || value === 'new' || value === 'import' || value === 'nsec';
 }
 
 @Component({
@@ -83,6 +96,7 @@ interface ResolvedIdentity {
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatRadioModule,
     MatSlideToggleModule,
     MatTooltipModule,
   ],
@@ -99,6 +113,7 @@ export class ImportPodcastRssDialogComponent {
   private database = inject(DatabaseService);
   private nostr = inject(NostrService);
   private podcastData = inject(PodcastDataService);
+  private data = inject(DataService);
   private corsProxy = inject(CorsProxyService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
@@ -117,9 +132,12 @@ export class ImportPodcastRssDialogComponent {
   readonly hasFetched = signal(false);
   readonly showPreview = signal(false);
   readonly publishShow = signal(true);
-  readonly useUniqueIdentity = signal(false);
+  readonly publishProfile = signal(true);
+  readonly identityMode = signal<PodcastIdentityMode>('current');
+  readonly nsecInput = signal('');
   readonly podcastNpub = signal('');
   readonly podcastPubkey = signal('');
+  private readonly identityFileInput = viewChild<ElementRef<HTMLInputElement>>('identityFileInput');
   readonly profile = signal<PodcastProfileDraft>(emptyPodcastProfile());
   readonly showInfo = signal<ParsedPodcastShow>({
     title: '',
@@ -131,18 +149,26 @@ export class ImportPodcastRssDialogComponent {
   readonly previewEvents = signal<PodcastEventPreview[]>([]);
 
   readonly isPremium = computed(() => !!this.accountState.hasActiveSubscription());
+  readonly accountNpub = computed(() => this.accountState.npub());
+  readonly identityImported = computed(() => {
+    const mode = this.identityMode();
+    return mode === 'import' || mode === 'nsec';
+  });
   readonly episodeCount = computed(() => this.episodes().length);
   readonly selectedCount = computed(() => this.episodes().filter(episode => episode.selected).length);
   readonly canPublish = computed(() => {
     if (this.isPublishing()) {
       return false;
     }
-    if (this.useUniqueIdentity()) {
+    if (this.identityMode() !== 'current') {
       const profile = this.profile();
-      if (!this.podcastPubkey() || !(profile.displayName.trim() || profile.name.trim())) {
+      if (!this.podcastPubkey()) {
         return false;
       }
-      return this.selectedCount() > 0 || this.publishShow();
+      if (this.publishProfile() && !(profile.displayName.trim() || profile.name.trim())) {
+        return false;
+      }
+      return this.selectedCount() > 0 || this.publishShow() || this.publishProfile();
     }
     if (this.publishShow() && !this.showInfo().title.trim()) {
       return false;
@@ -151,7 +177,7 @@ export class ImportPodcastRssDialogComponent {
   });
   readonly publishLabel = computed(() => {
     const selected = this.selectedCount();
-    if (this.useUniqueIdentity()) {
+    if (this.identityMode() === 'new') {
       return selected > 0
         ? $localize`:@@podcasts.import.publishNewIdentity:Publish new podcast + ${selected}:count: episodes`
         : $localize`:@@podcasts.import.publishNewIdentityOnly:Publish new podcast identity`;
@@ -167,9 +193,12 @@ export class ImportPodcastRssDialogComponent {
   readonly publishSummaryLines = computed(() => this.buildPublishSummaryLines());
   readonly publishSummarySigner = computed(() => {
     const identity = this.resolveIdentity();
-    return identity.useIdentity
-      ? $localize`:@@podcasts.import.summarySignedByIdentity:Signed by the new podcast identity`
-      : $localize`:@@podcasts.import.summarySignedByYou:Signed by your account`;
+    if (!identity.useIdentity) {
+      return $localize`:@@podcasts.import.summarySignedByYou:Signed by your account`;
+    }
+    return this.identityImported()
+      ? $localize`:@@podcasts.import.summarySignedByImported:Signed by the imported podcast identity`
+      : $localize`:@@podcasts.import.summarySignedByIdentity:Signed by the new podcast identity`;
   });
   readonly publishSummaryRelays = computed(() => {
     if (this.resolveIdentity().useIdentity) {
@@ -180,6 +209,7 @@ export class ImportPodcastRssDialogComponent {
 
   private secretKey: Uint8Array | null = null;
   private nameManuallyEdited = false;
+  private identityLoadToken = 0;
 
   constructor() {
     void this.podcastData.ensureInitialized();
@@ -230,34 +260,77 @@ export class ImportPodcastRssDialogComponent {
     }
   }
 
-  toggleUniqueIdentity(enabled: boolean): void {
-    if (!this.isPremium()) {
-      this.useUniqueIdentity.set(false);
+  selectIdentityMode(mode: string): void {
+    if (!isPodcastIdentityMode(mode)) {
       return;
     }
 
-    if (!enabled) {
+    if (mode !== 'current' && !this.isPremium()) {
+      this.clearGeneratedIdentity();
+      this.snackBar.open($localize`:@@podcasts.import.premiumRequired:Premium is required to publish as a new podcast identity`, '', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    if (mode === 'current') {
       this.clearGeneratedIdentity();
       return;
     }
 
-    const keypair = generatePodcastKeypair();
-    this.secretKey = keypair.secretKey;
-    this.podcastPubkey.set(keypair.pubkey);
-    this.podcastNpub.set(keypair.npub);
-    this.useUniqueIdentity.set(true);
-    this.publishShow.set(true);
+    if (mode === 'new') {
+      this.applyIdentity(generatePodcastKeypair(), 'new');
+      this.nsecInput.set('');
+      return;
+    }
 
-    const show = this.showInfo();
-    this.nameManuallyEdited = false;
-    this.profile.set({
-      name: deriveShortProfileName(show.title),
-      displayName: show.title,
-      about: show.description,
-      picture: show.imageUrl,
-      website: show.website,
-      lud16: readProfileLightningAddress(this.accountState.profile()),
-    });
+    if (this.identityMode() !== mode) {
+      this.clearDedicatedIdentity();
+      this.identityMode.set(mode);
+    }
+
+    if (mode === 'import') {
+      queueMicrotask(() => this.identityFileInput()?.nativeElement.click());
+    }
+  }
+
+  importIdentityFile(event: globalThis.Event): void {
+    if (!this.isPremium()) {
+      return;
+    }
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const content = typeof reader.result === 'string' ? reader.result : '';
+        this.applyIdentity(parsePodcastIdentityJson(content), 'import');
+        this.snackBar.open($localize`:@@podcasts.import.identityLoaded:Podcast identity loaded`, '', { duration: 2500 });
+      } catch {
+        this.snackBar.open($localize`:@@podcasts.import.invalidIdentityFile:Invalid identity JSON file`, '', { duration: 3000 });
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  applyNsecIdentity(): void {
+    if (!this.isPremium()) {
+      return;
+    }
+
+    try {
+      this.applyIdentity(parsePodcastIdentitySecret(this.nsecInput()), 'nsec');
+      this.nsecInput.set('');
+      this.snackBar.open($localize`:@@podcasts.import.identityLoaded:Podcast identity loaded`, '', { duration: 2500 });
+    } catch {
+      this.snackBar.open($localize`:@@podcasts.import.invalidNsec:Enter a valid nsec or hex private key`, '', { duration: 3000 });
+    }
   }
 
   updateDisplayName(value: string): void {
@@ -271,6 +344,25 @@ export class ImportPodcastRssDialogComponent {
   updateShortName(value: string): void {
     this.nameManuallyEdited = true;
     this.updateProfile({ name: value });
+  }
+
+  appendUnofficialDisclaimer(): void {
+    const npub = this.accountNpub();
+    if (!npub) {
+      this.snackBar.open($localize`:@@podcasts.import.signIn:Sign in to import a podcast`, '', { duration: 3000 });
+      return;
+    }
+
+    const disclaimer = $localize`:@@podcasts.import.unofficialDisclaimer:This podcast is republished on Nostr by an unofficial maintainer. Zaps paid here go to that maintainer, not the original podcast author. If you are the original author and want to self-publish, please contact the publisher: ${npub}:npub:.`;
+    const about = this.profile().about.trim();
+    if (about.includes(disclaimer)) {
+      return;
+    }
+
+    this.updateProfile({ about: about ? `${about}\n\n${disclaimer}` : disclaimer });
+    if (!this.publishProfile()) {
+      this.publishProfile.set(true);
+    }
   }
 
   updateProfile(updates: Partial<PodcastProfileDraft>): void {
@@ -366,7 +458,7 @@ export class ImportPodcastRssDialogComponent {
     }
 
     const identity = this.resolveIdentity();
-    if (this.useUniqueIdentity() && !identity.useIdentity) {
+    if (this.identityMode() !== 'current' && !identity.useIdentity) {
       this.snackBar.open($localize`:@@podcasts.import.premiumRequired:Premium is required to publish as a new podcast identity`, '', {
         duration: 4000,
       });
@@ -381,35 +473,71 @@ export class ImportPodcastRssDialogComponent {
 
     this.isPublishing.set(true);
     this.showPreview.set(false);
-    let publishedCount = 0;
 
     try {
+      const signedEvents: Event[] = [];
       for (const template of templates) {
-        const signed = await this.signImportEvent(template, identity, accountPubkey);
-        if (identity.useIdentity && importEventSigner(signed.kind, true) === 'identity' && signed.pubkey !== identity.pubkey) {
-          throw new Error('Podcast identity event was not signed by the generated key');
+        try {
+          const signed = await this.signImportEvent(template, identity, accountPubkey);
+          if (identity.useIdentity && importEventSigner(signed.kind, true) === 'identity' && signed.pubkey !== identity.pubkey) {
+            throw new Error('Podcast identity event was not signed by the generated key');
+          }
+          signedEvents.push(signed);
+        } catch (error) {
+          this.logger.error('Failed to sign imported podcast event:', error);
+          if (signedEvents.length === 0) {
+            throw error;
+          }
+          break;
         }
-
-        await this.persistPublishedEvent(signed);
-        await this.publishImportEvent(signed, identity.useIdentity);
-        publishedCount += 1;
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      if (identity.useIdentity) {
+      let publishedCount = 0;
+      for (const signed of signedEvents) {
+        try {
+          await this.publishImportEvent(signed, identity.useIdentity);
+          await this.persistPublishedEvent(signed);
+          publishedCount += 1;
+        } catch (error) {
+          this.logger.warn('Failed to publish imported podcast event:', error);
+        }
+      }
+
+      if (identity.useIdentity && publishedCount > 0) {
         await this.addAuthoredPodcast(accountPubkey, identity.pubkey);
-        this.downloadCredentials();
+        if (!this.identityImported()) {
+          this.downloadCredentials();
+        }
       }
-      this.snackBar.open(
-        $localize`:@@podcasts.import.published:Published ${publishedCount}:count: events`,
-        '',
-        { duration: 3000 }
-      );
+
+      if (publishedCount === 0) {
+        throw new Error('No events published');
+      }
+
+      if (publishedCount < templates.length) {
+        this.snackBar.open(
+          $localize`:@@podcasts.import.partialPublish:Published ${publishedCount}:count: of ${templates.length}:total: events`,
+          '',
+          { duration: 4000 },
+        );
+      } else {
+        this.snackBar.open(
+          $localize`:@@podcasts.import.published:Published ${publishedCount}:count: events`,
+          '',
+          { duration: 3000 },
+        );
+      }
       this.closed.emit({ published: true });
-    } catch {
-      this.snackBar.open($localize`:@@podcasts.import.publishFailed:Failed to publish imported podcast`, '', {
-        duration: 3000,
-      });
+    } catch (error) {
+      this.logger.error('Failed to publish imported podcast:', error);
+      const message = error instanceof Error ? error.message : '';
+      this.snackBar.open(
+        message.toLowerCase().includes('insufficient permissions')
+          ? $localize`:@@podcasts.import.extensionPermission:The extension denied signing. Approve "sign event" for Nostria, then publish again.`
+          : $localize`:@@podcasts.import.publishFailed:Failed to publish imported podcast`,
+        '',
+        { duration: 5000 },
+      );
     } finally {
       this.isPublishing.set(false);
     }
@@ -454,8 +582,9 @@ export class ImportPodcastRssDialogComponent {
         content: existing?.content ?? '',
         tags,
       });
-      await this.database.saveReplaceableEvent(signed);
       await this.publishToRelays(this.contentRelayUrls(), signed);
+      await this.database.saveReplaceableEvent(signed);
+      this.podcastData.addPublisher(signed);
     } catch (error) {
       this.logger.warn('Failed to update authored podcasts list:', error);
     }
@@ -477,13 +606,15 @@ export class ImportPodcastRssDialogComponent {
 
     if (identity.useIdentity) {
       const contentRelays = this.contentRelayUrls();
-      events.push({
-        kind: kinds.Metadata,
-        pubkey: identity.pubkey,
-        created_at: now,
-        tags: [],
-        content: buildPodcastProfileContent(this.profile()),
-      });
+      if (this.publishProfile()) {
+        events.push({
+          kind: kinds.Metadata,
+          pubkey: identity.pubkey,
+          created_at: now,
+          tags: [],
+          content: buildPodcastProfileContent(this.profile()),
+        });
+      }
       if (contentRelays.length > 0) {
         events.push({
           kind: kinds.RelayList,
@@ -533,7 +664,7 @@ export class ImportPodcastRssDialogComponent {
   }
 
   private resolveIdentity(): ResolvedIdentity {
-    const useIdentity = this.useUniqueIdentity() === true
+    const useIdentity = this.identityMode() !== 'current'
       && this.isPremium() === true
       && this.secretKey !== null
       && this.podcastPubkey().length > 0;
@@ -590,11 +721,7 @@ export class ImportPodcastRssDialogComponent {
       throw new Error('No relays available for publish');
     }
 
-    try {
-      await this.pool.publish(relayUrls, event);
-    } catch (error) {
-      this.logger.warn('Some relays failed while publishing imported podcast event:', error);
-    }
+    await this.pool.publish(relayUrls, event);
   }
 
   private contentRelayUrls(): string[] {
@@ -636,12 +763,126 @@ export class ImportPodcastRssDialogComponent {
     return lines;
   }
 
-  private clearGeneratedIdentity(): void {
+  private applyIdentity(keypair: GeneratedPodcastKeypair, mode: Exclude<PodcastIdentityMode, 'current'>): void {
+    this.secretKey = keypair.secretKey;
+    this.podcastPubkey.set(keypair.pubkey);
+    this.podcastNpub.set(keypair.npub);
+    this.identityMode.set(mode);
+    this.publishShow.set(true);
+    this.publishProfile.set(mode === 'new');
+    this.prefillProfileFromRss();
+    if (mode === 'import' || mode === 'nsec') {
+      const token = ++this.identityLoadToken;
+      void this.loadImportedIdentity(keypair.pubkey, token);
+    }
+  }
+
+  private async loadImportedIdentity(pubkey: string, token: number): Promise<void> {
+    await Promise.all([
+      this.loadExistingIdentityProfile(pubkey, token),
+      this.deselectPublishedEpisodes(pubkey, token),
+    ]);
+  }
+
+  private prefillProfileFromRss(): void {
+    const show = this.showInfo();
+    this.nameManuallyEdited = false;
+    this.profile.set({
+      name: deriveShortProfileName(show.title),
+      displayName: show.title,
+      about: show.description,
+      picture: show.imageUrl,
+      website: show.website,
+      lud16: readProfileLightningAddress(this.accountState.profile()),
+    });
+  }
+
+  private async deselectPublishedEpisodes(pubkey: string, token: number): Promise<void> {
+    const events = [...this.podcastData.getEpisodesForShow(pubkey)];
+
+    try {
+      const cached = await this.database.getEventsByPubkeyAndKind(pubkey, PODCAST_EPISODE_KIND);
+      events.push(...cached);
+    } catch (error) {
+      this.logger.warn('Could not load cached podcast episodes for imported identity:', error);
+    }
+
+    try {
+      const fromRelays = await this.pool.query(this.contentRelayUrls(), {
+        kinds: [PODCAST_EPISODE_KIND],
+        authors: [pubkey],
+        limit: 400,
+      }, 5000);
+      for (const event of fromRelays) {
+        this.podcastData.addEpisode(event);
+        events.push(event);
+      }
+    } catch (error) {
+      this.logger.warn('Could not query published podcast episodes for imported identity:', error);
+    }
+
+    const publishedUrls = publishedPodcastAudioUrls(events);
+    if (publishedUrls.size === 0 || token !== this.identityLoadToken) {
+      return;
+    }
+
+    const before = this.selectedCount();
+    this.episodes.update(episodes => selectUnpublishedEpisodes(episodes, publishedUrls));
+    const skipped = before - this.selectedCount();
+    if (skipped > 0) {
+      this.snackBar.open(
+        $localize`:@@podcasts.import.skippedPublished:Deselected ${skipped}:count: already published episodes`,
+        '',
+        { duration: 3500 },
+      );
+    }
+  }
+
+  private async loadExistingIdentityProfile(pubkey: string, token: number): Promise<void> {
+    try {
+      const existing = await this.data.getProfile(pubkey);
+      const data = existing?.data;
+      if (!data || typeof data !== 'object' || token !== this.identityLoadToken) {
+        return;
+      }
+
+      const record = data as Record<string, unknown>;
+      const name = typeof record['name'] === 'string' ? record['name'] : '';
+      const displayName = typeof record['display_name'] === 'string' ? record['display_name'] : '';
+      const about = typeof record['about'] === 'string' ? record['about'] : '';
+      const picture = typeof record['picture'] === 'string' ? record['picture'] : '';
+      const website = typeof record['website'] === 'string' ? record['website'] : '';
+      const lud16 = typeof record['lud16'] === 'string' ? record['lud16'] : '';
+
+      this.profile.update(profile => ({
+        name: name || profile.name,
+        displayName: displayName || name || profile.displayName,
+        about: about || profile.about,
+        picture: picture || profile.picture,
+        website: website || profile.website,
+        lud16: lud16 || profile.lud16,
+      }));
+      if (name) {
+        this.nameManuallyEdited = true;
+      }
+    } catch (error) {
+      this.logger.warn('Could not load existing podcast profile:', error);
+    }
+  }
+
+  private clearDedicatedIdentity(): void {
+    this.identityLoadToken += 1;
     this.secretKey = null;
-    this.useUniqueIdentity.set(false);
+    this.nsecInput.set('');
+    this.publishProfile.set(true);
     this.nameManuallyEdited = false;
     this.podcastNpub.set('');
     this.podcastPubkey.set('');
     this.profile.set(emptyPodcastProfile());
+  }
+
+  private clearGeneratedIdentity(): void {
+    this.clearDedicatedIdentity();
+    this.identityMode.set('current');
   }
 }

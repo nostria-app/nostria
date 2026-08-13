@@ -71,7 +71,7 @@
   }
 
   <div class="podcasts-content" #podcastsContent>
-    @if (loading() && episodesPreview().length === 0 && showsPreview().length === 0) {
+    @if (loading() && episodesPreview().length === 0 && showsPreview().length === 0 && publishersPreview().length === 0) {
       <div class="loading-container">
         <mat-spinner diameter="50"></mat-spinner>
         <p i18n="@@podcasts.loading">Loading podcasts...</p>
@@ -146,11 +146,33 @@
         </section>
       }
 
-      @if (episodesPreview().length === 0 && showsPreview().length === 0) {
+      @if (publishersPreview().length > 0) {
+        <section class="podcasts-section">
+          <div class="section-header">
+            <h2>
+              <span i18n="@@podcasts.section.publishers">Publishers</span>
+              <span class="section-count">{{ filteredPublishers().length }}</span>
+            </h2>
+            @if (hasMorePublishers()) {
+              <button mat-button (click)="goToPublishers()" class="show-all-btn">
+                <span i18n="@@podcasts.showAll">Show all</span>
+                <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+              </button>
+            }
+          </div>
+          <div class="podcasts-grid">
+            @for (publisher of publishersPreview(); track publisher.id) {
+              <app-podcast-publisher-card [event]="publisher" />
+            }
+          </div>
+        </section>
+      }
+
+      @if (episodesPreview().length === 0 && showsPreview().length === 0 && publishersPreview().length === 0) {
         <div class="empty-state">
           <mat-icon>podcasts</mat-icon>
           <h2 i18n="@@podcasts.empty.title">No podcasts found</h2>
-          <p i18n="@@podcasts.empty.message">Curated view only shows episodes from shows that published podcast metadata. Switch to Following or Public, or add dedicated podcast relays in settings.</p>
+          <p i18n="@@podcasts.empty.publicMessage">No podcasts found on your relays yet. Add dedicated podcast relays in settings, or try Curated to see only shows with published metadata.</p>
           <button mat-flat-button (click)="refresh()">
             <mat-icon>refresh</mat-icon>
             <span i18n="@@podcasts.refresh">Refresh</span>

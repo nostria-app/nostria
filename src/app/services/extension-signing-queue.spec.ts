@@ -108,4 +108,34 @@ describe('Extension signing queue serialization', () => {
             'sign:second:end',
         ]);
     });
+
+    it('must not start a second signEvent while the first prompt is still open', async () => {
+        const runExclusive = createExclusiveInteractionRunner();
+        let firstStarted = false;
+        let secondStartedWhileFirstOpen = false;
+        let releaseFirst!: () => void;
+
+        const first = runExclusive(async () => {
+            firstStarted = true;
+            await new Promise<void>(resolve => {
+                releaseFirst = resolve;
+            });
+            return 'first';
+        });
+
+        const second = runExclusive(async () => {
+            secondStartedWhileFirstOpen = !firstStarted || releaseFirst === undefined;
+            return 'second';
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(firstStarted).toBe(true);
+        expect(secondStartedWhileFirstOpen).toBe(false);
+
+        releaseFirst();
+        await expect(first).resolves.toBe('first');
+        await expect(second).resolves.toBe('second');
+        expect(secondStartedWhileFirstOpen).toBe(false);
+    });
 });

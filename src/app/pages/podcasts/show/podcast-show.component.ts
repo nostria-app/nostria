@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
@@ -17,6 +19,12 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 import { PodcastEventComponent } from '../../../components/event-types/podcast-event.component';
 import { PodcastShowMenuComponent } from '../../../components/podcast-show-menu/podcast-show-menu.component';
 import { EditShowDialogComponent } from '../edit-show-dialog/edit-show-dialog.component';
+import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
+import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
+import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { MediaItem } from '../../../interfaces';
 import {
   getPodcastAuthors,
@@ -40,6 +48,8 @@ import {
     PodcastEventComponent,
     PodcastShowMenuComponent,
     EditShowDialogComponent,
+    EventActionsToolbarComponent,
+    CommentsListComponent,
   ],
   template: `
     <div class="panel-header">
@@ -68,7 +78,9 @@ import {
         <div class="hero">
           <div class="cover">
             @if (image()) {
-              <img [src]="image()" [alt]="title()" />
+              <button type="button" class="cover-button" (click)="openCoverPreview()" [attr.aria-label]="title()">
+                <img [src]="image()" [alt]="title()" />
+              </button>
             } @else {
               <mat-icon>podcasts</mat-icon>
             }
@@ -92,6 +104,17 @@ import {
           </div>
         </div>
 
+        @if (show(); as currentShow) {
+          <app-event-actions-toolbar
+            [event]="currentShow"
+            bookmarkType="e"
+            likeTapBehavior="like"
+            (replyClick)="scrollToComments()"
+            (bookmarkClick)="onBookmarkClick($event)"
+            (shareClick)="shareShow()"
+          />
+        }
+
         @if (episodes().length === 0) {
           <div class="empty">
             <p i18n="@@podcasts.show.noEpisodes">No episodes from this show yet.</p>
@@ -100,6 +123,18 @@ import {
           @for (episode of episodes(); track episode.id; let i = $index) {
             <app-podcast-event [event]="episode" mode="row" [queueEpisodes]="episodes()" [queueIndex]="i"></app-podcast-event>
           }
+        }
+
+        @if (show(); as currentShow) {
+          <div class="comments-section" #commentsSection>
+            <app-comments-list
+              [event]="currentShow"
+              [autoExpand]="true"
+              [label]="commentsLabel"
+              [singularLabel]="commentLabel"
+              [allowedKinds]="[1111]"
+            />
+          </div>
         }
       </div>
     }
@@ -126,6 +161,10 @@ import {
       display: flex; align-items: center; justify-content: center;
       img { width: 100%; height: 100%; object-fit: cover; }
       mat-icon { font-size: 64px; width: 64px; height: 64px; }
+      .cover-button {
+        padding: 0; border: 0; background: transparent; cursor: pointer;
+        display: flex; width: 100%; height: 100%;
+      }
     }
     .hero-info { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
     h1 { margin: 0; font-size: 1.75rem; color: var(--mat-sys-on-surface); }
@@ -136,6 +175,7 @@ import {
     }
     .hero-actions { display: flex; align-items: center; gap: 1rem; }
     .count { color: var(--mat-sys-on-surface-variant); }
+    .comments-section { margin-top: 1.5rem; min-width: 0; }
     .empty { display: flex; justify-content: center; padding: 3rem 1rem; color: var(--mat-sys-on-surface-variant); }
     @media (max-width: 600px) {
       .hero { flex-direction: column; }
@@ -153,12 +193,29 @@ export class PodcastShowComponent {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
+  private userRelays = inject(UserRelaysService);
+  private readonly commentsSection = viewChild<ElementRef<HTMLElement>>('commentsSection');
 
-  readonly loading = signal(true);
+  readonly refreshing = signal(false);
   readonly showEditDialog = signal(false);
-  readonly show = signal<NostrEvent | null>(null);
-  readonly episodes = signal<NostrEvent[]>([]);
   readonly pubkey = signal('');
+  readonly show = computed(() => {
+    this.podcastData.shows();
+    return this.podcastData.getShow(this.pubkey()) ?? null;
+  });
+  readonly episodes = computed(() => {
+    this.podcastData.episodes();
+    return this.podcastData.getEpisodesForShow(this.pubkey());
+  });
+  readonly loading = computed(() => {
+    if (!this.pubkey()) {
+      return true;
+    }
+    const hasCache = !!this.show() || this.episodes().length > 0;
+    return !hasCache && this.refreshing();
+  });
   readonly isAuthenticated = computed(() => this.app.authenticated());
   readonly isFavorite = computed(() => this.favorites.isFavoriteShow(this.pubkey()));
   readonly title = computed(() => getPodcastTitle(this.show() ?? { tags: [] } as unknown as NostrEvent) || $localize`:@@podcasts.untitledShow:Untitled podcast`);
@@ -168,19 +225,32 @@ export class PodcastShowComponent {
   readonly authors = computed(() => getPodcastAuthors(this.show() ?? { tags: [] } as unknown as NostrEvent));
   readonly favoriteLabel = $localize`:@@podcasts.action.favorite:Favorite show`;
   readonly unfavoriteLabel = $localize`:@@podcasts.action.unfavorite:Unfavorite show`;
+  readonly commentsLabel = $localize`:@@podcasts.comments:Comments`;
+  readonly commentLabel = $localize`:@@podcasts.comment:Comment`;
 
   constructor() {
-    void this.load();
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      void this.loadShow(params.get('pubkey') || '');
+    });
   }
 
-  private async load(): Promise<void> {
-    const raw = this.route.snapshot.paramMap.get('pubkey') || '';
+  private async loadShow(raw: string): Promise<void> {
     const pubkey = this.decodePubkey(raw);
     this.pubkey.set(pubkey);
-    const result = await this.podcastData.queryShowAndEpisodes(pubkey);
-    this.show.set(result.show);
-    this.episodes.set(result.episodes);
-    this.loading.set(false);
+    if (!pubkey) {
+      return;
+    }
+
+    await this.podcastData.ensureInitialized();
+
+    this.refreshing.set(true);
+    try {
+      await this.podcastData.refreshShowAndEpisodes(pubkey);
+    } finally {
+      if (this.pubkey() === pubkey) {
+        this.refreshing.set(false);
+      }
+    }
   }
 
   private decodePubkey(value: string): string {
@@ -224,6 +294,61 @@ export class PodcastShowComponent {
     await this.favorites.toggleShow(this.pubkey());
   }
 
+  scrollToComments(): void {
+    this.commentsSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  shareShow(): void {
+    const ev = this.show();
+    if (!ev) {
+      return;
+    }
+
+    const npub = nip19.npubEncode(ev.pubkey);
+    const title = this.title();
+    const dialogData: ShareArticleDialogData = {
+      title,
+      summary: this.description() || $localize`:@@podcasts.share.showSummary:Listen to ${title}:title:`,
+      image: this.image() || undefined,
+      url: `https://nostria.app/podcasts/show/${npub}`,
+      eventId: ev.id,
+      pubkey: ev.pubkey,
+      kind: ev.kind,
+      encodedId: npub,
+      event: ev,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: $localize`:@@podcasts.action.share:Share`,
+      showCloseButton: true,
+      data: dialogData,
+      width: '560px',
+      maxWidth: 'min(560px, calc(100vw - 24px))',
+    });
+  }
+
+  async onBookmarkClick(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const ev = this.show();
+    if (!ev) {
+      return;
+    }
+
+    await this.userRelays.ensureRelaysForPubkey(ev.pubkey);
+    const relayHint = this.userRelays.getRelaysForPubkey(ev.pubkey)[0];
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: ev.id,
+        type: 'e',
+        eventKind: ev.kind,
+        pubkey: ev.pubkey,
+        relay: relayHint,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
+  }
+
   goBack(): void {
     if (this.route.outlet === 'right') {
       this.panelNav.goBackRight();
@@ -232,15 +357,34 @@ export class PodcastShowComponent {
     void this.router.navigate(['/podcasts']);
   }
 
+  async openCoverPreview(): Promise<void> {
+    const url = this.image();
+    if (!url) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import(
+      '../../../components/media-preview-dialog/media-preview.component'
+    );
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: url,
+        mediaType: 'image',
+        mediaTitle: this.title(),
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   openEditShow(): void {
     this.showEditDialog.set(true);
   }
 
   onEditClosed(): void {
     this.showEditDialog.set(false);
-    const pubkey = this.pubkey();
-    if (pubkey) {
-      this.show.set(this.podcastData.getShow(pubkey) ?? this.show());
-    }
   }
 }

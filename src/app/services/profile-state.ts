@@ -7,6 +7,9 @@ import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
 import { TimelineFilterOptions, DEFAULT_TIMELINE_FILTER } from '../interfaces/timeline-filter';
 
+/** Voice notes and podcast episodes. Show metadata (10154) stays off the profile timeline. */
+const PROFILE_TIMELINE_AUDIO_KINDS: number[] = [1222, 1244, 54];
+
 /**
  * ProfileState holds all state for a single profile view.
  * Unlike the legacy singleton service, this class is instantiated per-profile,
@@ -294,7 +297,7 @@ export class ProfileState {
 
     // Add audio if enabled
     if (filter.showAudio) {
-      items.push(...this.audio());
+      items.push(...this.audio().filter(item => PROFILE_TIMELINE_AUDIO_KINDS.includes(item.event.kind)));
     }
 
     // Add video if enabled
@@ -567,7 +570,7 @@ export class ProfileState {
             }
             return media;
           });
-        } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
+        } else if (PROFILE_TIMELINE_AUDIO_KINDS.includes(event.kind)) {
           const record = this.utilities.toRecord(event);
           this.audio.update(audio => {
             const exists = audio.some(a => a.event.id === event.id);
@@ -708,7 +711,7 @@ export class ProfileState {
 
     // Add audio if enabled
     if (currentFilter.showAudio) {
-      kindsToQuery.push(1222, 1244, 54, 10154);
+      kindsToQuery.push(...PROFILE_TIMELINE_AUDIO_KINDS);
     }
 
     // Optionally add reactions if enabled
@@ -793,7 +796,7 @@ export class ProfileState {
           }
           return reposts;
         });
-      } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
+      } else if (PROFILE_TIMELINE_AUDIO_KINDS.includes(event.kind)) {
         // Handle audio events
         const record = this.utilities.toRecord(event);
         this.audio.update(audio => {
@@ -1063,7 +1066,7 @@ export class ProfileState {
       }
 
       if (currentFilter.showAudio) {
-        kindsToQuery.push(1222, 1244, 54, 10154);
+        kindsToQuery.push(...PROFILE_TIMELINE_AUDIO_KINDS);
       }
 
       if (currentFilter.showVideo) {
@@ -1158,7 +1161,7 @@ export class ProfileState {
           if (!exists) {
             newReactions.push(record);
           }
-        } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
+        } else if (PROFILE_TIMELINE_AUDIO_KINDS.includes(event.kind)) {
           // Handle audio
           const record: NostrRecord = {
             event: event,

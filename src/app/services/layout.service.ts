@@ -1970,6 +1970,10 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`podcasts/show/${pubkey}`);
   }
 
+  openPodcastPublisher(pubkey: string): void {
+    this.navigateToRightPanel(`podcasts/publisher/${pubkey}`);
+  }
+
   /**
    * Open the detail page for the currently playing media item.
    */

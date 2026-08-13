@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -11,30 +10,28 @@ import { FollowSetsService } from '../../../services/follow-sets.service';
 import { PodcastDataService } from '../../../services/podcast-data.service';
 import { ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
 import { PodcastListFilterComponent } from '../../../components/podcast-list-filter/podcast-list-filter.component';
-import { PodcastEventComponent } from '../../../components/event-types/podcast-event.component';
-import { episodeMatchesQuery } from '../../../utils/podcast';
+import { PodcastPublisherCardComponent } from '../podcast-publisher-card.component';
+import { showMatchesQuery } from '../../../utils/podcast';
 
-const PAGE_SIZE = 30;
 const CURATED_FILTER = 'curated';
 
 @Component({
-  selector: 'app-podcast-episodes',
+  selector: 'app-podcast-publishers',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     PodcastListFilterComponent,
-    PodcastEventComponent,
+    PodcastPublisherCardComponent,
   ],
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()" matTooltip="Back to Podcasts">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <h2 class="panel-title title-font" i18n="@@podcasts.episodes.title">Episodes</h2>
+      <h2 class="panel-title title-font" i18n="@@podcasts.publishers.title">Publishers</h2>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
         <app-podcast-list-filter [initialFilter]="urlListFilter()" (filterChanged)="onFilterChanged($event)" />
@@ -47,24 +44,19 @@ const CURATED_FILTER = 'curated';
         <input type="text" [placeholder]="searchPlaceholder" [value]="searchQuery()" (input)="onSearch($any($event))" />
       </div>
 
-      @if (loading() && displayed().length === 0) {
+      @if (loading() && filtered().length === 0) {
         <div class="empty"><mat-spinner diameter="40"></mat-spinner></div>
-      } @else if (displayed().length === 0) {
+      } @else if (filtered().length === 0) {
         <div class="empty">
-          <mat-icon>podcasts</mat-icon>
-          <p i18n="@@podcasts.episodes.empty">No episodes match this filter.</p>
+          <mat-icon>person</mat-icon>
+          <p i18n="@@podcasts.publishers.empty">No publishers match this filter.</p>
         </div>
       } @else {
-        <div class="episode-list">
-          @for (episode of displayed(); track episode.id; let i = $index) {
-            <app-podcast-event [event]="episode" mode="row" [queueEpisodes]="filtered()" [queueIndex]="i"></app-podcast-event>
+        <div class="publishers-grid">
+          @for (publisher of filtered(); track publisher.id) {
+            <app-podcast-publisher-card [event]="publisher" />
           }
         </div>
-        @if (hasMore()) {
-          <button mat-button (click)="loadMore()">
-            <span i18n="@@podcasts.loadMore">Load more</span>
-          </button>
-        }
       }
     </div>
   `,
@@ -84,10 +76,11 @@ const CURATED_FILTER = 'curated';
       background: var(--mat-sys-surface-container); border-radius: var(--mat-sys-corner-large);
       input { flex: 1; border: 0; background: transparent; outline: none; color: var(--mat-sys-on-surface); }
     }
+    .publishers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 3rem 1rem; color: var(--mat-sys-on-surface-variant); }
   `],
 })
-export class PodcastEpisodesComponent implements OnDestroy {
+export class PodcastPublishersComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private accountState = inject(AccountStateService);
@@ -100,36 +93,34 @@ export class PodcastEpisodesComponent implements OnDestroy {
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
   readonly selectedListFilter = signal<ListFilterValue>(this.urlListFilter() || 'all');
   readonly searchQuery = signal('');
-  readonly displayLimit = signal(PAGE_SIZE);
-  readonly searchPlaceholder = $localize`:@@podcasts.searchEpisodes:Search episodes...`;
+  readonly searchPlaceholder = $localize`:@@podcasts.searchPublishers:Search publishers...`;
 
   private filterPubkeys = computed(() => {
     const filter = this.selectedListFilter();
-    if (filter === CURATED_FILTER) return this.podcastData.showPubkeys();
-    if (filter === 'all') return null;
+    if (filter === CURATED_FILTER || filter === 'all') return null;
     if (filter === 'following') return this.accountState.followingList() || [];
     return this.followSetsService.followSets().find(set => set.dTag === filter)?.pubkeys || [];
   });
 
   readonly filtered = computed(() => {
-    const query = this.searchQuery();
+    const query = this.searchQuery().trim().toLowerCase();
     const pubkeys = this.filterPubkeys();
-    let episodes = this.podcastData.episodes().filter(episode => episodeMatchesQuery(episode, query));
+    let publishers = this.podcastData.publishers();
     if (pubkeys !== null) {
       if (pubkeys.length === 0) return [];
-      episodes = episodes.filter(episode => pubkeys.includes(episode.pubkey));
+      publishers = publishers.filter(publisher => pubkeys.includes(publisher.pubkey));
     }
-    return episodes.sort((a, b) => b.created_at - a.created_at);
+    if (query) {
+      publishers = publishers.filter(publisher => this.matchesQuery(publisher.pubkey, query));
+    }
+    return publishers.sort((a, b) => b.created_at - a.created_at);
   });
-
-  readonly displayed = computed(() => this.filtered().slice(0, this.displayLimit()));
-  readonly hasMore = computed(() => this.filtered().length > this.displayLimit());
 
   constructor() {
     void this.podcastData.ensureInitialized();
     effect(() => {
       const filter = this.selectedListFilter();
-      if (filter === CURATED_FILTER) {
+      if (filter === CURATED_FILTER || filter === 'all') {
         untracked(() => this.podcastData.startSubscriptions(null));
         return;
       }
@@ -144,19 +135,20 @@ export class PodcastEpisodesComponent implements OnDestroy {
 
   onFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
-    this.displayLimit.set(PAGE_SIZE);
   }
 
   onSearch(domEvent: { target: EventTarget | null }): void {
     this.searchQuery.set((domEvent.target as HTMLInputElement).value);
-    this.displayLimit.set(PAGE_SIZE);
-  }
-
-  loadMore(): void {
-    this.displayLimit.update(limit => limit + PAGE_SIZE);
   }
 
   goBack(): void {
     void this.router.navigate(['/podcasts']);
+  }
+
+  private matchesQuery(pubkey: string, query: string): boolean {
+    if (pubkey.toLowerCase().includes(query)) {
+      return true;
+    }
+    return this.podcastData.getShowsForPublisher(pubkey).some(show => showMatchesQuery(show, query));
   }
 }

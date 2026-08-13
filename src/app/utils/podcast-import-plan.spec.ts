@@ -1,5 +1,11 @@
 import { AUTHORED_PODCASTS_KIND, PODCAST_EPISODE_KIND, PODCAST_METADATA_KIND } from './podcast';
-import { importEventSigner, readProfileLightningAddress, uniqueRelayUrls } from './podcast-import-plan';
+import {
+  importEventSigner,
+  publishedPodcastAudioUrls,
+  readProfileLightningAddress,
+  selectUnpublishedEpisodes,
+  uniqueRelayUrls,
+} from './podcast-import-plan';
 
 describe('podcast import plan', () => {
   it('dedupes relay URLs ignoring trailing slashes', () => {
@@ -32,5 +38,21 @@ describe('podcast import plan', () => {
       event: { content: '{"lud16":"fallback@wallet.com"}' },
     })).toBe('fallback@wallet.com');
     expect(readProfileLightningAddress(undefined)).toBe('');
+  });
+
+  it('deselects RSS episodes whose audio URL is already published', () => {
+    const published = publishedPodcastAudioUrls([
+      { tags: [['audio', 'https://cdn.example.com/ep-1.mp3', 'audio/mpeg']] },
+      { tags: [['title', 'No audio']] },
+    ]);
+
+    expect([...published]).toEqual(['https://cdn.example.com/ep-1.mp3']);
+    expect(selectUnpublishedEpisodes([
+      { title: 'Old', audioUrl: 'https://cdn.example.com/ep-1.mp3', selected: true },
+      { title: 'New', audioUrl: 'https://cdn.example.com/ep-2.mp3', selected: true },
+    ], published)).toEqual([
+      { title: 'Old', audioUrl: 'https://cdn.example.com/ep-1.mp3', selected: false },
+      { title: 'New', audioUrl: 'https://cdn.example.com/ep-2.mp3', selected: true },
+    ]);
   });
 });

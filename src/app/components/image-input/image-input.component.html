@@ -1,14 +1,23 @@
 <div class="image-input">
   <div class="image-input-row">
     @if (value()) {
-    <img
-      class="preview"
+    <button
+      type="button"
+      class="preview-button"
       [class.circle]="shape() === 'circle'"
       [class.wide]="shape() === 'wide'"
-      [src]="value()"
-      [alt]="label()"
-      loading="lazy"
-    />
+      (click)="openPreview()"
+      [attr.aria-label]="label()"
+    >
+      <img
+        class="preview"
+        [class.circle]="shape() === 'circle'"
+        [class.wide]="shape() === 'wide'"
+        [src]="value()"
+        [alt]="label()"
+        loading="lazy"
+      />
+    </button>
     } @else {
     <span
       class="preview placeholder"

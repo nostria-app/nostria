@@ -20,6 +20,11 @@ import { EventFocusService } from './event-focus.service';
 import { LoggerService } from './logger.service';
 import { ContactListProfileMetadata, getContactListProfileMap, normalizeContactListTags } from '../utils/contact-list';
 
+/** Temporary complimentary Premium so this npub can publish RSS podcasts. Remove after. */
+const TEMPORARY_PREMIUM_PUBKEYS = new Set([
+  '',
+]);
+
 interface ProfileProcessingState {
   isProcessing: boolean;
   total: number;
@@ -148,8 +153,13 @@ export class AccountStateService implements OnDestroy {
   });
 
   hasActiveSubscription = computed(() => {
+    const pubkey = this.pubkey();
+    if (pubkey && TEMPORARY_PREMIUM_PUBKEYS.has(pubkey)) {
+      return true;
+    }
+
     const subscription = this.subscription();
-    return subscription?.expires && Date.now() < subscription.expires;
+    return !!subscription?.expires && Date.now() < subscription.expires;
   });
 
   expiresWhen = computed(() => {

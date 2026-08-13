@@ -1035,16 +1035,23 @@ export class NostrService implements NostriaService {
 
     this.setExtensionSigningUiActive(true);
     try {
-      const signed = await this.runExclusiveExtensionInteraction(() => {
+      // Never time out acquiring the lock: a second window.nostr.signEvent while
+      // the previous prompt is open makes Alby throw
+      // `Insufficient permissions, required "nostr.signevent"`.
+      const signed = await this.runExclusiveExtensionInteraction(async () => {
         this.logger.debug('[Extension Signing] signEvent', { kind: eventTemplate.kind });
 
-        return new Promise<Event>((resolve, reject) => {
+        const result = await new Promise<Event>((resolve, reject) => {
           window.nostr!.signEvent(eventTemplate).then(
-            result => this.ngZone.run(() => resolve(result as Event)),
+            signedEvent => this.ngZone.run(() => resolve(signedEvent as Event)),
             (err: Error) => this.ngZone.run(() => reject(err))
           );
         });
-      }, { acquireTimeoutMs: 15000 });
+
+        // Let the extension close its prompt before the next signEvent is sent.
+        await new Promise<void>(resolve => setTimeout(resolve, 300));
+        return result;
+      });
 
       this.assertValidExtensionSignedEvent(signed, {
         template: eventTemplate,
@@ -1217,10 +1224,6 @@ export class NostrService implements NostriaService {
 
       return pubkey;
     };
-
-    if (options?.background) {
-      return requestPubkey();
-    }
 
     return this.runExclusiveExtensionInteraction(requestPubkey);
   }

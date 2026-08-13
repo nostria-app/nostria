@@ -130,6 +130,30 @@ export class ImageInputComponent {
     });
   }
 
+  async openPreview(): Promise<void> {
+    const url = this.value().trim();
+    if (!url) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import(
+      '../media-preview-dialog/media-preview.component'
+    );
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: url,
+        mediaType: 'image',
+        mediaTitle: this.label(),
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   clear(): void {
     this.value.set('');
     this.showUrlInput.set(false);

@@ -20,10 +20,12 @@ import { PodcastSettingsDialogComponent } from './podcast-settings-dialog/podcas
 import { PublishEpisodeDialogComponent } from './publish-episode-dialog/publish-episode-dialog.component';
 import { EditShowDialogComponent } from './edit-show-dialog/edit-show-dialog.component';
 import { ImportPodcastRssDialogComponent } from './import-podcast-rss-dialog/import-podcast-rss-dialog.component';
+import { PodcastPublisherCardComponent } from './podcast-publisher-card.component';
 import { episodeMatchesQuery, getPodcastTitle, showMatchesQuery } from '../../utils/podcast';
 
 const SECTION_LIMIT = 12;
 const CURATED_FILTER = 'curated';
+const DEFAULT_FILTER: ListFilterValue = 'all';
 
 @Component({
   selector: 'app-podcasts',
@@ -44,6 +46,7 @@ const CURATED_FILTER = 'curated';
     PublishEpisodeDialogComponent,
     EditShowDialogComponent,
     ImportPodcastRssDialogComponent,
+    PodcastPublisherCardComponent,
   ],
   templateUrl: './podcasts.component.html',
   styleUrl: './podcasts.component.scss',
@@ -63,7 +66,7 @@ export class PodcastsComponent implements OnDestroy {
   readonly loading = this.podcastData.loading;
   readonly isAuthenticated = computed(() => this.app.authenticated());
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
-  readonly selectedListFilter = signal<ListFilterValue>(CURATED_FILTER);
+  readonly selectedListFilter = signal<ListFilterValue>(DEFAULT_FILTER);
   readonly searchQuery = signal('');
   readonly showSearch = signal(false);
   readonly containerWidth = signal(0);
@@ -128,22 +131,46 @@ export class PodcastsComponent implements OnDestroy {
 
   readonly showsPreview = computed(() => this.filteredShows().slice(0, this.calculateCardLimit()));
   readonly episodesPreview = computed(() => this.filteredEpisodes().slice(0, this.calculateCardLimit()));
+  readonly filteredPublishers = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const pubkeys = this.filterPubkeys();
+    let publishers = this.podcastData.publishers();
+    if (pubkeys !== null) {
+      if (pubkeys.length === 0) {
+        return [];
+      }
+      publishers = publishers.filter(publisher => pubkeys.includes(publisher.pubkey));
+    }
+    if (query) {
+      publishers = publishers.filter(publisher =>
+        publisher.pubkey.toLowerCase().includes(query)
+        || this.podcastData.getShowsForPublisher(publisher.pubkey).some(show => showMatchesQuery(show, query))
+      );
+    }
+    return publishers.sort((a, b) => b.created_at - a.created_at);
+  });
+  readonly publishersPreview = computed(() => this.filteredPublishers().slice(0, this.calculateCardLimit()));
   readonly hasMoreShows = computed(() => this.filteredShows().length > this.showsPreview().length);
   readonly hasMoreEpisodes = computed(() => this.filteredEpisodes().length > this.episodesPreview().length);
+  readonly hasMorePublishers = computed(() => this.filteredPublishers().length > this.publishersPreview().length);
   readonly favoriteCount = computed(() => this.favorites.showPubkeys().length);
   readonly myShow = computed(() => {
     const pubkey = this.currentPubkey();
     return pubkey ? this.podcastData.getShow(pubkey) ?? null : null;
   });
-  readonly hasSearchResults = computed(() => this.filteredEpisodes().length > 0 || this.filteredShows().length > 0);
-  readonly totalSearchResults = computed(() => this.filteredEpisodes().length + this.filteredShows().length);
+  readonly hasSearchResults = computed(() =>
+    this.filteredEpisodes().length > 0 || this.filteredShows().length > 0 || this.filteredPublishers().length > 0
+  );
+  readonly totalSearchResults = computed(() =>
+    this.filteredEpisodes().length + this.filteredShows().length + this.filteredPublishers().length
+  );
   readonly myShowTitle = computed(() => {
     const show = this.myShow();
     return show ? getPodcastTitle(show) || $localize`:@@podcasts.untitledShow:Untitled podcast` : '';
   });
   readonly searchLabel = $localize`:@@podcasts.search:Search podcasts`;
   readonly closeSearchLabel = $localize`:@@podcasts.closeSearch:Close search`;
-  readonly searchPlaceholder = $localize`:@@podcasts.searchPlaceholder:Search episodes and shows...`;
+  readonly searchPlaceholder = $localize`:@@podcasts.searchPlaceholder:Search episodes, shows, and publishers...`;
   readonly unpublishedShow = $localize`:@@podcasts.unpublishedShow:Publish your show details`;
 
   constructor() {
@@ -224,6 +251,10 @@ export class PodcastsComponent implements OnDestroy {
 
   goToShows(): void {
     void this.router.navigate(['/podcasts/shows'], { queryParams: { list: this.selectedListFilter() } });
+  }
+
+  goToPublishers(): void {
+    void this.router.navigate(['/podcasts/publishers'], { queryParams: { list: this.selectedListFilter() } });
   }
 
   goToFavorites(): void {
