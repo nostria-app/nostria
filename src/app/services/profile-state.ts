@@ -567,7 +567,7 @@ export class ProfileState {
             }
             return media;
           });
-        } else if (event.kind === 1222 || event.kind === 1244) {
+        } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
           const record = this.utilities.toRecord(event);
           this.audio.update(audio => {
             const exists = audio.some(a => a.event.id === event.id);
@@ -708,7 +708,7 @@ export class ProfileState {
 
     // Add audio if enabled
     if (currentFilter.showAudio) {
-      kindsToQuery.push(1222, 1244);
+      kindsToQuery.push(1222, 1244, 54, 10154);
     }
 
     // Optionally add reactions if enabled
@@ -793,7 +793,7 @@ export class ProfileState {
           }
           return reposts;
         });
-      } else if (event.kind === 1222 || event.kind === 1244) {
+      } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
         // Handle audio events
         const record = this.utilities.toRecord(event);
         this.audio.update(audio => {
@@ -1063,7 +1063,7 @@ export class ProfileState {
       }
 
       if (currentFilter.showAudio) {
-        kindsToQuery.push(1222, 1244);
+        kindsToQuery.push(1222, 1244, 54, 10154);
       }
 
       if (currentFilter.showVideo) {
@@ -1158,7 +1158,7 @@ export class ProfileState {
           if (!exists) {
             newReactions.push(record);
           }
-        } else if (event.kind === 1222 || event.kind === 1244) {
+        } else if (event.kind === 1222 || event.kind === 1244 || event.kind === 54 || event.kind === 10154) {
           // Handle audio
           const record: NostrRecord = {
             event: event,

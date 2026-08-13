@@ -247,16 +247,16 @@ export class NavigationComponent {
 
   goToSong(): void {
     const current = this.media.current();
-    if (current?.eventPubkey && current?.eventIdentifier) {
-      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    if (current) {
+      this.layout.openMediaItemDetails(current);
       this.toolbarPlayerHovered.set(false);
     }
   }
 
   goToArtist(): void {
     const current = this.media.current();
-    if (current?.eventPubkey) {
-      this.router.navigate(['/music/artist', current.eventPubkey]);
+    if (current) {
+      this.layout.openMediaItemAuthor(current);
       this.toolbarPlayerHovered.set(false);
     }
   }

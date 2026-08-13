@@ -43,10 +43,10 @@ export type MusicTrackSortValue = 'released' | 'published';
             class="filter-option-chip"
             [class.selected]="selectedFilter() === 'curated'"
             (click)="selectFilter('curated')">
-            <mat-icon class="chip-icon">library_music</mat-icon>
+            <mat-icon class="chip-icon">{{ curatedIcon() }}</mat-icon>
             <div class="chip-text">
-              <span class="chip-label">Curated</span>
-              <span class="chip-description">Selected musicians</span>
+              <span class="chip-label">{{ curatedLabel() }}</span>
+              <span class="chip-description">{{ curatedDescription() }}</span>
             </div>
           </button>
           }
@@ -293,7 +293,10 @@ export class ListFilterMenuComponent implements OnInit {
   showWotOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
-  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'communities' | 'calendar' | 'chats'>();
+  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'podcasts' | 'communities' | 'calendar' | 'chats'>();
+  curatedLabel = input('Curated');
+  curatedDescription = input('Selected musicians');
+  curatedIcon = input('library_music');
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
 
   // Outputs
@@ -399,6 +402,9 @@ export class ListFilterMenuComponent implements OnInit {
           this.hideGruuv.set(this.accountLocalState.getMusicHideGruuv(pubkey));
           this.hideGruuvChanged.emit(this.hideGruuv());
           break;
+        case 'podcasts':
+          savedFilter = this.accountLocalState.getPodcastsListFilter(pubkey);
+          break;
         case 'communities':
           savedFilter = this.accountLocalState.getCommunitiesListFilter(pubkey);
           break;
@@ -441,6 +447,9 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         case 'music':
           this.accountLocalState.setMusicListFilter(pubkey, filter);
+          break;
+        case 'podcasts':
+          this.accountLocalState.setPodcastsListFilter(pubkey, filter);
           break;
         case 'communities':
           this.accountLocalState.setCommunitiesListFilter(pubkey, filter);

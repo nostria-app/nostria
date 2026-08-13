@@ -13,6 +13,7 @@ test.describe('Navigation Routes @public @navigation', () => {
     { path: '/discover', name: 'Discover' },
     { path: '/articles', name: 'Articles' },
     { path: '/music', name: 'Music' },
+    { path: '/podcasts', name: 'Podcasts' },
     { path: '/streams', name: 'Streams' },
     { path: '/media', name: 'Media' },
   ];

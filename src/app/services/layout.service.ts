@@ -10,7 +10,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/media-preview.component';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import { AddressPointer, EventPointer, ProfilePointer } from 'nostr-tools/nip19';
-import { NostrRecord } from '../interfaces';
+import { MediaItem as PlayerMediaItem, NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
@@ -1683,6 +1683,16 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    if (this.utilities.isPodcastEpisodeKind(event.kind)) {
+      this.openPodcastEpisode(event.id, event);
+      return;
+    }
+
+    if (this.utilities.isPodcastMetadataKind(event.kind)) {
+      this.openPodcastShow(event.pubkey);
+      return;
+    }
+
     // Music albums (kind 34139)
     if (event.kind === 34139) {
       this.openMusicAlbum(npub, dTag, event);
@@ -1719,6 +1729,16 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
+    if (event && this.utilities.isPodcastEpisodeKind(event.kind)) {
+      this.openPodcastEpisode(event.id, event);
+      return;
+    }
+
+    if (event && this.utilities.isPodcastMetadataKind(event.kind)) {
+      this.openPodcastShow(event.pubkey);
+      return;
+    }
+
     if (eventId.startsWith('naddr')) {
       // Decode the naddr to check kind and route to content-specific pages
       try {
@@ -1932,6 +1952,65 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`music/song/${pubkey}/${dTag}`, {
       state: { songEvent: event }
     });
+  }
+
+  /**
+   * Open a NIP-F4 podcast episode in the right panel.
+   */
+  openPodcastEpisode(eventId: string, event?: Event): void {
+    this.navigateToRightPanel(`podcasts/episode/${eventId}`, {
+      state: { podcastEpisode: event }
+    });
+  }
+
+  /**
+   * Open a NIP-F4 podcast show in the right panel.
+   */
+  openPodcastShow(pubkey: string): void {
+    this.navigateToRightPanel(`podcasts/show/${pubkey}`);
+  }
+
+  /**
+   * Open the detail page for the currently playing media item.
+   */
+  openMediaItemDetails(item: PlayerMediaItem): void {
+    if (!item.eventIdentifier) {
+      return;
+    }
+
+    if (item.type === 'Podcast' || item.eventKind === 54) {
+      this.openPodcastEpisode(item.eventIdentifier);
+      return;
+    }
+
+    if (item.eventPubkey) {
+      this.openSongDetail(item.eventPubkey, item.eventIdentifier);
+    }
+  }
+
+  /**
+   * Open the artist/show page for the currently playing media item.
+   */
+  openMediaItemAuthor(item: PlayerMediaItem): void {
+    if (!item.eventPubkey) {
+      return;
+    }
+
+    if (item.type === 'Podcast' || item.eventKind === 54 || item.eventKind === 10154) {
+      this.openPodcastShow(item.eventPubkey);
+      return;
+    }
+
+    let npub = item.eventPubkey;
+    if (!npub.startsWith('npub1')) {
+      try {
+        npub = nip19.npubEncode(item.eventPubkey);
+      } catch {
+        return;
+      }
+    }
+
+    this.openMusicArtist(npub);
   }
 
   /**
@@ -2267,6 +2346,11 @@ export class LayoutService implements OnDestroy {
   /** Navigate to music page and open the upload track dialog */
   openMusicUpload(): void {
     this.router.navigate(['/music'], { queryParams: { upload: 'true' } });
+  }
+
+  /** Navigate to podcasts and open the publish episode dialog */
+  openPodcastPublish(): void {
+    this.router.navigate(['/podcasts'], { queryParams: { publish: 'true' } });
   }
 
   /** Open the streaming apps dialog to start a live stream */

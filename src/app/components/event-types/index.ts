@@ -8,6 +8,8 @@ export { ZapPollEventComponent } from './zap-poll-event.component';
 export { LiveEventComponent } from './live-event.component';
 export { AudioEventComponent } from './audio-event.component';
 export { MusicEventComponent } from './music-event.component';
+export { PodcastEventComponent } from './podcast-event.component';
+export { PodcastShowEventComponent } from './podcast-show-event.component';
 export { EmojiSetEventComponent } from './emoji-set-event.component';
 export { PeopleSetEventComponent } from './people-set-event.component';
 export { ProfileUpdateEventComponent } from './profile-update-event.component';

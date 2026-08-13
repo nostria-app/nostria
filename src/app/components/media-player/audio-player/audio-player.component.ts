@@ -339,16 +339,16 @@ export class AudioPlayerComponent {
   // Navigate to song detail page
   goToSong(): void {
     const current = this.media.current();
-    if (current?.eventPubkey && current?.eventIdentifier) {
-      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    if (current) {
+      this.layout.openMediaItemDetails(current);
     }
   }
 
   // Navigate to artist page
   goToArtist(): void {
     const current = this.media.current();
-    if (current?.eventPubkey) {
-      this.router.navigate(['/music/artist', current.eventPubkey]);
+    if (current) {
+      this.layout.openMediaItemAuthor(current);
     }
   }
 

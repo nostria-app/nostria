@@ -512,6 +512,22 @@ function buildFallbackSocialMetadata(routePath: string, id: string): { title: st
     };
   }
 
+  if (routePath.startsWith('podcasts/episode')) {
+    return {
+      title: 'Nostr Podcast Episode on Nostria',
+      description: 'Listen to this podcast episode on Nostria, the decentralized social app.',
+      url: `https://nostria.app/podcasts/episode/${normalizedId}`,
+    };
+  }
+
+  if (routePath.startsWith('podcasts/show')) {
+    return {
+      title: 'Nostr Podcast on Nostria',
+      description: 'Open this podcast on Nostria, the decentralized social app.',
+      url: `https://nostria.app/podcasts/show/${normalizedId}`,
+    };
+  }
+
   return {
     title: 'Nostr Post on Nostria',
     description: 'Open this content on Nostria, the decentralized social app.',

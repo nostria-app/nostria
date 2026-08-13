@@ -44,6 +44,7 @@ import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider
 import { PublicChatsListService } from './public-chats-list.service';
 import { Nip29GroupsListService } from './nip29-groups-list.service';
 import { CommunityListService } from './community-list.service';
+import { PodcastFavoritesService } from './podcast-favorites.service';
 import { UserRelayService } from './relays/user-relay';
 import { UserRelaysService } from './relays/user-relays';
 import { DeleteEventService } from './delete-event.service';
@@ -738,6 +739,7 @@ export class NostrService implements NostriaService {
         10005,               // 10005 - public chats list (NIP-51)
         10009,               // 10009 - simple groups list (NIP-51 / NIP-29)
         10004,               // 10004 - communities list (NIP-72)
+        10054,               // 10054 - favorite podcasts (NIP-51 / NIP-F4)
         10007,               // Search relay list
         TRUST_PROVIDER_LIST_KIND, // 10040 - NIP-85 Trusted Service Providers
         kinds.DirectMessageRelaysList, // 10050 - DM relays
@@ -915,6 +917,12 @@ export class NostrService implements NostriaService {
             pubkey,
             communityCount: event.tags.filter(t => t[0] === 'a').length,
           });
+          break;
+        }
+
+        case 10054: {
+          const podcastFavorites = this.injector.get(PodcastFavoritesService);
+          podcastFavorites.updateFromEvent(event);
           break;
         }
 

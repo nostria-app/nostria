@@ -140,6 +140,7 @@ export const APP_ROUTES = {
     discover: '/discover',
     articles: '/articles',
     music: '/music',
+    podcasts: '/podcasts',
     streams: '/streams',
     search: '/search',
     login: '/login',

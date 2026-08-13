@@ -29,6 +29,7 @@ const KIND_LABELS: Record<number, string> = {
   42: 'Channel Message',
   43: 'Channel Hide Message',
   44: 'Channel Mute User',
+  54: 'Podcast Episode',
   1040: 'OpenTimestamps',
   1063: 'File Metadata',
   1068: 'Poll',
@@ -52,8 +53,11 @@ const KIND_LABELS: Record<number, string> = {
   10023: 'Pinned Articles List',
   10040: 'Trust Provider List',
   10050: 'DM Relay List',
+  10054: 'Favorite Podcasts',
   10063: 'Media Server List',
+  10064: 'Authored Podcasts',
   10086: 'Discovery Relay List',
+  10154: 'Podcast',
   30000: 'Categorized People List',
   30001: 'Categorized Bookmark List',
   30008: 'Profile Badges',
@@ -118,6 +122,7 @@ function localizedKindLabel(kind: number): string | undefined {
     case 42: return $localize`:@@kind.42:Channel Message`;
     case 43: return $localize`:@@kind.43:Channel Hide Message`;
     case 44: return $localize`:@@kind.44:Channel Mute User`;
+    case 54: return $localize`:@@kind.54:Podcast Episode`;
     case 1040: return $localize`:@@kind.1040:OpenTimestamps`;
     case 1063: return $localize`:@@kind.1063:File Metadata`;
     case 1068: return $localize`:@@kind.1068:Poll`;
@@ -141,8 +146,11 @@ function localizedKindLabel(kind: number): string | undefined {
     case 10023: return $localize`:@@kind.10023:Pinned Articles List`;
     case 10040: return $localize`:@@kind.10040:Trust Provider List`;
     case 10050: return $localize`:@@kind.10050:DM Relay List`;
+    case 10054: return $localize`:@@kind.10054:Favorite Podcasts`;
     case 10063: return $localize`:@@kind.10063:Media Server List`;
+    case 10064: return $localize`:@@kind.10064:Authored Podcasts`;
     case 10086: return $localize`:@@kind.10086:Discovery Relay List`;
+    case 10154: return $localize`:@@kind.10154:Podcast`;
     case 30000: return $localize`:@@kind.30000:Categorized People List`;
     case 30001: return $localize`:@@kind.30001:Categorized Bookmark List`;
     case 30008: return $localize`:@@kind.30008:Profile Badges`;
@@ -199,6 +207,7 @@ const KNOWN_RENDERABLE_KINDS = new Set([
   22,     // Short Video
   40,     // Channel Creation
   42,     // Channel Message
+  54,     // Podcast Episode
   1068,   // Poll
   1111,   // Comment (rendered by <app-content>)
   1222,   // Audio Track
@@ -219,4 +228,5 @@ const KNOWN_RENDERABLE_KINDS = new Set([
   34236,  // Short Video Event
   36787,  // Music Track
   39089,  // Starter Pack
+  10154,  // Podcast
 ]);

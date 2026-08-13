@@ -158,6 +158,7 @@ interface AccountLocalState {
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
   musicListFilter?: string; // Filter for music: 'curated', 'all', 'following', or follow set d-tag
   musicHideGruuv?: boolean; // Whether to hide music tagged with #gruuv
+  podcastsListFilter?: string; // Filter for podcasts: 'curated', 'all', 'following', or follow set d-tag
   communitiesListFilter?: string; // Filter for communities: 'all', 'following', or follow set d-tag
   musicTrackSort?: string; // Track sort for music: 'released' or 'published'
   calendarListFilter?: string; // Filter for calendar: 'all', 'following', or follow set d-tag
@@ -2015,6 +2016,16 @@ export class AccountLocalStateService {
   setMusicHideGruuv(pubkey: string, hideGruuv: boolean): void {
     const value = hideGruuv ? true : undefined;
     this.updateAccountState(pubkey, { musicHideGruuv: value });
+  }
+
+  getPodcastsListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.podcastsListFilter || 'curated';
+  }
+
+  setPodcastsListFilter(pubkey: string, filter: string): void {
+    const value = filter === 'curated' ? undefined : filter;
+    this.updateAccountState(pubkey, { podcastsListFilter: value });
   }
 
   /**

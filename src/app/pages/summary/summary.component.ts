@@ -119,7 +119,7 @@ interface MediaPreviewSource {
 type GmFilterMode = 'all' | 'only' | 'exclude';
 
 interface ContentTypeOption {
-  id: 'posts' | 'articles' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music' | 'profiles';
+  id: 'posts' | 'articles' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music' | 'podcasts' | 'profiles';
   label: string;
   description: string;
   kinds: number[];
@@ -150,6 +150,7 @@ const POST_KINDS = [1];
 const MEDIA_KINDS = [20, 21, 22, 34235, 34236];
 const VIDEO_KINDS = [21, 22, 34235, 34236];
 const AUDIO_KINDS = [1222, 1244];
+const PODCAST_KINDS = [54, 10154];
 const CHAT_KINDS = [40, 42];
 const LIVE_EVENT_KINDS = [30311];
 const CALENDAR_KINDS = [31922, 31923, 31925];
@@ -178,6 +179,8 @@ const SUMMARY_FETCH_KINDS = [
   34236,
   COMMUNITY_DEFINITION_KIND,
   36787,
+  54,
+  10154,
 ];
 const SUMMARY_DEFAULT_CONTENT_KINDS = [
   ...POST_KINDS,
@@ -191,6 +194,7 @@ const SUMMARY_DEFAULT_CONTENT_KINDS = [
   ...LIVE_EVENT_KINDS,
   ...CALENDAR_KINDS,
   ...MUSIC_KINDS,
+  ...PODCAST_KINDS,
   ...PROFILE_KINDS,
 ];
 
@@ -206,6 +210,7 @@ const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
   { id: 'liveEvents', label: 'Live Events', description: 'Streams and live sessions', kinds: LIVE_EVENT_KINDS, icon: 'live_tv' },
   { id: 'calendar', label: 'Calendar', description: 'Events and RSVPs', kinds: CALENDAR_KINDS, icon: 'event' },
   { id: 'music', label: 'Music', description: 'Tracks and playlists', kinds: MUSIC_KINDS, icon: 'music_note' },
+  { id: 'podcasts', label: 'Podcasts', description: 'Episodes and shows', kinds: PODCAST_KINDS, icon: 'podcasts' },
   { id: 'profiles', label: 'Profiles', description: 'Profile updates and metadata changes', kinds: PROFILE_KINDS, icon: 'badge' },
 ];
 
@@ -233,6 +238,8 @@ const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
   34236: 'Video',
   [COMMUNITY_DEFINITION_KIND]: 'Community',
   36787: 'Music Track',
+  54: 'Podcast Episode',
+  10154: 'Podcast',
 };
 
 // Constants for configurable limits
@@ -1045,7 +1052,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       if (!accountPubkey) return;
 
       // Get events from database
-      const [notes, reposts6, reposts16, articles, audio1222, audio1244, media20, media21, media22, media34235, media34236, communities, chatChannels, chatMessages, liveEvents, calendarDateEvents, calendarTimeEvents, calendarRsvps, music32100, music34139, music36787, profiles] = await Promise.all([
+      const [notes, reposts6, reposts16, articles, audio1222, audio1244, media20, media21, media22, media34235, media34236, communities, chatChannels, chatMessages, liveEvents, calendarDateEvents, calendarTimeEvents, calendarRsvps, music32100, music34139, music36787, podcast54, podcast10154, profiles] = await Promise.all([
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 6, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 16, sinceTimestamp),
@@ -1067,6 +1074,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 32100, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 34139, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 36787, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 54, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 10154, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
 
@@ -1075,7 +1084,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       const media = [...media20, ...media21, ...media22, ...media34235, ...media34236];
       const chats = [...chatChannels, ...chatMessages];
       const calendar = [...calendarDateEvents, ...calendarTimeEvents, ...calendarRsvps];
-      const music = [...music32100, ...music34139, ...music36787];
+      const music = [...music32100, ...music34139, ...music36787, ...podcast54, ...podcast10154];
 
       this.logger.debug(`[Summary] Queried since timestamp: ${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
       this.logger.debug(`[Summary] Found ${notes.length} notes, ${reposts.length} reposts, ${articles.length} articles, ${audio.length} audio posts, ${media.length} media events, ${communities.length} communities, ${chats.length} chats, ${liveEvents.length} live events, ${calendar.length} calendar events, ${music.length} music events, ${profiles.length} profile updates`);
@@ -1443,7 +1452,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
       timelineEvent.kind === 31922 ||
       timelineEvent.kind === 31923 ||
       timelineEvent.kind === 34139 ||
-      timelineEvent.kind === 36787
+      timelineEvent.kind === 36787 ||
+      timelineEvent.kind === 54 ||
+      timelineEvent.kind === 10154
     ) {
       this.layout.openEvent(timelineEvent.id, this.toNostrEvent(timelineEvent));
       return;
@@ -1464,6 +1475,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
       case 16: return 'repeat';
       case 30023: return 'article';
       case 20: return 'perm_media';
+      case 54: return 'podcasts';
+      case 10154: return 'podcasts';
       default: return 'event';
     }
   }
@@ -1553,7 +1566,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
       event.kind === 34139 ||
       event.kind === 36787 ||
       event.kind === 1222 ||
-      event.kind === 1244
+      event.kind === 1244 ||
+      event.kind === 54 ||
+      event.kind === 10154
     ) {
       return this.getTaggedValue(event, 'title') ||
         this.getTaggedValue(event, 'name') ||

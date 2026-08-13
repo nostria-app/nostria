@@ -48,6 +48,7 @@ const CONTENT_TYPE_DEFS: Omit<ContentType, 'label' | 'description'>[] = [
   { id: 'polls', kinds: [1068, 6969], icon: 'poll' },
   { id: 'reposts', kinds: [6, 16], icon: 'repeat' },
   { id: 'voicePosts', kinds: [1222, 1244], icon: 'audiotrack' },
+  { id: 'podcasts', kinds: [54, 10154], icon: 'podcasts' },
   { id: 'photoPosts', kinds: [20], icon: 'image' },
   { id: 'videoPosts', kinds: [21, 22, 34235, 34236], icon: 'movie' },
 ];
@@ -714,8 +715,9 @@ export class FeedFilterPanelComponent {
     { ...CONTENT_TYPE_DEFS[2], label: $localize`:@@feed.filter.polls:Polls`, description: $localize`:@@feed.filter.polls.description:Polls and zap polls` },
     { ...CONTENT_TYPE_DEFS[3], label: $localize`:@@feed.filter.reposts:Reposts`, description: $localize`:@@feed.filter.reposts.description:Shared content from others` },
     { ...CONTENT_TYPE_DEFS[4], label: $localize`:@@feed.filter.audio:Audio Posts`, description: $localize`:@@feed.filter.audio.description:Audio posts and music` },
-    { ...CONTENT_TYPE_DEFS[5], label: $localize`:@@feed.filter.photos:Photo Posts`, description: $localize`:@@feed.filter.photos.description:Image galleries` },
-    { ...CONTENT_TYPE_DEFS[6], label: $localize`:@@feed.filter.videos:Video Posts`, description: $localize`:@@feed.filter.videos.description:Video posts and clips` },
+    { ...CONTENT_TYPE_DEFS[5], label: $localize`:@@feed.filter.podcasts:Podcasts`, description: $localize`:@@feed.filter.podcasts.description:Podcast episodes and shows` },
+    { ...CONTENT_TYPE_DEFS[6], label: $localize`:@@feed.filter.photos:Photo Posts`, description: $localize`:@@feed.filter.photos.description:Image galleries` },
+    { ...CONTENT_TYPE_DEFS[7], label: $localize`:@@feed.filter.videos:Video Posts`, description: $localize`:@@feed.filter.videos.description:Video posts and clips` },
   ];
 
   readonly toggleFilterOptions: ToggleFilterOption[] = [
@@ -1010,6 +1012,8 @@ export class FeedFilterPanelComponent {
         return [21, 22, 34235, 34236]; // Videos
       case 'music':
         return [32100, 36787, 34139]; // Music
+      case 'podcasts':
+        return [54, 10154];
       case 'polls':
         return [1068, 6969]; // Polls + Zap Polls
       case 'custom':

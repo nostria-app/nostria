@@ -785,6 +785,11 @@ export class App implements OnInit, OnDestroy {
       icon: 'music_note',
     },
     {
+      path: 'podcasts',
+      label: $localize`:@@app.nav.podcasts:Podcasts`,
+      icon: 'podcasts',
+    },
+    {
       path: 'streams',
       label: $localize`:@@app.nav.streams:Streams`,
       icon: 'live_tv',

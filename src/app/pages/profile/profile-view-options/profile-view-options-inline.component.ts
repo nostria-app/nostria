@@ -22,7 +22,7 @@ interface FilterOption {
 const FILTER_OPTIONS: FilterOption[] = [
   { id: 'showNotes', label: 'Posts', description: 'Short text posts', icon: 'description' },
   { id: 'showReposts', label: 'Reposts', description: 'Shared content from others', icon: 'repeat' },
-  { id: 'showAudio', label: 'Audio Posts', description: 'Audio posts and music', icon: 'audiotrack' },
+  { id: 'showAudio', label: 'Audio Posts', description: 'Audio posts, music, and podcasts', icon: 'audiotrack' },
   { id: 'showVideo', label: 'Video Posts', description: 'Video posts and clips', icon: 'movie' },
   { id: 'showReactions', label: 'Reactions', description: 'Like and emoji reactions', icon: 'favorite', experimental: true },
 ];

@@ -38,6 +38,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
   { id: 'clips', label: $localize`:@@app.nav.clips:Clips`, icon: 'smart_display', authenticated: false },
   { id: 'music', label: $localize`:@@app.nav.music:Music`, icon: 'music_note', authenticated: false },
+  { id: 'podcasts', label: $localize`:@@app.nav.podcasts:Podcasts`, icon: 'podcasts', authenticated: false },
   { id: 'streams', label: $localize`:@@app.nav.streams:Streams`, icon: 'live_tv', authenticated: false },
   { id: 'chats', label: $localize`:@@menu.chats:Chats`, icon: 'forum', authenticated: false },
   { id: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },

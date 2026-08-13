@@ -328,6 +328,10 @@ export class MediaQueueComponent implements OnInit {
     if (!item.eventPubkey || !item.eventIdentifier) {
       return;
     }
+    if (item.type === 'Podcast' || item.eventKind === 54) {
+      this.layout.openPodcastEpisode(item.eventIdentifier, undefined);
+      return;
+    }
     this.layout.openSongDetail(item.eventPubkey, item.eventIdentifier);
   }
 
@@ -354,6 +358,11 @@ export class MediaQueueComponent implements OnInit {
       } catch {
         return;
       }
+    }
+
+    if (item.type === 'Podcast' || item.eventKind === 54 || item.eventKind === 10154) {
+      this.layout.openPodcastShow(item.eventPubkey);
+      return;
     }
 
     this.layout.openMusicArtist(npub);

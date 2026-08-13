@@ -57,6 +57,7 @@ IMPORTANT: Make sure that in the UI for users, you don't call things for "events
 - **People**: Profile management and social connections
 - **Collections**: Follow sets and content organization
 - **Music**: Integrated music player with offline support
+- **Podcasts**: NIP-F4 episodes and shows, played through the shared media player
 - **Streams**: Live streaming viewer
 - **Notifications**: Real-time activity notifications
 - **Push Notifications**: Some notifications via web push, such as Zaps, Follows and more. This is handled by separate service hosted by Nostria.

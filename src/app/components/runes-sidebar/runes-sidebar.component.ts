@@ -618,16 +618,16 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected goToSong(): void {
     const current = this.mediaPlayer.current();
-    if (current?.eventPubkey && current?.eventIdentifier) {
-      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    if (current) {
+      this.layout.openMediaItemDetails(current);
       this.sidebarPlayerHovered.set(false);
     }
   }
 
   protected goToArtist(): void {
     const current = this.mediaPlayer.current();
-    if (current?.eventPubkey) {
-      this.router.navigate(['/music/artist', current.eventPubkey]);
+    if (current) {
+      this.layout.openMediaItemAuthor(current);
       this.sidebarPlayerHovered.set(false);
     }
   }

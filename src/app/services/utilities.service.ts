@@ -11,6 +11,12 @@ import { encode } from 'blurhash';
 import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
 import { formatCompactRelativeTime, formatNever } from '../utils/relative-time';
 import { getAngularLocaleCode } from '../utils/supported-locales';
+import {
+  getPodcastDescription,
+  getPodcastImage,
+  getPodcastTitle,
+  getPrimaryPodcastAudioUrl,
+} from '../utils/podcast';
 
 /**
  * Represents a relay entry with its read/write markers per NIP-65.
@@ -2597,5 +2603,39 @@ export class UtilitiesService {
    */
   isMusicKind(kind: number): boolean {
     return UtilitiesService.MUSIC_KINDS.some(value => value === kind);
+  }
+
+  /** NIP-F4 podcast episode and show metadata kinds */
+  static readonly PODCAST_EPISODE_KIND = 54;
+  static readonly PODCAST_METADATA_KIND = 10154;
+  static readonly PODCAST_KINDS = [54, 10154] as const;
+
+  isPodcastEpisodeKind(kind: number): boolean {
+    return kind === UtilitiesService.PODCAST_EPISODE_KIND;
+  }
+
+  isPodcastMetadataKind(kind: number): boolean {
+    return kind === UtilitiesService.PODCAST_METADATA_KIND;
+  }
+
+  isPodcastKind(kind: number): boolean {
+    return kind === UtilitiesService.PODCAST_EPISODE_KIND
+      || kind === UtilitiesService.PODCAST_METADATA_KIND;
+  }
+
+  getPodcastTitle(event: Event | UnsignedEvent): string | undefined {
+    return getPodcastTitle(event);
+  }
+
+  getPodcastDescription(event: Event | UnsignedEvent): string | undefined {
+    return getPodcastDescription(event);
+  }
+
+  getPodcastImage(event: Event | UnsignedEvent): string | undefined {
+    return getPodcastImage(event);
+  }
+
+  getPodcastAudioUrl(event: Event | UnsignedEvent): string | undefined {
+    return getPrimaryPodcastAudioUrl(event);
   }
 }

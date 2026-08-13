@@ -69,6 +69,11 @@ export class CreateMenuComponent {
       action: () => this.layout.openMusicUpload(),
     },
     {
+      label: $localize`:@@create.option.podcast:Podcast Episode`,
+      icon: 'podcasts',
+      action: () => this.layout.openPodcastPublish(),
+    },
+    {
       label: $localize`:@@create.option.livestream:Live Stream`,
       icon: 'live_tv',
       action: () => this.layout.openLiveStreamDialog(),

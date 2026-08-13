@@ -63,7 +63,7 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
             <mat-icon>audiotrack</mat-icon>
             <div class="toggle-text">
               <span class="toggle-label">Audio Clips</span>
-              <span class="toggle-description">Audio posts and music</span>
+              <span class="toggle-description">Audio posts, music, and podcasts</span>
             </div>
           </div>
         </mat-slide-toggle>

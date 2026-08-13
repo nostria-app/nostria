@@ -563,15 +563,15 @@ export class VideoPlayerComponent implements OnDestroy {
 
   goToSong(): void {
     const current = this.media.current();
-    if (this.hasSongLink() && current?.eventPubkey && current?.eventIdentifier) {
-      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    if (this.hasSongLink() && current) {
+      this.layout.openMediaItemDetails(current);
     }
   }
 
   goToArtist(): void {
     const current = this.media.current();
-    if (this.hasArtistLink() && current?.eventPubkey) {
-      this.router.navigate(['/music/artist', current.eventPubkey]);
+    if (this.hasArtistLink() && current) {
+      this.layout.openMediaItemAuthor(current);
     }
   }
 }

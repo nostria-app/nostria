@@ -454,6 +454,45 @@ export const routes: Routes = [
     title: 'Music Terms of Service',
   },
   {
+    path: 'podcasts',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastsComponent),
+    data: { isRoot: true },
+    title: 'Podcasts',
+  },
+  {
+    path: 'podcasts/episodes',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastEpisodesComponent),
+    title: 'Podcast Episodes',
+  },
+  {
+    path: 'podcasts/shows',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastShowsComponent),
+    title: 'Podcast Shows',
+  },
+  {
+    path: 'podcasts/favorites',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastFavoritesComponent),
+    title: 'Favorite Podcasts',
+  },
+  {
+    path: 'podcasts/show/:pubkey',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastShowComponent),
+    resolve: { data: DataResolver },
+    title: 'Podcast',
+  },
+  {
+    path: 'podcasts/episode/:id',
+    loadComponent: () =>
+      import('./pages/podcasts/podcast-route-components').then(m => m.PodcastEpisodeComponent),
+    resolve: { data: DataResolver },
+    title: 'Podcast Episode',
+  },
+  {
     path: 'terms',
     loadComponent: () =>
       import('./pages/terms/terms.component').then(m => m.TermsComponent),
@@ -962,6 +1001,29 @@ export const routes: Routes = [
       import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),
     title: 'Live Stream',
     resolve: { streamData: streamResolver },
+  },
+  {
+    path: 'podcasts/show/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/podcasts/show/podcast-show.component').then(m => m.PodcastShowComponent),
+    resolve: { data: DataResolver },
+    title: 'Podcast',
+  },
+  {
+    path: 'podcasts/episode/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/podcasts/episode/podcast-episode.component').then(m => m.PodcastEpisodeComponent),
+    resolve: { data: DataResolver },
+    title: 'Podcast Episode',
+  },
+  {
+    path: 'podcasts/favorites',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/podcasts/favorites/podcast-favorites.component').then(m => m.PodcastFavoritesComponent),
+    title: 'Favorite Podcasts',
   },
   {
     path: 'music/song/:encodedAddress',

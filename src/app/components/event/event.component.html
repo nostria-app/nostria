@@ -113,6 +113,14 @@
     @else if (targetItem.event.kind === 36787) {
     <app-music-event [event]="targetItem.event"></app-music-event>
     }
+    <!-- Podcast Episode (NIP-F4, kind 54) -->
+    @else if (targetItem.event.kind === 54) {
+    <app-podcast-event [event]="targetItem.event"></app-podcast-event>
+    }
+    <!-- Podcast Show (NIP-F4, kind 10154) -->
+    @else if (targetItem.event.kind === 10154) {
+    <app-podcast-show-event [event]="targetItem.event"></app-podcast-show-event>
+    }
     <!-- Articles (kind 30023) -->
     @else if (targetItem.event.kind === 30023) {
     <app-article-event [event]="targetItem.event"></app-article-event>
@@ -331,6 +339,14 @@
           @else if (rootRecordData.event.kind === 36787) {
           <app-music-event [event]="rootRecordData.event"></app-music-event>
           }
+          <!-- Podcast Episode (NIP-F4, kind 54) -->
+          @else if (rootRecordData.event.kind === 54) {
+          <app-podcast-event [event]="rootRecordData.event"></app-podcast-event>
+          }
+          <!-- Podcast Show (NIP-F4, kind 10154) -->
+          @else if (rootRecordData.event.kind === 10154) {
+          <app-podcast-show-event [event]="rootRecordData.event"></app-podcast-show-event>
+          }
           <!-- Articles (kind 30023) -->
           @else if (rootRecordData.event.kind === 30023) {
           <app-article-event [event]="rootRecordData.event"></app-article-event>
@@ -516,6 +532,14 @@
           @else if (parentRecordData.event.kind === 36787) {
           <app-music-event [event]="parentRecordData.event"></app-music-event>
           }
+          <!-- Podcast Episode (NIP-F4, kind 54) -->
+          @else if (parentRecordData.event.kind === 54) {
+          <app-podcast-event [event]="parentRecordData.event"></app-podcast-event>
+          }
+          <!-- Podcast Show (NIP-F4, kind 10154) -->
+          @else if (parentRecordData.event.kind === 10154) {
+          <app-podcast-show-event [event]="parentRecordData.event"></app-podcast-show-event>
+          }
           <!-- Articles (kind 30023) -->
           @else if (parentRecordData.event.kind === 30023) {
           <app-article-event [event]="parentRecordData.event"></app-article-event>
@@ -685,6 +709,14 @@
     <!-- Music Track (kind 36787) -->
     @else if (item.event.kind === 36787) {
     <app-music-event [event]="item.event"></app-music-event>
+    }
+    <!-- Podcast Episode (NIP-F4, kind 54) -->
+    @else if (item.event.kind === 54) {
+    <app-podcast-event [event]="item.event"></app-podcast-event>
+    }
+    <!-- Podcast Show (NIP-F4, kind 10154) -->
+    @else if (item.event.kind === 10154) {
+    <app-podcast-show-event [event]="item.event"></app-podcast-show-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
@@ -870,6 +902,14 @@
     <!-- Music Track (kind 36787) -->
     @else if (item.event.kind === 36787) {
     <app-music-event [event]="item.event"></app-music-event>
+    }
+    <!-- Podcast Episode (NIP-F4, kind 54) -->
+    @else if (item.event.kind === 54) {
+    <app-podcast-event [event]="item.event"></app-podcast-event>
+    }
+    <!-- Podcast Show (NIP-F4, kind 10154) -->
+    @else if (item.event.kind === 10154) {
+    <app-podcast-show-event [event]="item.event"></app-podcast-show-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {

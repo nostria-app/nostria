@@ -3,6 +3,10 @@ import { AudioEventComponent } from './audio-event.component';
 import { EmojiSetEventComponent } from './emoji-set-event.component';
 import { LiveEventComponent } from './live-event.component';
 import { MusicEventComponent } from './music-event.component';
+import { PodcastEventComponent } from './podcast-event.component';
+import { PodcastShowEventComponent } from './podcast-show-event.component';
+import { PodcastEpisodeMenuComponent } from '../podcast-episode-menu/podcast-episode-menu.component';
+import { PodcastShowMenuComponent } from '../podcast-show-menu/podcast-show-menu.component';
 import { PeopleSetEventComponent } from './people-set-event.component';
 import { PhotoEventComponent } from './photo-event.component';
 import { PlaylistEventComponent } from './playlist-event.component';
@@ -18,6 +22,10 @@ describe('Event type components OnPush change detection', () => {
     { name: 'EmojiSetEventComponent', component: EmojiSetEventComponent },
     { name: 'LiveEventComponent', component: LiveEventComponent },
     { name: 'MusicEventComponent', component: MusicEventComponent },
+    { name: 'PodcastEventComponent', component: PodcastEventComponent },
+    { name: 'PodcastShowEventComponent', component: PodcastShowEventComponent },
+    { name: 'PodcastEpisodeMenuComponent', component: PodcastEpisodeMenuComponent },
+    { name: 'PodcastShowMenuComponent', component: PodcastShowMenuComponent },
     { name: 'PeopleSetEventComponent', component: PeopleSetEventComponent },
     { name: 'PhotoEventComponent', component: PhotoEventComponent },
     { name: 'PlaylistEventComponent', component: PlaylistEventComponent },

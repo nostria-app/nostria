@@ -498,6 +498,22 @@ function buildRouteFallbackPreview(path: string): { title: string; description: 
     };
   }
 
+  if (path.startsWith('/podcasts/episode/')) {
+    return {
+      title: 'Nostr Podcast Episode on Nostria',
+      description: 'Listen to this podcast episode on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/podcasts/show/')) {
+    return {
+      title: 'Nostr Podcast on Nostria',
+      description: 'Open this podcast on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
   if (path.startsWith('/g/')) {
     return {
       title: 'Nostr Group on Nostria',
@@ -671,6 +687,8 @@ const SSR_ROUTE_PATTERNS = [
   /^\/music\/artist\/.+/, // Music artist pages
   /^\/music\/song\/.+/,   // Music song pages
   /^\/music\/playlist\/.+/, // Music playlist pages
+  /^\/podcasts\/episode\/.+/,
+  /^\/podcasts\/show\/.+/,
 ];
 
 /**

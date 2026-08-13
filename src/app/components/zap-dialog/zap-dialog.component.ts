@@ -213,6 +213,22 @@ export class ZapDialogComponent {
       };
     }
 
+    if (this.utilities.isPodcastEpisodeKind(event.kind)) {
+      const title = this.utilities.getPodcastTitle(event)?.trim();
+      return {
+        icon: 'podcasts',
+        label: title ? `Episode: ${title}` : 'Episode zap',
+      };
+    }
+
+    if (this.utilities.isPodcastMetadataKind(event.kind)) {
+      const title = this.utilities.getPodcastTitle(event)?.trim();
+      return {
+        icon: 'podcasts',
+        label: title ? `Podcast: ${title}` : 'Podcast zap',
+      };
+    }
+
     const address = this.data.eventAddress?.trim();
     if (address) {
       return {
