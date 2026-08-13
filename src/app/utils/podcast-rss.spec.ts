@@ -69,4 +69,41 @@ describe('podcast RSS parser', () => {
     expect(parseRssDurationToSeconds('1:01:01')).toBe(3661);
     expect(parseRssDurationToSeconds('75')).toBe(75);
   });
+
+  it('prefers channel/link over channel/image/link for the website', () => {
+    const feed = parsePodcastRssFeed(`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Image First</title>
+    <image>
+      <url>https://cdn.example.com/show.jpg</url>
+      <link>https://cdn.example.com/from-image</link>
+    </image>
+    <link>https://example.com/show</link>
+    <item>
+      <title>Episode</title>
+      <enclosure url="https://cdn.example.com/ep.mp3" type="audio/mpeg" />
+    </item>
+  </channel>
+</rss>`);
+    expect(feed.show.website).toBe('https://example.com/show');
+  });
+
+  it('falls back to channel/image/link when channel/link is missing', () => {
+    const feed = parsePodcastRssFeed(`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Image Only</title>
+    <image>
+      <url>https://cdn.example.com/show.jpg</url>
+      <link>https://example.com/from-image</link>
+    </image>
+    <item>
+      <title>Episode</title>
+      <enclosure url="https://cdn.example.com/ep.mp3" type="audio/mpeg" />
+    </item>
+  </channel>
+</rss>`);
+    expect(feed.show.website).toBe('https://example.com/from-image');
+  });
 });

@@ -112,6 +112,7 @@
   font-size: 0.8125rem;
 }
 
+
 .identity-npub {
   display: flex;
   align-items: center;
@@ -275,6 +276,35 @@ app-image-input {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.publish-summary {
+  margin-top: 1.5rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.summary-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  color: var(--mat-sys-on-surface);
+  font-size: 0.875rem;
+
+  li + li {
+    margin-top: 0.25rem;
+  }
+}
+
+.summary-meta {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8125rem;
+
+  + .summary-meta {
+    margin-top: 0.25rem;
+  }
 }
 
 [dialog-actions] {

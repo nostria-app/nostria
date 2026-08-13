@@ -21,7 +21,8 @@
       </button>
     </div>
     <p class="hint-text" i18n="@@podcasts.import.hint">Supports podcast RSS feeds with audio enclosures (iTunes / Podcast Index).</p>
-    } @else if (!showPreview()) {
+    } @else {
+    @if (!showPreview()) {
     <div class="fetched-content">
       <section class="identity-section">
         @if (isPremium()) {
@@ -55,25 +56,28 @@
             [value]="profile().picture"
             (valueChange)="updateProfile({ picture: $event })"
           />
-          <div class="field-row">
-            <mat-form-field appearance="outline" class="half">
-              <mat-label i18n="@@podcasts.import.profileName">Name</mat-label>
-              <input matInput [value]="profile().name" (input)="updateProfile({ name: $any($event.target).value })" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="half">
-              <mat-label i18n="@@podcasts.import.displayName">Display name</mat-label>
-              <input matInput [value]="profile().displayName"
-                (input)="updateProfile({ displayName: $any($event.target).value })" />
-            </mat-form-field>
-          </div>
           <mat-form-field appearance="outline" class="full">
-            <mat-label i18n="@@podcasts.import.profileWebsite">Website</mat-label>
-            <input matInput [value]="profile().website" (input)="updateProfile({ website: $any($event.target).value })" />
+            <mat-label i18n="@@podcasts.import.displayName">Display name</mat-label>
+            <input matInput [value]="profile().displayName"
+              (input)="updateDisplayName($any($event.target).value)" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
             <mat-label i18n="@@podcasts.import.profileAbout">About</mat-label>
             <textarea matInput rows="3" [value]="profile().about"
               (input)="updateProfile({ about: $any($event.target).value })"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.profileName">Name</mat-label>
+            <input matInput [value]="profile().name" (input)="updateShortName($any($event.target).value)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.profileWebsite">Website</mat-label>
+            <input matInput [value]="profile().website" (input)="updateProfile({ website: $any($event.target).value })" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.lightningAddress">Bitcoin Lightning Address</mat-label>
+            <input matInput [value]="profile().lud16" (input)="updateProfile({ lud16: $any($event.target).value })"
+              placeholder="name@wallet.com" />
           </mat-form-field>
         </div>
         }
@@ -210,6 +214,20 @@
         }
       </div>
     </div>
+    }
+
+    <section class="publish-summary">
+      <div class="section-header">
+        <span class="section-title" i18n="@@podcasts.import.summaryTitle">Publish summary</span>
+      </div>
+      <ul class="summary-list">
+        @for (line of publishSummaryLines(); track line) {
+        <li>{{ line }}</li>
+        }
+      </ul>
+      <p class="summary-meta">{{ publishSummarySigner() }}</p>
+      <p class="summary-meta">{{ publishSummaryRelays() }}</p>
+    </section>
     }
   </div>
 

@@ -20,6 +20,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CorsProxyService } from '../../../services/cors-proxy.service';
 import { DatabaseService } from '../../../services/database.service';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrService } from '../../../services/nostr.service';
 import { PodcastDataService } from '../../../services/podcast-data.service';
@@ -27,11 +28,17 @@ import { parsePodcastRssFeed, type ParsedPodcastEpisode, type ParsedPodcastShow 
 import {
   buildPodcastLoginCredentials,
   buildPodcastProfileContent,
+  deriveShortProfileName,
   emptyPodcastProfile,
   generatePodcastKeypair,
   profileToShowDraft,
   type PodcastProfileDraft,
 } from '../../../utils/podcast-identity';
+import {
+  importEventSigner,
+  readProfileLightningAddress,
+  uniqueRelayUrls,
+} from '../../../utils/podcast-import-plan';
 import {
   AUTHORED_PODCASTS_KIND,
   buildPodcastEpisodeTags,
@@ -40,6 +47,7 @@ import {
   PODCAST_EPISODE_KIND,
   PODCAST_METADATA_KIND,
 } from '../../../utils/podcast';
+import { DEFAULT_PODCAST_RELAYS } from '../../../utils/podcast-default-relays';
 
 interface ImportEpisode extends ParsedPodcastEpisode {
   selected: boolean;
@@ -48,10 +56,17 @@ interface ImportEpisode extends ParsedPodcastEpisode {
 
 interface PodcastEventPreview {
   kind: number;
-  pubkey?: string;
+  pubkey: string;
   created_at: number;
   tags: string[][];
   content: string;
+}
+
+interface ResolvedIdentity {
+  useIdentity: boolean;
+  pubkey: string;
+  npub: string;
+  secretKey: Uint8Array | null;
 }
 
 @Component({
@@ -80,6 +95,7 @@ export class ImportPodcastRssDialogComponent {
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
+  private pool = inject(RelayPoolService);
   private database = inject(DatabaseService);
   private nostr = inject(NostrService);
   private podcastData = inject(PodcastDataService);
@@ -114,7 +130,7 @@ export class ImportPodcastRssDialogComponent {
   readonly episodes = signal<ImportEpisode[]>([]);
   readonly previewEvents = signal<PodcastEventPreview[]>([]);
 
-  readonly isPremium = computed(() => this.accountState.hasActiveSubscription());
+  readonly isPremium = computed(() => !!this.accountState.hasActiveSubscription());
   readonly episodeCount = computed(() => this.episodes().length);
   readonly selectedCount = computed(() => this.episodes().filter(episode => episode.selected).length);
   readonly canPublish = computed(() => {
@@ -122,7 +138,8 @@ export class ImportPodcastRssDialogComponent {
       return false;
     }
     if (this.useUniqueIdentity()) {
-      if (!this.podcastPubkey() || !this.profile().name.trim()) {
+      const profile = this.profile();
+      if (!this.podcastPubkey() || !(profile.displayName.trim() || profile.name.trim())) {
         return false;
       }
       return this.selectedCount() > 0 || this.publishShow();
@@ -147,8 +164,26 @@ export class ImportPodcastRssDialogComponent {
     }
     return $localize`:@@podcasts.import.publishEpisodes:Publish ${selected}:count: episodes`;
   });
+  readonly publishSummaryLines = computed(() => this.buildPublishSummaryLines());
+  readonly publishSummarySigner = computed(() => {
+    const identity = this.resolveIdentity();
+    return identity.useIdentity
+      ? $localize`:@@podcasts.import.summarySignedByIdentity:Signed by the new podcast identity`
+      : $localize`:@@podcasts.import.summarySignedByYou:Signed by your account`;
+  });
+  readonly publishSummaryRelays = computed(() => {
+    if (this.resolveIdentity().useIdentity) {
+      return $localize`:@@podcasts.import.summaryRelaysIdentity:Published to your relays, podcast relays, and discovery relays (NIP-65)`;
+    }
+    return $localize`:@@podcasts.import.summaryRelaysAccount:Published to your relays and podcast relays`;
+  });
 
   private secretKey: Uint8Array | null = null;
+  private nameManuallyEdited = false;
+
+  constructor() {
+    void this.podcastData.ensureInitialized();
+  }
 
   async fetchRss(): Promise<void> {
     const url = this.rssUrl().trim();
@@ -214,13 +249,28 @@ export class ImportPodcastRssDialogComponent {
     this.publishShow.set(true);
 
     const show = this.showInfo();
+    this.nameManuallyEdited = false;
     this.profile.set({
-      name: show.title,
+      name: deriveShortProfileName(show.title),
       displayName: show.title,
       about: show.description,
       picture: show.imageUrl,
       website: show.website,
+      lud16: readProfileLightningAddress(this.accountState.profile()),
     });
+  }
+
+  updateDisplayName(value: string): void {
+    const updates: Partial<PodcastProfileDraft> = { displayName: value };
+    if (!this.nameManuallyEdited) {
+      updates.name = deriveShortProfileName(value);
+    }
+    this.updateProfile(updates);
+  }
+
+  updateShortName(value: string): void {
+    this.nameManuallyEdited = true;
+    this.updateProfile({ name: value });
   }
 
   updateProfile(updates: Partial<PodcastProfileDraft>): void {
@@ -315,7 +365,8 @@ export class ImportPodcastRssDialogComponent {
       return;
     }
 
-    if (this.useUniqueIdentity() && (!this.isPremium() || !this.secretKey || !this.podcastPubkey())) {
+    const identity = this.resolveIdentity();
+    if (this.useUniqueIdentity() && !identity.useIdentity) {
       this.snackBar.open($localize`:@@podcasts.import.premiumRequired:Premium is required to publish as a new podcast identity`, '', {
         duration: 4000,
       });
@@ -331,37 +382,22 @@ export class ImportPodcastRssDialogComponent {
     this.isPublishing.set(true);
     this.showPreview.set(false);
     let publishedCount = 0;
-    const identityKey = this.secretKey;
-    const identityPubkey = this.podcastPubkey();
 
     try {
       for (const template of templates) {
-        const unsigned: UnsignedEvent = {
-          kind: template.kind,
-          created_at: template.created_at,
-          tags: template.tags,
-          content: template.content,
-          pubkey: template.pubkey || accountPubkey,
-        };
-
-        const signed = identityKey && unsigned.pubkey === identityPubkey
-          ? finalizeEvent(unsigned, identityKey)
-          : await this.nostr.signEvent(unsigned);
+        const signed = await this.signImportEvent(template, identity, accountPubkey);
+        if (identity.useIdentity && importEventSigner(signed.kind, true) === 'identity' && signed.pubkey !== identity.pubkey) {
+          throw new Error('Podcast identity event was not signed by the generated key');
+        }
 
         await this.persistPublishedEvent(signed);
-        await this.accountRelay.publish(signed);
-        if (signed.kind === kinds.RelayList) {
-          await this.discoveryRelay.publish(signed);
-        }
+        await this.publishImportEvent(signed, identity.useIdentity);
         publishedCount += 1;
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      if (identityPubkey) {
-        await this.addAuthoredPodcast(accountPubkey, identityPubkey);
-      }
-
-      if (identityKey) {
+      if (identity.useIdentity) {
+        await this.addAuthoredPodcast(accountPubkey, identity.pubkey);
         this.downloadCredentials();
       }
       this.snackBar.open(
@@ -419,7 +455,7 @@ export class ImportPodcastRssDialogComponent {
         tags,
       });
       await this.database.saveReplaceableEvent(signed);
-      await this.accountRelay.publish(signed);
+      await this.publishToRelays(this.contentRelayUrls(), signed);
     } catch (error) {
       this.logger.warn('Failed to update authored podcasts list:', error);
     }
@@ -428,27 +464,32 @@ export class ImportPodcastRssDialogComponent {
   private generateEventTemplates(): PodcastEventPreview[] {
     const now = Math.floor(Date.now() / 1000);
     const events: PodcastEventPreview[] = [];
-    const identityPubkey = this.useUniqueIdentity() ? this.podcastPubkey() : '';
-    const authorPubkey = this.accountState.pubkey();
-    const show = this.useUniqueIdentity()
+    const identity = this.resolveIdentity();
+    const accountPubkey = this.accountState.pubkey() || '';
+    const publishPubkey = identity.useIdentity ? identity.pubkey : accountPubkey;
+    const show = identity.useIdentity
       ? { ...this.showInfo(), ...profileToShowDraft(this.profile()) }
       : this.showInfo();
 
-    if (identityPubkey) {
-      const relayUrls = this.accountRelay.getRelayUrls();
+    if (!publishPubkey) {
+      return events;
+    }
+
+    if (identity.useIdentity) {
+      const contentRelays = this.contentRelayUrls();
       events.push({
         kind: kinds.Metadata,
-        pubkey: identityPubkey,
+        pubkey: identity.pubkey,
         created_at: now,
         tags: [],
         content: buildPodcastProfileContent(this.profile()),
       });
-      if (relayUrls.length > 0) {
+      if (contentRelays.length > 0) {
         events.push({
           kind: kinds.RelayList,
-          pubkey: identityPubkey,
+          pubkey: identity.pubkey,
           created_at: now,
-          tags: relayUrls.map(url => ['r', url]),
+          tags: contentRelays.map(url => ['r', url]),
           content: '',
         });
       }
@@ -456,12 +497,12 @@ export class ImportPodcastRssDialogComponent {
 
     if (this.publishShow() && show.title.trim()) {
       const tags = buildPodcastShowTags(show);
-      if (identityPubkey && authorPubkey) {
-        tags.push(['p', authorPubkey, 'host']);
+      if (identity.useIdentity && accountPubkey) {
+        tags.push(['p', accountPubkey, 'host']);
       }
       events.push({
         kind: PODCAST_METADATA_KIND,
-        pubkey: identityPubkey || undefined,
+        pubkey: publishPubkey,
         created_at: now,
         tags,
         content: '',
@@ -475,7 +516,7 @@ export class ImportPodcastRssDialogComponent {
 
       events.push({
         kind: PODCAST_EPISODE_KIND,
-        pubkey: identityPubkey || undefined,
+        pubkey: publishPubkey,
         created_at: episode.publishedAt && episode.publishedAt > 0 ? episode.publishedAt : now,
         tags: buildPodcastEpisodeTags({
           title: episode.title,
@@ -491,9 +532,114 @@ export class ImportPodcastRssDialogComponent {
     return events;
   }
 
+  private resolveIdentity(): ResolvedIdentity {
+    const useIdentity = this.useUniqueIdentity() === true
+      && this.isPremium() === true
+      && this.secretKey !== null
+      && this.podcastPubkey().length > 0;
+
+    return {
+      useIdentity,
+      pubkey: useIdentity ? this.podcastPubkey() : '',
+      npub: useIdentity ? this.podcastNpub() : '',
+      secretKey: useIdentity ? this.secretKey : null,
+    };
+  }
+
+  private async signImportEvent(
+    template: PodcastEventPreview,
+    identity: ResolvedIdentity,
+    accountPubkey: string,
+  ): Promise<Event> {
+    const signer = importEventSigner(template.kind, identity.useIdentity);
+    const unsigned: UnsignedEvent = {
+      kind: template.kind,
+      created_at: template.created_at,
+      tags: template.tags,
+      content: template.content,
+      pubkey: signer === 'identity' ? identity.pubkey : accountPubkey,
+    };
+
+    if (signer === 'identity') {
+      if (!identity.secretKey || unsigned.pubkey !== identity.pubkey) {
+        throw new Error('Generated podcast identity is not available for signing');
+      }
+      return finalizeEvent(unsigned, identity.secretKey);
+    }
+
+    return this.nostr.signEvent(unsigned);
+  }
+
+  private async publishImportEvent(event: Event, useIdentity: boolean): Promise<void> {
+    const contentRelays = this.contentRelayUrls();
+    const discoveryRelays = this.discoveryRelayUrls();
+
+    if (event.kind === kinds.RelayList && useIdentity) {
+      await this.publishToRelays(uniqueRelayUrls([...contentRelays, ...discoveryRelays]), event);
+      if (discoveryRelays.length === 0) {
+        await this.discoveryRelay.publish(event);
+      }
+      return;
+    }
+
+    await this.publishToRelays(contentRelays, event);
+  }
+
+  private async publishToRelays(relayUrls: string[], event: Event): Promise<void> {
+    if (relayUrls.length === 0) {
+      throw new Error('No relays available for publish');
+    }
+
+    try {
+      await this.pool.publish(relayUrls, event);
+    } catch (error) {
+      this.logger.warn('Some relays failed while publishing imported podcast event:', error);
+    }
+  }
+
+  private contentRelayUrls(): string[] {
+    const podcastRelays = this.podcastData.podcastRelays();
+    return uniqueRelayUrls([
+      ...this.accountRelay.getRelayUrls(),
+      ...(podcastRelays.length > 0 ? podcastRelays : DEFAULT_PODCAST_RELAYS),
+    ]);
+  }
+
+  private discoveryRelayUrls(): string[] {
+    return uniqueRelayUrls(this.discoveryRelay.getRelayUrls());
+  }
+
+  private buildPublishSummaryLines(): string[] {
+    const identity = this.resolveIdentity();
+    const templates = this.generateEventTemplates();
+    const lines: string[] = [];
+    const episodeCount = templates.filter(event => event.kind === PODCAST_EPISODE_KIND).length;
+
+    if (templates.some(event => event.kind === kinds.Metadata)) {
+      lines.push($localize`:@@podcasts.import.summaryProfile:Profile (kind 0)`);
+    }
+    if (templates.some(event => event.kind === kinds.RelayList)) {
+      lines.push($localize`:@@podcasts.import.summaryRelayList:Relay list (kind 10002, NIP-65)`);
+    }
+    if (templates.some(event => event.kind === PODCAST_METADATA_KIND)) {
+      lines.push($localize`:@@podcasts.import.summaryShow:Show metadata (kind 10154)`);
+    }
+    if (episodeCount === 1) {
+      lines.push($localize`:@@podcasts.import.summaryEpisodeOne:1 episode (kind 54)`);
+    } else if (episodeCount > 1) {
+      lines.push($localize`:@@podcasts.import.summaryEpisodes:${episodeCount}:count: episodes (kind 54)`);
+    }
+    if (identity.useIdentity) {
+      lines.push($localize`:@@podcasts.import.summaryAuthored:Authored podcasts list (kind 10064)`);
+    }
+
+    return lines;
+  }
+
   private clearGeneratedIdentity(): void {
     this.secretKey = null;
     this.useUniqueIdentity.set(false);
+    this.nameManuallyEdited = false;
     this.podcastNpub.set('');
     this.podcastPubkey.set('');
     this.profile.set(emptyPodcastProfile());

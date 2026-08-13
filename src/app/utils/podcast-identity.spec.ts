@@ -2,6 +2,7 @@ import { getPublicKey, nip19 } from 'nostr-tools';
 import {
   buildPodcastLoginCredentials,
   buildPodcastProfileContent,
+  deriveShortProfileName,
   emptyPodcastProfile,
   generatePodcastKeypair,
   profileToShowDraft,
@@ -30,12 +31,16 @@ describe('podcast identity', () => {
       website: 'https://example.com',
     };
 
-    expect(JSON.parse(buildPodcastProfileContent(profile))).toEqual({
+    expect(JSON.parse(buildPodcastProfileContent({
+      ...profile,
+      lud16: 'show@getalby.com',
+    }))).toEqual({
       name: 'Relay Talk',
       display_name: 'Relay Talk Show',
       about: 'Weekly notes',
       picture: 'https://cdn.example.com/show.jpg',
       website: 'https://example.com',
+      lud16: 'show@getalby.com',
     });
     expect(profileToShowDraft(profile)).toEqual({
       title: 'Relay Talk Show',
@@ -43,5 +48,6 @@ describe('podcast identity', () => {
       imageUrl: 'https://cdn.example.com/show.jpg',
       website: 'https://example.com',
     });
+    expect(deriveShortProfileName('Relay Talk Show')).toBe('relaytalkshow');
   });
 });

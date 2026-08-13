@@ -64,7 +64,7 @@ export function parsePodcastRssFeed(xml: string): ParsedPodcastFeed {
   const showImage = channel.querySelector('image > url')?.textContent?.trim()
     || itunesImageHref(channel)
     || '';
-  const website = textContent(channel, 'link');
+  const website = parseChannelWebsite(channel);
 
   const episodes: ParsedPodcastEpisode[] = [];
   const items = channel.querySelectorAll('item');
@@ -117,6 +117,21 @@ export function stripRssHtml(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   return (doc.body.textContent || '').replace(/\s+\n/g, '\n').trim();
+}
+
+/** channel/link wins; fall back to channel/image/link. */
+export function parseChannelWebsite(channel: Element): string {
+  for (const child of Array.from(channel.children)) {
+    const localName = child.localName || child.nodeName;
+    if (localName === 'link') {
+      const value = child.textContent?.trim();
+      if (value) {
+        return value;
+      }
+    }
+  }
+
+  return channel.querySelector('image > link')?.textContent?.trim() || '';
 }
 
 export function parseRssDurationToSeconds(duration: string): number | null {

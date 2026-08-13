@@ -16,6 +16,7 @@ export interface PodcastProfileDraft {
   about: string;
   picture: string;
   website: string;
+  lud16: string;
 }
 
 export interface GeneratedPodcastKeypair {
@@ -51,6 +52,7 @@ export function buildPodcastProfileContent(profile: PodcastProfileDraft): string
   const about = profile.about.trim();
   const picture = profile.picture.trim();
   const website = profile.website.trim();
+  const lud16 = profile.lud16.trim();
 
   if (name) {
     content['name'] = name;
@@ -67,8 +69,20 @@ export function buildPodcastProfileContent(profile: PodcastProfileDraft): string
   if (website) {
     content['website'] = website;
   }
+  if (lud16) {
+    content['lud16'] = lud16;
+  }
 
   return JSON.stringify(content);
+}
+
+export function deriveShortProfileName(displayName: string): string {
+  return displayName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 30);
 }
 
 export function profileToShowDraft(profile: PodcastProfileDraft): PodcastShowDraft {
@@ -87,5 +101,6 @@ export function emptyPodcastProfile(): PodcastProfileDraft {
     about: '',
     picture: '',
     website: '',
+    lud16: '',
   };
 }

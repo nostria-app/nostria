@@ -100,6 +100,33 @@ export const DEFAULT_MENU_ITEM_IDS: string[] = [
 ];
 
 /**
+ * Inserts Podcasts into a saved custom menu if it is missing.
+ * Empty configs still mean "use defaults", which already include Podcasts.
+ */
+export function ensurePodcastsMenuItem(menuItems: MenuItemConfig[]): MenuItemConfig[] {
+  if (menuItems.length === 0 || menuItems.some(item => item.id === 'podcasts')) {
+    return menuItems;
+  }
+
+  const next = [...menuItems];
+  const podcastsItem: MenuItemConfig = { id: 'podcasts', visible: true };
+  const musicIndex = next.findIndex(item => item.id === 'music');
+  if (musicIndex >= 0) {
+    next.splice(musicIndex + 1, 0, podcastsItem);
+    return next;
+  }
+
+  const streamsIndex = next.findIndex(item => item.id === 'streams');
+  if (streamsIndex >= 0) {
+    next.splice(streamsIndex, 0, podcastsItem);
+    return next;
+  }
+
+  next.push(podcastsItem);
+  return next;
+}
+
+/**
  * Threshold for filtering notifications from events with too many tagged accounts.
  * This helps prevent spam notifications from mass-tagging attacks.
  * 'none' means no filtering (allow any number of tags).
@@ -393,6 +420,9 @@ export class LocalSettingsService {
           },
           // Ensure locale is supported
           locale: normalizeLocale(stored.locale),
+          menuItems: ensurePodcastsMenuItem(
+            Array.isArray(stored.menuItems) ? stored.menuItems : [],
+          ),
         };
 
         this.settings.set(mergedSettings);
@@ -605,7 +635,7 @@ export class LocalSettingsService {
    * Set menu items configuration (order and visibility)
    */
   setMenuItems(menuItems: MenuItemConfig[]): void {
-    this.updateSettings({ menuItems });
+    this.updateSettings({ menuItems: ensurePodcastsMenuItem(menuItems) });
   }
 
   /**
