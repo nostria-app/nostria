@@ -23,6 +23,77 @@
     <p class="hint-text" i18n="@@podcasts.import.hint">Supports podcast RSS feeds with audio enclosures (iTunes / Podcast Index).</p>
     } @else if (!showPreview()) {
     <div class="fetched-content">
+      <section class="identity-section">
+        @if (isPremium()) {
+        <div class="section-header">
+          <span class="section-title">
+            <mat-icon>vpn_key</mat-icon>
+            <span i18n="@@podcasts.import.identityTitle">Unique podcast identity</span>
+          </span>
+          <mat-slide-toggle [checked]="useUniqueIdentity()" (change)="toggleUniqueIdentity($event.checked)">
+            <span i18n="@@podcasts.import.createKeypair">Create a new key pair</span>
+          </mat-slide-toggle>
+        </div>
+        @if (useUniqueIdentity()) {
+        <p class="identity-hint" i18n="@@podcasts.import.identityHint">
+          Each show gets its own npub. Events are signed with that key so you can publish many podcasts without switching accounts. Nostria does not save this key — download the login JSON if you want to keep it.
+        </p>
+        <div class="identity-npub">
+          <code>{{ podcastNpub() }}</code>
+          <button mat-icon-button type="button" (click)="copyNpub()" [matTooltip]="copyNpubLabel" [attr.aria-label]="copyNpubLabel">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+          <button mat-stroked-button type="button" (click)="downloadCredentials()">
+            <mat-icon>download</mat-icon>
+            <span i18n="@@podcasts.import.downloadJson">Download JSON</span>
+          </button>
+        </div>
+        <div class="profile-fields">
+          <app-image-input
+            [label]="profilePictureLabel"
+            shape="circle"
+            [value]="profile().picture"
+            (valueChange)="updateProfile({ picture: $event })"
+          />
+          <div class="field-row">
+            <mat-form-field appearance="outline" class="half">
+              <mat-label i18n="@@podcasts.import.profileName">Name</mat-label>
+              <input matInput [value]="profile().name" (input)="updateProfile({ name: $any($event.target).value })" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="half">
+              <mat-label i18n="@@podcasts.import.displayName">Display name</mat-label>
+              <input matInput [value]="profile().displayName"
+                (input)="updateProfile({ displayName: $any($event.target).value })" />
+            </mat-form-field>
+          </div>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.profileWebsite">Website</mat-label>
+            <input matInput [value]="profile().website" (input)="updateProfile({ website: $any($event.target).value })" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label i18n="@@podcasts.import.profileAbout">About</mat-label>
+            <textarea matInput rows="3" [value]="profile().about"
+              (input)="updateProfile({ about: $any($event.target).value })"></textarea>
+          </mat-form-field>
+        </div>
+        }
+        } @else {
+        <div class="premium-teaser">
+          <mat-icon>workspace_premium</mat-icon>
+          <div class="premium-teaser-copy">
+            <strong i18n="@@podcasts.import.premiumTitle">Premium: unique podcast identities</strong>
+            <p i18n="@@podcasts.import.premiumBody">
+              Generate a dedicated npub/nsec for this show, publish a kind 0 profile plus podcast events without logging in as that key, and download the credentials as a Nostria login JSON file. Import as many podcasts as you want from your current account.
+            </p>
+            <button mat-stroked-button type="button" (click)="upgradeToPremium()">
+              <mat-icon>stars</mat-icon>
+              <span i18n="@@podcasts.import.upgrade">Upgrade to Premium</span>
+            </button>
+          </div>
+        </div>
+        }
+      </section>
+
       <section class="show-section">
         <div class="section-header">
           <span class="section-title" i18n="@@podcasts.import.showDetails">Show details</span>
