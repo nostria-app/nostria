@@ -29,14 +29,10 @@
   font-size: 0.75rem;
 }
 
-.fetched-content,
-.event-preview-section {
+.fetched-content {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  max-height: 60vh;
-  min-height: 40vh;
-  overflow-y: auto;
 }
 
 .show-section,
@@ -312,11 +308,4 @@ app-image-input {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.75rem;
-}
-
-@media (max-width: 600px) {
-  .fetched-content,
-  .event-preview-section {
-    max-height: none;
-  }
 }
