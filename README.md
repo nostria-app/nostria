@@ -291,6 +291,12 @@ Make browser config 1024x1366 with 2x pixel density.
 
 https://vscode.dev/redirect/mcp/install?name=io.github.ChromeDevTools%2Fchrome-devtools-mcp&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22chrome-devtools-mcp%22%5D%2C%22env%22%3A%7B%7D%7D
 
+### Ava Voice MCP
+
+In the .vscode/mcp.json there is a registration for Ava Voice MCP. This is used to run Ava Voice, for example after AI has completed a run.
+
+Run it like this: `Use the Ava voice tool to speak a 10-second summary of what I just asked and what you completed.`
+
 ### ADB Logs
 
 ```pws
