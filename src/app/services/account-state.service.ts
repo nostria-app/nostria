@@ -22,7 +22,7 @@ import { ContactListProfileMetadata, getContactListProfileMap, normalizeContactL
 
 /** Temporary complimentary Premium so this npub can publish RSS podcasts. Remove after. */
 const TEMPORARY_PREMIUM_PUBKEYS = new Set([
-  '',
+  '4d033b7870c336209a8b8267829b165df88c6ccd8c1fa0572899b1435726f978',
 ]);
 
 interface ProfileProcessingState {

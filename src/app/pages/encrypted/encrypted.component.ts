@@ -516,6 +516,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
         if (count > 0) queueMicrotask(() => this.scrollToBottom());
       });
     });
+
+    // Hide the mobile nav while the composer is on screen, matching public chats.
+    effect(() => {
+      const viewingChat = this.mobilePane() === 'content';
+      this.layout.hideMobileNav.set(this.layout.isHandset() && viewingChat);
+    });
   }
 
   ngOnInit(): void {
@@ -540,6 +546,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.layout.hideMobileNav.set(false);
     this.concord.closeSubscriptions();
   }
 
