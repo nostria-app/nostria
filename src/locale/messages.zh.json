@@ -2027,6 +2027,15 @@
     "ago.short.months": "{$count}mo\n",
     "ago.short.months-ago": "{$count} 个月前\n",
     "ago.short.years": "{$count}y\n",
-    "ago.short.years-ago": "{$count}年前"
+    "ago.short.years-ago": "{$count}年前",
+    "encrypted.rail.title": "Communities",
+    "encrypted.rail.empty": "No communities",
+    "encrypted.rail.sync": "Sync",
+    "encrypted.rail.join": "Join",
+    "encrypted.rail.create": "New",
+    "servers.rail.title": "Groups",
+    "servers.rail.empty": "No groups yet",
+    "servers.rail.discover": "Discover",
+    "servers.rail.create": "New"
   }
 }

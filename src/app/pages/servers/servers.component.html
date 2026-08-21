@@ -1,6 +1,7 @@
 <div class="servers-page" [attr.data-pane]="mobilePane()">
   <!-- ──────────────────── Group rail (primary entities) ──────────────────── -->
   <nav class="server-rail" aria-label="Your groups">
+    <h2 class="rail-heading title-font" i18n="@@servers.rail.title">Groups</h2>
     <div class="rail-scroll">
       @for (group of joinedGroups(); track group.relay + group.id) {
       <button
@@ -16,9 +17,10 @@
         } @else {
         <span class="rail-avatar rail-initials">{{ initials(group.name) }}</span>
         }
+        <span class="rail-label">{{ group.name }}</span>
       </button>
       } @empty {
-      <p class="rail-empty">No groups yet</p>
+      <p class="rail-empty" i18n="@@servers.rail.empty">No groups yet</p>
       }
     </div>
 
@@ -31,6 +33,7 @@
         (click)="loadDiscover()"
       >
         <mat-icon>explore</mat-icon>
+        <span class="rail-label" i18n="@@servers.rail.discover">Discover</span>
       </button>
 
       <button
@@ -41,6 +44,7 @@
         (click)="openCreateGroup()"
       >
         <mat-icon>add</mat-icon>
+        <span class="rail-label" i18n="@@servers.rail.create">New</span>
       </button>
     </div>
   </nav>

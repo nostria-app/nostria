@@ -1,6 +1,7 @@
 <div class="encrypted-page" [attr.data-pane]="mobilePane()">
   <!-- ─────────────────────── Community rail ─────────────────────── -->
   <nav class="rail" aria-label="Encrypted communities">
+    <h2 class="rail-heading title-font" i18n="@@encrypted.rail.title">Communities</h2>
     <div class="rail-scroll">
       @for (community of communities(); track community.communityId) {
       <button type="button" class="rail-item" [class.active]="activeCommunity()?.communityId === community.communityId"
@@ -10,9 +11,10 @@
         } @else {
         <span class="rail-avatar">{{ initials(displayName(community)) }}</span>
         }
+        <span class="rail-label">{{ displayName(community) }}</span>
       </button>
       } @empty {
-      <p class="rail-empty">No communities</p>
+      <p class="rail-empty" i18n="@@encrypted.rail.empty">No communities</p>
       }
     </div>
 
@@ -20,16 +22,19 @@
       <button type="button" class="rail-item rail-add" matTooltip="Sync communities from your other clients"
         matTooltipPosition="right" [disabled]="concord.syncing()" (click)="syncMemberships()">
         <mat-icon>{{ concord.syncing() ? 'hourglass_empty' : 'sync' }}</mat-icon>
+        <span class="rail-label" i18n="@@encrypted.rail.sync">Sync</span>
       </button>
 
       <button type="button" class="rail-item rail-add" matTooltip="Join with an invite" matTooltipPosition="right"
         (click)="openJoin()">
         <mat-icon>key</mat-icon>
+        <span class="rail-label" i18n="@@encrypted.rail.join">Join</span>
       </button>
 
       <button type="button" class="rail-item rail-add" matTooltip="Create a community" matTooltipPosition="right"
         (click)="openCreate()">
         <mat-icon>add</mat-icon>
+        <span class="rail-label" i18n="@@encrypted.rail.create">New</span>
       </button>
     </div>
   </nav>

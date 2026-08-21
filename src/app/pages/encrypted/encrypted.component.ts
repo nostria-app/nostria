@@ -518,9 +518,13 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     });
 
     // Hide the mobile nav while the composer is on screen, matching public chats.
+    // List/channel pickers keep the nav and clear any scroll-hidden leftover.
     effect(() => {
       const viewingChat = this.mobilePane() === 'content';
       this.layout.hideMobileNav.set(this.layout.isHandset() && viewingChat);
+      if (!viewingChat) {
+        this.layout.mobileNavScrollHidden.set(false);
+      }
     });
   }
 

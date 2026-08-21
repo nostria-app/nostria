@@ -2027,6 +2027,15 @@
     "ago.short.months": "__ПЛАЦЕХОЛДЕР_0__мес",
     "ago.short.months-ago": "пре __ПЛАЦЕХОЛДЕР_0__месеца",
     "ago.short.years": "__ПЛАЦЕХОЛДЕР_0__и",
-    "ago.short.years-ago": "__ПЛАЦЕХОЛДЕР_0__г"
+    "ago.short.years-ago": "__ПЛАЦЕХОЛДЕР_0__г",
+    "encrypted.rail.title": "Communities",
+    "encrypted.rail.empty": "No communities",
+    "encrypted.rail.sync": "Sync",
+    "encrypted.rail.join": "Join",
+    "encrypted.rail.create": "New",
+    "servers.rail.title": "Groups",
+    "servers.rail.empty": "No groups yet",
+    "servers.rail.discover": "Discover",
+    "servers.rail.create": "New"
   }
 }
