@@ -20,7 +20,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -45,6 +45,7 @@ import { VideoRecordDialogResult } from '../../interfaces/media-upload';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { HapticsService } from '../../services/haptics.service';
 import { LoggerService } from '../../services/logger.service';
 import { Nip29GroupsListService } from '../../services/nip29-groups-list.service';
 import { Nip29LivekitService } from '../../services/nip29-livekit.service';
@@ -119,6 +120,7 @@ export class ServersComponent implements OnInit, OnDestroy {
   private readonly mediaService = inject(MediaService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly transferState = inject(TransferState);
+  private readonly haptics = inject(HapticsService);
 
   readonly layout = inject(LayoutService);
   readonly nip29 = inject(Nip29Service);
@@ -134,6 +136,10 @@ export class ServersComponent implements OnInit, OnDestroy {
   // -- Route state ------------------------------------------------------------
   readonly serverSlug = signal<string | null>(null);
   readonly groupId = signal<string | null>(null);
+
+  readonly longPressedMessageId = signal<string | null>(null);
+  private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly LONG_PRESS_DURATION = 500;
 
   // -- UI state ---------------------------------------------------------------
   readonly mobilePane = signal<MobilePane>('servers');
@@ -457,6 +463,10 @@ export class ServersComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
     this.layout.hideMobileNav.set(false);
     this.nip29.closeSubscriptions();
     void this.voice.leave();
@@ -807,6 +817,32 @@ export class ServersComponent implements OnInit, OnDestroy {
 
   setReply(message: Nip29Message): void {
     this.replyingTo.set(message);
+  }
+
+  onMessageTouchStart(event: TouchEvent, message: Nip29Message, menuTrigger: MatMenuTrigger): void {
+    this.onMessageTouchEnd();
+
+    this.longPressTimeout = setTimeout(() => {
+      event.preventDefault();
+      this.haptics.triggerMedium();
+      this.longPressedMessageId.set(message.id);
+      menuTrigger.openMenu();
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  onMessageTouchEnd(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+
+    setTimeout(() => {
+      this.longPressedMessageId.set(null);
+    }, 300);
+  }
+
+  copyMessage(message: Nip29Message): void {
+    this.layout.copyToClipboard(message.content, 'message');
   }
 
   cancelReply(): void {

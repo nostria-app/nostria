@@ -442,9 +442,33 @@ img.rail-avatar {
   position: relative;
   padding: 2px 0;
 
-  &:hover>.row-actions {
+  &:hover .row-actions {
     opacity: 1;
   }
+}
+
+.message-press-target {
+  position: relative;
+  -webkit-touch-callout: none;
+
+  &.long-press-active {
+    transform: scale(0.98);
+    opacity: 0.9;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+}
+
+.message-menu-trigger {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
 }
 
 .thread-toggle {

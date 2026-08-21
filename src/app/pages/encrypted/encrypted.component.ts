@@ -22,7 +22,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -59,6 +59,7 @@ import {
 } from '../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { HapticsService } from '../../services/haptics.service';
 import { LoggerService } from '../../services/logger.service';
 import { DatabaseService } from '../../services/database.service';
 import { FollowingService } from '../../services/following.service';
@@ -161,6 +162,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   private readonly database = inject(DatabaseService);
   private readonly following = inject(FollowingService);
+  private readonly haptics = inject(HapticsService);
 
   readonly layout = inject(LayoutService);
   readonly concord = inject(ConcordService);
@@ -178,6 +180,11 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
   readonly communityId = signal<string | null>(null);
   readonly channelId = signal<string | null>(null);
+
+  readonly longPressedMessageId = signal<string | null>(null);
+  readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'] as const;
+  private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly LONG_PRESS_DURATION = 500;
 
   readonly mobilePane = signal<MobilePane>('communities');
   readonly view = signal<ChannelView>('chat');
@@ -550,6 +557,10 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
     this.layout.hideMobileNav.set(false);
     this.concord.closeSubscriptions();
   }
@@ -679,6 +690,32 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
   setReply(message: CordMessage): void {
     this.replyingTo.set(message);
+  }
+
+  onMessageTouchStart(event: TouchEvent, message: CordMessage, menuTrigger: MatMenuTrigger): void {
+    this.onMessageTouchEnd();
+
+    this.longPressTimeout = setTimeout(() => {
+      event.preventDefault();
+      this.haptics.triggerMedium();
+      this.longPressedMessageId.set(message.id);
+      menuTrigger.openMenu();
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  onMessageTouchEnd(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+
+    setTimeout(() => {
+      this.longPressedMessageId.set(null);
+    }, 300);
+  }
+
+  copyMessage(message: CordMessage): void {
+    this.layout.copyToClipboard(this.textFor(message) || message.content, 'message');
   }
 
   cancelReply(): void {

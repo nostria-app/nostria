@@ -717,10 +717,30 @@
   display: flex;
   flex-direction: column;
   padding: 2px 0;
+  -webkit-touch-callout: none;
 
   &:hover .message-actions {
     opacity: 1;
   }
+
+  &.long-press-active {
+    transform: scale(0.98);
+    opacity: 0.9;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+}
+
+.message-menu-trigger {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
 }
 
 .message-body {

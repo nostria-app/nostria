@@ -708,81 +708,134 @@
     </div>
 
     <ng-template #messageBody let-message let-rootId="rootId">
-      @if (parentPreview(message, rootId); as parent) {
-      <div class="reply-preview">
-        <mat-icon>reply</mat-icon>
-        <app-profile-display-name [pubkey]="parent.pubkey" />
-        <span class="reply-text">{{ parent.content }}</span>
-      </div>
-      }
+      <div class="message-press-target" [class.long-press-active]="longPressedMessageId() === message.id"
+        (touchstart)="onMessageTouchStart($event, message, msgMenuTrigger)" (touchend)="onMessageTouchEnd()"
+        (touchmove)="onMessageTouchEnd()">
+        <button type="button" class="message-menu-trigger" #msgMenuTrigger="matMenuTrigger"
+          [matMenuTriggerFor]="msgMenu" tabindex="-1" aria-hidden="true"></button>
+        <mat-menu #msgMenu="matMenu">
+          <ng-template matMenuContent>
+            <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+              <mat-icon>add_reaction</mat-icon>
+              <span i18n="@@messages.menu.react">React</span>
+            </button>
+            <button mat-menu-item (click)="setReply(message)">
+              <mat-icon>reply</mat-icon>
+              <span i18n="@@event.actions.reply">Reply</span>
+            </button>
+            <button mat-menu-item (click)="copyMessage(message)">
+              <mat-icon>content_copy</mat-icon>
+              <span i18n="@@event.menu.copy">Copy</span>
+            </button>
+            @if (canPin()) {
+            <button mat-menu-item [disabled]="busy()" (click)="togglePin(message)">
+              <mat-icon>push_pin</mat-icon>
+              @if (isPinned(message)) {
+              <span i18n="@@event.menu.unpin">Unpin</span>
+              } @else {
+              <span i18n="@@event.menu.pin">Pin</span>
+              }
+            </button>
+            }
+            @if (canDelete(message)) {
+            <button mat-menu-item (click)="deleteMessage(message)">
+              <mat-icon>delete</mat-icon>
+              <span i18n="@@event.menu.delete">Delete</span>
+            </button>
+            }
+          </ng-template>
+        </mat-menu>
+        <mat-menu #reactionMenu="matMenu">
+          <ng-template matMenuContent>
+            @for (emoji of quickReactions; track emoji) {
+            <button mat-menu-item (click)="react(message, emoji)">
+              <span>{{ emoji }}</span>
+            </button>
+            }
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="openReactionPicker(message)">
+              <mat-icon>add_reaction</mat-icon>
+              <span i18n="@@encrypted.message.more-reactions">More</span>
+            </button>
+          </ng-template>
+        </mat-menu>
 
-      @if (textFor(message); as text) {
-      <div class="body">
-        <app-message-content [content]="text" [tags]="message.rumor.tags" [authorPubkey]="message.pubkey" />
-        @if (message.editedContent) {
-        <span class="edited" matTooltip="Edited by the author">(edited)</span>
-        }
-      </div>
-      }
-
-      @if (attachmentsFor(message); as attachments) {
-      @if (attachments.length > 0) {
-      <div class="attachments">
-        @for (attachment of attachments; track attachment.src) {
-        <div class="attachment-frame">
-          @if (attachment.video) {
-          <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
-          } @else {
-          <img class="attachment" [src]="attachment.src" [alt]="attachment.alt" loading="lazy"
-            (click)="openAttachment(attachment.src, attachment.alt)" />
-          }
-          <span class="attachment-visibility" [class.encrypted]="attachment.encrypted"
-            [matTooltip]="attachment.encrypted ? 'Encrypted attachment' : 'Public attachment'">
-            <mat-icon>{{ attachment.encrypted ? 'lock' : 'public' }}</mat-icon>
-          </span>
+        @if (parentPreview(message, rootId); as parent) {
+        <div class="reply-preview">
+          <mat-icon>reply</mat-icon>
+          <app-profile-display-name [pubkey]="parent.pubkey" />
+          <span class="reply-text">{{ parent.content }}</span>
         </div>
         }
-      </div>
-      }
-      }
 
-      @for (preview of previewsFor(message); track preview.url) {
-      <app-social-preview class="social-preview" [url]="preview.url" [previewData]="preview" [compact]="true" />
-      }
-
-      @if (reactionSummary(message).length > 0) {
-      <div class="reactions">
-        @for (reaction of reactionSummary(message); track reaction.emoji) {
-        <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
-          @if (reaction.url) {
-          <img class="reaction-emoji" [src]="reaction.url" [alt]="reaction.emoji" loading="lazy" />
-          } @else {
-          <span>{{ reaction.emoji }}</span>
+        @if (textFor(message); as text) {
+        <div class="body">
+          <app-message-content [content]="text" [tags]="message.rumor.tags" [authorPubkey]="message.pubkey" />
+          @if (message.editedContent) {
+          <span class="edited" matTooltip="Edited by the author">(edited)</span>
           }
-          {{ reaction.count }}
-        </button>
+        </div>
         }
-      </div>
-      }
 
-      <div class="row-actions">
-        <button mat-icon-button type="button" matTooltip="React" (click)="openReactionPicker(message)">
-          <mat-icon>add_reaction</mat-icon>
-        </button>
-        <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
-          <mat-icon>reply</mat-icon>
-        </button>
-        @if (canPin()) {
-        <button mat-icon-button type="button" [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'" [disabled]="busy()"
-          (click)="togglePin(message)">
-          <mat-icon>push_pin</mat-icon>
-        </button>
+        @if (attachmentsFor(message); as attachments) {
+        @if (attachments.length > 0) {
+        <div class="attachments">
+          @for (attachment of attachments; track attachment.src) {
+          <div class="attachment-frame">
+            @if (attachment.video) {
+            <video class="attachment" [src]="attachment.src" controls preload="metadata"></video>
+            } @else {
+            <img class="attachment" [src]="attachment.src" [alt]="attachment.alt" loading="lazy"
+              (click)="openAttachment(attachment.src, attachment.alt)" />
+            }
+            <span class="attachment-visibility" [class.encrypted]="attachment.encrypted"
+              [matTooltip]="attachment.encrypted ? 'Encrypted attachment' : 'Public attachment'">
+              <mat-icon>{{ attachment.encrypted ? 'lock' : 'public' }}</mat-icon>
+            </span>
+          </div>
+          }
+        </div>
         }
-        @if (canDelete(message)) {
-        <button mat-icon-button type="button" matTooltip="Delete" (click)="deleteMessage(message)">
-          <mat-icon>delete</mat-icon>
-        </button>
         }
+
+        @for (preview of previewsFor(message); track preview.url) {
+        <app-social-preview class="social-preview" [url]="preview.url" [previewData]="preview" [compact]="true" />
+        }
+
+        @if (reactionSummary(message).length > 0) {
+        <div class="reactions">
+          @for (reaction of reactionSummary(message); track reaction.emoji) {
+          <button type="button" class="reaction" (click)="react(message, reaction.emoji)">
+            @if (reaction.url) {
+            <img class="reaction-emoji" [src]="reaction.url" [alt]="reaction.emoji" loading="lazy" />
+            } @else {
+            <span>{{ reaction.emoji }}</span>
+            }
+            {{ reaction.count }}
+          </button>
+          }
+        </div>
+        }
+
+        <div class="row-actions">
+          <button mat-icon-button type="button" matTooltip="React" (click)="openReactionPicker(message)">
+            <mat-icon>add_reaction</mat-icon>
+          </button>
+          <button mat-icon-button type="button" matTooltip="Reply" (click)="setReply(message)">
+            <mat-icon>reply</mat-icon>
+          </button>
+          @if (canPin()) {
+          <button mat-icon-button type="button" [matTooltip]="isPinned(message) ? 'Unpin' : 'Pin'" [disabled]="busy()"
+            (click)="togglePin(message)">
+            <mat-icon>push_pin</mat-icon>
+          </button>
+          }
+          @if (canDelete(message)) {
+          <button mat-icon-button type="button" matTooltip="Delete" (click)="deleteMessage(message)">
+            <mat-icon>delete</mat-icon>
+          </button>
+          }
+        </div>
       </div>
     </ng-template>
 
