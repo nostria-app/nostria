@@ -16,11 +16,12 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -76,6 +77,12 @@ import { DeleteEventService } from '../../services/delete-event.service';
 import {
   ChatsSettingsDialogComponent,
 } from './chats-settings-dialog/chats-settings-dialog.component';
+import {
+  MessageContextSheetComponent,
+  messageContextAction,
+  type MessageContextAction,
+  type MessageContextSheetResult,
+} from '../../components/message-context-sheet/message-context-sheet.component';
 
 /**
  * Represents a zap receipt shown inline in the chat timeline.
@@ -110,6 +117,7 @@ export type TimelineEntry =
     MatProgressBarModule,
     MatSnackBarModule,
     MatDividerModule,
+    MatBottomSheetModule,
     RouterModule,
     UserProfileComponent,
     ProfileDisplayNameComponent,
@@ -142,6 +150,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly mediaService = inject(MediaService);
   private readonly mediaProcessing = inject(MediaProcessingService);
   private readonly haptics = inject(HapticsService);
+  private readonly bottomSheet = inject(MatBottomSheet);
   private readonly publicChatsListService = inject(PublicChatsListService);
   private readonly zapService = inject(ZapService);
   private readonly zapSound = inject(ZapSoundService);
@@ -781,15 +790,153 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   /** Handle touch start on message bubble (long press detection) */
-  onMessageTouchStart(event: TouchEvent, message: ChannelMessage, menuTrigger: MatMenuTrigger): void {
+  onMessageTouchStart(event: TouchEvent, message: ChannelMessage): void {
     this.onMessageTouchEnd();
 
     this.longPressTimeout = setTimeout(() => {
       event.preventDefault();
       this.haptics.triggerMedium();
       this.longPressedMessageId.set(message.id);
-      menuTrigger.openMenu();
+      this.openMessageContext(message);
     }, this.LONG_PRESS_DURATION);
+  }
+
+  openMessageContext(message: ChannelMessage): void {
+    const isOwn = message.pubkey === this.currentPubkey();
+    const sections: MessageContextAction[][] = [];
+
+    const primary: MessageContextAction[] = [messageContextAction('reply')];
+    if (!isOwn) primary.push(messageContextAction('mention'));
+    sections.push(primary);
+
+    const secondary: MessageContextAction[] = [
+      messageContextAction('copy-text'),
+      messageContextAction('copy-link'),
+      messageContextAction('copy-id'),
+      messageContextAction('copy-data'),
+    ];
+    if (this.isAuthenticated()) secondary.push(messageContextAction('zap'));
+    if (this.getMessageImageUrls(message).length > 0) {
+      secondary.push(messageContextAction('save-gif'));
+    }
+    sections.push(secondary);
+
+    if (!isOwn) {
+      sections.push([messageContextAction('hide'), messageContextAction('mute')]);
+    }
+
+    if (isOwn) {
+      sections.push([messageContextAction('delete')]);
+    }
+
+    this.bottomSheet
+      .open(MessageContextSheetComponent, {
+        data: {
+          quickReactions: this.quickReactions,
+          showReactions: true,
+          sections,
+        },
+        panelClass: 'glass-bottom-sheet',
+      })
+      .afterDismissed()
+      .subscribe((result: MessageContextSheetResult | undefined) => {
+        if (result) void this.handleMessageContextResult(message, result);
+      });
+  }
+
+  private async handleMessageContextResult(
+    message: ChannelMessage,
+    result: MessageContextSheetResult
+  ): Promise<void> {
+    if (result.kind === 'reaction') {
+      await this.addReaction(message, result.emoji);
+      return;
+    }
+
+    if (result.kind === 'more-reactions') {
+      await this.openReactionPicker(message);
+      return;
+    }
+
+    switch (result.id) {
+      case 'reply':
+        this.setReplyTo(message);
+        break;
+      case 'mention':
+        this.mentionInComposer(message.pubkey);
+        break;
+      case 'copy-text':
+        this.layout.copyToClipboard(message.content, 'message');
+        break;
+      case 'copy-id':
+        this.layout.copyToClipboard(message.id, 'message ID');
+        break;
+      case 'copy-link':
+        this.copyMessageLink(message);
+        break;
+      case 'copy-data':
+        await this.copyMessageData(message);
+        break;
+      case 'zap':
+        await this.zapMessage(message);
+        break;
+      case 'save-gif':
+        await this.openSaveToGifsDialog(message);
+        break;
+      case 'hide':
+        await this.hideMessage(message);
+        break;
+      case 'mute':
+        await this.muteUser(message.pubkey);
+        break;
+      case 'delete':
+        await this.deleteMessage(message);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private mentionInComposer(pubkey: string): void {
+    const mention = `nostr:${nip19.npubEncode(pubkey)}`;
+    const current = this.newMessageText();
+    const separator = current && !current.endsWith(' ') && current.length > 0 ? ' ' : '';
+    this.newMessageText.set(current + separator + mention);
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  private copyMessageLink(message: ChannelMessage): void {
+    const channel = this.selectedChannel();
+    const relays = channel?.metadata.relays?.length
+      ? channel.metadata.relays
+      : this.accountRelay.getRelayUrls();
+    const nevent = nip19.neventEncode({
+      id: message.id,
+      author: message.pubkey,
+      kind: 42,
+      relays,
+    });
+    this.layout.copyToClipboard(`https://nostria.app/e/${nevent}`, 'message link');
+  }
+
+  async openReactionPicker(message: ChannelMessage): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import(
+      '../../components/emoji-picker/emoji-picker-dialog.component'
+    );
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'desktop-reaction-picker-dialog-panel'],
+      width: '400px',
+      data: {
+        title: 'React',
+        mode: 'reaction',
+        activeTab: 'emoji',
+        allowPreferredReactionShortcut: true,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((emoji: string | undefined) => {
+      if (emoji) void this.addReaction(message, emoji);
+    });
   }
 
   /** Handle touch end/move (cancel long press) */

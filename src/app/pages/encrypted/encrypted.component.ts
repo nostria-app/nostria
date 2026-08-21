@@ -22,7 +22,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -60,6 +61,12 @@ import {
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { HapticsService } from '../../services/haptics.service';
+import {
+  MessageContextSheetComponent,
+  messageContextAction,
+  type MessageContextAction,
+  type MessageContextSheetResult,
+} from '../../components/message-context-sheet/message-context-sheet.component';
 import { LoggerService } from '../../services/logger.service';
 import { DatabaseService } from '../../services/database.service';
 import { FollowingService } from '../../services/following.service';
@@ -133,6 +140,7 @@ type ChannelView = 'chat' | 'members' | 'settings';
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatBottomSheetModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
@@ -163,6 +171,7 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private readonly database = inject(DatabaseService);
   private readonly following = inject(FollowingService);
   private readonly haptics = inject(HapticsService);
+  private readonly bottomSheet = inject(MatBottomSheet);
 
   readonly layout = inject(LayoutService);
   readonly concord = inject(ConcordService);
@@ -692,15 +701,98 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.replyingTo.set(message);
   }
 
-  onMessageTouchStart(event: TouchEvent, message: CordMessage, menuTrigger: MatMenuTrigger): void {
+  onMessageTouchStart(event: TouchEvent, message: CordMessage): void {
     this.onMessageTouchEnd();
 
     this.longPressTimeout = setTimeout(() => {
       event.preventDefault();
       this.haptics.triggerMedium();
       this.longPressedMessageId.set(message.id);
-      menuTrigger.openMenu();
+      this.openMessageContext(message);
     }, this.LONG_PRESS_DURATION);
+  }
+
+  openMessageContext(message: CordMessage): void {
+    const isOwn = message.pubkey === this.pubkey();
+    const sections: MessageContextAction[][] = [];
+
+    const primary: MessageContextAction[] = [messageContextAction('reply')];
+    if (!isOwn) primary.push(messageContextAction('mention'));
+    sections.push(primary);
+
+    const secondary: MessageContextAction[] = [
+      messageContextAction('copy-text'),
+      messageContextAction('copy-id'),
+    ];
+    if (this.canPin()) {
+      secondary.push(messageContextAction(this.isPinned(message) ? 'unpin' : 'pin'));
+    }
+    sections.push(secondary);
+
+    if (this.canDelete(message)) {
+      sections.push([messageContextAction('delete')]);
+    }
+
+    this.bottomSheet
+      .open(MessageContextSheetComponent, {
+        data: {
+          quickReactions: this.quickReactions,
+          showReactions: true,
+          sections,
+        },
+        panelClass: 'glass-bottom-sheet',
+      })
+      .afterDismissed()
+      .subscribe((result: MessageContextSheetResult | undefined) => {
+        if (result) void this.handleMessageContextResult(message, result);
+      });
+  }
+
+  private async handleMessageContextResult(
+    message: CordMessage,
+    result: MessageContextSheetResult
+  ): Promise<void> {
+    if (result.kind === 'reaction') {
+      await this.react(message, result.emoji);
+      return;
+    }
+
+    if (result.kind === 'more-reactions') {
+      await this.openReactionPicker(message);
+      return;
+    }
+
+    switch (result.id) {
+      case 'reply':
+        this.setReply(message);
+        break;
+      case 'mention':
+        this.mentionInComposer(message.pubkey);
+        break;
+      case 'copy-text':
+        this.copyMessage(message);
+        break;
+      case 'copy-id':
+        this.layout.copyToClipboard(message.id, 'message ID');
+        break;
+      case 'pin':
+      case 'unpin':
+        await this.togglePin(message);
+        break;
+      case 'delete':
+        await this.deleteMessage(message);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private mentionInComposer(pubkey: string): void {
+    const mention = `nostr:${nip19.npubEncode(pubkey)}`;
+    const current = this.messageText();
+    const separator = current && !current.endsWith(' ') && current.length > 0 ? ' ' : '';
+    this.messageText.set(current + separator + mention);
+    this.composer()?.nativeElement.focus();
   }
 
   onMessageTouchEnd(): void {

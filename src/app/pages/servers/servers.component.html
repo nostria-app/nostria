@@ -589,47 +589,10 @@
           <div
             class="message-row"
             [class.long-press-active]="longPressedMessageId() === message.id"
-            (touchstart)="onMessageTouchStart($event, message, msgMenuTrigger)"
+            (touchstart)="onMessageTouchStart($event, message)"
             (touchend)="onMessageTouchEnd()"
             (touchmove)="onMessageTouchEnd()"
           >
-            <button
-              type="button"
-              class="message-menu-trigger"
-              #msgMenuTrigger="matMenuTrigger"
-              [matMenuTriggerFor]="msgMenu"
-              tabindex="-1"
-              aria-hidden="true"
-            ></button>
-            <mat-menu #msgMenu="matMenu">
-              <ng-template matMenuContent>
-                <button mat-menu-item (click)="setReply(message)">
-                  <mat-icon>reply</mat-icon>
-                  <span i18n="@@event.actions.reply">Reply</span>
-                </button>
-                <button mat-menu-item (click)="copyMessage(message)">
-                  <mat-icon>content_copy</mat-icon>
-                  <span i18n="@@event.menu.copy">Copy</span>
-                </button>
-                @if (isAdmin()) {
-                <button mat-menu-item (click)="togglePin(message)">
-                  <mat-icon>push_pin</mat-icon>
-                  @if (isPinned(message)) {
-                  <span i18n="@@event.menu.unpin">Unpin</span>
-                  } @else {
-                  <span i18n="@@event.menu.pin">Pin</span>
-                  }
-                </button>
-                }
-                @if (canDelete(message)) {
-                <button mat-menu-item (click)="deleteMessage(message)">
-                  <mat-icon>delete</mat-icon>
-                  <span i18n="@@event.menu.delete">Delete</span>
-                </button>
-                }
-              </ng-template>
-            </mat-menu>
-
             @if (findMessage(message.replyTo); as parent) {
             <div class="reply-preview">
               <mat-icon>reply</mat-icon>
@@ -672,6 +635,15 @@
                 <mat-icon>delete</mat-icon>
               </button>
               }
+
+              <button
+                mat-icon-button
+                type="button"
+                matTooltip="More options"
+                (click)="openMessageContext(message)"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
             </div>
           </div>
           }

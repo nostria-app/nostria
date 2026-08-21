@@ -20,7 +20,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -46,6 +47,12 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { HapticsService } from '../../services/haptics.service';
+import {
+  MessageContextSheetComponent,
+  messageContextAction,
+  type MessageContextAction,
+  type MessageContextSheetResult,
+} from '../../components/message-context-sheet/message-context-sheet.component';
 import { LoggerService } from '../../services/logger.service';
 import { Nip29GroupsListService } from '../../services/nip29-groups-list.service';
 import { Nip29LivekitService } from '../../services/nip29-livekit.service';
@@ -94,6 +101,7 @@ const LAST_GROUP_STORAGE_KEY = 'nostria-nip29-last-group-v1';
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatBottomSheetModule,
     MatCheckboxModule,
     MatSelectModule,
     MatProgressSpinnerModule,
@@ -121,6 +129,7 @@ export class ServersComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   private readonly transferState = inject(TransferState);
   private readonly haptics = inject(HapticsService);
+  private readonly bottomSheet = inject(MatBottomSheet);
 
   readonly layout = inject(LayoutService);
   readonly nip29 = inject(Nip29Service);
@@ -819,15 +828,119 @@ export class ServersComponent implements OnInit, OnDestroy {
     this.replyingTo.set(message);
   }
 
-  onMessageTouchStart(event: TouchEvent, message: Nip29Message, menuTrigger: MatMenuTrigger): void {
+  onMessageTouchStart(event: TouchEvent, message: Nip29Message): void {
     this.onMessageTouchEnd();
 
     this.longPressTimeout = setTimeout(() => {
       event.preventDefault();
       this.haptics.triggerMedium();
       this.longPressedMessageId.set(message.id);
-      menuTrigger.openMenu();
+      this.openMessageContext(message);
     }, this.LONG_PRESS_DURATION);
+  }
+
+  openMessageContext(message: Nip29Message): void {
+    const isOwn = message.pubkey === this.pubkey();
+    const sections: MessageContextAction[][] = [];
+
+    const primary: MessageContextAction[] = [
+      messageContextAction('reply'),
+      messageContextAction('create-thread'),
+    ];
+    if (!isOwn) primary.push(messageContextAction('mention'));
+    sections.push(primary);
+
+    const secondary: MessageContextAction[] = [
+      messageContextAction('copy-text'),
+      messageContextAction('copy-link'),
+      messageContextAction('copy-id'),
+    ];
+    if (this.isAdmin()) {
+      secondary.push(messageContextAction(this.isPinned(message) ? 'unpin' : 'pin'));
+    }
+    sections.push(secondary);
+
+    if (this.canDelete(message)) {
+      sections.push([messageContextAction('delete')]);
+    }
+
+    this.bottomSheet
+      .open(MessageContextSheetComponent, {
+        data: {
+          quickReactions: [],
+          showReactions: false,
+          sections,
+        },
+        panelClass: 'glass-bottom-sheet',
+      })
+      .afterDismissed()
+      .subscribe((result: MessageContextSheetResult | undefined) => {
+        if (result) void this.handleMessageContextResult(message, result);
+      });
+  }
+
+  private async handleMessageContextResult(
+    message: Nip29Message,
+    result: MessageContextSheetResult
+  ): Promise<void> {
+    if (result.kind !== 'action') return;
+
+    switch (result.id) {
+      case 'reply':
+        this.setReply(message);
+        break;
+      case 'create-thread':
+        this.createThreadFromMessage(message);
+        break;
+      case 'mention':
+        this.mentionInComposer(message.pubkey);
+        break;
+      case 'copy-text':
+        this.copyMessage(message);
+        break;
+      case 'copy-id':
+        this.layout.copyToClipboard(message.id, 'message ID');
+        break;
+      case 'copy-link':
+        this.copyMessageLink(message);
+        break;
+      case 'pin':
+      case 'unpin':
+        await this.togglePin(message);
+        break;
+      case 'delete':
+        await this.deleteMessage(message);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private mentionInComposer(pubkey: string): void {
+    const mention = `nostr:${nip19.npubEncode(pubkey)}`;
+    const current = this.messageText();
+    const separator = current && !current.endsWith(' ') && current.length > 0 ? ' ' : '';
+    this.messageText.set(current + separator + mention);
+    this.composer()?.nativeElement.focus();
+  }
+
+  private copyMessageLink(message: Nip29Message): void {
+    const server = this.activeServer();
+    const nevent = nip19.neventEncode({
+      id: message.id,
+      author: message.pubkey,
+      kind: message.kind,
+      relays: server ? [server.url] : undefined,
+    });
+    this.layout.copyToClipboard(`https://nostria.app/e/${nevent}`, 'message link');
+  }
+
+  private createThreadFromMessage(message: Nip29Message): void {
+    const preview = message.content.trim().replace(/\s+/g, ' ');
+    this.composingThread.set(true);
+    this.newThreadSubject.set(preview.length > 80 ? `${preview.slice(0, 77)}...` : preview);
+    this.newThreadBody.set('');
+    this.setView('threads');
   }
 
   onMessageTouchEnd(): void {

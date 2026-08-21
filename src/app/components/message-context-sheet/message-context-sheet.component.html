@@ -1,0 +1,31 @@
+<div class="sheet">
+  <div class="handle" aria-hidden="true"></div>
+
+  @if (data.showReactions) {
+  <div class="emoji-row" role="group" i18n-aria-label="@@chat.message.reactions" aria-label="Reactions">
+    @for (emoji of data.quickReactions; track emoji) {
+    <button type="button" class="emoji-btn" (click)="pickReaction(emoji)">{{ emoji }}</button>
+    }
+    <button type="button" class="emoji-btn more" (click)="moreReactions()"
+      i18n-aria-label="@@chat.message.more-reactions" aria-label="More reactions">
+      <mat-icon>sentiment_satisfied</mat-icon>
+    </button>
+  </div>
+  }
+
+  @for (section of data.sections; track $index) {
+  @if (section.length > 0) {
+  <div class="section" [class.destructive]="isDestructiveSection(section)">
+    @for (action of section; track action.id; let last = $last) {
+    <button type="button" class="row" [class.danger]="action.destructive" (click)="pickAction(action)">
+      <mat-icon>{{ action.icon }}</mat-icon>
+      <span>{{ action.label }}</span>
+    </button>
+    @if (!last) {
+    <div class="divider"></div>
+    }
+    }
+  </div>
+  }
+  }
+</div>

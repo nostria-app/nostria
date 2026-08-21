@@ -394,7 +394,7 @@
           <div class="message-content-column">
             <div class="message-bubble-row">
               <div class="message-bubble" [class.long-press-active]="longPressedMessageId() === entry.data.id"
-                (touchstart)="onMessageTouchStart($event, entry.data, msgMenuTrigger)" (touchend)="onMessageTouchEnd()"
+                (touchstart)="onMessageTouchStart($event, entry.data)" (touchend)="onMessageTouchEnd()"
                 (touchmove)="onMessageTouchEnd()">
                 @if (isGroupStart(i) && entry.data.pubkey !== currentPubkey()) {
                 <div class="message-sender-name">
@@ -439,50 +439,10 @@
                     </div>
                   </ng-template>
                 </mat-menu>
-                <button mat-icon-button class="more-button" #msgMenuTrigger="matMenuTrigger"
-                  [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()" matTooltip="More options">
+                <button mat-icon-button class="more-button" (click)="openMessageContext(entry.data); $event.stopPropagation()"
+                  matTooltip="More options">
                   <mat-icon>more_vert</mat-icon>
                 </button>
-                <mat-menu #msgMenu="matMenu">
-                  <ng-template matMenuContent>
-                    <button mat-menu-item (click)="setReplyTo(entry.data)">
-                      <mat-icon>reply</mat-icon>
-                      <span i18n="@@event.actions.reply">Reply</span>
-                    </button>
-                    @if (isAuthenticated()) {
-                    <button mat-menu-item (click)="zapMessage(entry.data)">
-                      <mat-icon>bolt</mat-icon>
-                      <span i18n="@@event.actions.zap">Zap</span>
-                    </button>
-                    }
-                    <button mat-menu-item (click)="copyMessageData(entry.data)">
-                      <mat-icon>content_copy</mat-icon>
-                      <span>Copy Data</span>
-                    </button>
-                    @if (getMessageImageUrls(entry.data).length > 0) {
-                    <button mat-menu-item (click)="openSaveToGifsDialog(entry.data)">
-                      <mat-icon>gif_box</mat-icon>
-                      <span>Save to Gifs Set</span>
-                    </button>
-                    }
-                    @if (entry.data.pubkey === currentPubkey()) {
-                    <button mat-menu-item (click)="deleteMessage(entry.data)">
-                      <mat-icon>delete</mat-icon>
-                      <span>Delete Message</span>
-                    </button>
-                    }
-                    @if (entry.data.pubkey !== currentPubkey()) {
-                    <button mat-menu-item (click)="hideMessage(entry.data)">
-                      <mat-icon>visibility_off</mat-icon>
-                      <span>Hide Message</span>
-                    </button>
-                    <button mat-menu-item (click)="muteUser(entry.data.pubkey)">
-                      <mat-icon>block</mat-icon>
-                      <span>Mute User</span>
-                    </button>
-                    }
-                  </ng-template>
-                </mat-menu>
               </div>
             </div>
 
