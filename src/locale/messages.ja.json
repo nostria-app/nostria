@@ -2048,6 +2048,8 @@
     "chat.message.delete": "Delete Message",
     "chat.message.more-reactions": "More reactions",
     "chat.message.reactions": "Reactions",
+    "app.snackbar.opening-invite": "Opening community invite...",
+    "app.snackbar.invite-missing-fragment": "This community invite is missing its unlock fragment. Scan the full QR code.",
     "servers.rail.title": "Groups",
     "servers.rail.empty": "No groups yet",
     "servers.rail.discover": "Discover",

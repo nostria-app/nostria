@@ -16,6 +16,7 @@ import { nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
 import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
+import { looksLikeInviteLink, normalizeInviteLinkCandidate } from '../../services/concord/concord-invite';
 
 // Define interface for QR camera to avoid 'any' type
 interface QRCamera {
@@ -259,6 +260,12 @@ export class
 
     const trimmedResult = rawResult.trim();
     this.logger.debug('Processing scanned result:', trimmedResult);
+
+    const inviteLink = normalizeInviteLinkCandidate(trimmedResult);
+    if (looksLikeInviteLink(inviteLink)) {
+      this.logger.debug('Found Concord invite link');
+      return inviteLink;
+    }
 
     // Handle different formats of Nostr entities
 

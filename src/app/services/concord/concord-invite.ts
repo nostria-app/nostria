@@ -165,7 +165,7 @@ export function encodeInviteFragment(token: string, relays: string[]): string {
  * protocol — so a link minted by Vector opens in Nostria and vice versa.
  */
 export function parseInviteLink(link: string): CordParsedInviteLink {
-  const trimmed = link.trim();
+  const trimmed = normalizeInviteLinkCandidate(link);
   const hashIndex = trimmed.indexOf('#');
 
   if (hashIndex < 0) throw new Error('This invite link is missing its unlock fragment');
@@ -182,6 +182,33 @@ export function parseInviteLink(link: string): CordParsedInviteLink {
   const { version, relays, token } = decodeInviteFragment(fragment);
 
   return { pointer: decoded.data, token, relays, version };
+}
+
+/**
+ * Restore a percent-encoded hash (`%23`) so a scanned or pasted URL still
+ * carries the off-network unlock fragment.
+ */
+export function normalizeInviteLinkCandidate(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+
+  try {
+    if (/%23/i.test(trimmed)) return decodeURIComponent(trimmed);
+  } catch {
+    return trimmed;
+  }
+
+  return trimmed;
+}
+
+/** True when `value` is a CORD-05 invite (`…/invite/<naddr>#<fragment>`). */
+export function looksLikeInviteLink(value: string): boolean {
+  try {
+    parseInviteLink(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** The key that decrypts a bundle, derived from the link's off-network token. */

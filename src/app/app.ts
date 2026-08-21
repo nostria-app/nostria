@@ -64,6 +64,8 @@ import { PublishQueueService } from './services/publish-queue';
 import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
 import { Wallets } from './services/wallets';
+import { ConcordInviteService } from './services/concord/concord-invite.service';
+import { looksLikeInviteLink } from './services/concord/concord-invite';
 import { NwcService } from './services/nwc.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
@@ -252,6 +254,7 @@ export class App implements OnInit, OnDestroy {
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
   protected readonly wallets = inject(Wallets);
+  private readonly concordInvites = inject(ConcordInviteService);
   private readonly nwcService = inject(NwcService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -1484,6 +1487,25 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+  private openConcordInvite(link: string): void {
+    this.concordInvites.queueJoin(link);
+
+    const path = this.router.url.split('?')[0] ?? '';
+    if (path !== '/c' && !path.startsWith('/c/')) {
+      void this.router.navigate(['/c']);
+    }
+
+    this.snackBar.open(
+      $localize`:@@app.snackbar.opening-invite:Opening community invite...`,
+      $localize`:@@app.snackbar.dismiss:Dismiss`,
+      {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+  }
+
   qrScan() {
     const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       data: { did: '' },
@@ -1504,6 +1526,11 @@ export class App implements OnInit, OnDestroy {
           // Handle special protocols first
           if (result.startsWith('bunker://')) {
             await this.nostrService.loginWithNostrConnect(result);
+            return;
+          }
+
+          if (looksLikeInviteLink(result)) {
+            this.openConcordInvite(result);
             return;
           }
 
@@ -1621,7 +1648,18 @@ export class App implements OnInit, OnDestroy {
             const data = decoded.data;
             const npub = nip19.npubEncode(data.pubkey);
 
-            if (data.kind === 34139) {
+            if (data.kind === 33301) {
+              this.snackBar.open(
+                $localize`:@@app.snackbar.invite-missing-fragment:This community invite is missing its unlock fragment. Scan the full QR code.`,
+                $localize`:@@app.snackbar.dismiss:Dismiss`,
+                {
+                  duration: 4000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'bottom',
+                }
+              );
+              return;
+            } else if (data.kind === 34139) {
               this.layout.openMusicAlbum(npub, data.identifier);
             } else if (data.kind === 30003) {
               this.layout.openMusicPlaylist(npub, data.identifier);
@@ -2738,6 +2776,11 @@ export class App implements OnInit, OnDestroy {
     let pastedText = event.clipboardData?.getData('text')?.trim();
 
     if (pastedText) {
+      if (looksLikeInviteLink(pastedText)) {
+        this.openConcordInvite(pastedText);
+        return;
+      }
+
       // Check if it's a Nostr client URL and extract the entity
       const nostrEntity = this.extractNostrEntityFromUrl(pastedText);
       if (nostrEntity) {
@@ -2766,6 +2809,12 @@ export class App implements OnInit, OnDestroy {
    * - https://primal.net/p/npub1.../notes
    */
   private extractNostrEntityFromUrl(url: string): string | null {
+    // Concord invites must keep their #fragment; stripping to naddr would
+    // throw away the unlock token.
+    if (looksLikeInviteLink(url)) {
+      return null;
+    }
+
     // Check if URL ends with a file extension that indicates it's not a Nostr profile link
     // This prevents RSS feeds, JSON files, etc. from being treated as Nostr entities
     const feedExtensions = /\.(xml|rss|json|atom|txt|csv|pdf|zip|tar|gz)(\?.*)?$/i;

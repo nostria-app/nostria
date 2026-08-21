@@ -1,4 +1,4 @@
-import { inject, Service } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { Event, finalizeEvent, getPublicKey, nip19, UnsignedEvent } from 'nostr-tools';
 import { encrypt as nip44Encrypt } from 'nostr-tools/nip44';
 
@@ -50,6 +50,16 @@ export class ConcordInviteService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly lists = inject(ConcordListsService);
   private readonly admin = inject(ConcordAdminService);
+
+  /**
+   * Invite URL waiting to be opened on the Private chats page, typically from
+   * a QR scan. EncryptedComponent consumes and clears this.
+   */
+  readonly pendingJoinLink = signal<string | null>(null);
+
+  queueJoin(link: string): void {
+    this.pendingJoinLink.set(link.trim());
+  }
 
   /**
    * Mint a shareable invite link.

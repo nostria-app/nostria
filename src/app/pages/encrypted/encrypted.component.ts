@@ -542,6 +542,16 @@ export class EncryptedComponent implements OnInit, OnDestroy {
         this.layout.mobileNavScrollHidden.set(false);
       }
     });
+
+    effect(() => {
+      const link = this.invites.pendingJoinLink();
+      if (!link) return;
+
+      untracked(() => {
+        this.invites.pendingJoinLink.set(null);
+        this.beginJoinFromLink(link);
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -630,6 +640,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
     this.showJoin.set(true);
     this.preview.set(null);
     this.mobilePane.set('content');
+  }
+
+  private beginJoinFromLink(link: string): void {
+    this.inviteLink.set(link);
+    this.openJoin();
+    void this.previewInvite();
   }
 
   async previewInvite(): Promise<void> {
@@ -2190,6 +2206,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
   private async syncRoute(communityId: string | null, channelId: string | null): Promise<void> {
     if (!communityId) {
       this.concord.closeSubscriptions();
+
+      if (this.showJoin() || this.showCreate() || this.invites.pendingJoinLink()) {
+        this.mobilePane.set('content');
+        return;
+      }
+
       this.mobilePane.set('communities');
 
       // Resume where the user left off instead of showing an empty shell.
@@ -2211,6 +2233,12 @@ export class EncryptedComponent implements OnInit, OnDestroy {
 
     if (!channelId) {
       this.concord.closeSubscriptions();
+
+      if (this.showJoin() || this.showCreate() || this.invites.pendingJoinLink()) {
+        this.mobilePane.set('content');
+        return;
+      }
+
       this.mobilePane.set('channels');
 
       // Drop straight into the last channel used here, or the first readable

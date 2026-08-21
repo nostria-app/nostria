@@ -9,6 +9,8 @@ import { LoggerService } from '../../services/logger.service';
 import { LayoutService } from '../../services/layout.service';
 import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { ConcordInviteService } from '../../services/concord/concord-invite.service';
+import { looksLikeInviteLink } from '../../services/concord/concord-invite';
 import { NostrRecord } from '../../interfaces';
 
 @Component({
@@ -30,6 +32,7 @@ export class InviteComponent implements OnInit {
   private layout = inject(LayoutService);
   private data = inject(DataService);
   private accountState = inject(AccountStateService);
+  private readonly concordInvites = inject(ConcordInviteService);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -60,6 +63,14 @@ export class InviteComponent implements OnInit {
     if (!nprofileParam) {
       this.error.set('Invalid invite link - missing inviter information');
       this.loading.set(false);
+      return;
+    }
+
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const communityInvite = `https://nostria.app/invite/${nprofileParam}${hash}`;
+    if (nprofileParam.startsWith('naddr1') && looksLikeInviteLink(communityInvite)) {
+      this.concordInvites.queueJoin(communityInvite);
+      void this.router.navigate(['/c'], { replaceUrl: true });
       return;
     }
 
