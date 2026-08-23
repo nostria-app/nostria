@@ -29,6 +29,11 @@
     content="Nostria: Built for human connections. See your friends again. Nostria is social without the noise." />
   <meta name="twitter:image" content="/assets/nostria-social.jpg" />
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="api-catalog" href="/.well-known/api-catalog" />
+  <link rel="ai-catalog" href="/.well-known/ai-catalog.json" />
+  <link rel="service-doc" type="text/markdown" href="/auth.md" />
+  <link rel="service-desc" type="application/json" href="/.well-known/mcp/server-card.json" />
+  <link rel="describedby" type="text/markdown" href="/llms.txt" />
   <link rel="preload" as="image" href="/icons/nostria.png" fetchpriority="high" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180-maskable.png">
   <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192-maskable.png">
@@ -502,6 +507,7 @@
       </script>
     </div>
   </app-root>
+  <script src="/webmcp.js"></script>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
 

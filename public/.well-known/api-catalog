@@ -1,0 +1,50 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://api.nostria.app/",
+      "service-desc": [
+        {
+          "href": "https://api.nostria.app/openapi.json",
+          "type": "application/openapi+json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://nostria.app/auth.md",
+          "type": "text/markdown"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://api.nostria.app/api/status/health",
+          "type": "application/json"
+        }
+      ]
+    },
+    {
+      "anchor": "https://nostria.app/",
+      "service-desc": [
+        {
+          "href": "https://nostria.app/openapi.json",
+          "type": "application/openapi+json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://nostria.app/llms.txt",
+          "type": "text/plain"
+        },
+        {
+          "href": "https://nostria.app/auth.md",
+          "type": "text/markdown"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://nostria.app/status/health",
+          "type": "application/json"
+        }
+      ]
+    }
+  ]
+}

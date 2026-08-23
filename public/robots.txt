@@ -1,0 +1,81 @@
+# Nostria robots.txt (RFC 9309)
+# https://nostria.app/robots.txt
+
+User-agent: *
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+Allow: /p/
+Allow: /e/
+Allow: /a/
+Allow: /u/
+Allow: /discover
+Allow: /articles
+Allow: /people
+Allow: /music
+Allow: /podcasts
+Allow: /search
+Allow: /about
+Allow: /auth.md
+Allow: /.well-known/
+Disallow: /messages
+Disallow: /chats
+Disallow: /settings
+Disallow: /wallet
+Disallow: /credentials
+Disallow: /accounts
+Disallow: /notifications
+Disallow: /profile-edit
+Disallow: /queue
+Disallow: /debug
+Disallow: /ai/history
+Disallow: /premium/upgrade
+Disallow: /premium/renew
+
+# Search-oriented AI crawlers
+User-agent: OAI-SearchBot
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+
+User-agent: Claude-Web
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+
+User-agent: ChatGPT-User
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+
+User-agent: PerplexityBot
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+
+User-agent: Amazonbot
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Allow: /
+
+# Training-oriented AI crawlers
+User-agent: GPTBot
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+User-agent: Google-Extended
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+User-agent: anthropic-ai
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+User-agent: Bytespider
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+User-agent: CCBot
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+User-agent: Applebot-Extended
+Content-Signal: ai-train=no, search=no, ai-input=no
+Disallow: /
+
+Sitemap: https://nostria.app/sitemap.xml
+Agentmap: https://nostria.app/.well-known/ai-catalog.json

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "nostr-auth",
+      "type": "skill-md",
+      "description": "Authenticate to Nostria HTTP APIs with NIP-98. Use when calling api.nostria.app or signing Nostr HTTP auth events.",
+      "url": "/.well-known/agent-skills/nostr-auth/SKILL.md",
+      "digest": "sha256:eca85caec446aeb16390b8809a831eff6e17e68bc4edffb05a778ca96531d328"
+    },
+    {
+      "name": "nostria-urls",
+      "type": "skill-md",
+      "description": "Canonical Nostria URL patterns for profiles, posts, articles, search, and NIP-05 names. Use when linking to Nostria content.",
+      "url": "/.well-known/agent-skills/nostria-urls/SKILL.md",
+      "digest": "sha256:b2ab4c3b82af113d70a2cadc88ba76e723a34ebe1c8591e9e0477f376c9dab5e"
+    },
+    {
+      "name": "nostria-mcp",
+      "type": "skill-md",
+      "description": "Call the public Nostria MCP server over Streamable HTTP. Use for NIP-05 lookup, public accounts, and canonical URL helpers.",
+      "url": "/.well-known/agent-skills/nostria-mcp/SKILL.md",
+      "digest": "sha256:6baee32edc4581240d229ed445c55a42d210aac52cd5fa6b01abe0bf2e5ab071"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nostria Web Discovery API",
+    "version": "4.1.72",
+    "description": "Public discovery, NIP-05, health, and MCP endpoints hosted on nostria.app. Account APIs live at https://api.nostria.app/."
+  },
+  "servers": [
+    {
+      "url": "https://nostria.app",
+      "description": "Nostria web origin"
+    }
+  ],
+  "paths": {
+    "/.well-known/nostr.json": {
+      "get": {
+        "operationId": "nip05Lookup",
+        "summary": "NIP-05 identifier lookup",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NIP-05 names map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "names": {
+                      "type": "object",
+                      "additionalProperties": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/health": {
+      "get": {
+        "operationId": "webHealth",
+        "summary": "Web origin health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcpJsonRpc",
+        "summary": "MCP Streamable HTTP JSON-RPC",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    },
+    "/.well-known/api-catalog": {
+      "get": {
+        "operationId": "apiCatalog",
+        "summary": "RFC 9727 API catalog",
+        "responses": {
+          "200": {
+            "description": "Linkset",
+            "content": {
+              "application/linkset+json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
