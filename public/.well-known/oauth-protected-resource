@@ -1,0 +1,17 @@
+{
+  "resource": "https://api.nostria.app/",
+  "resource_name": "Nostria API",
+  "resource_documentation": "https://nostria.app/auth.md",
+  "authorization_servers": [
+    "https://nostria.app"
+  ],
+  "scopes_supported": [
+    "account",
+    "settings",
+    "notifications",
+    "backup"
+  ],
+  "bearer_methods_supported": [
+    "header"
+  ]
+}

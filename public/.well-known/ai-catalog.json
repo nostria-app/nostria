@@ -1,0 +1,53 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Nostria",
+    "identifier": "did:web:nostria.app"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:nostria.app:server:mcp",
+      "displayName": "Nostria MCP Server",
+      "type": "application/mcp-server-card+json",
+      "url": "https://nostria.app/.well-known/mcp/server-card.json",
+      "representativeQueries": [
+        "resolve a Nostria NIP-05 name to a pubkey",
+        "look up a public Nostria account by username",
+        "get the canonical Nostria URL for an npub"
+      ]
+    },
+    {
+      "identifier": "urn:air:nostria.app:api:backend",
+      "displayName": "Nostria Backend API",
+      "type": "application/openapi+json",
+      "url": "https://api.nostria.app/openapi.json",
+      "representativeQueries": [
+        "check Nostria API health",
+        "get a public Nostria account by username",
+        "read Nostria OpenAPI for account settings"
+      ]
+    },
+    {
+      "identifier": "urn:air:nostria.app:api:web",
+      "displayName": "Nostria Web Discovery API",
+      "type": "application/openapi+json",
+      "url": "https://nostria.app/openapi.json",
+      "representativeQueries": [
+        "look up a Nostria NIP-05 identifier",
+        "call the Nostria MCP JSON-RPC endpoint",
+        "find Nostria agent discovery documents"
+      ]
+    },
+    {
+      "identifier": "urn:air:nostria.app:skill:nostr-auth",
+      "displayName": "Nostria Nostr HTTP Auth",
+      "type": "text/markdown",
+      "url": "https://nostria.app/.well-known/agent-skills/nostr-auth/SKILL.md",
+      "representativeQueries": [
+        "how do I authenticate to the Nostria API",
+        "sign a NIP-98 event for Nostria",
+        "call a Nostria HTTP endpoint with a Nostr key"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "nostria",
+  "description": "Public Nostria tools: NIP-05 lookup, public accounts, and canonical Nostr URLs.",
+  "version": "4.1.72",
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+    "name": "nostria",
+    "version": "4.1.72"
+  },
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://nostria.app/mcp"
+  },
+  "endpoint": "https://nostria.app/mcp",
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  }
+}

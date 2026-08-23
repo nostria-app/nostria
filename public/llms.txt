@@ -1,0 +1,34 @@
+# Nostria
+
+Nostria is a Nostr client at https://nostria.app — a decentralized social network for posts, articles, music, podcasts, live streams, and encrypted messages.
+
+## For agents
+
+- Auth: https://nostria.app/auth.md
+- robots: https://nostria.app/robots.txt
+- sitemap: https://nostria.app/sitemap.xml
+- API catalog: https://nostria.app/.well-known/api-catalog
+- ARD catalog: https://nostria.app/.well-known/ai-catalog.json
+- MCP card: https://nostria.app/.well-known/mcp/server-card.json
+- MCP endpoint: POST https://nostria.app/mcp
+- Skills: https://nostria.app/.well-known/agent-skills/index.json
+- OpenAPI (web): https://nostria.app/openapi.json
+- OpenAPI (backend): https://api.nostria.app/openapi.json
+
+## Canonical URLs
+
+- Home: https://nostria.app/
+- Profile: https://nostria.app/p/{npub|nprofile|hex}
+- Username: https://nostria.app/u/{name}
+- Post: https://nostria.app/e/{note|nevent|hex}
+- Article: https://nostria.app/a/{naddr}
+- Search: https://nostria.app/search?q={query}
+- Discover: https://nostria.app/discover
+- Music: https://nostria.app/music
+- Podcasts: https://nostria.app/podcasts
+
+## Protocol
+
+Nostria speaks Nostr over relays. HTTP APIs at https://api.nostria.app/api/ use NIP-98. Public profile and event pages are shareable; private messages and wallet routes are not for crawlers.
+
+Request this site with `Accept: text/markdown` to receive markdown instead of HTML.

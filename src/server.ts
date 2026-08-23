@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { join } from 'node:path';
 import multer from 'multer';
+import { homepageLinkHeader, registerAgentDiscovery } from './agent-discovery';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -745,7 +746,7 @@ app.use(
   cors({
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'MCP-Protocol-Version', 'MCP-Session-Id'],
   })
 );
 
@@ -753,6 +754,8 @@ app.use((req, res, next) => {
   applyFrameProtectionHeaders(res);
   next();
 });
+
+registerAgentDiscovery(app, browserDistFolder);
 
 // In-memory storage for shared files (with expiration)
 const sharedFilesCache = new Map<string, { files: { name: string; type: string; data: string }[]; title?: string; text?: string; url?: string; timestamp: number }>();
@@ -916,6 +919,14 @@ app.use(
   '/.well-known',
   express.static(join(browserDistFolder, '.well-known'), {
     dotfiles: 'allow',
+    setHeaders(res, filePath) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      if (filePath.endsWith('api-catalog')) {
+        res.setHeader('Content-Type', 'application/linkset+json; charset=utf-8');
+      } else if (filePath.endsWith('.md')) {
+        res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+      }
+    },
   })
 );
 
@@ -942,6 +953,10 @@ app.use(async (req, res, next) => {
   const isBotRequest = isBot(userAgent);
   const path = req.path;
   const isSSR = isSSRRoute(path);
+
+  if (path === '/' || path === '') {
+    res.setHeader('Link', homepageLinkHeader());
+  }
 
   // Check cache for bot requests on SSR routes
   if (isBotRequest && isSSR) {

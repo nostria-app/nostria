@@ -28,8 +28,9 @@
 16. [Content Creation](#content-creation)
 17. [Command Palette](#command-palette)
 18. [AI Features](#ai-features)
-19. [Key Design Decisions](#key-design-decisions)
-20. [Development Guidelines](#development-guidelines)
+19. [Agent Discovery](#agent-discovery)
+20. [Key Design Decisions](#key-design-decisions)
+21. [Development Guidelines](#development-guidelines)
 
 ---
 
@@ -1084,7 +1085,8 @@ The `og:url` meta tag always uses canonical Nostr-encoded URLs, regardless of ho
 
 **Key Files:**
 
-- `src/server.ts` - Bot detection, caching, fallback HTML
+- `src/server.ts` - Bot detection, caching, fallback HTML, agent discovery wiring
+- `src/agent-discovery.ts` - robots/sitemap/well-known content types, Link headers, markdown negotiation, MCP
 - `src/app/services/meta.service.ts` - Meta tag updates, canonical URL generation
 - `src/app/data-resolver.ts` - Profile/event/article metadata resolution
 - `src/app/stream-resolver.ts` - Stream metadata resolution
@@ -1427,6 +1429,35 @@ The app includes 50+ translation model pairs supporting languages including:
 - Other: Arabic, Russian, Ukrainian, Turkish, etc.
 
 ---
+
+## Agent Discovery
+
+Nostria publishes machine-readable discovery documents so AI agents can find public APIs, crawl rules, and Nostr HTTP auth (NIP-98) without scraping HTML.
+
+| Path | Role |
+| --- | --- |
+| `/robots.txt` | RFC 9309 crawl rules, AI bot `User-agent` blocks, Content-Signal, sitemap + Agentmap |
+| `/sitemap.xml` | Canonical public app URLs |
+| `/auth.md` | Agent registration / NIP-98 instructions |
+| `/.well-known/api-catalog` | RFC 9727 linkset (`application/linkset+json`) |
+| `/.well-known/oauth-protected-resource` | RFC 9728 resource metadata (issuer is Nostria; HTTP auth is NIP-98) |
+| `/.well-known/oauth-authorization-server` | RFC 8414 + `agent_auth` pointing at `/auth.md` |
+| `/.well-known/mcp/server-card.json` | MCP Server Card; transport `POST /mcp` |
+| `/.well-known/agent-skills/index.json` | Agent Skills Discovery RFC v0.2.0 |
+| `/.well-known/ai-catalog.json` | ARD / ai-catalog manifest |
+
+The homepage returns RFC 8288 `Link` headers (`api-catalog`, `service-doc`, `service-desc`, `ai-catalog`). Requests with `Accept: text/markdown` receive markdown (`Content-Type: text/markdown`, `x-markdown-tokens`) instead of HTML. WebMCP tools register from `/webmcp.js` on page load.
+
+OAuth token/authorize endpoints exist only as discovery-compatible stubs that return `nip98_required`. They do not mint bearer tokens.
+
+### DNS-AID (operator action)
+
+HTTP cannot publish DNS-AID. At the DNS host for `nostria.app`, add DNSSEC-signed ServiceMode records, for example:
+
+```
+_index._agents.nostria.app. 3600 IN HTTPS 1 nostria.app. alpn="h2,h3" port=443
+_catalog._agents.nostria.app. 3600 IN TXT "url=https://nostria.app/.well-known/ai-catalog.json"
+```
 
 ## Key Design Decisions
 
