@@ -475,9 +475,13 @@ export class RelaysComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Check if the URL has a valid protocol
-    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
-      // Default to wss:// if no protocol is specified
+    // Account / discovery lists are wss-only. Overlay ws:// is NIP-17 Message Relays.
+    if (url.startsWith('ws://')) {
+      this.showMessage('Please enter a valid relay URL starting with wss://');
+      return;
+    }
+
+    if (!url.startsWith('wss://')) {
       url = `wss://${url}`;
     }
 
@@ -497,9 +501,15 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async addRelay() {
-    const url = this.parseUrl(this.newRelayUrl());
+    const parsedUrl = this.parseUrl(this.newRelayUrl());
 
+    if (!parsedUrl) {
+      return;
+    }
+
+    const url = this.utilities.normalizeRelayUrl(parsedUrl);
     if (!url) {
+      this.showMessage('Please enter a valid relay URL starting with wss://');
       return;
     }
 
@@ -729,7 +739,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
   async publish() {
     this.logger.info('Starting relay list publication process');
 
-    const relays = this.accountRelay.relaysSignal();
+    const relays = this.accountRelay.relaysSignal()
+      .map(relay => {
+        const url = this.utilities.normalizeRelayUrl(relay.url);
+        return url ? { ...relay, url } : null;
+      })
+      .filter((relay): relay is Relay => relay !== null);
     this.logger.debug('User relays being published:', relays);
 
     // Build tags with NIP-65 read/write markers
@@ -852,16 +867,21 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   addBootstrapRelay(): void {
-    const url = this.parseUrl(this.newBootstrapUrl());
+    const parsedUrl = this.parseUrl(this.newBootstrapUrl());
 
-    if (!url) {
+    if (!parsedUrl) {
       return;
     }
 
-    this.newBootstrapUrl.set(url);
+    const normalizedUrl = this.utilities.normalizeRelayUrl(parsedUrl);
+    if (!normalizedUrl) {
+      this.showMessage('Please enter a valid relay URL starting with wss://');
+      return;
+    }
+
+    this.newBootstrapUrl.set(normalizedUrl);
 
     // Check if relay already exists (using normalized URL comparison)
-    const normalizedUrl = this.utilities.normalizeRelayUrl(url);
     const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(relayUrl =>
       this.utilities.normalizeRelayUrl(relayUrl)
     );
@@ -871,8 +891,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.logger.info('Adding new Discovery Relay', { url, normalizedUrl });
-    this.discoveryRelay.addRelay(url);
+    this.logger.info('Adding new Discovery Relay', { url: normalizedUrl, normalizedUrl });
+    this.discoveryRelay.addRelay(normalizedUrl);
     this.newBootstrapUrl.set('');
     this.showMessage('Discovery Relay added successfully');
 
@@ -901,7 +921,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const relayUrls = this.discoveryRelay.getRelayUrls();
+      const relayUrls = this.utilities.normalizeRelayUrls(this.discoveryRelay.getRelayUrls());
       const event = this.discoveryRelay.createDiscoveryRelayListEvent(pubkey, relayUrls);
       const signedEvent = await this.nostr.signEvent(event);
 

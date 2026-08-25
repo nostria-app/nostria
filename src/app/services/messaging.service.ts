@@ -23,8 +23,10 @@ import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SettingsService } from './settings.service';
 
-/** Force NIP-42 auth on DM relay reads/subscribes (AUTH-gated kind 1059 inboxes). */
-const DM_AUTHED = { auth: true, allowWs: true } as const;
+/** Force NIP-42 auth on account-relay DM reads/subscribes. Never allowWs. */
+const DM_AUTHED = { auth: true } as const;
+/** Kind 10050 inbox path only: AUTH plus overlay ws://. */
+const DM_INBOX = { auth: true, allowWs: true } as const;
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -1462,7 +1464,12 @@ export class MessagingService implements NostriaService {
       }
 
       // Query for incoming messages (AUTH required for NIP-17 inbox relays)
-      const incomingEvents = await this.pool.query(allRelays, filterIncoming, 15000, DM_AUTHED);
+      const incomingEvents = await this.queryInboxAndAccount(
+        this.inboxOnlyRelayUrls(dmRelayUrls, accountRelays),
+        accountRelays,
+        filterIncoming,
+        15000,
+      );
       this.logger.info(`Found ${incomingEvents.length} incoming events during refresh`);
 
       for (const event of incomingEvents) {
@@ -1884,7 +1891,7 @@ export class MessagingService implements NostriaService {
       });
 
       // Query all additional relays for messages (AUTH required for NIP-17 inbox relays)
-      const events = await this.pool.query(uniqueRelays, filter, 10000, DM_AUTHED);
+      const events = await this.pool.query(uniqueRelays, filter, 10000, DM_INBOX);
 
       this.logger.info(`Found ${events.length} events from additional relays`);
 
@@ -2035,22 +2042,70 @@ export class MessagingService implements NostriaService {
       }
     }
 
-    const accountRelays = this.relay.getRelayUrls();
-    accountRelays.forEach(url => relayUrls.add(url));
+    const inboxRelays = Array.from(relayUrls);
 
-    const combinedRelays = Array.from(relayUrls);
-
-    if (combinedRelays.length === 0) {
-      this.logger.info('No DM relays found, using account relays', { count: accountRelays.length });
-      return accountRelays;
+    if (inboxRelays.length === 0) {
+      this.logger.info('No kind 10050 DM relays found');
+      return [];
     }
 
-    this.logger.info('Using combined DM relay set for subscription', {
-      count: combinedRelays.length,
-      relays: combinedRelays,
+    this.logger.info('Using kind 10050 DM relays', {
+      count: inboxRelays.length,
+      relays: inboxRelays,
     });
 
-    return combinedRelays;
+    return inboxRelays;
+  }
+
+  /** Kind 10050 URLs that are not also on the account list. allowWs stays here only. */
+  private inboxOnlyRelayUrls(dmRelayUrls: string[], accountRelays: string[]): string[] {
+    const accountSet = new Set(accountRelays);
+    return dmRelayUrls.filter(url => !accountSet.has(url));
+  }
+
+  private async queryInboxAndAccount(
+    inboxUrls: string[],
+    accountUrls: string[],
+    filter: Filter,
+    timeoutMs: number,
+  ): Promise<NostrEvent[]> {
+    const [inboxEvents, accountEvents] = await Promise.all([
+      inboxUrls.length > 0
+        ? this.pool.query(inboxUrls, filter, timeoutMs, DM_INBOX)
+        : Promise.resolve([]),
+      accountUrls.length > 0
+        ? this.pool.query(accountUrls, filter, timeoutMs, DM_AUTHED)
+        : Promise.resolve([]),
+    ]);
+
+    const seen = new Set<string>();
+    const merged: NostrEvent[] = [];
+    for (const event of [...inboxEvents, ...accountEvents]) {
+      if (seen.has(event.id)) {
+        continue;
+      }
+      seen.add(event.id);
+      merged.push(event);
+    }
+    return merged;
+  }
+
+  private subscribeInboxAndAccount(
+    inboxUrls: string[],
+    accountUrls: string[],
+    filter: Filter,
+    onEvent: (event: NostrEvent) => void,
+  ): { close: () => void } {
+    const subscriptions: { close: () => void }[] = [];
+    if (inboxUrls.length > 0) {
+      subscriptions.push(this.pool.subscribe(inboxUrls, filter, onEvent, DM_INBOX));
+    }
+    if (accountUrls.length > 0) {
+      subscriptions.push(this.pool.subscribe(accountUrls, filter, onEvent, DM_AUTHED));
+    }
+    return {
+      close: () => subscriptions.forEach(subscription => subscription.close()),
+    };
   }
 
   /**
@@ -2242,7 +2297,12 @@ export class MessagingService implements NostriaService {
     };
 
     // Subscribe to messages where we're tagged (incoming + our outgoing NIP-44)
-    const sub1 = this.pool.subscribe(allRelays, filterTagged, processEvent, DM_AUTHED);
+    const sub1 = this.subscribeInboxAndAccount(
+      this.inboxOnlyRelayUrls(dmRelayUrls, accountRelays),
+      accountRelays,
+      filterTagged,
+      processEvent,
+    );
 
     // Subscribe to our outgoing NIP-04 messages
     const sub2 = this.pool.subscribe(accountRelays, filterAuthored, processEvent, DM_AUTHED);
@@ -2696,9 +2756,10 @@ export class MessagingService implements NostriaService {
     };
 
     try {
+      const inboxUrls = this.inboxOnlyRelayUrls(dmRelayUrls, accountRelays);
       const [receivedEvents, sentEvents] = await Promise.all([
-        this.pool.query(allRelays, filterReceived, 15000, DM_AUTHED),
-        this.pool.query(allRelays, filterSent, 15000, DM_AUTHED),
+        this.queryInboxAndAccount(inboxUrls, accountRelays, filterReceived, 15000),
+        this.queryInboxAndAccount(inboxUrls, accountRelays, filterSent, 15000),
       ]);
 
       for (const event of receivedEvents) {

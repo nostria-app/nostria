@@ -35,11 +35,14 @@ describe('RelaysComponent', () => {
       relaysModifiedSignal: signal([]),
       getRelayUrls: () => [],
       publish: vi.fn().mockResolvedValue(undefined),
+      addRelay: vi.fn(),
     };
 
     const mockDiscoveryRelay = {
       relaysSignal: signal([]),
       getRelayUrls: () => [],
+      addRelay: vi.fn(),
+      setDiscoveryRelays: vi.fn(),
     };
 
     const mockRelaysService = {
@@ -171,6 +174,68 @@ describe('RelaysComponent', () => {
         'Close',
         expect.objectContaining({ duration: 3000 })
       );
+    });
+  });
+
+  describe('addRelay', () => {
+    it('rejects clearnet ws:// and does not persist it', async () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+      const dialog = TestBed.inject(MatDialog);
+      const dialogOpen = vi.spyOn(dialog, 'open');
+      const accountRelay = TestBed.inject(AccountRelayService);
+
+      component.newRelayUrl.set('ws://evil.example.com');
+      await component.addRelay();
+
+      expect(accountRelay.addRelay).not.toHaveBeenCalled();
+      expect(dialogOpen).not.toHaveBeenCalled();
+      expect(open).toHaveBeenCalledWith(
+        'Please enter a valid relay URL starting with wss://',
+        'Close',
+        expect.objectContaining({ duration: 3000 })
+      );
+    });
+
+    it('does not persist overlay ws:// on the account list', async () => {
+      const dialog = TestBed.inject(MatDialog);
+      const dialogOpen = vi.spyOn(dialog, 'open');
+      const accountRelay = TestBed.inject(AccountRelayService);
+
+      component.newRelayUrl.set('ws://[31b:6f20:c7f2:3ddf::3221]');
+      await component.addRelay();
+
+      expect(accountRelay.addRelay).not.toHaveBeenCalled();
+      expect(dialogOpen).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addBootstrapRelay', () => {
+    it('rejects clearnet ws:// and does not persist it', () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+      const discoveryRelay = TestBed.inject(DiscoveryRelayService);
+
+      component.newBootstrapUrl.set('ws://evil.example.com');
+      component.addBootstrapRelay();
+
+      expect(discoveryRelay.addRelay).not.toHaveBeenCalled();
+      expect(discoveryRelay.setDiscoveryRelays).not.toHaveBeenCalled();
+      expect(open).toHaveBeenCalledWith(
+        'Please enter a valid relay URL starting with wss://',
+        'Close',
+        expect.objectContaining({ duration: 3000 })
+      );
+    });
+
+    it('does not persist overlay ws:// on the discovery list', () => {
+      const discoveryRelay = TestBed.inject(DiscoveryRelayService);
+
+      component.newBootstrapUrl.set('ws://[31b:6f20:c7f2:3ddf::3221]');
+      component.addBootstrapRelay();
+
+      expect(discoveryRelay.addRelay).not.toHaveBeenCalled();
+      expect(discoveryRelay.setDiscoveryRelays).not.toHaveBeenCalled();
     });
   });
 
