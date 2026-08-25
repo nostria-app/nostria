@@ -60,6 +60,7 @@ import { EventComponent as NostrEventComponent } from '../event/event.component'
 import { ReferencedEventService } from '../../services/referenced-event.service';
 import { SatDisplayService } from '../../services/sat-display.service';
 import { PdfViewerComponent } from '../pdf-viewer/pdf-viewer.component';
+import { getCappedHashtags, MAX_EVENT_HASHTAGS } from '../../utils/hashtags';
 
 type ArticleEmbedState = 'loading' | 'loaded' | 'failed';
 
@@ -364,8 +365,15 @@ export class ArticleDisplayComponent implements OnDestroy {
   image = computed(() => this.article().image);
   parsedContent = computed(() => this.article().parsedContent);
   hashtags = computed(() => this.article().hashtags);
-  // Deduplicated hashtags to avoid Angular track key errors
-  uniqueHashtags = computed(() => [...new Set(this.article().hashtags)]);
+  // Same capped `t` list as ingest. Fall back to the article hashtags when no event is present.
+  uniqueHashtags = computed(() => {
+    const event = this.article().event;
+    if (event) {
+      return getCappedHashtags(event);
+    }
+
+    return [...new Set(this.article().hashtags)].slice(0, MAX_EVENT_HASHTAGS);
+  });
   authorPubkey = computed(() => this.article().authorPubkey);
   authorCanBeFollowed = computed(() => {
     const pubkey = this.authorPubkey();

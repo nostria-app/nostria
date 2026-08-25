@@ -20,6 +20,7 @@ import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 interface MediaWithCommentsDialogData {
   event: Event;
@@ -220,9 +221,7 @@ export class MediaWithCommentsDialogComponent {
     const event = this.event();
     if (!event) return [];
 
-    return event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1]);
+    return getCappedHashtags(event);
   });
 
   // Navigation methods for photo carousel

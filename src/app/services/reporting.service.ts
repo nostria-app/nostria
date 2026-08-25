@@ -10,6 +10,7 @@ import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
 import { MessagingService } from './messaging.service';
+import { getCappedHashtags } from '../utils/hashtags';
 
 export type ReportType =
   | 'nudity'
@@ -127,14 +128,12 @@ export class ReportingService {
       return true;
     }
 
-    // Check for muted hashtags in event tags
-    const eventHashtags = event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1]?.toLowerCase());
+    // Same capped `t` list as ingest — do not allocate one entry per unbounded tag.
+    const eventHashtags = getCappedHashtags(event);
 
     if (
       eventHashtags.some(hashtag =>
-        this.mutedHashtags().some(muted => muted.toLowerCase() === hashtag)
+        this.mutedHashtags().some(muted => muted.toLowerCase() === hashtag.toLowerCase())
       )
     ) {
       return true;

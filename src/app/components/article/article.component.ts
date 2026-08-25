@@ -15,6 +15,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { UserDataService } from '../../services/user-data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { LoggerService } from '../../services/logger.service';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 @Component({
   selector: 'app-article',
@@ -106,7 +107,7 @@ export class ArticleComponent {
   hashtags = computed(() => {
     const ev = this.event();
     if (!ev) return [];
-    return [...new Set(this.utilities.getTagValues('t', ev.tags))];
+    return getCappedHashtags(ev);
   });
 
   publishedAtTimestamp = computed(() => {
