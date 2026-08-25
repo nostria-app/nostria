@@ -16,7 +16,8 @@ function readTags(source: HashtagSource): string[][] {
     return [];
   }
 
-  return Array.isArray(source) ? source : source.tags;
+  const tags = Array.isArray(source) ? source : source.tags;
+  return Array.isArray(tags) ? tags : [];
 }
 
 /**
@@ -34,7 +35,7 @@ export function getCappedHashtags(source: HashtagSource): string[] {
       return cached;
     }
 
-    const list = extractCappedHashtags(source.tags);
+    const list = extractCappedHashtags(readTags(source));
     ingestedHashtags.set(source, list);
     return list;
   }
@@ -51,7 +52,7 @@ function extractCappedHashtags(tags: string[][] | undefined): string[] {
   const seen = new Set<string>();
 
   for (const tag of tags) {
-    if (tag[0] !== 't' || !tag[1]) {
+    if (!Array.isArray(tag) || tag[0] !== 't' || !tag[1]) {
       continue;
     }
 
@@ -77,7 +78,7 @@ export function eventExceedsHashtagCap(source: HashtagSource): boolean {
   let count = 0;
 
   for (const tag of tags) {
-    if (tag[0] === 't' && tag[1]) {
+    if (Array.isArray(tag) && tag[0] === 't' && tag[1]) {
       count++;
       if (count > MAX_EVENT_HASHTAGS) {
         return true;

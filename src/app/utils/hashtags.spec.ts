@@ -76,6 +76,21 @@ describe('hashtag cap', () => {
     expect(eventMatchesAnyCappedHashtag(event, ['tag0', 'tag1'])).toBe(false);
   });
 
+  it('skips null and non-array tag entries without throwing', () => {
+    const tags = [
+      null,
+      undefined,
+      't',
+      ['t'],
+      ['t', 'nostr'],
+      ['e', 'root-id'],
+    ] as unknown as string[][];
+
+    expect(getCappedHashtags(tags)).toEqual(['nostr']);
+    expect(eventExceedsHashtagCap(tags)).toBe(false);
+    expect(getCappedHashtags({ tags: undefined as unknown as string[][] })).toEqual([]);
+  });
+
   it('matches hashtags only from the capped list on in-cap notes', () => {
     const event = eventWithTags([
       ['t', 'bitcoin'],
