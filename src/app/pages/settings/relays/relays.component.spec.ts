@@ -31,6 +31,7 @@ describe('RelaysComponent', () => {
       relaysSignal: signal([]),
       relaysModifiedSignal: signal([]),
       getRelayUrls: () => [],
+      publish: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockDiscoveryRelay = {
@@ -52,7 +53,7 @@ describe('RelaysComponent', () => {
     };
 
     const mockAccountState = {
-      pubkey: signal(''),
+      pubkey: signal('aa'.repeat(32)),
     };
 
     const mockRightPanel = {
@@ -71,15 +72,36 @@ describe('RelaysComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: NostrService, useValue: {} },
+        {
+          provide: NostrService,
+          useValue: {
+            createTags: (name: string, values: string[]) => values.map(value => [name, value]),
+            signEvent: vi.fn().mockResolvedValue({ id: 'signed' }),
+          },
+        },
         { provide: LoggerService, useValue: { info: () => { }, debug: () => { }, warn: () => { }, error: () => { } } },
         { provide: MatSnackBar, useValue: { open: () => { } } },
         { provide: MatDialog, useValue: { open: () => { } } },
         { provide: LayoutService, useValue: {} },
-        { provide: DatabaseService, useValue: { getEventByPubkeyAndKind: () => Promise.resolve(null) } },
+        {
+          provide: DatabaseService,
+          useValue: {
+            getEventByPubkeyAndKind: () => Promise.resolve(null),
+            saveEvent: vi.fn().mockResolvedValue(undefined),
+          },
+        },
         { provide: NotificationService, useValue: {} },
         { provide: ApplicationService, useValue: {} },
-        { provide: UtilitiesService, useValue: { getRelayUrlsFromFollowing: () => [], normalizeRelayUrls: (urls: string[]) => urls, normalizeRelayUrl: (url: string) => url, formatRelativeTime: () => '' } },
+        {
+          provide: UtilitiesService,
+          useValue: {
+            getRelayUrlsFromFollowing: () => [],
+            normalizeRelayUrls: (urls: string[]) => urls,
+            normalizeRelayUrl: (url: string) => url,
+            isWebSocketRelayUrl: (url: string) => url.startsWith('wss://') || url.startsWith('ws://'),
+            formatRelativeTime: () => '',
+          },
+        },
         { provide: AccountStateService, useValue: mockAccountState },
         { provide: AccountRelayService, useValue: mockAccountRelay },
         { provide: DiscoveryRelayService, useValue: mockDiscoveryRelay },
@@ -99,6 +121,45 @@ describe('RelaysComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('addMessageRelay', () => {
+    it('rejects URLs that are not ws:// or wss://', async () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+
+      component.newMessageRelayUrl.set('https://relay.example.com');
+      await component.addMessageRelay();
+
+      expect(open).toHaveBeenCalledWith(
+        'Please enter a valid relay URL starting with wss:// or ws://',
+        'Close',
+        expect.objectContaining({ duration: 3000 })
+      );
+    });
+
+    it('still adds a wss:// message relay', async () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+
+      component.newMessageRelayUrl.set('wss://relay.primal.net/');
+      await component.addMessageRelay();
+
+      expect(component.messageRelays()).toEqual(['wss://relay.primal.net/']);
+      expect(open).toHaveBeenCalledWith('Message relay added', 'Close', expect.objectContaining({ duration: 3000 }));
+    });
+
+    it('adds a Yggdrasil ws:// URL without rewriting it to wss://', async () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+      const yggdrasil = 'ws://[31b:6f20:c7f2:3ddf::3221]';
+
+      component.newMessageRelayUrl.set(yggdrasil);
+      await component.addMessageRelay();
+
+      expect(component.messageRelays()).toEqual([yggdrasil]);
+      expect(open).toHaveBeenCalledWith('Message relay added', 'Close', expect.objectContaining({ duration: 3000 }));
+    });
   });
 
   describe('getPerformanceClass', () => {

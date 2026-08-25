@@ -1427,7 +1427,7 @@
     "settings.relays.message-relays": "رله های پیام\n",
     "settings.relays.message-relays-description": "رله های مورد استفاده برای دریافت پیام های مستقیم (NIP-17)\n",
     "settings.relays.no-message-relays": "هیچ رله پیامی پیکربندی نشده است. با رله های حساب خود همگام سازی کنید یا به صورت دستی یکی اضافه کنید.\n",
-    "settings.relays.add-message-relay-url": "URL رله (wss://...)\n",
+    "settings.relays.add-message-relay-url": "URL رله (wss:// or ws://...)\n",
     "settings.relays.deprecated.title": "هشدار منسوخ شده",
     "settings.relays.deprecated.description": "لیست دنبال کردن شما حاوی لیستی از رله‌ها است. این در پروتکل منسوخ شده است.",
     "settings.relays.deprecated.migrate-hint": "اگر رویدادهای تاریخی در این رله‌های قدیمی دارید، می‌توانید آنها را به رله‌های حساب فعلی خود منتقل کنید تا اطمینان حاصل کنید که داده‌هایتان از بین نمی‌رود. \n",

@@ -1427,7 +1427,7 @@
     "settings.relays.message-relays": "Relè messaggi\n",
     "settings.relays.message-relays-description": "Relè utilizzati per ricevere messaggi diretti (NIP-17)\n",
     "settings.relays.no-message-relays": "Nessun relè di messaggio configurato. Sincronizza con i relè del tuo account o aggiungine uno manualmente.\n",
-    "settings.relays.add-message-relay-url": "URL di inoltro (wss://...)\n",
+    "settings.relays.add-message-relay-url": "URL di inoltro (wss:// or ws://...)\n",
     "settings.relays.deprecated.title": "Avviso di deprecazione",
     "settings.relays.deprecated.description": "La tua lista following contiene un elenco di relay. Questo è deprecato nel protocollo.",
     "settings.relays.deprecated.migrate-hint": "Se disponi di eventi storici su questi vecchi relè, puoi migrarli sui tuoi attuali relè account per assicurarti che i tuoi dati non vadano persi. \n",

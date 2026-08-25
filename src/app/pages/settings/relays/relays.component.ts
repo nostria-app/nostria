@@ -905,8 +905,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   formatRelayUrl(url: string): string {
-    // Remove wss:// prefix for better UX
-    return url.replace(/^wss:\/\//, '');
+    // Remove WebSocket scheme for better UX
+    return url.replace(/^wss?:\/\//, '');
   }
 
   private showMessage(message: string): void {
@@ -919,19 +919,25 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   async addMessageRelay(): Promise<void> {
     const url = this.newMessageRelayUrl().trim();
-    if (!url || !url.startsWith('wss://')) {
-      this.showMessage('Please enter a valid relay URL starting with wss://');
+    if (!url || !this.utilities.isWebSocketRelayUrl(url)) {
+      this.showMessage('Please enter a valid relay URL starting with wss:// or ws://');
       return;
     }
 
     const normalized = this.utilities.normalizeRelayUrls([url]);
+    const normalizedUrl = normalized[0];
+    if (!normalizedUrl) {
+      this.showMessage('Please enter a valid relay URL starting with wss:// or ws://');
+      return;
+    }
+
     const current = this.messageRelays();
-    if (current.some(r => this.utilities.normalizeRelayUrls([r])[0] === normalized[0])) {
+    if (current.some(r => this.utilities.normalizeRelayUrls([r])[0] === normalizedUrl)) {
       this.showMessage('Relay already in message relay list');
       return;
     }
 
-    const updated = [...current, normalized[0]];
+    const updated = [...current, normalizedUrl];
     await this.publishMessageRelayList(updated);
     this.newMessageRelayUrl.set('');
     this.showMessage('Message relay added');

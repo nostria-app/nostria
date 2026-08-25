@@ -234,18 +234,10 @@ export class RelayPoolService {
    * Add relays to the pool and register them with RelaysService
    */
   private addRelays(relayUrls: string[]): void {
-    // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureRelays = relayUrls.filter(url => !url.startsWith('ws://'));
-
-    if (secureRelays.length < relayUrls.length) {
-      const filtered = relayUrls.length - secureRelays.length;
-      this.logger.warn(`[RelayPoolService] Filtered out ${filtered} insecure ws:// relay(s) - secure context requires wss://`);
-    }
-
     // Get current relays from RelaysService
     const allRelayStats = this.relaysService.getAllRelayStats();
     const currentRelays = Array.from(allRelayStats.keys());
-    const newRelays = secureRelays.filter(url => !currentRelays.includes(url));
+    const newRelays = relayUrls.filter(url => !currentRelays.includes(url));
 
     if (newRelays.length > 0) {
       // Register each new relay with the RelaysService for tracking
@@ -288,15 +280,8 @@ export class RelayPoolService {
       return null;
     }
 
-    // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
-    if (secureUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
-      return null;
-    }
-
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
       allowAuthRequired: options.auth === true,
     });
     if (filteredUrls.length === 0) {
@@ -385,15 +370,8 @@ export class RelayPoolService {
       return [];
     }
 
-    // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
-    if (secureUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
-      return [];
-    }
-
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
       allowAuthRequired: options.auth === true,
     });
     if (filteredUrls.length === 0) {
@@ -486,19 +464,8 @@ export class RelayPoolService {
   ) {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'subscribe');
 
-    // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
-    if (secureUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
-      return {
-        close: () => {
-          this.logger.debug('[RelayPoolService] No subscription to close (all relays insecure)');
-        },
-      };
-    }
-
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
       allowAuthRequired: options.auth === true,
     });
     if (filteredUrls.length === 0) {
@@ -721,11 +688,7 @@ export class RelayPoolService {
     options: { auth?: boolean } = {}
   ): Promise<string>[] {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publishWithTracking');
-    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
-    if (secureUrls.length === 0) {
-      return [];
-    }
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls, {
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
       allowAuthRequired: options.auth === true,
     });
     if (filteredUrls.length === 0) {
@@ -787,12 +750,7 @@ export class RelayPoolService {
     timeoutMs = 2000,
   ): Promise<RelayCountResponse> {
     const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'count');
-    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
-    if (secureUrls.length === 0) {
-      return { count: 0, approximate: true, queriedRelays: 0 };
-    }
-
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls);
     if (filteredUrls.length === 0) {
       return { count: 0, approximate: true, queriedRelays: 0 };
     }
