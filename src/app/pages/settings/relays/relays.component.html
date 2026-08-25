@@ -217,8 +217,8 @@
         <div class="message-relay-actions">
           <div class="flex-container add-relay-container">
             <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
-              <mat-label i18n="@@settings.relays.add-message-relay-url">Relay URL (wss://...)</mat-label>
-              <input matInput placeholder="wss://relay.example.com" [value]="newMessageRelayUrl()"
+              <mat-label i18n="@@settings.relays.add-message-relay-url">Relay URL (wss:// or ws://...)</mat-label>
+              <input matInput placeholder="wss:// or ws://..." [value]="newMessageRelayUrl()"
                 (input)="newMessageRelayUrl.set($any($event.target).value)" (keyup.enter)="addMessageRelay()" />
             </mat-form-field>
             <button mat-flat-button class="add-button" (click)="addMessageRelay()" i18n="@@settings.relays.add-button">

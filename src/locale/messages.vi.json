@@ -1427,7 +1427,7 @@
     "settings.relays.message-relays": "Chuyển tiếp tin nhắn\n",
     "settings.relays.message-relays-description": "Rơle được sử dụng để nhận tin nhắn trực tiếp (NIP-17)\n",
     "settings.relays.no-message-relays": "Không có cấu hình chuyển tiếp tin nhắn nào. Đồng bộ hóa với rơle tài khoản của bạn hoặc thêm một tài khoản theo cách thủ công.\n",
-    "settings.relays.add-message-relay-url": "URL chuyển tiếp (wss://...)\n",
+    "settings.relays.add-message-relay-url": "URL chuyển tiếp (wss:// or ws://...)\n",
     "settings.relays.deprecated.title": "Cảnh báo không dùng nữa\n",
     "settings.relays.deprecated.description": "Danh sách sau đây của bạn chứa danh sách các rơle {$INTERPOLATION}. Điều này không được dùng nữa trong giao thức.",
     "settings.relays.deprecated.migrate-hint": "Nếu bạn có các sự kiện lịch sử trên các rơle cũ này, bạn có thể di chuyển chúng sang Rơle tài khoản hiện tại của mình để đảm bảo dữ liệu của bạn không bị mất. \n",

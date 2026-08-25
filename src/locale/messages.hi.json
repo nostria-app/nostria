@@ -1427,7 +1427,7 @@
     "settings.relays.message-relays": "संदेश रिले\n",
     "settings.relays.message-relays-description": "सीधे संदेश प्राप्त करने के लिए उपयोग किए जाने वाले रिले (NIP-17)\n",
     "settings.relays.no-message-relays": "कोई संदेश रिले कॉन्फ़िगर नहीं किया गया। अपने खाते के रिले के साथ सिंक करें या मैन्युअल रूप से एक जोड़ें।\n",
-    "settings.relays.add-message-relay-url": "रिले यूआरएल (wss://...)\n",
+    "settings.relays.add-message-relay-url": "रिले यूआरएल (wss:// or ws://...)\n",
     "settings.relays.deprecated.title": "अस्वीकृत चेतावनी",
     "settings.relays.deprecated.description": "आपकी निम्नलिखित सूची में रिले की एक सूची है। इसे प्रोटोकॉल में अस्वीकार कर दिया गया है.",
     "settings.relays.deprecated.migrate-hint": "यदि आपके पास इन पुराने रिले पर ऐतिहासिक घटनाएं हैं, तो आप यह सुनिश्चित करने के लिए उन्हें अपने वर्तमान खाता रिले में स्थानांतरित कर सकते हैं कि आपका डेटा खो न जाए। \n",

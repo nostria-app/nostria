@@ -1427,7 +1427,7 @@
     "settings.relays.message-relays": "Retransmissões de mensagens\n",
     "settings.relays.message-relays-description": "Relés utilizados para recebimento de mensagens diretas (NIP-17)\n",
     "settings.relays.no-message-relays": "Nenhum relé de mensagem configurado. Sincronize com os relés da sua conta ou adicione um manualmente.\n",
-    "settings.relays.add-message-relay-url": "URL de retransmissão (wss://...)\n",
+    "settings.relays.add-message-relay-url": "URL de retransmissão (wss:// or ws://...)\n",
     "settings.relays.deprecated.title": "Aviso obsoleto",
     "settings.relays.deprecated.description": "A lista a seguir contém uma lista de relés. Isso está obsoleto no protocolo.",
     "settings.relays.deprecated.migrate-hint": "Se você tiver eventos históricos nessas retransmissões antigas, poderá migrá-los para suas retransmissões de conta atuais para garantir que seus dados não sejam perdidos. \n",

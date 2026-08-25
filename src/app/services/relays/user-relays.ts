@@ -433,7 +433,7 @@ export class UserRelaysService {
           dmRelayEvent.tags
             .filter((tag: string[]) => tag[0] === 'relay')
             .map((tag: string[]) => tag[1])
-            .filter((url: string | undefined) => url && url.startsWith('wss://')),
+            .filter((url: string | undefined) => url && this.utilitiesService.isWebSocketRelayUrl(url)),
           false,
           {
             source: 'account-relays',

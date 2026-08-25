@@ -142,7 +142,7 @@ export class UserRelaysComponent {
           const dmRelays = dmRelayEvent.tags
             .filter((tag: string[]) => tag[0] === 'relay')
             .map((tag: string[]) => tag[1])
-            .filter((url: string | undefined) => url && url.startsWith('wss://'));
+            .filter((url: string | undefined) => url && this.utilities.isWebSocketRelayUrl(url));
           this.dmRelayList.set(Array.from(new Set(dmRelays)));
         } else {
           this.dmRelayList.set([]);
@@ -236,7 +236,7 @@ export class UserRelaysComponent {
   }
 
   formatRelayUrl(url: string): string {
-    return url.replace(/^wss:\/\//, '');
+    return url.replace(/^wss?:\/\//, '');
   }
 
   getRelayDisplayName(url: string): string {

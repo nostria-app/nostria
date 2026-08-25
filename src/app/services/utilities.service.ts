@@ -904,18 +904,25 @@ export class UtilitiesService {
 
   /**
    * Check if a relay URL uses secure WebSocket protocol (wss://)
-   * Insecure ws:// URLs are rejected to prevent mixed content errors
-   * when the app is served over HTTPS
    */
   isSecureRelayUrl(url: string): boolean {
     return url.startsWith('wss://');
   }
 
   /**
+   * Check if a relay URL uses a WebSocket scheme (wss:// or ws://).
+   * ws:// is required for overlay-network relays (Yggdrasil, I2P, Tor)
+   * that are already encrypted at the transport layer.
+   */
+  isWebSocketRelayUrl(url: string): boolean {
+    return url.startsWith('wss://') || url.startsWith('ws://');
+  }
+
+  /**
    * Check if a relay URL is valid.
    * A valid relay URL must:
-   * - Use secure WebSocket protocol (wss://)
-   * - Have a valid hostname with a domain (contains a dot)
+   * - Use WebSocket protocol (wss:// or ws://)
+   * - Have a hostname that is a domain, IPv4, or IPv6 address
    *
    * This filters out malformed URLs like "wss://was//snort.social" where
    * autocomplete errors turn "wss" into "was" creating invalid hostnames.
@@ -923,7 +930,7 @@ export class UtilitiesService {
   isValidRelayUrl(url: string): boolean {
     const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
 
-    if (!cleanedUrl || !this.isSecureRelayUrl(cleanedUrl)) {
+    if (!cleanedUrl || !this.isWebSocketRelayUrl(cleanedUrl)) {
       return false;
     }
 
@@ -932,8 +939,7 @@ export class UtilitiesService {
       if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return false;
       }
-      // Must have a real hostname with a dot (valid domain)
-      return parsedUrl.hostname.includes('.');
+      return this.hasValidRelayHostname(parsedUrl.hostname);
     } catch {
       return false;
     }
@@ -942,16 +948,15 @@ export class UtilitiesService {
   /**
    * Normalizes relay URLs by ensuring root URLs have a trailing slash
    * but leaves URLs with paths unchanged.
-   * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
-   * Also validates that the hostname is a valid domain (contains a dot).
+   * Accepts wss:// and ws://. Does not rewrite ws:// to wss://.
+   * Hostnames must be a domain, IPv4, or IPv6 address.
    */
   normalizeRelayUrl(url: string, includeIgnoredRelays = false, context?: RelayNormalizationContext): string {
     try {
       const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
 
-      // Only allow secure WebSocket connections (wss://)
-      // Reject ws:// to prevent mixed content errors when served over HTTPS
-      if (!this.isSecureRelayUrl(cleanedUrl)) {
+      // Overlay-network DM relays (Yggdrasil / I2P / Tor) use ws://.
+      if (!this.isWebSocketRelayUrl(cleanedUrl)) {
         return '';
       }
 
@@ -961,9 +966,9 @@ export class UtilitiesService {
         return '';
       }
 
-      // Must have a real hostname with a dot (not malformed like "wss://was//snort.social")
-      // This catches autocomplete errors where "wss" becomes "was" and creates invalid URLs
-      if (!parsedUrl.hostname.includes('.')) {
+      // Reject autocomplete junk like "wss://was//snort.social" (hostname "was").
+      // IPv6 hosts (Yggdrasil) have colons and no dots.
+      if (!this.hasValidRelayHostname(parsedUrl.hostname)) {
         this.logInvalidRelayUrl('hostname has no domain', cleanedUrl, context);
         return '';
       }
@@ -983,17 +988,31 @@ export class UtilitiesService {
     }
   }
 
+  private hasValidRelayHostname(hostname: string): boolean {
+    const host = hostname.replace(/^\[|\]$/g, '');
+    if (!host) {
+      return false;
+    }
+    // Domains and IPv4 contain a dot. IPv6 uses colons.
+    return host.includes('.') || host.includes(':');
+  }
+
   private cleanupCommonRelayUrlTypos(url: string): string {
     let cleanedUrl = url.trim();
+    const protocol = cleanedUrl.startsWith('wss://')
+      ? 'wss://'
+      : cleanedUrl.startsWith('ws://')
+        ? 'ws://'
+        : null;
 
-    if (!cleanedUrl.startsWith('wss://')) {
+    if (!protocol) {
       return this.regionService.rewriteAppRelayUrl(cleanedUrl);
     }
 
     cleanedUrl = cleanedUrl.replace(/,+$/g, '');
     cleanedUrl = cleanedUrl.replace(/\/+,+$/g, '/');
 
-    const relayWithoutProtocol = cleanedUrl.slice('wss://'.length);
+    const relayWithoutProtocol = cleanedUrl.slice(protocol.length);
     const authorityMatch = relayWithoutProtocol.match(/^([^/?#]+)(.*)$/);
 
     if (!authorityMatch) {
@@ -1012,7 +1031,7 @@ export class UtilitiesService {
         return `relay.ditto.pub${portMatch?.[1] ?? ''}`;
       });
 
-    return this.regionService.rewriteAppRelayUrl(`wss://${canonicalAuthority}${suffix}`);
+    return this.regionService.rewriteAppRelayUrl(`${protocol}${canonicalAuthority}${suffix}`);
   }
 
   private logInvalidRelayUrl(

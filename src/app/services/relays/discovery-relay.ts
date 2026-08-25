@@ -220,7 +220,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         const relayUrls = dmRelayEvent.tags
           .filter((tag: string[]) => tag[0] === 'relay')
           .map((tag: string[]) => tag[1])
-          .filter((url: string | undefined) => url && url.startsWith('wss://')); // Only allow secure wss:// relays
+          .filter((url: string | undefined) => url && this.utilities.isWebSocketRelayUrl(url));
 
         const normalizedRelayUrls = this.utilities.normalizeRelayUrls(relayUrls, false, {
           source: 'account-relays',
