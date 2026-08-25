@@ -7,6 +7,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 import { Event } from 'nostr-tools';
+import { MAX_EVENT_HASHTAGS } from '../../utils/hashtags';
 
 describe('ArticleEventComponent', () => {
     let component: ArticleEventComponent;
@@ -179,6 +180,18 @@ describe('ArticleEventComponent', () => {
             expect(truncated).not.toBeNull();
             expect(truncated!.length).toBeLessThan(longSummary.length);
             expect(truncated!.endsWith('…')).toBe(true);
+        });
+    });
+
+    describe('Hashtag cap', () => {
+        it('renders only the capped t-list from a huge tag array', () => {
+            const tags = Array.from({ length: 400 }, (_, index) => ['t', `topic${index}`]);
+            const event = createMockArticleEvent('Article content', tags);
+            fixture.componentRef.setInput('event', event);
+            fixture.detectChanges();
+
+            expect(component.articleTags()).toHaveLength(MAX_EVENT_HASHTAGS);
+            expect(component.articleTags()[0]).toBe('topic0');
         });
     });
 });

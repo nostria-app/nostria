@@ -18,6 +18,7 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 @Component({
   selector: 'app-live-event',
@@ -186,9 +187,7 @@ export class LiveEventComponent {
     const event = this.event();
     if (!event) return [];
 
-    return event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1]);
+    return getCappedHashtags(event);
   });
 
   // Display hashtags with igdb tags replaced by game name

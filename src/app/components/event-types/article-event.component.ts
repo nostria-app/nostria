@@ -13,6 +13,7 @@ import { ChroniaCalendarService } from '../../services/chronia-calendar.service'
 import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 @Component({
   selector: 'app-article-event',
@@ -225,11 +226,7 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return [];
 
-    const tags = event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1])
-      .filter(Boolean);
-    return [...new Set(tags)];
+    return getCappedHashtags(event);
   });
 
   // Truncated content for preview (always show preview in feeds)

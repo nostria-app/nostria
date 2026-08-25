@@ -191,7 +191,7 @@ export class TimelineHoverCardComponent {
       try {
         const parsed = await this.parsing.parseContent(
           note.event.content || '',
-          note.event.tags,
+          note.event,
           note.event.pubkey
         );
         rendered.set(note.event.id, this.tokensToPreviewHtml(parsed.tokens));

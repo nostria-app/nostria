@@ -19,6 +19,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { LayoutService } from '../../services/layout.service';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 const MUSIC_KIND = 36787;
 
@@ -643,7 +644,7 @@ export class MusicEmbedComponent {
   hashtags = computed(() => {
     const ev = this.event();
     if (!ev) return [];
-    return this.utilities.getTagValues('t', ev.tags);
+    return getCappedHashtags(ev);
   });
 
   authorPubkey = computed(() => {
