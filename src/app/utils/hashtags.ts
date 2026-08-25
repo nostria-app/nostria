@@ -1,11 +1,9 @@
 /**
- * Hard cap on `t` tags processed per event.
- *
- * Aligns with the highest numeric `MaxFeedTagsAllowed` option (20). This is
- * not the user-facing "Tags allowed" feed filter — that setting can still be
- * Any. Extra `t` tags are dropped; the note is kept.
+ * Hard cap on `t` tags processed per event (per-note hashtag cap, not a
+ * max-events cap). This is not the user-facing "Tags allowed" feed filter —
+ * that setting can still be Any. Extra `t` tags are dropped; the note is kept.
  */
-export const MAX_EVENT_HASHTAGS = 20;
+export const MAX_EVENT_HASHTAGS = 50;
 
 export type HashtagSource = { tags: string[][] } | string[][] | null | undefined;
 
