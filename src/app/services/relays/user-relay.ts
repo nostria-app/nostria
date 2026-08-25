@@ -837,7 +837,7 @@ export class UserRelayService {
 
     // Use RelayPoolService.publishWithTracking to get per-relay promises.
     // Force NIP-42 auth so AUTH-gated inbox relays accept kind 1059 gift wraps.
-    const publishResults = this.pool.publishWithTracking(relayUrls, event, { auth: true });
+    const publishResults = this.pool.publishWithTracking(relayUrls, event, { auth: true, allowWs: true });
 
     // Create notifications for tracking (same pattern as publish())
     try {

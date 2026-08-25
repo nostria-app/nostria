@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "다이렉트 메시지 수신에 사용되는 릴레이(NIP-17)\n",
     "settings.relays.no-message-relays": "구성된 메시지 릴레이가 없습니다. 계정 릴레이와 동기화하거나 수동으로 추가하세요.\n",
     "settings.relays.add-message-relay-url": "릴레이 URL(wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "더 이상 사용되지 않는 경고",
     "settings.relays.deprecated.description": "다음 목록에는 릴레이 목록이 포함되어 있습니다. 이는 프로토콜에서 더 이상 사용되지 않습니다.",
     "settings.relays.deprecated.migrate-hint": "이전 릴레이에 과거 이벤트가 있는 경우 이를 현재 계정 릴레이로 마이그레이션하여 데이터가 손실되지 않도록 할 수 있습니다. \n",

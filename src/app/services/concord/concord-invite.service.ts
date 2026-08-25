@@ -7,6 +7,7 @@ import { NostrService } from '../nostr.service';
 import { AccountStateService } from '../account-state.service';
 import { EncryptionService } from '../encryption.service';
 import { RelayPoolService } from '../relays/relay-pool';
+import { UtilitiesService } from '../utilities.service';
 import { ConcordListsService } from './concord-lists.service';
 import { ConcordAdminService } from './concord-admin.service';
 import {
@@ -48,6 +49,7 @@ export class ConcordInviteService {
   private readonly accountState = inject(AccountStateService);
   private readonly encryption = inject(EncryptionService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly utilities = inject(UtilitiesService);
   private readonly lists = inject(ConcordListsService);
   private readonly admin = inject(ConcordAdminService);
 
@@ -307,7 +309,7 @@ export class ConcordInviteService {
 
     // Deliver to the recipient's DM relays when they publish one, per NIP-17.
     const relays = await this.recipientInbox(params.recipient, community.relays);
-    await this.relayPool.publish(relays, wrap, 10000);
+    await this.relayPool.publish(relays, wrap, 10000, { allowWs: true });
   }
 
   /**
@@ -363,11 +365,21 @@ export class ConcordInviteService {
         5000
       );
 
-      const urls = dmRelays[0]?.tags
-        .filter(tag => tag[0] === 'relay' && tag[1])
-        .map(tag => tag[1]);
+      const urls = this.utilities.normalizeRelayUrls(
+        dmRelays[0]?.tags
+          .filter(tag => tag[0] === 'relay' && tag[1])
+          .map(tag => tag[1]) ?? [],
+        false,
+        {
+          source: 'account-relays',
+          ownerPubkey: recipient,
+          eventKind: 10050,
+          details: 'concord NIP-17 inbox',
+          allowWs: true,
+        },
+      );
 
-      if (urls && urls.length > 0) return urls;
+      if (urls.length > 0) return urls;
     } catch {
       // Fall through to the community's own relays.
     }

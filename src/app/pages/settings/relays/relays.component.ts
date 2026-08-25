@@ -57,6 +57,7 @@ import {
 import { BackupComponent } from '../backup/backup.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { isTauri } from '@tauri-apps/api/core';
 import {
   FindResponsiveRelaysDialogComponent,
   FindResponsiveRelaysDialogResult,
@@ -117,6 +118,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // Message relays (kind 10050)
   messageRelays = signal<string[]>([]);
   newMessageRelayUrl = signal('');
+  /**
+   * HTTPS web cannot open ws:// overlay hosts (mixed content).
+   * Native shells can; do not block adding the URL on either surface.
+   */
+  readonly overlayWsBlockedOnWeb = computed(() => {
+    if (!this.app.isBrowser()) {
+      return false;
+    }
+    return location.protocol === 'https:' && !isTauri();
+  });
 
   // Template references for tooltip content
   @ViewChild('userRelaysInfoContent')
@@ -316,7 +327,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const dmRelayUrls = event.tags
       .filter(t => t[0] === 'relay' && t[1])
       .map(t => t[1]);
-    const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
+    const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls, false, {
+      allowWs: true,
+    });
 
     this.messageRelays.set(normalizedDMUrls);
   }
@@ -905,8 +918,11 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   formatRelayUrl(url: string): string {
-    // Remove WebSocket scheme for better UX
-    return url.replace(/^wss?:\/\//, '');
+    // Keep ws:// so overlay inboxes stay distinguishable from wss://.
+    if (url.startsWith('ws://')) {
+      return url;
+    }
+    return url.replace(/^wss:\/\//, '');
   }
 
   private showMessage(message: string): void {
@@ -924,7 +940,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const normalized = this.utilities.normalizeRelayUrls([url]);
+    const normalized = this.utilities.normalizeRelayUrls([url], false, { allowWs: true });
     const normalizedUrl = normalized[0];
     if (!normalizedUrl) {
       this.showMessage('Please enter a valid relay URL starting with wss:// or ws://');
@@ -932,7 +948,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
 
     const current = this.messageRelays();
-    if (current.some(r => this.utilities.normalizeRelayUrls([r])[0] === normalizedUrl)) {
+    if (current.some(r => this.utilities.normalizeRelayUrls([r], false, { allowWs: true })[0] === normalizedUrl)) {
       this.showMessage('Relay already in message relay list');
       return;
     }

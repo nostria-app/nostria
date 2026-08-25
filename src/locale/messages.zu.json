@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Ukudluliselwa okusetshenziselwa ukwamukela imilayezo eqondile (NIP-17)\n",
     "settings.relays.no-message-relays": "Akukho ukudluliselwa komlayezo okulungisiwe. Vumelanisa ne-akhawunti yakho edluliswayo noma wengeze ngokwakho.\n",
     "settings.relays.add-message-relay-url": "I-URL yokudlulisela (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Isexwayiso Sokudala",
     "settings.relays.deprecated.description": "Uhlu lwakho lokulandela luqukethe uhlu lwama-relay. Lokhu sekudala ku-protocol.",
     "settings.relays.deprecated.migrate-hint": "Uma unemicimbi yomlando kulokhu kudluliselwa okudala, ungakwazi ukuthutha ku-akhawunti yakho edluliselwe manje ukuze uqinisekise ukuthi idatha yakho ayilahleki. \n",

@@ -24,7 +24,7 @@ import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SettingsService } from './settings.service';
 
 /** Force NIP-42 auth on DM relay reads/subscribes (AUTH-gated kind 1059 inboxes). */
-const DM_AUTHED = { auth: true } as const;
+const DM_AUTHED = { auth: true, allowWs: true } as const;
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -1847,9 +1847,19 @@ export class MessagingService implements NostriaService {
       // Get DM relay URLs from kind 10050
       const dmRelayEvent = await this.database.getEventByPubkeyAndKind(myPubkey, kinds.DirectMessageRelaysList);
 
-      const dmRelayUrls = dmRelayEvent?.tags
-        .filter(t => t[0] === 'relay' && t[1])
-        .map(t => t[1]) || [];
+      const dmRelayUrls = this.utilities.normalizeRelayUrls(
+        dmRelayEvent?.tags
+          .filter(t => t[0] === 'relay' && t[1])
+          .map(t => t[1]) || [],
+        false,
+        {
+          source: 'account-relays',
+          ownerPubkey: myPubkey,
+          eventKind: kinds.DirectMessageRelaysList,
+          details: 'kind 10050 dm relays for supplemental query',
+          allowWs: true,
+        }
+      );
 
       // DM relays only — discovery/indexer relays are not for DM content
       const allAdditionalRelays = [...new Set([...dmRelayUrls])];
@@ -1992,6 +2002,7 @@ export class MessagingService implements NostriaService {
           ownerPubkey: pubkey,
           eventKind: kinds.DirectMessageRelaysList,
           details: 'cached DM relays for live subscription',
+          allowWs: true,
         }
       );
 

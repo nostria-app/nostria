@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Релеји који се користе за пријем директних порука (НИП-17)",
     "settings.relays.no-message-relays": "Нема конфигурисаних релеја порука. Синхронизујте са релејима налога или их додајте ручно.",
     "settings.relays.add-message-relay-url": "Релеј УРЛ (wss:// or ws://...)",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Upozorenje o zastarjelosti",
     "settings.relays.deprecated.description": "Vaša lista praćenja sadrži listu releja. Ovo je zastarjelo u protokolu.",
     "settings.relays.deprecated.migrate-hint": "Ако имате историјске догађаје на овим старим релејима, можете да их мигрирате на тренутне релеје налога како бисте осигурали да ваши подаци неће бити изгубљени.",

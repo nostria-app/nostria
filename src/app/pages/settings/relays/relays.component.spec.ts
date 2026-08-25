@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { DomSanitizer } from '@angular/platform-browser';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { RelaysComponent } from './relays.component';
@@ -21,6 +22,8 @@ import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { IgnoredRelayAuditService } from '../../../services/ignored-relay-audit.service';
+import { RegionService } from '../../../services/region.service';
 
 describe('RelaysComponent', () => {
   let component: RelaysComponent;
@@ -91,17 +94,11 @@ describe('RelaysComponent', () => {
           },
         },
         { provide: NotificationService, useValue: {} },
-        { provide: ApplicationService, useValue: {} },
-        {
-          provide: UtilitiesService,
-          useValue: {
-            getRelayUrlsFromFollowing: () => [],
-            normalizeRelayUrls: (urls: string[]) => urls,
-            normalizeRelayUrl: (url: string) => url,
-            isWebSocketRelayUrl: (url: string) => url.startsWith('wss://') || url.startsWith('ws://'),
-            formatRelativeTime: () => '',
-          },
-        },
+        { provide: ApplicationService, useValue: { isBrowser: signal(false) } },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: IgnoredRelayAuditService, useValue: { isExcludedAuditDomain: () => false, recordIgnoredRelayUsage: () => {} } },
+        { provide: RegionService, useValue: { rewriteAppRelayUrl: (url: string) => url } },
+        UtilitiesService,
         { provide: AccountStateService, useValue: mockAccountState },
         { provide: AccountRelayService, useValue: mockAccountRelay },
         { provide: DiscoveryRelayService, useValue: mockDiscoveryRelay },
@@ -157,8 +154,32 @@ describe('RelaysComponent', () => {
       component.newMessageRelayUrl.set(yggdrasil);
       await component.addMessageRelay();
 
-      expect(component.messageRelays()).toEqual([yggdrasil]);
+      expect(component.messageRelays()).toEqual(['ws://[31b:6f20:c7f2:3ddf::3221]/']);
       expect(open).toHaveBeenCalledWith('Message relay added', 'Close', expect.objectContaining({ duration: 3000 }));
+    });
+
+    it('rejects clearnet ws:// hosts', async () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const open = vi.spyOn(snackBar, 'open');
+
+      component.newMessageRelayUrl.set('ws://evil.example.com');
+      await component.addMessageRelay();
+
+      expect(component.messageRelays()).toEqual([]);
+      expect(open).toHaveBeenCalledWith(
+        'Please enter a valid relay URL starting with wss:// or ws://',
+        'Close',
+        expect.objectContaining({ duration: 3000 })
+      );
+    });
+  });
+
+  describe('formatRelayUrl', () => {
+    it('keeps ws:// so overlay entries stay distinguishable from wss://', () => {
+      expect(component.formatRelayUrl('ws://[31b:6f20:c7f2:3ddf::3221]/')).toBe(
+        'ws://[31b:6f20:c7f2:3ddf::3221]/'
+      );
+      expect(component.formatRelayUrl('wss://relay.primal.net/')).toBe('relay.primal.net/');
     });
   });
 
