@@ -1,9 +1,6 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       play_track:
@@ -38,18 +35,80 @@ env:
   ANDROID_PLAY_APPLICATION_ID: app.nostria.twa
 
 jobs:
+  # First job: patch the version and push to main with GITHUB_TOKEN.
+  # GITHUB_TOKEN pushes do not retrigger workflows, so this cannot start
+  # another store build or a second beta deploy. A failed later store
+  # upload still spends the version; do not add a retry that bumps again.
+  bump-version:
+    name: Bump patch version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.commit-version.outputs.version }}
+      sha: ${{ steps.commit-version.outputs.sha }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Bump patch version
+        run: npm run version:patch
+
+      - name: Commit version bump to main
+        id: commit-version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- \
+            package.json \
+            package-lock.json \
+            public/manifest.webmanifest \
+            README.md \
+            src-tauri/Cargo.toml \
+            src-tauri/Cargo.lock \
+            src-tauri/gen/apple/project.yml \
+            src-tauri/gen/apple/nostria_iOS/Info.plist
+
+          if git diff --cached --quiet; then
+            echo 'version.js produced no file changes' >&2
+            exit 1
+          fi
+
+          VERSION=$(node -p "require('./package.json').version")
+          git commit -m "chore: bump version to ${VERSION}"
+          git push origin HEAD:main
+
+          SHA=$(git rev-parse HEAD)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
   prepare-release:
     name: Prepare draft release metadata
     runs-on: ubuntu-22.04
+    needs: bump-version
     outputs:
       version: ${{ steps.release-metadata.outputs.version }}
       release_tag: ${{ steps.release-metadata.outputs.release_tag }}
       release_name: ${{ steps.release-metadata.outputs.release_name }}
       release_prerelease: ${{ steps.release-metadata.outputs.release_prerelease }}
+      sha: ${{ needs.bump-version.outputs.sha }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -79,6 +138,7 @@ jobs:
 
   build-desktop:
     name: Desktop ${{ matrix.name }} artifacts
+    needs: bump-version
     strategy:
       fail-fast: false
       matrix:
@@ -123,6 +183,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -256,11 +318,14 @@ jobs:
 
   build-android-verification:
     name: Android verification artifacts
+    needs: bump-version
     runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -368,11 +433,15 @@ jobs:
   build-android-signed-release:
     name: Android signed release artifacts
     runs-on: ubuntu-22.04
-    needs: build-android-verification
+    needs:
+      - bump-version
+      - build-android-verification
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -527,11 +596,14 @@ jobs:
     name: iOS verification artifacts
     # App Store Connect requires the iOS 26 SDK (Xcode 26+).
     # SwiftRs force-load symbols are satisfied by SwiftCompatibilityStubs.c.
+    needs: bump-version
     runs-on: macos-15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -646,11 +718,15 @@ jobs:
     name: iOS signed release artifacts
     # Must use Xcode 26+ so the IPA is built with the iOS 26 SDK (App Store rule).
     runs-on: macos-15
-    needs: build-ios-verification
+    needs:
+      - bump-version
+      - build-ios-verification
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -1353,7 +1429,7 @@ jobs:
           RELEASE_NAME: ${{ needs.prepare-release.outputs.release_name }}
           RELEASE_PRERELEASE: ${{ needs.prepare-release.outputs.release_prerelease }}
           RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
-          TARGET_COMMITISH: ${{ github.sha }}
+          TARGET_COMMITISH: ${{ needs.prepare-release.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
