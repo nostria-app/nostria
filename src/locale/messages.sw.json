@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Relays zinazotumiwa kupokea ujumbe wa moja kwa moja (NIP-17)\n",
     "settings.relays.no-message-relays": "Hakuna upeanaji wa ujumbe uliosanidiwa. Sawazisha na reli za akaunti yako au uongeze mwenyewe.\n",
     "settings.relays.add-message-relay-url": "URL ya Relay (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Onyo la Kuachwa",
     "settings.relays.deprecated.description": "Orodha yako ya kufuata ina orodha ya rile. Hii imeachwa katika itifaki.",
     "settings.relays.deprecated.migrate-hint": "Ikiwa una matukio ya kihistoria kwenye relays hizi za zamani, unaweza kuzihamisha hadi kwenye Relays za Akaunti yako ya sasa ili kuhakikisha kuwa data yako haipotei. \n",

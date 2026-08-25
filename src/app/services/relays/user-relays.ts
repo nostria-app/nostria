@@ -440,12 +440,17 @@ export class UserRelaysService {
             ownerPubkey: pubkey,
             eventKind: kinds.DirectMessageRelaysList,
             details: 'cached DM relays from database',
+            allowWs: true,
           }
         );
 
         if (relayUrls.length > 0) {
           // User has explicit DM relays — use only those, do NOT mix in fallback relays
-          const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(relayUrls);
+          const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(
+            relayUrls,
+            false,
+            { allowWs: true },
+          );
 
           // Cache immediately
           this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
@@ -480,7 +485,11 @@ export class UserRelaysService {
       this.logger.debug(`[UserRelaysService] discoveryRelayService.getUserDmRelayUrls returned:`, dmRelays);
 
       if (dmRelays.length > 0) {
-        const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(dmRelays);
+        const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(
+          dmRelays,
+          false,
+          { allowWs: true },
+        );
 
         this.logger.debug(`[UserRelaysService] Final DM relays for ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
 

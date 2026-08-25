@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Doğrudan mesajları almak için kullanılan röleler (NIP-17)\n",
     "settings.relays.no-message-relays": "Yapılandırılmış mesaj aktarımı yok. Hesap geçişlerinizle senkronize edin veya manuel olarak bir tane ekleyin.\n",
     "settings.relays.add-message-relay-url": "Geçiş URL'si (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Kullanımdan Kaldırıldı Uyarısı\n",
     "settings.relays.deprecated.description": "Aşağıdaki listeniz {$INTERPOLATION} rölelerin bir listesini içerir. Bu protokolde kullanımdan kaldırılmıştır.",
     "settings.relays.deprecated.migrate-hint": "Bu eski aktarmalarda geçmiş olaylar varsa, verilerinizin kaybolmamasını sağlamak için bunları mevcut Hesap Aktarmalarınıza taşıyabilirsiniz. \n",

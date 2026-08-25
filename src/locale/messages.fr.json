@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Relais utilisés pour recevoir des messages directs (NIP-17)\n",
     "settings.relays.no-message-relays": "Aucun relais de message configuré. Synchronisez avec les relais de votre compte ou ajoutez-en un manuellement.\n",
     "settings.relays.add-message-relay-url": "URL du relais (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Avertissement de dépréciation",
     "settings.relays.deprecated.description": "Votre liste de suivis contient une liste de relais. Ceci est déprécié dans le protocole.",
     "settings.relays.deprecated.migrate-hint": "Si vous avez des événements historiques sur ces anciens relais, vous pouvez les migrer vers vos relais de compte actuels pour vous assurer que vos données ne sont pas perdues. \n",

@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Relays used for receiving direct messages (NIP-17)",
     "settings.relays.no-message-relays": "No message relays configured. Add an auth-friendly inbox relay manually (NIP-17 kind 1059).",
     "settings.relays.add-message-relay-url": "Relay URL (wss:// or ws://...)",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Deprecated Warning",
     "settings.relays.deprecated.description": " Your following list contains a list of {$INTERPOLATION} relays. This is deprecated in the protocol. ",
     "settings.relays.deprecated.migrate-hint": " If you have historical events on these old relays, you can migrate them to your current Account Relays to ensure your data is not lost. ",

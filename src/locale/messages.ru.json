@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Реле, используемые для приема прямых сообщений (NIP-17)\n",
     "settings.relays.no-message-relays": "Ретрансляции сообщений не настроены. Синхронизируйте с реле своей учетной записи или добавьте его вручную.\n",
     "settings.relays.add-message-relay-url": "URL-адрес ретрансляции (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Предупреждение об устаревшем",
     "settings.relays.deprecated.description": "Ваш список подписок содержит список реле. Это устарело в протоколе.",
     "settings.relays.deprecated.migrate-hint": "Если у вас есть исторические события на этих старых реле, вы можете перенести их на текущие реле учетной записи, чтобы гарантировать, что ваши данные не будут потеряны. \n",

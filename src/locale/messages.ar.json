@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "المرحلات المستخدمة لاستقبال الرسائل المباشرة (NIP-17)\n",
     "settings.relays.no-message-relays": "لم يتم تكوين مرحلات الرسائل. قم بالمزامنة مع مرحلات حسابك أو قم بإضافة واحدة يدويًا.\n",
     "settings.relays.add-message-relay-url": "عنوان URL للترحيل (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "تحذير مهمل",
     "settings.relays.deprecated.description": "تحتوي قائمة المتابعة الخاصة بك على قائمة مُرحّلات. هذا مهمل في البروتوكول.",
     "settings.relays.deprecated.migrate-hint": "إذا كانت لديك أحداث تاريخية على هذه المرحلات القديمة، فيمكنك ترحيلها إلى مرحلات حسابك الحالية لضمان عدم فقدان بياناتك. \n",

@@ -1428,6 +1428,7 @@
     "settings.relays.message-relays-description": "Relés utilizados para recibir mensajes directos (NIP-17)\n",
     "settings.relays.no-message-relays": "No hay retransmisiones de mensajes configuradas. Sincronice con los relés de su cuenta o agregue uno manualmente.\n",
     "settings.relays.add-message-relay-url": "URL de retransmisión (wss:// or ws://...)\n",
+    "settings.relays.overlay-ws-web-warning": " Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them to your Message Relays list; use the Nostria desktop or mobile app to connect. ",
     "settings.relays.deprecated.title": "Advertencia de Obsolescencia",
     "settings.relays.deprecated.description": "Tu lista de seguimiento contiene una lista de relés. Esto está obsoleto en el protocolo.",
     "settings.relays.deprecated.migrate-hint": "Si tiene eventos históricos en estos repetidores antiguos, puede migrarlos a sus repetidores de cuenta actuales para asegurarse de que sus datos no se pierdan. \n",
