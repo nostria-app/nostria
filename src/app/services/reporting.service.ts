@@ -146,7 +146,7 @@ export class ReportingService {
       return true;
     }
 
-    // Check for muted words in the author's profile (name, display_name, nip05)
+    // Check for muted words in the author's profile (name, display_name, nip05, lud16, website, about)
     // This uses cached profiles only to keep the check synchronous
     if (this.checkProfileForMutedWords(event.pubkey, mutedWords)) {
       return true;
@@ -157,7 +157,8 @@ export class ReportingService {
 
   /**
    * Check if an author's profile contains any muted words.
-    * Checks name and display_name as whole words, and nip05/lud16 as identifier substrings.
+   * Checks name, display_name, and about as whole words, and nip05/lud16/website
+   * as identifier substrings. About keeps URLs so a muted domain can match a bio link.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -189,8 +190,10 @@ export class ReportingService {
 
     ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['name'], 'word');
     ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['display_name'], 'word');
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['about'], 'word');
     ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['nip05'], 'substring');
     ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['lud16'], 'substring');
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['website'], 'substring');
 
     return fieldsToCheck;
   }
@@ -257,7 +260,7 @@ export class ReportingService {
   /**
    * Check if any of the given profile fields contain a muted word.
    * Plain text fields use whole-word matching, while identifier fields such
-   * as nip05 and lud16 use substring matching.
+   * as nip05, lud16, and website use substring matching.
    */
   static fieldsContainMutedWord(fields: Array<string | ProfileMutedWordField>, mutedWords: string[]): boolean {
     if (fields.length === 0 || mutedWords.length === 0) return false;
@@ -289,7 +292,7 @@ export class ReportingService {
    * Check if a user's profile is blocked by muted words.
    * This is a public method that can be called from components to check
    * if a profile should be hidden based on muted words matching the
-    * user's name, display_name, nip05, or lud16 fields.
+    * user's name, display_name, about, nip05, lud16, or website fields.
    * 
    * @param pubkey The user's pubkey to check
    * @returns true if any muted word matches the user's profile
