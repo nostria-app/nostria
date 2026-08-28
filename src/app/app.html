@@ -390,6 +390,13 @@
             <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
           </button>
           }
+          @if (canToggleRightSidebar()) {
+          <button mat-icon-button class="right-sidebar-toggle" [class.active]="rightSidebarEnabled()"
+            (click)="toggleRightSidebar()" [matTooltip]="rightSidebarToggleTooltip()"
+            [attr.aria-label]="rightSidebarToggleTooltip()" [attr.aria-pressed]="rightSidebarEnabled()">
+            <mat-icon>view_sidebar</mat-icon>
+          </button>
+          }
           <!-- Create new content button - hidden on mobile (there's one in mobile nav) -->
           <button mat-icon-button class="create-button hide-on-mobile" (click)="openCreateMenu($event)"
             i18n-matTooltip="@@app.create.tooltip" matTooltip="Create" i18n-aria-label="@@app.create.aria"
@@ -513,7 +520,7 @@
         </div>
 
         <!-- Right sidebar - mini apps panel (shoutout, favorites, future mini apps) -->
-        @if (app.authenticated() && layout.rightSidebarVisible() && settings.settings().rightSidebarEnabled === true) {
+        @if (app.authenticated() && layout.rightSidebarVisible() && rightSidebarEnabled()) {
         <div class="right-sidebar">
           <!-- <app-shoutout-overlay></app-shoutout-overlay> -->
           @for (widget of runesSettings.visibleSidebarWidgets(); track widget) {
@@ -524,6 +531,11 @@
           <app-runes-sidebar></app-runes-sidebar>
           }
           }
+          <button mat-icon-button class="right-sidebar-hide" (click)="toggleRightSidebar()"
+            i18n-matTooltip="@@app.right-sidebar.hide" matTooltip="Hide right sidebar"
+            i18n-aria-label="@@app.right-sidebar.hide.aria" aria-label="Hide right sidebar">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
         </div>
         }
       </div>

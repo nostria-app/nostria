@@ -310,6 +310,13 @@ export class App implements OnInit, OnDestroy {
   // Right panel routing state - use PanelNavigationService as source of truth
   // hasRightContent checks both router-based content AND RightPanelService content
   hasRightContent = computed(() => this.panelNav.hasRightContent() || this.rightPanel.hasContent());
+  readonly rightSidebarEnabled = computed(() => this.settings.settings().rightSidebarEnabled === true);
+  readonly canToggleRightSidebar = computed(() => this.app.authenticated() && this.layout.rightSidebarVisible());
+  readonly rightSidebarToggleTooltip = computed(() =>
+    this.rightSidebarEnabled()
+      ? $localize`:@@app.right-sidebar.hide:Hide right sidebar`
+      : $localize`:@@app.right-sidebar.show:Show right sidebar`
+  );
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
   // Also show when RightPanelService has content (so user can close it)
   canGoBackRight = computed(() => this.panelNav.canGoBackRight() || this.rightPanel.hasContent());
@@ -2221,6 +2228,14 @@ export class App implements OnInit, OnDestroy {
       }
     }
 
+    // Alt+R (Windows/Linux) or Option+R (Mac) to toggle the right runes sidebar
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      if (this.canToggleRightSidebar()) {
+        this.toggleRightSidebar();
+      }
+    }
+
     if (event.key === 'Escape' && this.settingsQuickCardOpen()) {
       this.closeSettingsQuickCard();
     }
@@ -2605,6 +2620,13 @@ export class App implements OnInit, OnDestroy {
   toggleLeftPanelCollapse(): void {
     const pubkey = this.accountState.pubkey() || ANONYMOUS_PUBKEY;
     this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
+  }
+
+  /**
+   * Toggle the desktop right sidebar (runes/favorites). Synced with account settings.
+   */
+  toggleRightSidebar(): void {
+    void this.settings.toggleRightSidebar();
   }
 
   /**

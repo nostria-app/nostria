@@ -236,8 +236,7 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
   }
 
   toggleRightSidebar(): void {
-    const currentValue = this.settings.settings().rightSidebarEnabled === true;
-    void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
+    void this.settings.toggleRightSidebar();
   }
 
   setPostsDisplayMode(mode: string): void {

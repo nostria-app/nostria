@@ -651,6 +651,15 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['runes', 'close', 'pin', 'unpin', 'sidebar']
     },
     {
+      id: 'toggle-right-sidebar',
+      label: 'Toggle Right Sidebar',
+      icon: 'view_sidebar',
+      action: () => {
+        void this.settings.toggleRightSidebar();
+      },
+      keywords: ['runes', 'sidebar', 'right sidebar', 'favorites', 'toggle sidebar', 'rune bar', 'show sidebar', 'hide sidebar']
+    },
+    {
       id: 'runes-toggle-sidebar-widget',
       label: 'Toggle Sidebar: Runes',
       icon: 'auto_awesome',

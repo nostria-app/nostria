@@ -48,6 +48,7 @@ import { ThreadedEvent } from './event';
 import type { ArticleEditorDialogInitialDraft } from '../components/article-editor-dialog/article-editor-dialog.component';
 import { AccountLocalStateService } from './account-local-state.service';
 import { PublicUrlService } from './public-url.service';
+import { SettingsService } from './settings.service';
 
 /** Options for passing pre-loaded data when opening an event */
 export interface OpenEventOptions {
@@ -75,6 +76,7 @@ export class LayoutService implements OnDestroy {
   private injector = inject(Injector);
   private utilities = inject(UtilitiesService);
   private publicUrl = inject(PublicUrlService);
+  private settings = inject(SettingsService);
   isHandset = signal(false);
   isWideScreen = signal(false);
   rightSidebarVisible = signal(false);
@@ -420,9 +422,11 @@ export class LayoutService implements OnDestroy {
       this.rightSidebarVisible.set(result.matches);
     });
 
-    // Reset sidebar-docked media player when the right sidebar is hidden.
+    // Reset sidebar-docked media player when the right sidebar is hidden
+    // by viewport or by the synced right-sidebar setting.
     effect(() => {
-      if (!this.rightSidebarVisible() && this.mediaPlayerInSidebar()) {
+      const sidebarShown = this.rightSidebarVisible() && this.settings.settings().rightSidebarEnabled === true;
+      if (!sidebarShown && this.mediaPlayerInSidebar()) {
         this.mediaPlayerInSidebar.set(false);
       }
     });

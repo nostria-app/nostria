@@ -40,7 +40,6 @@ export class SettingRightSidebarComponent {
   readonly settings = inject(SettingsService);
 
   toggleRightSidebar(): void {
-    const currentValue = this.settings.settings().rightSidebarEnabled === true;
-    void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
+    void this.settings.toggleRightSidebar();
   }
 }

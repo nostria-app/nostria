@@ -82,6 +82,7 @@ export class ShortcutsDialogComponent {
       { keys: `${modifier}+C / Ctrl+K`, description: $localize`:@@shortcuts.command:Open command palette` },
       { keys: `${modifier}+V`, description: $localize`:@@shortcuts.voice:Open command palette with voice input` },
       { keys: `${modifier}+B`, description: $localize`:@@shortcuts.sidebar:Toggle side panel` },
+      { keys: `${modifier}+R`, description: $localize`:@@shortcuts.right-sidebar:Toggle right sidebar` },
       { keys: 'Space / K', description: $localize`:@@shortcuts.video.play-pause:Play/pause video (when video player is active)` },
       { keys: 'J / ←', description: $localize`:@@shortcuts.video.rewind:Rewind video 10 seconds (when video player is active)` },
       { keys: 'L / →', description: $localize`:@@shortcuts.video.forward:Fast forward video 10 seconds (when video player is active)` },

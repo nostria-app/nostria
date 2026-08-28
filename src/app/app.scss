@@ -406,6 +406,10 @@ nav {
     }
   }
 
+  .right-sidebar-toggle.active mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
   // Hidden state when search is focused on mobile
   &.mobile-search-focused {
     opacity: 0;
@@ -538,6 +542,28 @@ nav {
 
 :host-context(.dark) .right-sidebar {
   border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.right-sidebar-hide {
+  margin-top: auto;
+  margin-bottom: 8px;
+  width: 40px;
+  height: 40px;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
 }
 
 // Right section (already defined in toolbar-right above)

@@ -487,6 +487,13 @@ export class SettingsService {
     });
   }
 
+  async toggleRightSidebar(): Promise<void> {
+    const currentValue = this.settings().rightSidebarEnabled === true;
+    await this.updateSettings({
+      rightSidebarEnabled: !currentValue,
+    });
+  }
+
   async toggleImageCache(): Promise<void> {
     const currentValue = this.settings().imageCacheEnabled;
     await this.updateSettings({
