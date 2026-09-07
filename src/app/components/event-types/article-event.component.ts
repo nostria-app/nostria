@@ -38,6 +38,7 @@ export class ArticleEventComponent {
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
   enableImagePreview = input<boolean>(true);
+  compact = input(false);
 
   // Article title
   title = computed(() => {
@@ -98,6 +99,10 @@ export class ArticleEventComponent {
     return fullSummary.substring(0, this.MAX_SUMMARY_LENGTH).trimEnd() + '…';
   });
 
+  compactSummary = computed(() =>
+    this.truncatedSummary() || this.event().content.slice(0, this.MAX_SUMMARY_LENGTH).trim()
+  );
+
   previewContent = signal<SafeHtml>('');
   articleContent = signal<SafeHtml>('');
   isJsonContent = signal<boolean>(false);
@@ -106,6 +111,8 @@ export class ArticleEventComponent {
   constructor() {
     effect(() => {
       const event = this.event();
+      // Compact listings only need text and a thumbnail, without rendering the article body.
+      if (this.compact()) return;
       if (!event || !event.content) return;
 
       // Check if content is JSON
@@ -240,9 +247,12 @@ export class ArticleEventComponent {
     return previewContent || content || '';
   });
 
-  openFullArticle(interactionEvent?: MouseEvent | KeyboardEvent): void {
+  openFullArticle(interactionEvent?: globalThis.Event): void {
     // Stop propagation to prevent parent event card from also navigating
     interactionEvent?.stopPropagation();
+    if (interactionEvent instanceof KeyboardEvent) {
+      interactionEvent.preventDefault();
+    }
 
     if (this.enableImagePreview() && interactionEvent instanceof MouseEvent) {
       const target = interactionEvent.target as HTMLElement;

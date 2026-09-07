@@ -6,7 +6,8 @@
 }
 
 <article class="article-container clickable-card" [class.image-preview-enabled]="enableImagePreview()"
-  (click)="openFullArticle($event)" (keydown.enter)="openFullArticle()" (keydown.space)="openFullArticle()" tabindex="0"
+  [class.compact]="compact()" [class.has-image]="image()"
+  (click)="openFullArticle($event)" (keydown.enter)="openFullArticle($event)" (keydown.space)="openFullArticle($event)" tabindex="0"
   role="button" [attr.aria-label]="'Read article: ' + title()">
   @if (title()) {
   <h3 class="article-title">
@@ -14,7 +15,7 @@
   </h3>
   }
 
-  @if (authorName() || publishedAt()) {
+  @if (!compact() && (authorName() || publishedAt())) {
   <div class="article-meta">
     @if (authorName()) {
     <span class="article-author">{{ authorName() }}</span>
@@ -31,6 +32,11 @@
   </div>
   }
 
+  @if (compact()) {
+  @if (compactSummary()) {
+  <p class="article-summary">{{ compactSummary() }}</p>
+  }
+  } @else {
   @if (truncatedSummary()) {
   <p class="article-summary">{{ truncatedSummary() }}</p>
   }
@@ -69,5 +75,6 @@
     <span class="tag-chip">#{{ tag }}</span>
     }
   </div>
+  }
   }
 </article>

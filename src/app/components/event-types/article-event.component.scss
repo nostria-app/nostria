@@ -196,6 +196,62 @@
   }
 }
 
+// Dense previews for article discovery; feed previews retain their existing layout.
+.article-container.compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 6px 12px;
+  min-height: 112px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+
+  &.has-image {
+    grid-template-columns: minmax(0, 1fr) 88px;
+  }
+
+  .article-title,
+  .article-summary {
+    grid-column: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .article-title {
+    grid-row: 1;
+    font-size: 1rem;
+    line-height: 1.35;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .article-summary {
+    grid-row: 2;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 0.875rem;
+    font-style: normal;
+    line-height: 1.45;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .article-image-container {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    aspect-ratio: 1;
+
+    .article-image {
+      height: 100%;
+    }
+  }
+}
+
 // JSON content styles
 .json-content {
   font-family: 'Courier New', Courier, monospace;

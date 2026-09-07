@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect, ChangeDetectionStrategy, ElementRef, PLATFORM_ID, untracked, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,6 +32,7 @@ import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-
 import { LoggerService } from '../../services/logger.service';
 
 const PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 30;
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
 const RELAY_QUERY_TIMEOUT_MS = 3000;
@@ -89,6 +91,8 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly loadMoreSentinel = viewChild<ElementRef<HTMLElement>>('loadMoreSentinel');
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -140,11 +144,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private followingSubscription: { close: () => void } | null = null;
   private publicSubscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
-  private wasScrolledToBottom = false;
-
-  // Cooldown to prevent rapid-fire loading
-  private lastLoadTime = 0;
-  private readonly LOAD_COOLDOWN_MS = 2000;
+  private historyKey = '';
+  private historyGeneration = 0;
+  private historyCursors = new Map<string, { until: number; limit: number }>();
+  private readonly autoLoadPausedFor = signal<string | null>(null);
 
   // Articles relay set state
   articlesRelaySet = signal<Event | null>(null);
@@ -173,6 +176,17 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   private currentPubkey = computed(() => this.accountState.pubkey());
+
+  private readonly historyRequest = computed(() => {
+    const publicFeed = this.selectedListFilter() === 'public' || this.showPublic();
+    const authors = publicFeed
+      ? (this.currentPubkey() ? undefined : CURATED_ANONYMOUS_ARTICLE_AUTHORS)
+      : this.filterPubkeys() ?? [];
+    const configuredRelays = [...this.accountRelay.getRelayUrls(), ...this.articlesRelays()];
+    const relays = [...new Set(configuredRelays.length ? configuredRelays : this.utilities.anonymousRelays)];
+    const key = JSON.stringify([this.currentPubkey(), this.selectedListFilter(), authors, relays]);
+    return { key, authors, relays };
+  });
 
   private visibleArticles = computed(() => filterVisibleArticles(
     this.allArticles(),
@@ -258,20 +272,15 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   hasMore = computed(() => {
-    const filter = this.selectedListFilter();
-
-    // When using a specific list, check if there are more list articles
-    if (filter !== 'following' && filter !== 'public') {
-      return this.allFollowingArticles().length > this.followingDisplayCount();
-    }
-
     const showFollowing = this.showFollowing();
     const showPublic = this.showPublic();
+    if (!showFollowing && !showPublic) return false;
 
     // Has more if either enabled source has more
     if (showFollowing && this.hasMoreFollowing()) return true;
     if (showPublic && this.hasMorePublic()) return true;
-    return false;
+    const { authors, relays } = this.historyRequest();
+    return relays.length > 0 && (authors === undefined || authors.length > 0);
   });
 
   // Total counts
@@ -342,36 +351,20 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Effect to handle scroll events from layout service when user scrolls to bottom
-    // Uses leftPanelScrolledToBottom since articles render in the left panel
-    effect(() => {
-      const isAtBottom = this.layout.leftPanelScrolledToBottom();
-      const isReady = this.layout.leftPanelScrollReady();
+    effect(onCleanup => {
+      const sentinel = this.loadMoreSentinel()?.nativeElement;
+      // Re-observe after each displayed page, even if the sentinel never left the viewport.
+      this.currentArticles();
+      if (!this.isBrowser || !sentinel || this.loading() || this.loadingMore() || !this.hasMore()
+        || this.autoLoadPausedFor() === this.historyRequest().key) return;
 
-      // Detect transition from not-at-bottom to at-bottom
-      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
-
-      // Update the previous state
-      this.wasScrolledToBottom = isAtBottom;
-
-      // Only proceed if we just scrolled to bottom
-      if (!justScrolledToBottom) {
-        return;
-      }
-
-      // Check other conditions
-      if (this.loadingMore() || !this.hasMore()) {
-        return;
-      }
-
-      // Apply cooldown to prevent rapid-fire loading
-      const now = Date.now();
-      if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
-        return;
-      }
-      this.lastLoadTime = now;
-
-      this.loadMore();
+      const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          untracked(() => { void this.loadMore(); });
+        }
+      }, { root: sentinel.closest('.left-panel'), rootMargin: '300px 0px' });
+      observer.observe(sentinel);
+      onCleanup(() => observer.disconnect());
     });
   }
 
@@ -380,6 +373,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.historyGeneration++;
     if (this.followingSubscription) {
       this.followingSubscription.close();
     }
@@ -388,21 +382,55 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadMore(): void {
+  async loadMore(): Promise<void> {
     if (this.loadingMore() || !this.hasMore()) return;
 
-    this.loadingMore.set(true);
+    const hasCachedMore = (this.showFollowing() && this.hasMoreFollowing())
+      || (this.showPublic() && this.hasMorePublic());
+    if (this.showFollowing()) this.followingDisplayCount.update(count => count + PAGE_SIZE);
+    if (this.showPublic()) this.publicDisplayCount.update(count => count + PAGE_SIZE);
+    if (hasCachedMore) return;
 
-    setTimeout(() => {
-      // Load more for whichever sources are enabled and have more
-      if (this.showFollowing() && this.hasMoreFollowing()) {
-        this.followingDisplayCount.update(count => count + PAGE_SIZE);
+    const request = this.historyRequest();
+    if (this.historyKey !== request.key) {
+      this.historyKey = request.key;
+      this.historyCursors.clear();
+    }
+    const generation = this.historyGeneration;
+    this.autoLoadPausedFor.set(null);
+    this.loadingMore.set(true);
+    try {
+      // NIP-01: paginate each relay independently with an inclusive, seconds-based `until`.
+      const results = await Promise.allSettled(request.relays.map(async relay => {
+        const cursor = this.historyCursors.get(relay)
+          ?? { until: Math.floor(Date.now() / 1000), limit: HISTORY_PAGE_SIZE };
+        const filter: Filter = { kinds: [kinds.LongFormArticle], ...cursor };
+        if (request.authors) filter.authors = request.authors;
+        const events = await this.pool.query([relay], filter);
+        return { relay, cursor, events };
+      }));
+      if (generation !== this.historyGeneration || request.key !== this.historyRequest().key) return;
+
+      let progressed = false;
+      for (const result of results) {
+        if (result.status !== 'fulfilled' || result.value.events.length === 0) continue;
+        const { relay, cursor, events } = result.value;
+        const oldest = Math.min(...events.map(event => event.created_at));
+        events.forEach(event => this.handleArticleEvent(event));
+        // Keep the boundary second until all its events fit, rather than skipping timestamp ties.
+        const next = oldest < cursor.until
+          ? { until: oldest, limit: HISTORY_PAGE_SIZE }
+          : events.length >= cursor.limit
+            ? { until: cursor.until, limit: cursor.limit + HISTORY_PAGE_SIZE }
+            : { until: cursor.until - 1, limit: HISTORY_PAGE_SIZE };
+        this.historyCursors.set(relay, next);
+        progressed = true;
       }
-      if (this.showPublic() && this.hasMorePublic()) {
-        this.publicDisplayCount.update(count => count + PAGE_SIZE);
-      }
-      this.loadingMore.set(false);
-    }, 100);
+      // Empty results can mean a timeout, so pause automatic requests but keep manual retry available.
+      if (!progressed) this.autoLoadPausedFor.set(request.key);
+    } finally {
+      if (generation === this.historyGeneration) this.loadingMore.set(false);
+    }
   }
 
   toggleShowFollowing(): void {
@@ -755,7 +783,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     // Load articles relay set first
     await this.loadArticlesRelaySet();
 
-    const following = this.followingPubkeys();
+    const following = this.filterPubkeys() ?? [];
     if (following.length === 0) {
       this.logger.debug('[Articles] No following list available');
       this.loading.set(false);
@@ -1006,6 +1034,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
+    this.historyGeneration++;
+    this.historyCursors.clear();
+    this.autoLoadPausedFor.set(null);
+    this.loadingMore.set(false);
     this.eventMap.clear();
     this.allArticles.set([]);
     this.loading.set(true);

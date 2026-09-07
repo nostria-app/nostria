@@ -66,6 +66,59 @@ describe('ArticleEventComponent', () => {
         component = fixture.componentInstance;
     });
 
+    describe('Compact previews', () => {
+        it('renders a summary and thumbnail without rendering the body or duplicate metadata', () => {
+            fixture.componentRef.setInput('compact', true);
+            fixture.componentRef.setInput('event', createMockArticleEvent('Full article body', [
+                ['title', 'Compact article'],
+                ['summary', 'A short preview of the article.'],
+                ['image', 'https://example.com/cover.jpg'],
+                ['t', 'nostr'],
+            ]));
+            fixture.detectChanges();
+
+            const element: HTMLElement = fixture.nativeElement;
+            expect(element.querySelector('.article-title')?.textContent).toContain('Compact article');
+            expect(element.querySelector('.article-summary')?.textContent).toContain('A short preview');
+            expect(element.querySelector('.article-image')).not.toBeNull();
+            expect(element.querySelector('.article-content')).toBeNull();
+            expect(element.querySelector('.article-meta')).toBeNull();
+            expect(element.querySelector('.article-tags')).toBeNull();
+            expect(TestBed.inject(FormatService).markdownToHtmlNonBlocking).not.toHaveBeenCalled();
+        });
+
+        it('keeps short text visible when the article has no summary or image', () => {
+            fixture.componentRef.setInput('compact', true);
+            fixture.componentRef.setInput('event', createMockArticleEvent('Short text'));
+            fixture.detectChanges();
+
+            const element: HTMLElement = fixture.nativeElement;
+            expect(element.querySelector('.article-summary')?.textContent).toBe('Short text');
+            expect(element.querySelector('.article-image-container')).toBeNull();
+        });
+
+        it('opens an article once with Space without scrolling or bubbling to the card', () => {
+            fixture.componentRef.setInput('compact', true);
+            fixture.componentRef.setInput('event', {
+                ...createMockArticleEvent('Article content', [['d', 'compact-article']]),
+                pubkey: 'a'.repeat(64),
+            });
+            fixture.detectChanges();
+
+            const element: HTMLElement = fixture.nativeElement;
+            const parentKeydown = vi.fn();
+            element.addEventListener('keydown', parentKeydown);
+            const keydown = new KeyboardEvent('keydown', {
+                key: ' ', bubbles: true, cancelable: true,
+            });
+            element.querySelector('article')!.dispatchEvent(keydown);
+
+            expect(TestBed.inject(LayoutService).openArticle).toHaveBeenCalledOnce();
+            expect(keydown.defaultPrevented).toBe(true);
+            expect(parentKeydown).not.toHaveBeenCalled();
+        });
+    });
+
     describe('Title extraction', () => {
         it('should extract title from tags', () => {
             const event = createMockArticleEvent('Article content', [['title', 'Test Article Title']]);
