@@ -240,6 +240,27 @@ describe('RelayPoolService request queue', () => {
     );
   });
 
+  it('drops ws:// relays by default', async () => {
+    await expect(
+      service.get(['ws://[31b:6f20:c7f2:3ddf::3221]/'], { kinds: [1] })
+    ).resolves.toBeNull();
+
+    expect(poolGetMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps overlay ws:// when allowWs is set', async () => {
+    poolGetMock.mockResolvedValueOnce(null);
+    const ygg = 'ws://[31b:6f20:c7f2:3ddf::3221]/';
+
+    await service.get([ygg], { kinds: [1059] }, 5000, { allowWs: true });
+
+    expect(poolGetMock).toHaveBeenCalledWith(
+      [ygg],
+      { kinds: [1059] },
+      { maxWait: 5000 }
+    );
+  });
+
   it('forces auth callback for publishWithTracking when auth: true', () => {
     const authCallback = vi.fn();
     relayAuthServiceMock.getAuthCallback.mockReturnValue(authCallback);

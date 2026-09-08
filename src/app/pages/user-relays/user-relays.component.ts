@@ -139,11 +139,15 @@ export class UserRelaysComponent {
       try {
         const dmRelayEvent = await this.dataService.getDmRelayListEvent(pubkey);
         if (dmRelayEvent) {
-          const dmRelays = dmRelayEvent.tags
-            .filter((tag: string[]) => tag[0] === 'relay')
-            .map((tag: string[]) => tag[1])
-            .filter((url: string | undefined) => url && this.utilities.isWebSocketRelayUrl(url));
-          this.dmRelayList.set(Array.from(new Set(dmRelays)));
+          const dmRelays = this.utilities.normalizeRelayUrls(
+            dmRelayEvent.tags
+              .filter((tag: string[]) => tag[0] === 'relay')
+              .map((tag: string[]) => tag[1])
+              .filter((url: string | undefined) => url && this.utilities.isWebSocketRelayUrl(url)),
+            false,
+            { allowWs: true },
+          );
+          this.dmRelayList.set(dmRelays);
         } else {
           this.dmRelayList.set([]);
         }
@@ -236,7 +240,10 @@ export class UserRelaysComponent {
   }
 
   formatRelayUrl(url: string): string {
-    return url.replace(/^wss?:\/\//, '');
+    if (url.startsWith('ws://')) {
+      return url;
+    }
+    return url.replace(/^wss:\/\//, '');
   }
 
   getRelayDisplayName(url: string): string {

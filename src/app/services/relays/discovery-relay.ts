@@ -227,6 +227,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
           ownerPubkey: pubkey,
           eventKind: kinds.DirectMessageRelaysList,
           details: 'kind 10050 dm relay tags',
+          allowWs: true,
         });
 
         if (normalizedRelayUrls.length > 0) {

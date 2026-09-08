@@ -49,8 +49,14 @@ describe('MessagingService live subscriptions', () => {
     settings: signal({ messageNotificationSoundsEnabled: true }),
   };
 
+  const accountRelay = {
+    getRelayUrls: vi.fn().mockReturnValue(['wss://account-relay']),
+    waitUntilInitialized: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     subscribeMock = vi.fn().mockImplementation(() => ({ close: vi.fn() }));
+    accountRelay.getRelayUrls.mockReturnValue(['wss://account-relay']);
 
     await TestBed.configureTestingModule({
       providers: [
@@ -72,6 +78,7 @@ describe('MessagingService live subscriptions', () => {
             currentDate: vi.fn().mockReturnValue(2_000_000),
             getPTagsValuesFromEvent: (event: { tags?: string[][] }) =>
               (event.tags || []).filter(tag => tag[0] === 'p').map(tag => tag[1]),
+            normalizeRelayUrls: (urls: string[]) => urls,
           },
         },
         { provide: EncryptionService, useValue: {} },
@@ -81,13 +88,7 @@ describe('MessagingService live subscriptions', () => {
             needsPermission: vi.fn().mockReturnValue(false),
           },
         },
-        {
-          provide: AccountRelayService,
-          useValue: {
-            getRelayUrls: vi.fn().mockReturnValue(['wss://account-relay']),
-            waitUntilInitialized: vi.fn().mockResolvedValue(undefined),
-          },
-        },
+        { provide: AccountRelayService, useValue: accountRelay },
         { provide: DatabaseService, useValue: database },
         { provide: AccountLocalStateService, useValue: accountLocalState },
         {
@@ -108,6 +109,8 @@ describe('MessagingService live subscriptions', () => {
 
     service = TestBed.inject(MessagingService);
     vi.clearAllMocks();
+    database.getEventByPubkeyAndKind.mockResolvedValue(null);
+    accountRelay.getRelayUrls.mockReturnValue(['wss://account-relay']);
   });
 
   it('processes live gift-wrapped DMs instead of skipping them as already known', async () => {
@@ -144,6 +147,37 @@ describe('MessagingService live subscriptions', () => {
     expect(messages[0].id).toBe('inner-message-id');
     expect(messages[0].content).toBe('hello from peer');
     expect(messages[0].encryptionType).toBe('nip44');
+  });
+
+  it('keeps allowWs on kind 10050 URLs only, not leaked account ws://', async () => {
+    const yggInbox = 'ws://[31b:6f20:c7f2:3ddf::3221]/';
+    const leakedAccountWs = 'ws://evil.example.com/';
+    database.getEventByPubkeyAndKind.mockResolvedValue({
+      tags: [['relay', yggInbox]],
+    });
+    accountRelay.getRelayUrls.mockReturnValue([
+      'wss://account-relay',
+      leakedAccountWs,
+    ]);
+
+    await service.subscribeToIncomingMessages();
+
+    const optionCalls = subscribeMock.mock.calls.map(call => ({
+      relays: call[0],
+      options: call[3],
+    }));
+
+    expect(optionCalls).toContainEqual({
+      relays: [yggInbox],
+      options: { auth: true, allowWs: true },
+    });
+    expect(optionCalls.some(call =>
+      call.options?.allowWs === true && call.relays.includes(leakedAccountWs)
+    )).toBe(false);
+    expect(optionCalls).toContainEqual({
+      relays: ['wss://account-relay', leakedAccountWs],
+      options: { auth: true },
+    });
   });
 
   it('clears stale pending state when the same message arrives from relays', () => {

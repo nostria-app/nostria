@@ -247,18 +247,33 @@ export class RelayPoolService {
     }
   }
 
-  private getConnectableRelayUrls(relayUrls: string[], operation: string): string[] {
-    const normalizedRelayUrls = this.utilities.getUniqueNormalizedRelayUrls(relayUrls);
+  private getConnectableRelayUrls(
+    relayUrls: string[],
+    operation: string,
+    allowWs = false
+  ): string[] {
+    const normalizedRelayUrls = this.utilities.getUniqueNormalizedRelayUrls(
+      relayUrls,
+      false,
+      allowWs ? { allowWs: true } : undefined,
+    );
 
-    if (normalizedRelayUrls.length < relayUrls.length) {
+    // Default is wss-only. allowWs is NIP-17 / kind 10050 only; normalize
+    // still rejects clearnet ws:// even when this flag is set.
+    const connectableRelayUrls = allowWs
+      ? normalizedRelayUrls
+      : normalizedRelayUrls.filter(url => !url.startsWith('ws://'));
+
+    if (connectableRelayUrls.length < relayUrls.length) {
       this.logger.debug('[RelayPoolService] Filtered non-connectable relay URL(s)', {
         operation,
         requestedCount: relayUrls.length,
-        connectableCount: normalizedRelayUrls.length,
+        connectableCount: connectableRelayUrls.length,
+        allowWs,
       });
     }
 
-    return normalizedRelayUrls;
+    return connectableRelayUrls;
   }
 
   /**
@@ -272,9 +287,9 @@ export class RelayPoolService {
     relayUrls: string[],
     filter: Filter,
     timeoutMs = 5000,
-    options: { auth?: boolean } = {}
+    options: { auth?: boolean; allowWs?: boolean } = {}
   ): Promise<Event | null> {
-    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'get');
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'get', options.allowWs === true);
 
     if (connectableRelayUrls.length === 0) {
       return null;
@@ -362,9 +377,9 @@ export class RelayPoolService {
     relayUrls: string[],
     filter: Filter,
     timeoutMs = 5000,
-    options: { auth?: boolean } = {}
+    options: { auth?: boolean; allowWs?: boolean } = {}
   ): Promise<Event[]> {
-    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'query');
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'query', options.allowWs === true);
 
     if (connectableRelayUrls.length === 0) {
       return [];
@@ -460,9 +475,9 @@ export class RelayPoolService {
     relayUrls: string[],
     filter: Filter,
     onEvent: (event: Event) => void,
-    options: { auth?: boolean } = {}
+    options: { auth?: boolean; allowWs?: boolean } = {}
   ) {
-    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'subscribe');
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'subscribe', options.allowWs === true);
 
     // Filter out relays that have failed authentication
     const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
@@ -605,9 +620,9 @@ export class RelayPoolService {
     relayUrls: string[],
     event: Event,
     timeoutMs = 10000,
-    options: { auth?: boolean } = {}
+    options: { auth?: boolean; allowWs?: boolean } = {}
   ): Promise<void> {
-    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publish');
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publish', options.allowWs === true);
 
     if (connectableRelayUrls.length === 0) {
       throw new Error('No relays provided');
@@ -685,9 +700,9 @@ export class RelayPoolService {
   publishWithTracking(
     relayUrls: string[],
     event: Event,
-    options: { auth?: boolean } = {}
+    options: { auth?: boolean; allowWs?: boolean } = {}
   ): Promise<string>[] {
-    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publishWithTracking');
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publishWithTracking', options.allowWs === true);
     const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls, {
       allowAuthRequired: options.auth === true,
     });

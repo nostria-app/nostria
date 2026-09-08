@@ -225,6 +225,12 @@
               Add
             </button>
           </div>
+          @if (overlayWsBlockedOnWeb()) {
+          <p class="empty-message" i18n="@@settings.relays.overlay-ws-web-warning">
+            Plaintext ws:// relays (Tor, I2P, Yggdrasil) cannot connect from this HTTPS website. You can still add them
+            to your Message Relays list; use the Nostria desktop or mobile app to connect.
+          </p>
+          }
         </div>
       </mat-card-content>
     </mat-card>

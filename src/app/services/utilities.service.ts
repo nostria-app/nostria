@@ -46,6 +46,11 @@ export interface RelayNormalizationContext {
   details?: string;
   itemIndex?: number;
   totalItems?: number;
+  /**
+   * Accept overlay-network ws:// (onion / i2p / Yggdrasil).
+   * NIP-17 kind 10050 / DM pool only. Default remains wss-only.
+   */
+  allowWs?: boolean;
 }
 
 @Service()
@@ -920,81 +925,120 @@ export class UtilitiesService {
 
   /**
    * Check if a relay URL is valid.
-   * A valid relay URL must:
-   * - Use WebSocket protocol (wss:// or ws://)
-   * - Have a hostname that is a domain, IPv4, or IPv6 address
-   *
-   * This filters out malformed URLs like "wss://was//snort.social" where
-   * autocomplete errors turn "wss" into "was" creating invalid hostnames.
+   * Default is wss:// only. Pass allowWs for NIP-17 overlay ws://.
    */
-  isValidRelayUrl(url: string): boolean {
-    const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
-
-    if (!cleanedUrl || !this.isWebSocketRelayUrl(cleanedUrl)) {
-      return false;
-    }
-
-    try {
-      const parsedUrl = new URL(cleanedUrl);
-      if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
-        return false;
-      }
-      return this.hasValidRelayHostname(parsedUrl.hostname);
-    } catch {
-      return false;
-    }
+  isValidRelayUrl(url: string, options?: Pick<RelayNormalizationContext, 'allowWs'>): boolean {
+    return this.normalizeRelayUrl(url, false, options) !== '';
   }
 
   /**
    * Normalizes relay URLs by ensuring root URLs have a trailing slash
    * but leaves URLs with paths unchanged.
-   * Accepts wss:// and ws://. Does not rewrite ws:// to wss://.
-   * Hostnames must be a domain, IPv4, or IPv6 address.
+   * Default is wss:// only. context.allowWs accepts overlay ws://
+   * (onion / i2p / Yggdrasil) without rewriting to wss://.
    */
   normalizeRelayUrl(url: string, includeIgnoredRelays = false, context?: RelayNormalizationContext): string {
     try {
       const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
 
-      // Overlay-network DM relays (Yggdrasil / I2P / Tor) use ws://.
       if (!this.isWebSocketRelayUrl(cleanedUrl)) {
         return '';
       }
 
       const parsedUrl = new URL(cleanedUrl);
 
+      if (parsedUrl.username || parsedUrl.password) {
+        this.logInvalidRelayUrl('credentials not allowed', cleanedUrl, context);
+        return '';
+      }
+
       if (!includeIgnoredRelays && this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return '';
       }
 
-      // Reject autocomplete junk like "wss://was//snort.social" (hostname "was").
-      // IPv6 hosts (Yggdrasil) have colons and no dots.
+      // Reject autocomplete junk like "wss://was//snort.social" (hostname "was"),
+      // loopback, and empty hosts. IPv6 overlay hosts have colons and no dots.
       if (!this.hasValidRelayHostname(parsedUrl.hostname)) {
-        this.logInvalidRelayUrl('hostname has no domain', cleanedUrl, context);
+        this.logInvalidRelayUrl('hostname is not a usable relay host', cleanedUrl, context);
         return '';
+      }
+
+      if (parsedUrl.protocol === 'ws:') {
+        if (!context?.allowWs) {
+          this.logInvalidRelayUrl('plaintext ws requires NIP-17 allowWs', cleanedUrl, context);
+          return '';
+        }
+        if (!this.isOverlayPlaintextRelayHost(parsedUrl.hostname)) {
+          this.logInvalidRelayUrl('plaintext ws host is not an overlay network', cleanedUrl, context);
+          return '';
+        }
       }
 
       // If the URL has no pathname (or just '/'), ensure it ends with a slash
       if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
-        // Add trailing slash if missing
         return cleanedUrl.endsWith('/') ? cleanedUrl : `${cleanedUrl}/`;
       }
 
-      // URL already has a path, return as is
       return cleanedUrl;
     } catch (error) {
-      // If URL parsing fails, return original URL
       this.logInvalidRelayUrl('failed to parse', url, context, error);
       return '';
     }
   }
 
   private hasValidRelayHostname(hostname: string): boolean {
-    const host = hostname.replace(/^\[|\]$/g, '');
+    const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
     if (!host) {
       return false;
     }
-    // Domains and IPv4 contain a dot. IPv6 uses colons.
-    return host.includes('.') || host.includes(':');
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1'
+    ) {
+      return false;
+    }
+    if (host.includes(':')) {
+      return !this.isBlockedIPv6(host);
+    }
+    return host.includes('.');
+  }
+
+  private isBlockedIPv6(host: string): boolean {
+    const normalized = host.toLowerCase();
+    if (normalized === '::1' || normalized === '0:0:0:0:0:0:0:1') {
+      return true;
+    }
+    // IPv4-mapped / dotted-quad embedded addresses.
+    if (normalized.includes('.') || normalized.startsWith('::ffff:')) {
+      return true;
+    }
+    // Link-local fe80::/10.
+    const firstHextet = Number.parseInt(normalized.split(':')[0] || '', 16);
+    return Number.isInteger(firstHextet) && firstHextet >= 0xfe80 && firstHextet <= 0xfebf;
+  }
+
+  /**
+   * Overlay networks that publish plaintext ws:// because the transport
+   * itself is encrypted: Tor (.onion), I2P (.i2p), Yggdrasil (200::/7).
+   */
+  private isOverlayPlaintextRelayHost(hostname: string): boolean {
+    const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    if (host.endsWith('.onion') || host.endsWith('.i2p')) {
+      return true;
+    }
+    return this.isYggdrasilIPv6(host);
+  }
+
+  /** Yggdrasil addresses are in 200::/7 (first hextet 0x0200–0x03ff). */
+  private isYggdrasilIPv6(host: string): boolean {
+    const firstHextet = host.split(':')[0];
+    if (!firstHextet) {
+      return false;
+    }
+    const value = Number.parseInt(firstHextet, 16);
+    return Number.isInteger(value) && value >= 0x200 && value <= 0x3ff;
   }
 
   private cleanupCommonRelayUrlTypos(url: string): string {
