@@ -7,6 +7,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 export interface NoteEditorDialogData {
   dialogTitle?: string;
   dialogHeaderIcon?: string;
+  initialPanel?: 'scheduled-posts';
   /**
    * When false, do not navigate to the newly published event after publish succeeds.
    * Useful in thread views where the user should stay in-context.

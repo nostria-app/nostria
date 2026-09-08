@@ -1165,6 +1165,27 @@ When running inside the Android Tauri app, local signer accounts use native NIP-
 
 ## Content Creation
 
+Notes use the rich contenteditable composer with inline attachments and reference previews.
+The legacy textarea and its device preference have been removed. Scheduling is toggled from
+the footer button immediately before advanced options; its date/time panel appears below the editor.
+
+### Device-local scheduled posts
+
+The note composer signs scheduled notes (and media-story companion events) immediately with
+the scheduled Unix timestamp in `created_at`. `ScheduledPostsService` persists the signed
+payloads and the author's resolved relay destinations atomically in a separate IndexedDB
+database, `nostria-scheduled-posts`, outside the event cache and its cleanup/republish paths.
+No private keys or unsigned drafts are stored in this queue. Scheduling does not publish.
+
+After the first browser render, the queue checks overdue posts, arms a timer, and checks
+again on visibility/online events. Delivery works across account switches without re-signing.
+IndexedDB leases coordinate tabs and recover interrupted delivery; retries reuse signed IDs
+(at-least-once delivery) with backoff. Each media event is checkpointed after relay acceptance.
+Posts are removed only after every event has been accepted by at least one relay, or canceled.
+Clearing device app data removes the queue. Its manager is a panel inside the note editor,
+alongside Settings; the command palette opens the editor directly to that panel.
+Edits, proof-of-work posts, and X cross-posting currently cannot be scheduled.
+
 ### Editors
 
 | Type            | Component                      | Event Kind                   |

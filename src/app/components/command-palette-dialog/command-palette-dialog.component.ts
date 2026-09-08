@@ -70,6 +70,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   isTranscribing = signal(false);
 
   commands: Command[] = [
+    {
+      id: 'scheduled-posts',
+      label: $localize`:@@scheduled.title:Scheduled posts`,
+      icon: 'schedule_send',
+      action: () => { void this.eventService.createNote({ initialPanel: 'scheduled-posts' }); },
+      keywords: ['scheduled', 'posts', 'queue', 'pending', 'schedule'],
+    },
     // Navigation - Core Features
     {
       id: 'nav-home',

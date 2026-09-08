@@ -328,7 +328,7 @@ export class PublishService {
    * - Kind 7 (reactions): Publishes to account relays + reacted event author's relays
    * - Other kinds: Uses account relays or provided relay URLs
    */
-  private async getRelayUrlsForPublish(
+  async getRelayUrlsForPublish(
     event: Event,
     options: PublishOptions
   ): Promise<string[]> {

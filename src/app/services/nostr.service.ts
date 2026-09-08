@@ -1508,7 +1508,7 @@ export class NostrService implements NostriaService {
    * Call this before PoW mining so the mined event already includes them —
    * adding tags after mining invalidates NIP-13 proof-of-work.
    */
-  appendAutoPublishTags(tags: string[][], kind: number): string[][] {
+  appendAutoPublishTags(tags: string[][], kind: number, createdAt = Math.floor(Date.now() / 1000)): string[][] {
     const currentUser = this.accountState.account();
     if (!currentUser) {
       return tags.map(tag => [...tag]);
@@ -1524,7 +1524,7 @@ export class NostrService implements NostriaService {
     ) {
       const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);
       if (globalExpiration !== null) {
-        const expirationTimestamp = Math.floor(Date.now() / 1000) + (globalExpiration * 3600);
+        const expirationTimestamp = createdAt + (globalExpiration * 3600);
         nextTags.push(['expiration', expirationTimestamp.toString()]);
       }
     }

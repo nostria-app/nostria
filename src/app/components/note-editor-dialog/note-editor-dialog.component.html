@@ -19,13 +19,13 @@
 <ng-template #editorDialogContent>
   <!-- Content Area -->
   <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
-    <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
-      [class.preview-mode]="showPreview() && !showAdvancedOptions()"
-      [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
-      (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
-      (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
-      (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-      (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()"
+    <div class="dialog-content-wrapper" [class.scrollable]="showOptionsPanel()"
+      [class.preview-mode]="showPreview() && !showOptionsPanel()"
+      [attr.data-drag-enabled]="!showPreview() && !showOptionsPanel() || null"
+      (dragenter)="!showPreview() && !showOptionsPanel() && onDragEnter($event)"
+      (dragover)="!showPreview() && !showOptionsPanel() && onDragOver($event)"
+      (dragleave)="!showPreview() && !showOptionsPanel() && onDragLeave($event)"
+      (drop)="!showPreview() && !showOptionsPanel() && onDrop($event)" [class.drag-over]="isDragOver()"
       #dialogContentWrapper>
 
       <!-- Error display -->
@@ -95,7 +95,7 @@
       }
 
       <!-- Content editor with upload actions -->
-      @if (!showPreview() && !showAdvancedOptions()) {
+      @if (!showPreview() && !showOptionsPanel()) {
       <div class="content-editor-section">
 
         <!-- Media Mode Toggle Banner (hidden until future change) -->
@@ -138,7 +138,6 @@
               }
             </div>
             }
-            @if (useNewEditorExperience()) {
             <div contenteditable="plaintext-only" spellcheck="true" (beforeinput)="onContentBeforeInput($event)"
               (paste)="onContentPaste($event)" (input)="onContentInput($event)" (focus)="onContentFocus()"
               (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
@@ -169,15 +168,6 @@
               }
             </div>
             }
-            } @else {
-            <textarea spellcheck="true" [value]="content()" (paste)="onContentPaste($event)"
-              (input)="onContentInput($event)" (focus)="onContentFocus()" (blur)="onContentBlur()"
-              (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
-              (mouseup)="onContentSelectionChange($event)" (select)="onContentSelectionChange($event)"
-              title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
-              aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true"
-              class="content-textarea legacy-content-textarea" #contentTextarea></textarea>
-            }
           </div>
 
           <!-- Mention Autocomplete positioned relative to textarea -->
@@ -203,6 +193,49 @@
       }
 
       <!-- Advanced Options (not in inline mode) -->
+      @if (scheduleEnabled() && !showPreview() && !showOptionsPanel()) {
+      <div class="schedule-options">
+        <p i18n="@@scheduled.time">Date and time (local time)</p>
+        <div class="schedule-fields">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label i18n="@@scheduled.dateLabel">Date</mat-label>
+            <input matInput [matDatepicker]="scheduledDatePicker" [value]="scheduledDate()"
+              (dateChange)="onScheduledDateChange($event.value)" [min]="minDate()"
+              [disabled]="isPublishing()" required />
+            <mat-datepicker-toggle matIconSuffix [for]="scheduledDatePicker" />
+            <mat-datepicker #scheduledDatePicker />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label i18n="@@scheduled.timeLabel">Time</mat-label>
+            <input matInput [matTimepicker]="scheduledTimePicker" [ngModel]="scheduledDate()"
+              (ngModelChange)="scheduledDate.set($event)" [disabled]="isPublishing()" required />
+            <mat-timepicker-toggle matIconSuffix [for]="scheduledTimePicker" />
+            <mat-timepicker #scheduledTimePicker interval="15m" />
+          </mat-form-field>
+        </div>
+        <p i18n="@@scheduled.deviceHelp">Signed now and saved only on this device. Keep the app running to post on time; otherwise it posts when you next open the app. Clearing app data removes scheduled posts.</p>
+        @if (!canSchedule()) {
+        <p i18n="@@scheduled.incompatible">Scheduling requires a new Nostr post without X cross-posting or proof of work.</p>
+        }
+      </div>
+      }
+
+      @if (showScheduledPosts() && !inlineMode()) {
+      <section class="advanced-options-section scheduled-posts-section" aria-labelledby="scheduled-posts-title">
+        <div class="advanced-options-header">
+          <mat-icon class="options-icon">schedule_send</mat-icon>
+          <span class="options-title" id="scheduled-posts-title" role="heading" aria-level="2"
+            i18n="@@scheduled.title">Scheduled posts</span>
+          <span class="spacer"></span>
+          <button mat-icon-button type="button" (click)="closeScheduledPosts()"
+            aria-label="Back" i18n-aria-label="@@common.back" matTooltip="Back" i18n-matTooltip="@@common.back">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <app-scheduled-posts-panel />
+      </section>
+      }
+
       @if (showAdvancedOptions() && !inlineMode()) {
       <div class="advanced-options-section">
         <div class="advanced-options-header">
@@ -242,17 +275,6 @@
 
         <!-- Client Metadata Options -->
         <div class="option-row option-grouped-row">
-          <div class="option-group-section">
-            <div class="option-header">
-              <mat-slide-toggle [checked]="useNewEditorExperience()"
-                (change)="onNoteEditorExperienceToggle($event.checked)">
-                <span>New Editor Experience</span>
-              </mat-slide-toggle>
-              <span class="option-description">Enable the rich editor with inline attachments and enhanced
-                embeds.</span>
-            </div>
-          </div>
-
           <div class="option-group-section">
             <div class="option-header">
               <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
@@ -461,7 +483,7 @@
       }
 
       <!-- Preview section (not in inline mode) -->
-      @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
+      @if (showPreview() && !showOptionsPanel() && !inlineMode()) {
       <div class="preview-section">
         <div class="preview-header">
           <div class="preview-header-label">
@@ -503,14 +525,14 @@
 
 <ng-template #editorDialogActions>
   <div dialog-actions class="action-container composer-actions" [class.inline-actions]="inlineMode()"
-    [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
-    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
-    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
-    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
+    [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showOptionsPanel()" #composerActions
+    (dragenter)="!showPreview() && !showOptionsPanel() && onDragEnter($event)"
+    (dragover)="!showPreview() && !showOptionsPanel() && onDragOver($event)"
+    (dragleave)="!showPreview() && !showOptionsPanel() && onDragLeave($event)"
+    (drop)="!showPreview() && !showOptionsPanel() && onDrop($event)">
 
     <!-- Media Thumbnails (shown above action buttons in footer) -->
-    @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
+    @if (mediaMetadata().length > 0 && !showPreview() && !showOptionsPanel()) {
     <div class="media-thumbnails">
       @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
       <div class="media-thumbnail">
@@ -550,7 +572,13 @@
 
     <!-- Left side: Action buttons -->
     <div class="left-actions">
-      @if (showAdvancedOptions() && !inlineMode()) {
+      @if (showScheduledPosts() && !inlineMode()) {
+      <button mat-button type="button" class="back-from-overlay" (click)="closeScheduledPosts()"
+        #backFromScheduledPostsBtn>
+        <mat-icon>arrow_back</mat-icon>
+        <span i18n="@@common.back">Back</span>
+      </button>
+      } @else if (showAdvancedOptions() && !inlineMode()) {
       <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
         <mat-icon>arrow_back</mat-icon>
         <span>Back</span>
@@ -565,14 +593,23 @@
       <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
         [matMenuTriggerFor]="plusMenu" #plusMenuTrigger="matMenuTrigger"
         (click)="onFooterMenuTriggerClick($event, plusMenuTrigger)"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
+        [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel()"
+        [class.button-disabled-visible]="showPreview() || showOptionsPanel()" matTooltip="Add to post">
         <mat-icon>add</mat-icon>
       </button>
       <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
         [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
+      @if (!isEdit()) {
+      <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action schedule-button"
+        [class.schedule-active]="scheduleEnabled()" [attr.aria-pressed]="scheduleEnabled()"
+        [disabled]="isPublishing() || (!canSchedule() && !scheduleEnabled())"
+        (click)="toggleSchedule()" matTooltip="Schedule post"
+        i18n-matTooltip="@@scheduled.enable" aria-label="Schedule post" i18n-aria-label="@@scheduled.enable">
+        <mat-icon>schedule_send</mat-icon>
+      </button>
+      }
       <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
         (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
         <mat-icon>settings</mat-icon>
@@ -608,8 +645,8 @@
 
       @if (recordingHistory.length > 0) {
       <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel() || isTranscribing()"
+        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showOptionsPanel() || isTranscribing()"
         matTooltip="Undo last recording">
         <mat-icon>undo</mat-icon>
       </button>
@@ -625,7 +662,7 @@
       <mat-menu #mobileActionsMenu="matMenu">
         @if (!layout.isHandset()) {
         <button mat-menu-item (click)="toggleRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel() || isTranscribing()">
           <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
             }}</mat-icon>
           <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
@@ -634,7 +671,7 @@
 
         @if (recordingHistory.length > 0) {
         <button mat-menu-item (click)="undoLastRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel() || isTranscribing()">
           <mat-icon>undo</mat-icon>
           <span>Undo last recording</span>
         </button>
@@ -645,14 +682,19 @@
           <span>Clear draft</span>
         </button>
 
+        <button mat-menu-item (click)="openScheduledPosts()" [disabled]="isPublishing()">
+          <mat-icon>schedule_send</mat-icon>
+          <span i18n="@@scheduled.title">Scheduled posts</span>
+        </button>
+
         <button mat-menu-item (click)="openAiDialog('translate')"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel()">
           <mat-icon>translate</mat-icon>
           <span>Translate</span>
         </button>
 
         <button mat-menu-item (click)="analyzeSentimentInline()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
+          [disabled]="isUploading() || isPublishing() || showPreview() || showOptionsPanel() || !content().trim() || isSentimentAnalyzing()">
           <mat-icon>mood</mat-icon>
           <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
         </button>
@@ -679,7 +721,7 @@
     </div>
 
     <!-- Right side: PoW indicator and primary actions -->
-    @if (!showAdvancedOptions()) {
+    @if (!showOptionsPanel()) {
     <div class="right-actions">
       @if (powEnabled() && isPowMining()) {
       <div class="pow-mining-chip"
@@ -709,7 +751,9 @@
         </ng-container>
         } @else {
         <ng-container>
-          @if (inlineMode()) {
+          @if (scheduleEnabled()) {
+          <span i18n="@@scheduled.action">Schedule</span>
+          } @else if (inlineMode()) {
           Reply
           } @else {
           <span>Publish</span>

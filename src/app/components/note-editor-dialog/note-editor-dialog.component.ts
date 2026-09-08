@@ -31,6 +31,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DecimalPipe } from '@angular/common';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
@@ -91,12 +92,15 @@ import {
   type VideoOptimizationProfile,
 } from '../../interfaces/media-upload';
 import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
+import { ScheduledPostsService } from '../../services/scheduled-posts.service';
+import { ScheduledPostsPanelComponent } from '../scheduled-posts-panel/scheduled-posts-panel.component';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
 
 interface NoteEditorDialogResult {
   published: boolean;
+  scheduled?: boolean;
   event?: NostrEvent;
 }
 
@@ -242,6 +246,7 @@ interface ComposerReferencePreview {
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatDatepickerModule,
+    MatTimepickerModule,
     MatNativeDateModule,
     MatCheckboxModule,
     MatSelectModule,
@@ -253,6 +258,7 @@ interface ComposerReferencePreview {
     MatMenuModule,
     UserProfileComponent,
     MaterialCustomDialogComponent,
+    ScheduledPostsPanelComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -342,6 +348,57 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
+  private readonly scheduledPosts = inject(ScheduledPostsService);
+  readonly scheduleEnabled = signal(false);
+  toggleSchedule(): void {
+    if (!this.scheduleEnabled() && !this.scheduledDate()) {
+      const now = new Date();
+      now.setSeconds(0, 0);
+      this.scheduledDate.set(now);
+    }
+    this.scheduleEnabled.update(enabled => !enabled);
+  }
+  readonly scheduledDate = signal<Date | null>(null);
+  readonly scheduleTime = computed(() => Math.floor((this.scheduledDate()?.getTime() ?? NaN) / 1000));
+
+  onScheduledDateChange(date: Date | null): void {
+    if (date) {
+      const time = this.scheduledDate() ?? new Date();
+      date = new Date(date);
+      date.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    }
+    this.scheduledDate.set(date);
+  }
+  readonly canSchedule = computed(() =>
+    !this.isEdit() && !this.inlineMode() && !this.powEnabled() && !this.postToX());
+  private scheduledMediaEvents: NostrEvent[] = [];
+
+  openScheduledPosts(): void {
+    this.showPreview.set(false);
+    this.showAdvancedOptions.set(false);
+    this.showScheduledPosts.set(true);
+    setTimeout(() => this.backFromScheduledPostsBtn?.nativeElement.focus(), 0);
+  }
+
+  closeScheduledPosts(): void {
+    this.showScheduledPosts.set(false);
+    this.restoreEditorAfterViewToggle();
+  }
+
+  private prepareScheduledEvent(event: UnsignedEvent): UnsignedEvent {
+    const createdAt = this.scheduleTime();
+    if (!this.canSchedule() || !Number.isFinite(createdAt) ||
+      createdAt <= Math.floor(Date.now() / 1000)) {
+      throw new Error($localize`:@@scheduled.invalid:Choose a future time and sign the post again.`);
+    }
+    const tags = this.nostrService.appendAutoPublishTags(event.tags, event.kind, createdAt);
+    const expiration = tags.find(tag => tag[0] === 'expiration');
+    if (expiration && Number(expiration[1]) <= createdAt) {
+      throw new Error($localize`:@@scheduled.expiration:Expiration must be after the scheduled time.`);
+    }
+    // NIP-01: created_at is part of the signed payload, in Unix seconds.
+    return { ...event, created_at: createdAt, tags };
+  }
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
@@ -399,7 +456,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
-  useNewEditorExperience = computed(() => this.localSettings.noteEditorNewExperience());
+  readonly showScheduledPosts = signal(false);
+  readonly showOptionsPanel = computed(() => this.showAdvancedOptions() || this.showScheduledPosts());
+  @ViewChild('backFromScheduledPostsBtn', { read: ElementRef })
+  backFromScheduledPostsBtn?: ElementRef<HTMLButtonElement>;
   isContentFocused = signal(false);
   isKeyboardCompactMode = signal(false);
   private lastCursorPosition: number | null = null;
@@ -761,7 +821,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         continue;
       }
 
-      if (this.useNewEditorExperience() && previewItem.type === 'event') {
+      if (previewItem.type === 'event') {
         continue;
       }
 
@@ -773,7 +833,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   });
 
   showInlineEmbeds = computed(() => {
-    if (this.showPreview() || this.showAdvancedOptions()) {
+    if (this.showPreview() || this.showOptionsPanel()) {
       return false;
     }
 
@@ -1352,6 +1412,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
     this.isExpanded.set(true);
     setTimeout(() => {
+      this.setupContentEditorBridge();
       this.contentTextarea?.nativeElement?.focus();
     }, 50);
   }
@@ -1570,6 +1631,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Load auto-saved draft if available (skip for inline mode to keep it simple)
     if (!this.inlineMode()) {
       this.loadAutoDraft();
+      if (this.data.initialPanel === 'scheduled-posts') {
+        this.openScheduledPosts();
+      }
     }
 
     // Initialize content with quote if provided
@@ -1887,6 +1951,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async publishNote(): Promise<void> {
+    if (this.scheduleEnabled() && !this.canSchedule()) {
+      this.snackBar.open($localize`:@@scheduled.incompatible:Scheduling requires a new Nostr post without X cross-posting or proof of work.`, undefined, { duration: 5000 });
+      return;
+    }
     const xPostValidation = this.xPostValidation();
     if (!xPostValidation.valid) {
       this.snackBar.open(xPostValidation.message, 'Close', {
@@ -1913,6 +1981,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isPublishing.set(true);
 
     try {
+      this.scheduledMediaEvents = [];
+      if (this.scheduleEnabled()) {
+        this.prepareScheduledEvent(this.nostrService.createEvent(1, '', []));
+      }
       const uploadedPendingMedia = await this.uploadPendingMediaBeforePublish();
       if (!uploadedPendingMedia) {
         return;
@@ -1983,13 +2055,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const mediaEvent = this.nostrService.createEvent(kind, content, mediaTags);
 
     // 5. Publish Media Event
-    const result = await this.nostrService.signAndPublish(mediaEvent);
+    const result = this.scheduleEnabled()
+      ? { success: true, event: await this.nostrService.signEvent(this.prepareScheduledEvent(mediaEvent)) }
+      : await this.nostrService.signAndPublish(mediaEvent);
 
     if (!result.success || !result.event) {
       throw new Error('Failed to publish media event');
     }
 
     const signedMediaEvent = result.event;
+    if (this.scheduleEnabled()) this.scheduledMediaEvents.push(signedMediaEvent);
 
     // 6. Create Kind 1 Event Wrapper
     const nevent = nip19.neventEncode({
@@ -2131,6 +2206,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private async publishEvent(contentToPublish: string, tags: string[][], xText?: string, xMedia: XPostMediaItem[] = []): Promise<void> {
+    if (this.scheduleEnabled()) {
+      const unsignedEvent = this.prepareScheduledEvent(
+        this.nostrService.createEvent(1, contentToPublish, tags));
+      const signedEvent = await this.nostrService.signEvent(unsignedEvent);
+      await this.scheduledPosts.add([...this.scheduledMediaEvents, signedEvent]);
+      this.clearAutoDraft();
+      this.snackBar.open($localize`:@@scheduled.saved:Post scheduled on this device.`, undefined, { duration: 4000 });
+      this.dialogRef?.close({ published: false, scheduled: true });
+      return;
+    }
     let preparedXPost: PreparedXPost | undefined;
     const finalTags = tags.map(tag => [...tag]);
 
@@ -2974,10 +3059,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onContentBeforeInput(event: InputEvent): void {
-    if (!this.useNewEditorExperience()) {
-      return;
-    }
-
     if (event.inputType.startsWith('format')) {
       event.preventDefault();
       event.stopPropagation();
@@ -3108,11 +3189,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private setupContentEditorBridge(): void {
-    if (!this.useNewEditorExperience()) {
-      this.editorBridgeReady.set(false);
-      return;
-    }
-
     const editor = this.contentTextarea?.nativeElement;
     if (!editor) {
       return;
@@ -3154,21 +3230,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private restoreEditorAfterViewToggle(): void {
     setTimeout(() => {
-      if (this.useNewEditorExperience()) {
-        this.setupContentEditorBridge();
-        this.refreshEditorContent();
-      }
+      this.setupContentEditorBridge();
+      this.refreshEditorContent();
       this.scheduleTextareaRefresh();
     }, 0);
   }
 
   private decorateEditorElement(editor: EditableContentElement): void {
     if (editor.__nostriaEditorBridge) {
-      return;
-    }
-
-    if (editor instanceof HTMLTextAreaElement) {
-      editor.__nostriaEditorBridge = true;
       return;
     }
 
@@ -3196,12 +3265,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private readEditorValue(editor: HTMLElement): string {
-    if (editor instanceof HTMLTextAreaElement) {
-      return editor.value
-        .replace(/\r\n/g, '\n')
-        .replace(/\r/g, '\n');
-    }
-
     const readNode = (node: Node): string => {
       if (node.nodeType === Node.TEXT_NODE) {
         return (node.textContent ?? '');
@@ -3231,13 +3294,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private writeEditorValue(editor: HTMLElement, value: string): void {
-    if (editor instanceof HTMLTextAreaElement) {
-      if (editor.value !== value) {
-        editor.value = value;
-      }
-      return;
-    }
-
     const renderSignature = this.buildEditorRenderSignature(value);
     const editableEditor = editor as EditableContentElement;
 
@@ -3324,6 +3380,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       fragment.appendChild(chip);
     }
 
+    // A trailing newline needs a final empty line for the browser to place the caret on it.
+    // readEditorValue ignores this layout-only break, keeping the signed content unchanged.
+    if (value.endsWith('\n')) {
+      fragment.appendChild(document.createElement('br'));
+    }
+
     editor.replaceChildren(fragment);
     editableEditor.__nostriaRenderSignature = renderSignature;
   }
@@ -3337,7 +3399,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private refreshEditorContent(): void {
-    if (!this.useNewEditorExperience() || !this.editorBridgeReady()) {
+    if (!this.editorBridgeReady()) {
       return;
     }
 
@@ -3805,10 +3867,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(nextContent);
     this.lastCursorPosition = nextCursor;
 
-    if (this.useNewEditorExperience()) {
-      this.refreshEditorContent();
-    }
+    this.refreshEditorContent();
 
+    // Restore the caret before another input can arrive, rather than waiting for a frame.
+    this.setEditorSelection(editor, nextCursor, nextCursor);
     this.scheduleTextareaRefresh(nextCursor, true, true);
   }
 
@@ -3997,13 +4059,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Alt+Enter (Windows/Linux) or Cmd+Enter (Mac) shortcut to publish note
     if (this.platformService.hasModifierKey(event) && event.key === 'Enter') {
       event.preventDefault();
-      if (this.canPublish() && !this.isPublishing()) {
+      if (this.canPublish() && !this.isPublishing() && !this.showOptionsPanel()) {
         this.publishNote();
       }
     }
 
     // Close dialog on Escape if not in mention autocomplete, slash command menu, or other overlays
     if (event.key === 'Escape') {
+      if (this.showScheduledPosts()) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeScheduledPosts();
+        return;
+      }
+
       // Check if slash command menu is open
       const slashConfig = this.slashCommandConfig();
       if (slashConfig) {
@@ -4097,7 +4166,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     }
 
-    if (this.useNewEditorExperience() && event.key === 'Enter' && !this.platformService.hasModifierKey(event)) {
+    if (event.key === 'Enter' && !this.platformService.hasModifierKey(event)) {
       event.preventDefault();
       event.stopPropagation();
       this.insertTextAtSelection('\n');
@@ -4531,11 +4600,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (wasInAdvancedOptions) {
       this.restoreEditorAfterViewToggle();
     }
-  }
-
-  onNoteEditorExperienceToggle(enabled: boolean): void {
-    this.localSettings.setNoteEditorNewExperience(enabled);
-    this.editorBridgeReady.set(false);
   }
 
   async analyzeSentimentInline(): Promise<void> {
@@ -6009,16 +6073,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const file = item.getAsFile();
       return !!file && this.isMediaFile(file);
     });
-    const useCustomTextPaste = !!normalizedText && (
-      this.useNewEditorExperience()
-      || normalizedText !== text
-      || !!pastedHtml
-      || hasDirectMediaFiles
-      || htmlContainsImage
-    );
+    const useCustomTextPaste = !!normalizedText;
     const shouldPreventDefault = hasDirectMediaFiles
       || htmlContainsImage
-      || (!!pastedHtml && this.useNewEditorExperience())
+      || !!pastedHtml
       || useCustomTextPaste;
 
     if (!shouldPreventDefault) {

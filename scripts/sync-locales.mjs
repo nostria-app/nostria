@@ -20,6 +20,11 @@ const translateTargetMap = {
 const args = new Set(process.argv.slice(2));
 const requestedLocalesArg = process.argv.find((arg) => arg.startsWith('--locales='));
 const shouldTranslate = args.has('--translate');
+// Retry a feature's translations even if a previous network failure filled English fallbacks.
+const translatePrefix = process.argv.find(arg => arg.startsWith('--translate-prefix='))?.split('=')[1];
+const translationsFile = process.argv.find(arg => arg.startsWith('--translations-file='))?.split('=')[1];
+const suppliedTranslations = translationsFile
+  ? JSON.parse(await readFile(translationsFile, 'utf8')) : {};
 const batchSize = 75;
 
 const sourceMessages = JSON.parse(await readFile(sourceMessagesPath, 'utf8'));
@@ -55,7 +60,12 @@ async function syncLocale(locale) {
   const missingKeys = [];
 
   for (const key of sourceKeys) {
-    if (Object.hasOwn(existingTranslations, key)) {
+    if (Object.hasOwn(suppliedTranslations[locale] ?? {}, key)) {
+      nextTranslations[key] = suppliedTranslations[locale][key];
+      continue;
+    }
+    if (Object.hasOwn(existingTranslations, key) &&
+      !(shouldTranslate && translatePrefix && key.startsWith(translatePrefix))) {
       nextTranslations[key] = existingTranslations[key];
       continue;
     }
@@ -70,7 +80,10 @@ async function syncLocale(locale) {
       const translatedTexts = await translateBatch(batchTexts, locale);
 
       for (let translatedIndex = 0; translatedIndex < batchKeys.length; translatedIndex += 1) {
-        nextTranslations[batchKeys[translatedIndex]] = translatedTexts[translatedIndex];
+        const key = batchKeys[translatedIndex];
+        const translated = translatedTexts[translatedIndex];
+        nextTranslations[key] = translated === sourceTranslations[key] &&
+          Object.hasOwn(existingTranslations, key) ? existingTranslations[key] : translated;
       }
 
       console.log(
@@ -155,7 +168,7 @@ async function translateBatch(texts, locale) {
   }
 
   return translatedSegments.map((segment, index) => {
-    const rawText = segment[2].trimStart().replace(/^__EMPTY__$/, '');
+    const rawText = segment[2].trim().replace(/^__EMPTY__$/, '');
     let restoredText = rawText;
 
     for (const { placeholder, token } of maskedSegments[index].placeholders) {

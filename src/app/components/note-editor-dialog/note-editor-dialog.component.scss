@@ -1362,11 +1362,6 @@
         }
       }
 
-      .legacy-content-textarea {
-        field-sizing: content;
-        resize: none;
-      }
-
       .content-editor-surface {
         cursor: text;
 
@@ -2355,4 +2350,30 @@
     max-height: 52px;
     flex-basis: 52px;
   }
+}
+.schedule-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+
+  p { margin: 0; color: var(--mat-sys-on-surface-variant); }
+
+  .schedule-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    mat-form-field { min-width: 0; }
+  }
+}
+
+.schedule-active {
+  color: var(--mat-sys-primary);
+  background: var(--mat-sys-secondary-container);
 }

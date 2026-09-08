@@ -61,6 +61,7 @@ import { SearchResultsComponent } from './components/search-results/search-resul
 import { NostrProtocolService } from './services/nostr-protocol.service';
 import { StateService } from './services/state.service';
 import { PublishQueueService } from './services/publish-queue';
+import { ScheduledPostsService } from './services/scheduled-posts.service';
 import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
 import { Wallets } from './services/wallets';
@@ -834,6 +835,8 @@ export class App implements OnInit, OnDestroy {
   private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
 
   constructor() {
+    const scheduledPosts = inject(ScheduledPostsService);
+    afterNextRender(() => scheduledPosts.start());
     // EARLY ROUTE RESTORATION: Check synchronously from localStorage before Angular
     // processes the initial navigation to '/'. This prevents the Home→Feeds flash
     // by navigating to the saved route BEFORE the first render completes.
