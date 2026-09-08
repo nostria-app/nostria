@@ -1162,7 +1162,7 @@ export class MessageContentComponent implements OnDestroy {
         if (eventData) {
           const parseResult = await this.parsing.parseContent(
             eventData.data,
-            eventData.event.tags,
+            eventData.event,
             eventData.event.pubkey
           );
 

@@ -42,6 +42,7 @@ import {
   getRuntimeResourceProfile,
 } from '../utils/runtime-resource-profile';
 import { MaxFeedTagsAllowed } from './local-settings.service';
+import { eventExceedsHashtagCap } from '../utils/hashtags';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -1563,10 +1564,13 @@ export class FeedService {
       const currentEvents = feedData.events();
       const existingIds = new Set(currentEvents.map(e => e.id));
 
-      // Filter out duplicates and muted events
+      const isHashtagSearch = searchQuery.trim().startsWith('#');
+
+      // Filter out duplicates, muted events, and over-cap hashtag spam
       const newEvents = events.filter(event => {
         if (existingIds.has(event.id)) return false;
         if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) return false;
+        if (isHashtagSearch && eventExceedsHashtagCap(event)) return false;
         return true;
       });
 
@@ -1666,6 +1670,8 @@ export class FeedService {
       const newEvents = allEvents.filter((event: Event) => {
         if (existingIds.has(event.id)) return false;
         if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) return false;
+        // Ignore over-cap notes so spam t-arrays cannot take over hashtag lists.
+        if (eventExceedsHashtagCap(event)) return false;
         return true;
       });
 

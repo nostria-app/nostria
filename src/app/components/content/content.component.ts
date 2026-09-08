@@ -228,7 +228,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(true);
         const currentEvent = this.event();
         const authorPubkey = currentEvent?.pubkey;
-        const result = await this.parsing.parseContent(content, currentEvent?.tags, authorPubkey);
+        const result = await this.parsing.parseContent(content, currentEvent ?? undefined, authorPubkey);
 
         // Update cached tokens - inline rendering of event/article mentions is now handled by note-content.component
         untracked(() => {

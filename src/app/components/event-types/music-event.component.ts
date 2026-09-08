@@ -35,6 +35,7 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { MatDividerModule } from '@angular/material/divider';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 @Component({
   selector: 'app-music-event',
@@ -1325,10 +1326,7 @@ export class MusicEventComponent implements OnDestroy {
   // Extract hashtags from t tags (excluding common tags like 'music')
   hashtags = computed(() => {
     const event = this.event();
-    return event.tags
-      .filter(t => t[0] === 't' && t[1])
-      .map(t => t[1])
-      .filter(tag => tag.toLowerCase() !== 'music'); // Filter out 'music' tag
+    return getCappedHashtags(event).filter(tag => tag.toLowerCase() !== 'music');
   });
 
   // Extract duration from tags

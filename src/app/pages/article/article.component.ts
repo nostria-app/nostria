@@ -38,6 +38,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NostrRecord } from '../../interfaces';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RightPanelService } from '../../services/right-panel.service';
+import { getCappedHashtags } from '../../utils/hashtags';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
@@ -154,7 +155,7 @@ export class ArticleComponent implements OnDestroy {
   hashtags = computed(() => {
     const ev = this.event();
     if (!ev) return [];
-    return this.utilities.getTagValues('t', ev.tags);
+    return getCappedHashtags(ev);
   });
 
   publishedAt = computed(() => {

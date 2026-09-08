@@ -10,6 +10,7 @@ import type { SafeResourceUrl } from '@angular/platform-browser';
 import { MediaPlayerService } from './media-player.service';
 import { getTokenMetadata } from '@cashu/cashu-ts';
 import { EmojiSetService } from './emoji-set.service';
+import { getCappedHashtags, MAX_EVENT_HASHTAGS, type HashtagSource } from '../utils/hashtags';
 
 export interface NostrData {
   type: string;
@@ -363,7 +364,7 @@ export class ParsingService implements OnDestroy {
     ':black_circle:': '⚫',
   };
 
-  async parseContent(content: unknown, tags?: string[][], authorPubkey?: string): Promise<ParseContentResult> {
+  async parseContent(content: unknown, tags?: HashtagSource, authorPubkey?: string): Promise<ParseContentResult> {
     const normalizedContent = this.normalizeContent(content);
     if (!normalizedContent) return { tokens: [], pendingMentions: [] };
 
@@ -448,12 +449,13 @@ export class ParsingService implements OnDestroy {
     // Split content and generate tokens
     const tokens: ContentToken[] = [];
     let lastIndex = 0;
+    const eventTags = Array.isArray(tags) ? tags : tags?.tags;
 
     // Extract custom emojis from tags according to NIP-30
     // Format: ["emoji", <shortcode>, <image-url>, <emoji-set-address>]
     const customEmojiMap = new Map<string, { url: string; emojiSetAddress?: string }>();
-    if (tags) {
-      for (const tag of tags) {
+    if (eventTags) {
+      for (const tag of eventTags) {
         if (tag[0] === 'emoji' && tag[1] && tag[2]) {
           // Store as :shortcode: -> {url, emojiSetAddress}
           customEmojiMap.set(`:${tag[1]}:`, { url: tag[2], emojiSetAddress: tag[3] || undefined });
@@ -721,9 +723,16 @@ export class ParsingService implements OnDestroy {
       });
     }
 
-    // Find hashtags
+    // Produce the same capped `t` list used at ingest / render / index.
+    getCappedHashtags(tags);
+
+    // Find hashtags. Cap tokens so one DOM node is not mounted per unbounded tag.
     hashtagRegex.lastIndex = 0;
+    let hashtagTokens = 0;
     while ((match = hashtagRegex.exec(processedContent)) !== null) {
+      if (hashtagTokens >= MAX_EVENT_HASHTAGS) {
+        break;
+      }
       const fullMatch = match[0];
       const hashtag = match[1]; // The captured group without the #
       // Calculate the actual start position of the hashtag (excluding leading whitespace/linebreak marker)
@@ -736,6 +745,7 @@ export class ParsingService implements OnDestroy {
         content: hashtag, // Store just the tag text without #
         type: 'hashtag',
       });
+      hashtagTokens++;
     }
 
     // Find YouTube URLs
@@ -801,8 +811,8 @@ export class ParsingService implements OnDestroy {
       let dimensions: { width: number; height: number } | undefined;
 
       // Check for imeta tag with matching URL
-      if (tags) {
-        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+      if (eventTags) {
+        const imeta = eventTags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
         if (imeta) {
           // Extract blurhash
           const blurhashTag = imeta.find(v => v.startsWith('blurhash '));
@@ -868,8 +878,8 @@ export class ParsingService implements OnDestroy {
       let thumbnail: string | undefined;
       let dimensions: { width: number; height: number } | undefined;
 
-      if (tags) {
-        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+      if (eventTags) {
+        const imeta = eventTags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
         if (imeta) {
           const waveformTag = imeta.find(v => v.startsWith('waveform '));
           if (waveformTag) {
@@ -947,10 +957,10 @@ export class ParsingService implements OnDestroy {
       let waveform: number[] | undefined;
       let duration: number | undefined;
 
-      if (tags) {
+      if (eventTags) {
         // Look for imeta tag matching this URL
         // imeta tag format: ["imeta", "url <url>", "waveform <values>", "duration <seconds>"]
-        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+        const imeta = eventTags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
         if (imeta) {
           const waveformTag = imeta.find(v => v.startsWith('waveform '));
           if (waveformTag) {
@@ -1073,7 +1083,7 @@ export class ParsingService implements OnDestroy {
         (start <= m.start && start + rawUrl.length >= m.end)
       );
       if (!overlapsWithExisting) {
-        const imeta = tags?.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === rawUrl));
+        const imeta = eventTags?.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === rawUrl));
         const mimeType = imeta?.find(v => v.startsWith('m '))?.substring(2).toLowerCase();
         matches.push({
           start,

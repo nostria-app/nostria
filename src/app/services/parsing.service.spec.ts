@@ -8,6 +8,7 @@ import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 import { MediaPlayerService } from './media-player.service';
 import { EmojiSetService } from './emoji-set.service';
+import { getCappedHashtags, MAX_EVENT_HASHTAGS } from '../utils/hashtags';
 
 describe('ParsingService', () => {
   let injector: Injector;
@@ -106,5 +107,19 @@ describe('ParsingService', () => {
       type: 'text',
       content: 'Talk to andrzej.btc about it',
     });
+  });
+
+  it('reuses the ingested capped t-list and does not emit unbounded hashtag tokens', async () => {
+    const event = {
+      tags: Array.from({ length: 2_000 }, (_, index) => ['t', `tag${index}`]),
+    };
+    const ingested = getCappedHashtags(event);
+    const content = Array.from({ length: 80 }, (_, index) => `#tag${index}`).join(' ');
+
+    const result = await service.parseContent(content, event);
+
+    expect(getCappedHashtags(event)).toBe(ingested);
+    expect(result.tokens.filter(token => token.type === 'hashtag')).toHaveLength(MAX_EVENT_HASHTAGS);
+    expect(result.tokens.some(token => token.type === 'text')).toBe(true);
   });
 });

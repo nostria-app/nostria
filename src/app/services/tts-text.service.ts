@@ -16,7 +16,7 @@ export class TtsTextService {
     const expandedContent = this.expandIndexedProfileReferences(event.content, event.tags);
 
     try {
-      const parsed = await this.parsing.parseContent(expandedContent, event.tags, event.pubkey);
+      const parsed = await this.parsing.parseContent(expandedContent, event, event.pubkey);
       const tokens = await this.resolvePendingMentionTokens(parsed.tokens, parsed.pendingMentions);
       const text = this.tokensToSpeechText(tokens) || extractTextForTts(event.content);
       return {

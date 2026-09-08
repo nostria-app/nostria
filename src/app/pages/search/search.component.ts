@@ -36,6 +36,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { NostrRecord } from '../../interfaces';
 import { EventComponent } from '../../components/event/event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { eventExceedsHashtagCap, eventMatchesCappedHashtag } from '../../utils/hashtags';
 
 export type SearchSource = 'all' | 'local' | 'relays';
 export type SearchType = 'all' | 'profiles' | 'notes' | 'articles' | 'hashtags';
@@ -537,10 +538,8 @@ export class SearchComponent implements OnInit, OnDestroy {
           let matches = false;
 
           if (isHashtagSearch && hashtag) {
-            // Search by hashtag tag
-            matches = event.tags.some(tag =>
-              tag[0] === 't' && tag[1]?.toLowerCase() === hashtag
-            );
+            // Same capped `t` list as ingest. Over-cap notes are ignored.
+            matches = eventMatchesCappedHashtag(event, hashtag);
           } else {
             // Search by content
             matches = event.content.toLowerCase().includes(queryLower);
@@ -654,6 +653,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
         const newNotes: SearchResultItem[] = noteEvents
           .filter(event => !existingIds.has(event.id))
+          .filter(event => !isHashtagSearch || !eventExceedsHashtagCap(event))
           .map(event => ({
             event,
             source: 'relay' as const,

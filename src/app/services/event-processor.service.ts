@@ -5,6 +5,7 @@ import { ReportingService } from './reporting.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { PerformanceMetricsService } from './performance-metrics.service';
+import { getCappedHashtags } from '../utils/hashtags';
 
 /**
  * Result of event processing
@@ -92,6 +93,10 @@ export class EventProcessorService {
   } = {}): EventProcessingResult {
     const start = performance.now();
 
+    // Produce the capped `t` list once at ingest. Parse, render, and hashtag
+    // indexing reuse this same list via getCappedHashtags(event).
+    getCappedHashtags(event);
+
     // Track total
     this.incrementStat('total');
     this.perfMetrics.incrementCounter('event.processed.total');
@@ -164,6 +169,8 @@ export class EventProcessorService {
     /** Don't update stats (for preview/checking without side effects) */
     skipStats?: boolean;
   } = {}): boolean {
+    getCappedHashtags(event);
+
     // Quick checks without stats
     if (!options.skipExpirationCheck && this.utilities.isEventExpired(event)) {
       return false;
@@ -232,14 +239,11 @@ export class EventProcessorService {
       return 'muted_event';
     }
 
-    // Check for muted hashtags in event tags
-    const eventHashtags = event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1]?.toLowerCase());
-
+    // Check for muted hashtags against the same capped `t` list.
+    const eventHashtags = getCappedHashtags(event);
     const mutedHashtags = this.reportingService.mutedHashtags();
     if (eventHashtags.some(hashtag =>
-      mutedHashtags.some(muted => muted.toLowerCase() === hashtag)
+      mutedHashtags.some(muted => muted.toLowerCase() === hashtag.toLowerCase())
     )) {
       return 'muted_hashtag';
     }
