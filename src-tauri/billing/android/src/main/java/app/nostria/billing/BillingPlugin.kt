@@ -258,12 +258,12 @@ class BillingPlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         val params = QueryProductDetailsParams.newBuilder().setProductList(products).build()
-        client.queryProductDetailsAsync(params) { result, details ->
+        client.queryProductDetailsAsync(params) { result, detailsResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                 Log.w(TAG, "queryProductDetails($productType) failed: ${describe(result)}")
                 onResult(emptyList())
             } else {
-                onResult(details)
+                onResult(detailsResult.productDetailsList)
             }
         }
     }
