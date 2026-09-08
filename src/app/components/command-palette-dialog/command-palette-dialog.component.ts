@@ -139,6 +139,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['notifications', 'alerts', 'mentions', 'replies', 'activity']
     },
     {
+      id: 'nav-notification-settings',
+      label: $localize`:@@notifications.desktop.settings-title:Notification Settings`,
+      icon: 'notifications_active',
+      action: () => this.router.navigate(['/notifications/settings']),
+      keywords: ['notifications', 'desktop', 'native', 'push', 'permission', 'alerts']
+    },
+    {
       id: 'nav-discover',
       label: 'Open Discover',
       icon: 'explore',

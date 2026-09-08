@@ -15,10 +15,12 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SettingsService } from './settings.service';
+import { DesktopNotificationService } from './desktop-notification.service';
 
 describe('MessagingService live subscriptions', () => {
   let service: MessagingService;
   let subscribeMock: ReturnType<typeof vi.fn>;
+  const notify = vi.fn<DesktopNotificationService['notify']>().mockResolvedValue(undefined);
 
   const pubkey = signal('my-pubkey');
   const account = signal({ pubkey: 'my-pubkey', source: 'nsec' as const });
@@ -103,6 +105,7 @@ describe('MessagingService live subscriptions', () => {
           },
         },
         { provide: SettingsService, useValue: settingsService },
+        { provide: DesktopNotificationService, useValue: { notify } },
       ],
     }).compileComponents();
 
@@ -177,6 +180,22 @@ describe('MessagingService live subscriptions', () => {
     expect(message.pending).toBe(false);
     expect(message.received).toBe(true);
     expect(message.failed).toBe(false);
+  });
+
+  it('notifies once for an incoming message and ignores duplicate, read and outgoing messages', () => {
+    const message = {
+      id: 'incoming', pubkey: 'peer-pubkey', created_at: 2_000_000,
+      content: 'hello', isOutgoing: false, tags: [['p', 'my-pubkey']],
+    };
+    service.addMessageToChat('peer-pubkey', message);
+    service.addMessageToChat('peer-pubkey', message);
+    service.addMessageToChat('peer-pubkey', { ...message, id: 'read', read: true });
+    service.addMessageToChat('peer-pubkey', { ...message, id: 'outgoing', isOutgoing: true });
+    service.addMessageToChat('peer-pubkey', { ...message, id: 'other-account', tags: [['p', 'previous-account']] });
+    expect(notify).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      id: 'incoming', category: 'messages', timestamp: 2_000_000_000,
+      recipientPubkey: 'my-pubkey', authorPubkey: 'peer-pubkey',
+    }));
   });
 
   it('does not restore unread state when a replayed DM is already marked read in storage', async () => {

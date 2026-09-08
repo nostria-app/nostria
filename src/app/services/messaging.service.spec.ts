@@ -17,6 +17,7 @@ import { EncryptionPermissionService } from './encryption-permission.service';
 import { DatabaseService } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { SettingsService } from './settings.service';
+import { DesktopNotificationService } from './desktop-notification.service';
 
 interface MessagingServicePrivate {
     getReplyToFromTags(tags: string[][]): string | undefined;
@@ -110,6 +111,7 @@ describe('MessagingService', () => {
                 { provide: DatabaseService, useValue: mockDatabaseService },
                 { provide: AccountLocalStateService, useValue: mockAccountLocalStateService },
                 { provide: SettingsService, useValue: mockSettingsService },
+                { provide: DesktopNotificationService, useValue: { notify: vi.fn() } },
             ],
         }).compileComponents();
 

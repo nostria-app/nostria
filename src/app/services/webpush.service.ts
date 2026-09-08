@@ -9,6 +9,7 @@ import { UserNotificationType, DeviceNotificationPreferences } from './database.
 import { environment } from './../../environments/environment';
 import { WebRequest } from './web-request';
 import { isPlatformBrowser } from '@angular/common';
+import { isTauri } from '@tauri-apps/api/core';
 
 export interface Device {
   deviceId: string;
@@ -38,7 +39,7 @@ export class WebPushService {
 
   constructor() {
     // Only load preferences in browser environment when user is authenticated
-    if (isPlatformBrowser(this.platformId)) {
+    if (isPlatformBrowser(this.platformId) && !isTauri()) {
       // Delay to ensure account state is initialized
       setTimeout(() => {
         if (this.accountState.pubkey()) {

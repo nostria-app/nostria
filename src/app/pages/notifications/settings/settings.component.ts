@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { Location } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, PLATFORM_ID, signal } from '@angular/core';
+import { isPlatformBrowser, Location } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DesktopNotificationService } from '../../../services/desktop-notification.service';
+import { DesktopNotificationSettingsComponent } from './desktop-notification-settings.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SwPush } from '@angular/service-worker';
@@ -22,6 +25,7 @@ import { PanelHeaderComponent } from '../../../components/panel-header/panel-hea
 @Component({
   selector: 'app-settings',
   imports: [
+    DesktopNotificationSettingsComponent,
     MatButtonModule,
     CommonModule,
     MatCardModule,
@@ -35,9 +39,12 @@ import { PanelHeaderComponent } from '../../../components/panel-header/panel-hea
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:focus)': 'desktopNotifications.refreshPermission()' },
 })
 export class NotificationSettingsComponent {
   private readonly location = inject(Location);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  readonly desktopNotifications = inject(DesktopNotificationService);
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
@@ -62,12 +69,7 @@ export class NotificationSettingsComponent {
   pushSupported = computed(() => this.push.isEnabled);
 
   // Add this computed signal to your component
-  notificationPermission = computed(() => {
-    if (!('Notification' in window)) {
-      return 'unsupported';
-    }
-    return Notification.permission; // 'granted', 'denied', or 'default'
-  });
+  notificationPermission = this.desktopNotifications.permission;
 
   isNotificationEnabled = computed(() => this.notificationPermission() === 'granted');
 
@@ -83,16 +85,26 @@ export class NotificationSettingsComponent {
   });
 
   constructor() {
+    void this.desktopNotifications.refreshPermission();
+    if (!this.isBrowser || this.desktopNotifications.isNative) {
+      this.isLoading.set(false);
+      return;
+    }
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
-    this.push.messages.subscribe(message => {
-      // This is triggered when a push message is received and the app is active.
-      this.logger.info('Push message received:', message);
-    });
-
-    this.push.notificationClicks.subscribe(event => {
-      this.logger.info('Notification clicked:', event);
+    this.push.subscription.pipe(takeUntilDestroyed()).subscribe(sub => {
+      if (!sub) {
+        this.currentDevice.set(null);
+        return;
+      }
+      const subJson = sub.toJSON();
+      this.currentDevice.set({
+        deviceId: subJson.keys?.['p256dh'] || '',
+        endpoint: subJson.endpoint || '',
+        created: new Date().toISOString(),
+        auth: subJson.keys?.['auth'] || '',
+      });
     });
 
     effect(async () => {
@@ -120,23 +132,7 @@ export class NotificationSettingsComponent {
                 // subscriptionId: btoa(subJson.endpoint || ''), // Create unique ID from endpoint
               } as Device);
             }
-          } // Also set up Angular's subscription listener for updates
-          this.push.subscription.subscribe(sub => {
-            if (!sub) {
-              this.currentDevice.set(null);
-              return;
-            }
-
-            const subJson = JSON.parse(JSON.stringify(sub));
-
-            this.currentDevice.set({
-              deviceId: subJson.keys.p256dh,
-              endpoint: subJson.endpoint,
-              created: new Date().toISOString(),
-              auth: subJson.keys.auth,
-              // subscriptionId: btoa(subJson.endpoint), // Create unique ID from endpoint
-            } as Device);
-          });
+          }
 
           // Load devices using WebPushService on-demand
           await this.webPush.loadDevices(this.currentDevice()?.deviceId);
@@ -176,7 +172,7 @@ export class NotificationSettingsComponent {
 
   // Add this method to get subscription from native APIs
   async getSubscriptionFromNativeAPI(): Promise<PushSubscription | null> {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!this.isBrowser || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       this.logger.error('Push messaging is not supported');
       return null;
     }
@@ -271,15 +267,11 @@ export class NotificationSettingsComponent {
   }
 
   async createLocalNotification() {
-    // Only log when notification is actually created
-    if ('Notification' in window && Notification.permission === 'granted') {
-      this.logger.debug('Creating local test notification');
-
-      new Notification('Local test notification', {
-        body: 'This is a local notification test!',
-        icon: '/icons/icon-128x128.png',
-      });
-    }
+    const sent = await this.desktopNotifications.sendTest();
+    this.snackBar.open(sent
+      ? $localize`:@@notifications.desktop.test-sent:Test submitted to your operating system.`
+      : $localize`:@@notifications.desktop.test-failed:Could not send the test notification. Check permission and try again.`,
+      undefined, { duration: 5000 });
   }
 
   async createRemoteNotification() {
@@ -317,11 +309,12 @@ export class NotificationSettingsComponent {
   // }
   async createSubscription() {
     if (!this.pushSupported()) {
-      this.logger.error('Push notifications not supported in this browser');
-      return;
+      throw new Error('Push notifications are not supported in this browser');
     }
 
     const sub = await this.webPush.subscribe();
+
+    if (!sub) throw new Error('Push subscription registration failed');
 
     if (sub) {
       // Device is automatically added to WebPushService deviceList signal
@@ -330,19 +323,9 @@ export class NotificationSettingsComponent {
   }
 
   async askPermission() {
-    return new Promise(function (resolve, reject) {
-      const permissionResult = Notification.requestPermission(function (result) {
-        resolve(result);
-      });
-
-      if (permissionResult) {
-        permissionResult.then(resolve, reject);
-      }
-    }).then(function (permissionResult) {
-      if (permissionResult !== 'granted') {
-        throw new Error("We weren't granted permission.");
-      }
-    });
+    if (!await this.desktopNotifications.requestPermission()) {
+      throw new Error('Notification permission was not granted');
+    }
   }
 
   async deleteDevice(deviceId: string, endpoint: string) {
@@ -378,12 +361,6 @@ export class NotificationSettingsComponent {
         duration: 3000,
       });
 
-      // After deletion, perform a check if there is subscription left, if not, remove the device one.
-      this.push.subscription.subscribe(sub => {
-        if (!sub) {
-          this.currentDevice.set(null);
-        }
-      });
     } catch (error) {
       this.logger.error('Failed to delete device:', error);
       this.snackBar.open('Failed to unregister device', 'Close', {

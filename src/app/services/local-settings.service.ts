@@ -133,7 +133,32 @@ export function ensurePodcastsMenuItem(menuItems: MenuItemConfig[]): MenuItemCon
  */
 export type MaxTaggedAccountsFilter = 'none' | 10 | 50 | 100 | 200;
 
+export interface DesktopNotificationSettings {
+  enabled: boolean;
+  messages: boolean;
+  mentions: boolean;
+  replies: boolean;
+  reposts: boolean;
+  reactions: boolean;
+  zaps: boolean;
+  showPreview: boolean;
+  whenFocused: boolean;
+}
+
+export const DEFAULT_DESKTOP_NOTIFICATIONS: DesktopNotificationSettings = {
+  enabled: false,
+  messages: true,
+  mentions: true,
+  replies: true,
+  reposts: false,
+  reactions: false,
+  zaps: true,
+  showPreview: false,
+  whenFocused: false,
+};
+
 export interface LocalSettings {
+  desktopNotifications: DesktopNotificationSettings;
   menuOpen: boolean;
   menuExpanded: boolean;
   locale: string;
@@ -179,6 +204,7 @@ export interface LocalSettings {
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
+  desktopNotifications: { ...DEFAULT_DESKTOP_NOTIFICATIONS },
   menuOpen: false,
   menuExpanded: true,
   locale: 'en',
@@ -407,6 +433,10 @@ export class LocalSettingsService {
           // Default autoRelayAuth to true for users who don't have this property yet
           // so AUTH-gated relays (NIP-17 inboxes, NIP-29 groups) work out of the box.
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : true,
+          desktopNotifications: {
+            ...DEFAULT_DESKTOP_NOTIFICATIONS,
+            ...stored.desktopNotifications,
+          },
           // Ensure contentFilter exists for existing users
           contentFilter: {
             ...DEFAULT_CONTENT_FILTER,

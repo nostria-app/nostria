@@ -1,12 +1,15 @@
 <div class="notifications-page content-small">
   <app-panel-header
     title="Notification Settings"
+    i18n-title="@@notifications.desktop.settings-title"
     [showBack]="true"
     (backClick)="goBack()"
   />
 
   <!-- Loading indicator -->
-  @if (isLoading()) {
+  @if (desktopNotifications.isNative) {
+    <app-desktop-notification-settings />
+  } @else if (isLoading()) {
     <div class="loading-container">
       <mat-spinner diameter="40"></mat-spinner>
       <p>Loading notification settings...</p>
@@ -111,14 +114,10 @@
     }
     } -->
 
-        <!-- <br /><br />
-
         <p>
-          <button mat-button (click)="createLocalNotification()">Local test notifications</button>
+          <button mat-button [disabled]="!isNotificationEnabled()" (click)="createLocalNotification()"
+            i18n="@@notifications.desktop.test">Send test notification</button>
         </p>
-        <p>
-          <button mat-button (click)="createRemoteNotification()">Remote test notifications</button>
-        </p> -->
       </div>
     }
   }

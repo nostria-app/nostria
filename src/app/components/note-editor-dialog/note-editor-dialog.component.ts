@@ -3850,13 +3850,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }, 0);
   }
 
-  private insertTextAtSelection(text: string): void {
+  private insertTextAtSelection(text: string, pasteSelection?: EditorSelectionRange): void {
     const editor = this.contentTextarea?.nativeElement;
     if (!editor) {
       return;
     }
 
-    const selection = this.getEditorSelection(editor) ?? {
+    const selection = pasteSelection ?? this.getEditorSelection(editor) ?? {
       start: this.lastCursorPosition ?? this.content().length,
       end: this.lastCursorPosition ?? this.content().length,
     };
@@ -6055,16 +6055,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const items = Array.from(clipboardData.items ?? []);
     const pastedHtml = clipboardData.getData('text/html') || '';
+    const plainText = clipboardData.getData('text/plain') || '';
     const htmlContainsImage = /<img\b/i.test(pastedHtml);
-    const parsedHtml = htmlContainsImage ? await this.parsePastedHtml(pastedHtml) : null;
-    let text = parsedHtml?.text ?? (clipboardData.getData('text/plain') || '');
-    if (!text && parsedHtml) {
-      text = parsedHtml.text;
-    } else if (!text && pastedHtml) {
-      text = this.extractPlainTextFromHtml(pastedHtml);
-    }
-
-    const normalizedText = text ? this.normalizePastedText(text) : '';
     const hasDirectMediaFiles = items.some(item => {
       if (item.kind !== 'file') {
         return false;
@@ -6073,11 +6065,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const file = item.getAsFile();
       return !!file && this.isMediaFile(file);
     });
-    const useCustomTextPaste = !!normalizedText;
     const shouldPreventDefault = hasDirectMediaFiles
-      || htmlContainsImage
       || !!pastedHtml
-      || useCustomTextPaste;
+      || !!plainText;
 
     if (!shouldPreventDefault) {
       return;
@@ -6085,6 +6075,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     event.preventDefault();
     event.stopPropagation();
+
+    // Capture the replacement range before asynchronous image parsing can change the selection.
+    const editor = this.contentTextarea?.nativeElement;
+    const insertionAnchor = this.getCurrentInsertionAnchor();
+    const pasteSelection = (editor && this.getEditorSelection(editor)) ?? {
+      start: insertionAnchor,
+      end: insertionAnchor,
+    };
+    const parsedHtml = htmlContainsImage ? await this.parsePastedHtml(pastedHtml) : null;
+    let text = parsedHtml?.text ?? plainText;
+    if (!text && pastedHtml && !parsedHtml) {
+      text = this.extractPlainTextFromHtml(pastedHtml);
+    }
+    const normalizedText = text ? this.normalizePastedText(text) : '';
 
     const mediaFiles = parsedHtml ? [...parsedHtml.mediaFiles] : [];
     const placeholderTokens = parsedHtml ? [...parsedHtml.placeholderTokens] : [];
@@ -6110,14 +6114,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       mediaFiles.push(...await this.extractImageFilesFromPastedHtml(pastedHtml));
     }
 
-    const selectionStart = this.getCurrentInsertionAnchor();
-
     if (normalizedText) {
-      this.insertTextAtSelection(normalizedText);
+      this.insertTextAtSelection(normalizedText, pasteSelection);
     }
 
     if (mediaFiles.length > 0) {
-      void this.uploadFiles(mediaFiles, selectionStart + normalizedText.length, placeholderTokens);
+      void this.uploadFiles(mediaFiles, pasteSelection.start + normalizedText.length, placeholderTokens);
     }
   }
 

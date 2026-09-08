@@ -11,6 +11,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
 import { UserRelayService } from './relays/user-relay';
 import { UtilitiesService } from './utilities.service';
+import { DesktopNotificationService } from './desktop-notification.service';
 
 /**
  * Query limits for fetching notifications from relays
@@ -36,7 +37,7 @@ const MAX_NOTIFICATION_QUERY_PAGES = 20;
  * This service also manages periodic polling for new notifications with visibility awareness:
  * - Checks for new notifications every 5 minutes when the app is visible
  * - Immediately checks when the app returns to visibility after being hidden
- * - Pauses polling when the app is hidden to conserve resources
+ * - Pauses hidden browser polling; desktop apps keep checking while minimized
  */
 @Service()
 export class ContentNotificationService implements OnDestroy {
@@ -50,6 +51,7 @@ export class ContentNotificationService implements OnDestroy {
   private localSettings = inject(LocalSettingsService);
   private userRelayService = inject(UserRelayService);
   private utilities = inject(UtilitiesService);
+  private desktopNotifications = inject(DesktopNotificationService);
 
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -414,14 +416,14 @@ export class ContentNotificationService implements OnDestroy {
       return;
     }
 
-    if (isPlatformBrowser(this.platformId) && document.hidden) {
+    if (isPlatformBrowser(this.platformId) && document.hidden && !this.desktopNotifications.isDesktop) {
       this.logger.debug('[Polling] Document is hidden, not starting interval');
       return;
     }
 
     this.pollingIntervalId = setInterval(async () => {
       await this.performPollingCheck();
-    }, this.POLLING_INTERVAL_MS);
+    }, this.desktopNotifications.isDesktop ? 60 * 1000 : this.POLLING_INTERVAL_MS);
 
     this.logger.debug('[Polling] Started polling interval');
   }
@@ -435,7 +437,7 @@ export class ContentNotificationService implements OnDestroy {
       return;
     }
 
-    if (document.hidden) {
+    if (document.hidden && !this.desktopNotifications.isDesktop) {
       // App is now hidden - stop the polling interval to conserve resources
       this.logger.debug('[Polling] App hidden, pausing polling interval');
       if (this.pollingIntervalId) {
@@ -1516,6 +1518,8 @@ export class ContentNotificationService implements OnDestroy {
     // Add to notification service (which handles storage)
     this.notificationService.addNotification(notification);
     await this.notificationService.persistNotificationToStorage(notification);
+
+    void this.desktopNotifications.notifyContent(notification);
 
     this.logger.debug(`Created content notification: ${notification.id}`);
   }

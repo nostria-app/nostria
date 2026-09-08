@@ -62,6 +62,7 @@ IMPORTANT: Make sure that in the UI for users, you don't call things for "events
 - **Streams**: Live streaming viewer
 - **Notifications**: Real-time activity notifications
 - **Push Notifications**: Some notifications via web push, such as Zaps, Follows and more. This is handled by separate service hosted by Nostria.
+- **Native Notifications**: Tauri uses `DesktopNotificationService` and the notification plugin to deliver new messages and social activity locally, without backend device registration. Device-only preferences live in `LocalSettingsService`. Delivery checks permission, account, mutes, focus, freshness and duplicate IDs; previews default off. Desktop social polling continues every minute while minimized. Browser polling retains its visibility-aware five-minute interval. Quitting, sleep and mobile OS suspension stop local delivery; web push remains a separate backend feature.
 - **Zaps**: Bitcoin Lightning payments (NIP-57)
 
 ---

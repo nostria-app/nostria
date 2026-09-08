@@ -592,6 +592,17 @@ export class SettingsRegistryService {
       priority: 18,
     },
     {
+      id: 'notification-delivery',
+      title: $localize`:@@notifications.desktop.settings-title:Notification Settings`,
+      keywords: ['notifications', 'native', 'desktop', 'push', 'permission', 'alerts'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'notifications_active',
+      route: '/notifications/settings',
+      authenticated: true,
+      popular: true,
+    },
+    {
       id: 'notification-spam-filter',
       title: $localize`:@@settings.notification-spam-filter.title:Notification Spam Filter`,
       description: $localize`:@@settings.notification-spam-filter.description:Filter out notifications from events that tag too many accounts`,

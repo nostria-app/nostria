@@ -12,6 +12,7 @@
     "deep-link:default",
     "media-session:default",
     "opener:default",
+    "notification:default",
     "storekit:default",
     "updater:default"
   ]

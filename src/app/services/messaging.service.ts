@@ -22,6 +22,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SettingsService } from './settings.service';
+import { DesktopNotificationService } from './desktop-notification.service';
 
 /** Force NIP-42 auth on DM relay reads/subscribes (AUTH-gated kind 1059 inboxes). */
 const DM_AUTHED = { auth: true } as const;
@@ -190,6 +191,7 @@ export class MessagingService implements NostriaService {
 
   /** Audio element for new-message notification sound */
   private notificationAudio: HTMLAudioElement | null = null;
+  private readonly desktopNotifications = inject(DesktopNotificationService);
   /** Prevents rapid-fire notification sounds */
   private lastNotificationSoundTime = 0;
 
@@ -880,6 +882,19 @@ export class MessagingService implements NostriaService {
     // Play notification sound for incoming unread messages
     if (this.shouldPlayNotificationSound(normalizedMessage)) {
       this.playNotificationSound();
+      const recipientPubkey = this.accountState.pubkey();
+      if (recipientPubkey && normalizedMessage.eventKind !== 'reaction'
+        && normalizedMessage.tags.some(tag => tag[0] === 'p' && tag[1] === recipientPubkey)) {
+        void this.desktopNotifications.notify({
+          id: normalizedMessage.id,
+          category: 'messages',
+          title: $localize`:@@notifications.desktop.new-message:New message`,
+          body: normalizedMessage.content,
+          timestamp: normalizedMessage.created_at * 1000,
+          recipientPubkey,
+          authorPubkey: normalizedMessage.pubkey,
+        });
+      }
     }
 
     // Save message to storage asynchronously

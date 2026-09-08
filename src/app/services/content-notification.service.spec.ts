@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ContentNotificationService } from './content-notification.service';
+import { DesktopNotificationService } from './desktop-notification.service';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -113,6 +114,7 @@ describe('ContentNotificationService', () => {
       providers: [
         provideZonelessChangeDetection(),
         ContentNotificationService,
+        { provide: DesktopNotificationService, useValue: { isDesktop: false, notifyContent: vi.fn() } },
         { provide: PLATFORM_ID, useValue: 'browser' },
         {
           provide: LoggerService,
@@ -230,6 +232,47 @@ describe('ContentNotificationService', () => {
   });
 
   describe('polling lifecycle', () => {
+    it('keeps checking every minute while the desktop window is hidden', async () => {
+      service.ngOnDestroy();
+      TestBed.resetTestingModule();
+      vi.useFakeTimers();
+      const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+      const account = { pubkey: signal(TEST_PUBKEY_A) };
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          { provide: PLATFORM_ID, useValue: 'browser' },
+          { provide: LoggerService, useValue: { info: vi.fn(), debug: vi.fn(), error: vi.fn() } },
+          { provide: NotificationService, useValue: mockNotificationService },
+          { provide: AccountRelayService, useValue: mockAccountRelay },
+          { provide: AccountLocalStateService, useValue: mockAccountLocalState },
+          { provide: AccountStateService, useValue: account },
+          { provide: DatabaseService, useValue: mockDatabase },
+          { provide: LocalSettingsService, useValue: mockLocalSettings },
+          { provide: UserRelayService, useValue: mockUserRelayService },
+          { provide: UtilitiesService, useValue: mockUtilities },
+          { provide: DesktopNotificationService, useValue: { isDesktop: true, notifyContent: vi.fn() } },
+        ],
+      });
+      service = TestBed.inject(ContentNotificationService);
+      const check = vi.spyOn(service, 'checkForNewNotifications').mockResolvedValue();
+      try {
+        service.startPolling();
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(check).toHaveBeenCalledTimes(1);
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(check).toHaveBeenCalledTimes(2);
+        service.stopPolling();
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(check).toHaveBeenCalledTimes(2);
+      } finally {
+        service.ngOnDestroy();
+        hidden.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
     it('should start polling on initialize', async () => {
       await service.initialize();
       expect(service.initialized()).toBe(true);

@@ -97,6 +97,7 @@ pub fn run() {
         .plugin(media_session::init())
         .plugin(storekit::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             #[cfg(any(windows, target_os = "linux"))]
