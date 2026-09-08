@@ -224,6 +224,30 @@ describe('ReportingService', () => {
 
       expect(ReportingService.fieldsContainMutedWord(fields, ['gm'])).toBe(false);
     });
+
+    it('should match muted domain substring inside a website', () => {
+      const fields = ReportingService.collectProfileFieldsForMutedWordCheck({
+        website: 'https://channels.im/donate',
+      });
+
+      expect(ReportingService.fieldsContainMutedWord(fields, ['channels.im'])).toBe(true);
+    });
+
+    it('should match muted domain in a URL kept in about', () => {
+      const fields = ReportingService.collectProfileFieldsForMutedWordCheck({
+        about: 'Tips welcome at https://channels.im/donate',
+      });
+
+      expect(ReportingService.fieldsContainMutedWord(fields, ['channels.im'])).toBe(true);
+    });
+
+    it('should keep whole-word matching for about text outside URLs', () => {
+      const fields = ReportingService.collectProfileFieldsForMutedWordCheck({
+        about: 'I love programming',
+      });
+
+      expect(ReportingService.fieldsContainMutedWord(fields, ['gm'])).toBe(false);
+    });
   });
 
   describe('mute list updates', () => {
