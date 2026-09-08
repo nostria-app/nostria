@@ -454,7 +454,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Determine which poster stat categories are visible based on content filter
   showNotesStats = computed(() => this.currentContentKinds().some(k => POST_KINDS.includes(k)));
-  showRepostsStats = computed(() => this.currentShowReposts() || this.currentContentKinds().some(k => [6, 16].includes(k)));
+  showRepostsStats = computed(() => this.currentShowReposts() && this.currentContentKinds().some(k => [6, 16].includes(k)));
   showArticlesStats = computed(() => this.currentContentKinds().includes(30023));
   showAudioStats = computed(() => this.currentContentKinds().some(k => AUDIO_KINDS.includes(k)));
   showMediaStats = computed(() => this.currentContentKinds().some(k => MEDIA_KINDS.includes(k)));
@@ -478,53 +478,23 @@ export class SummaryComponent implements OnInit, OnDestroy {
   followSets = this.followSetsService.followSets;
   followSetsLoading = this.followSetsService.isLoading;
 
-  // Filtered active posters (by list filter, then by content filter, then paginated)
+  // Count the same events as the timeline, before poster selection and pagination.
   filteredActivePosters = computed(() => {
-    const all = this.allActivePosters();
-    const list = this.selectedList();
+    const visibleIds = new Set(this.filteredTimelineEvents().map(event => event.id));
+    const isVisible = (event: TimelineEvent) => visibleIds.has(event.id);
 
-    let filtered = all;
-
-    if (list) {
-      // Filter by pubkeys in the selected list
-      const listPubkeys = new Set(list.pubkeys);
-      filtered = filtered.filter(poster => listPubkeys.has(poster.pubkey));
-    }
-
-    // Apply content filter: recalculate totalCount based on visible stat categories
-    const showNotes = this.showNotesStats();
-    const showReposts = this.showRepostsStats();
-    const showArticles = this.showArticlesStats();
-    const showAudio = this.showAudioStats();
-    const showMedia = this.showMediaStats();
-    const showCommunities = this.showCommunitiesStats();
-    const showChats = this.showChatsStats();
-    const showLiveEvents = this.showLiveEventsStats();
-    const showCalendar = this.showCalendarStats();
-    const showMusic = this.showMusicStats();
-    const hasFilter = this.hasActiveContentFilter();
-
-    if (hasFilter) {
-      filtered = filtered
-        .map(poster => {
-          const filteredTotal =
-            (showNotes ? poster.notesCount : 0) +
-            (showReposts ? poster.repostsCount : 0) +
-            (showArticles ? poster.articlesCount : 0) +
-            (showAudio ? poster.audioCount : 0) +
-            (showMedia ? poster.mediaCount : 0) +
-            (showCommunities ? poster.communitiesCount : 0) +
-            (showChats ? poster.chatsCount : 0) +
-            (showLiveEvents ? poster.liveEventsCount : 0) +
-            (showCalendar ? poster.calendarCount : 0) +
-            (showMusic ? poster.musicCount : 0);
-          return { ...poster, totalCount: filteredTotal };
-        })
-        .filter(poster => poster.totalCount > 0)
-        .sort((a, b) => b.totalCount - a.totalCount);
-    }
-
-    return filtered;
+    return this.calculatePosterStats(
+      this.noteEvents().filter(isVisible),
+      this.repostEvents().filter(isVisible),
+      this.articleEventsRaw().filter(isVisible),
+      this.audioEventsRaw().filter(isVisible),
+      this.mediaEventsRaw().filter(isVisible),
+      this.communityEventsRaw().filter(isVisible),
+      this.chatEventsRaw().filter(isVisible),
+      this.liveEventsRaw().filter(isVisible),
+      this.calendarEventsRaw().filter(isVisible),
+      this.musicEventsRaw().filter(isVisible),
+    );
   });
 
   // Paginated active posters (from filtered list)
@@ -639,8 +609,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Timeline pagination
   timelinePage = signal(1);
 
-  // All timeline events (combined, filtered by content filter, selected posters and list, and sorted)
-  allTimelineEvents = computed(() => {
+  // Shared content, list and GM filters for the timeline and poster counters.
+  private readonly filteredTimelineEvents = computed(() => {
     const allowedKinds = this.currentContentKinds();
     const showReposts = this.currentShowReposts();
     const showReplies = this.currentShowReplies();
@@ -660,9 +630,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
 
     // Apply content filter - filter by allowed kinds
-    if (allowedKinds.length > 0) {
-      allEvents = allEvents.filter(e => allowedKinds.includes(e.kind));
-    }
+    allEvents = allEvents.filter(e => allowedKinds.includes(e.kind));
 
     // Filter reposts based on showReposts setting
     if (!showReposts) {
@@ -676,12 +644,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
         // Check if note is a reply (has 'e' tags)
         return !e.tags?.some(tag => tag[0] === 'e');
       });
-    }
-
-    // Filter by selected posters if any are selected
-    const selected = this.selectedPosters();
-    if (selected.size > 0) {
-      allEvents = allEvents.filter(e => selected.has(e.pubkey));
     }
 
     // Filter by selected list if active (applies to timeline too)
@@ -700,6 +662,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
 
     return allEvents;
+  });
+
+  allTimelineEvents = computed(() => {
+    const events = this.filteredTimelineEvents();
+    const selected = this.selectedPosters();
+    return selected.size > 0 ? events.filter(event => selected.has(event.pubkey)) : events;
   });
 
   // Paginated timeline events
@@ -1117,7 +1085,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
       this.calendarEventsRaw.set(this.mapTimelineEvents(calendar));
       this.musicEventsRaw.set(this.mapTimelineEvents(music));
 
-      this.calculatePosterStats(notes, reposts, articles, audio, media, communities, chats, liveEvents, calendar, music);
+      this.allActivePosters.set(this.calculatePosterStats(notes, reposts, articles, audio, media, communities, chats, liveEvents, calendar, music));
+      this.postersPage.set(1);
       this.profileUpdatesRaw.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
 
     } catch (error) {
@@ -1125,7 +1094,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private calculatePosterStats(notes: Event[], reposts: Event[], articles: Event[], audio: Event[], media: Event[], communities: Event[], chats: Event[], liveEvents: Event[], calendar: Event[], music: Event[]): void {
+  private calculatePosterStats(notes: TimelineEvent[], reposts: TimelineEvent[], articles: TimelineEvent[], audio: TimelineEvent[], media: TimelineEvent[], communities: TimelineEvent[], chats: TimelineEvent[], liveEvents: TimelineEvent[], calendar: TimelineEvent[], music: TimelineEvent[]): PosterStats[] {
     const statsMap = new Map<string, PosterStats>();
 
     this.incrementPosterStats(statsMap, notes, 'notesCount');
@@ -1140,11 +1109,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.incrementPosterStats(statsMap, music, 'musicCount');
 
     // Sort by total count (no more slice limit here)
-    const sorted = Array.from(statsMap.values())
+    return Array.from(statsMap.values())
       .sort((a, b) => b.totalCount - a.totalCount);
-
-    this.allActivePosters.set(sorted);
-    this.postersPage.set(1); // Reset pagination
   }
 
   private createEmptyPosterStats(pubkey: string): PosterStats {
@@ -1164,7 +1130,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     };
   }
 
-  private incrementPosterStats(statsMap: Map<string, PosterStats>, events: Event[], key: PosterStatsCountKey): void {
+  private incrementPosterStats(statsMap: Map<string, PosterStats>, events: TimelineEvent[], key: PosterStatsCountKey): void {
     for (const event of events) {
       const existing = statsMap.get(event.pubkey) || this.createEmptyPosterStats(event.pubkey);
       existing[key]++;
