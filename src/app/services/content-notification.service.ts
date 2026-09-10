@@ -1008,7 +1008,9 @@ export class ContentNotificationService implements OnDestroy {
 
         // Filter out replies (which have 'e' tags referencing the original note)
         // and only keep pure mentions
-        const hasReplyTag = event.tags.some((tag) => tag[0] === 'e' && tag[3] === 'reply');
+        const hasReplyTag = event.tags.some(
+          (tag) => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'),
+        );
 
         if (!hasReplyTag) {
           const resolvedMessage = await this.resolveEventReferences(event.content);

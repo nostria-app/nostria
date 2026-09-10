@@ -10,7 +10,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
-import { DatabaseService } from './database.service';
+import { DatabaseService, NotificationType } from './database.service';
 import { LocalSettingsService } from './local-settings.service';
 import { UserRelayService } from './relays/user-relay';
 import { UtilitiesService } from './utilities.service';
@@ -391,6 +391,33 @@ describe('ContentNotificationService', () => {
   });
 
   describe('refreshRecentNotifications', () => {
+    it.each(['recent', 'history'])('creates only a reply for a root-only note in %s scans', async (scan) => {
+      const now = Math.floor(Date.now() / 1000);
+      const event = {
+        id: 'root-only-reply',
+        pubkey: TEST_PUBKEY_B,
+        created_at: now - 60,
+        kind: kinds.ShortTextNote,
+        tags: [['p', TEST_PUBKEY_A], ['e', 'parent-note', '', 'root']],
+        content: 'Hello',
+        sig: '',
+      };
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: { kinds?: number[] }) =>
+        (filter.kinds?.includes(kinds.ShortTextNote) ? [event] : []) as T[],
+      );
+      await service.initialize();
+
+      if (scan === 'recent') {
+        await service.refreshRecentNotifications();
+      } else {
+        await service.checkForOlderNotifications(now - 3600, now);
+      }
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ type: NotificationType.REPLY, eventId: event.id }),
+      );
+    });
+
     it('should look back the specified number of days', async () => {
       await service.initialize();
       await service.refreshRecentNotifications(3);

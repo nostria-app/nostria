@@ -1,4 +1,4 @@
-import { effect, inject, signal, untracked, OnDestroy, Service } from '@angular/core';
+import { computed, effect, inject, signal, untracked, OnDestroy, Service } from '@angular/core';
 import { LoggerService } from './logger.service';
 import {
   GeneralNotification,
@@ -36,8 +36,27 @@ export class NotificationService implements OnDestroy {
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
 
-  // Read-only signal exposing notifications
-  readonly notifications = this._notifications.asReadonly();
+  // Older scans could store the same note as both a mention and a reply.
+  // Consolidate here so every consumer, including unread badges, sees one notification.
+  readonly notifications = computed(() => {
+    const notifications = new Map<string, Notification>();
+    for (const notification of this._notifications()) {
+      const key = this.getNotificationGroupKey(notification);
+      const existing = notifications.get(key);
+      if (!existing) {
+        notifications.set(key, notification);
+        continue;
+      }
+
+      const preferred = notification.type === NotificationType.REPLY ? notification : existing;
+      notifications.set(key, {
+        ...preferred,
+        // Reading either representation acknowledges the same source event.
+        read: existing.read || notification.read,
+      });
+    }
+    return [...notifications.values()];
+  });
 
   // Signal to track if notifications have been loaded from storage
   private _notificationsLoaded = signal(false);
@@ -608,11 +627,12 @@ export class NotificationService implements OnDestroy {
    * Mark a notification as read
    */
   markAsRead(id: string): void {
-    const updatedNotification = this._notifications().find(n => n.id === id);
+    const ids = this.getNotificationGroupIds(id);
+    const updatedNotifications = this._notifications().filter(n => ids.has(n.id));
 
     this._notifications.update(notifications => {
       return this.clampNotifications(notifications.map(notification => {
-        if (notification.id === id) {
+        if (ids.has(notification.id)) {
           return this.normalizeRelayNotification({ ...notification, read: true });
         }
         return notification;
@@ -620,8 +640,8 @@ export class NotificationService implements OnDestroy {
     });
 
     // Persist the updated notification to storage
-    if (updatedNotification) {
-      this.persistNotificationToStorage({ ...updatedNotification, read: true });
+    for (const notification of updatedNotifications) {
+      void this.persistNotificationToStorage({ ...notification, read: true });
     }
   }
 
@@ -629,14 +649,38 @@ export class NotificationService implements OnDestroy {
    * Remove a notification
    */
   removeNotification(id: string): void {
+    const ids = this.getNotificationGroupIds(id);
     this._notifications.update(notifications =>
-      notifications.filter(notification => notification.id !== id)
+      notifications.filter(notification => !ids.has(notification.id))
     );
 
     // Also remove from storage directly
-    this.database
-      .deleteNotification(id)
-      .catch((error: unknown) => this.logger.error(`Failed to delete notification ${id} from storage`, error));
+    for (const notificationId of ids) {
+      this.database
+        .deleteNotification(notificationId)
+        .catch((error: unknown) => this.logger.error(`Failed to delete notification ${notificationId} from storage`, error));
+    }
+  }
+
+  private getNotificationGroupKey(notification: Notification): string {
+    if (notification.type === NotificationType.MENTION || notification.type === NotificationType.REPLY) {
+      const content = notification as ContentNotification;
+      const eventId = content.metadata?.replyEventId || content.eventId;
+      if (eventId) {
+        return `note:${content.recipientPubkey ?? ''}:${content.authorPubkey}:${eventId}`;
+      }
+    }
+    return `notification:${notification.id}`;
+  }
+
+  private getNotificationGroupIds(id: string): Set<string> {
+    const notification = this._notifications().find(n => n.id === id);
+    if (!notification) return new Set([id]);
+
+    const key = this.getNotificationGroupKey(notification);
+    return new Set(this._notifications()
+      .filter(n => this.getNotificationGroupKey(n) === key)
+      .map(n => n.id));
   }
 
   /**
@@ -951,7 +995,12 @@ export class NotificationService implements OnDestroy {
     }
 
     readNotifications.sort((left, right) => right.timestamp - left.timestamp);
-    return [...mustKeep, ...readNotifications.slice(0, this.MAX_IN_MEMORY_READ_NOTIFICATIONS)];
+    const retained = [...mustKeep, ...readNotifications.slice(0, this.MAX_IN_MEMORY_READ_NOTIFICATIONS)];
+    const retainedKeys = new Set(retained.map(notification => this.getNotificationGroupKey(notification)));
+    // Keep all representations together so trimming history cannot undo read state
+    // or leave a hidden duplicate behind when a visible notification is dismissed.
+    return [...mustKeep, ...readNotifications.filter(notification =>
+      retainedKeys.has(this.getNotificationGroupKey(notification)))];
   }
 
   private sanitizeNotification(notification: Notification): Notification {
