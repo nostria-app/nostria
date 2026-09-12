@@ -1,6 +1,7 @@
 import '@angular/compiler';
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { signal } from '@angular/core';
+import { DestroyRef, Injector, provideZonelessChangeDetection, signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { kinds } from 'nostr-tools';
 import { MessagesComponent } from './messages.component';
@@ -684,8 +685,16 @@ describe('MessagesComponent chat list keyboard navigation', () => {
 });
 
 describe('MessagesComponent message render batching', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+  });
+
   function createThreadComponent(messageCount: number): MessagesComponent {
     const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+    (component as any).historyRequest = 0;
+    (component as any).injector = TestBed.inject(Injector);
+    (component as any).destroyRef = TestBed.inject(DestroyRef);
+    (component as any).accountState = { pubkey: signal(TEST_MY_PUBKEY) };
 
     const messages = Array.from({ length: messageCount }, (_, index) => ({
       id: `msg-${index + 1}`,
@@ -744,7 +753,7 @@ describe('MessagesComponent message render batching', () => {
     };
     (component as any).error = signal(null);
     (component as any).messaging = {
-      loadMoreMessages: vi.fn().mockResolvedValue([]),
+      loadMoreMessages: vi.fn().mockResolvedValue({ messages: [], canAutoLoad: false }),
     };
 
     return component;
@@ -774,7 +783,7 @@ describe('MessagesComponent message render batching', () => {
 
     await component.loadMoreMessages();
 
-    expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith(TEST_NIP44_CHAT_ID, 0);
+    expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith(TEST_NIP44_CHAT_ID);
   });
 
   it('should expand the rendered window when the first message appears in a new chat', () => {

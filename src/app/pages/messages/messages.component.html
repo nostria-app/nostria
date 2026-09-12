@@ -256,7 +256,6 @@
             </mat-nav-list>
 
             <!-- Load more chats button for Following tab -->
-            @if (messaging.hasMoreChats()) {
             <div class="load-more-chats">
               <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
                 class="load-more-chats-button">
@@ -268,7 +267,6 @@
                 }
               </button>
             </div>
-            }
           </div>
           } @else if (isFollowingListLoading()) {
           <div class="empty-tab-content">
@@ -401,7 +399,6 @@
             </mat-nav-list>
 
             <!-- Load more chats button for Others tab -->
-            @if (messaging.hasMoreChats()) {
             <div class="load-more-chats">
               <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
                 class="load-more-chats-button">
@@ -413,7 +410,6 @@
                 }
               </button>
             </div>
-            }
           </div>
           } @else if (isFollowingListLoading()) {
           <div class="empty-tab-content">
@@ -572,9 +568,11 @@
       <div class="message-list" #messagesWrapper>
         <router-outlet></router-outlet>
 
-        @if (hasOlderMessagesToLoad() && !isLoadingMore()) {
+        @if (!isLoadingMore()) {
         <div class="load-more-indicator">
+          @if (hasOlderMessagesToLoad()) {
           <p class="load-more-hint">Scroll up to load older messages</p>
+          }
           <button mat-button (click)="loadMoreMessages()">
             <mat-icon>expand_less</mat-icon>
             Load older messages

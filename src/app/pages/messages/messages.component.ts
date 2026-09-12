@@ -12,6 +12,8 @@ import {
   untracked,
   DestroyRef,
   ChangeDetectionStrategy,
+  afterNextRender,
+  Injector,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -934,6 +936,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private historyRequest = 0;
 
   // ViewChild for scrolling functionality
   @ViewChild('messagesWrapper', { static: false })
@@ -1024,6 +1028,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Only watch the chatId to avoid triggering on unreadCount changes
       const chatId = this.selectedChatId();
       this.logger.debug('Effect triggered - selectedChatId:', chatId);
+      this.historyRequest++;
+      this.isLoadingMore.set(false);
+      this.isLoadingMoreMessages.set(false);
 
       if (chatId) {
         untracked(() => {
@@ -1090,7 +1097,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // If we have more messages than before and we're not loading older messages,
       // scroll to bottom (new message received)
       if (messageCount > previousCount && previousCount > 0 && !this.isLoadingMoreMessages()) {
-        this.scrollToBottom();
+        this.scrollToBottomIfNotScrolledUp();
       }
 
       // Update the last message count
@@ -1512,6 +1519,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * falsely mark the user as scrolled up.
    */
   private autoScrollAfterContentGrowth(scrollElement: HTMLElement): void {
+    if (this.isLoadingMoreMessages()) return;
     const newScrollHeight = scrollElement.scrollHeight;
     if (newScrollHeight <= this.lastScrollHeight) {
       this.lastScrollHeight = newScrollHeight;
@@ -1736,6 +1744,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.historyRequest++;
 
     this.clearPendingDmVideoProfileMenuOpen();
 
@@ -1944,85 +1953,48 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Load more messages (older messages)
    */
   async loadMoreMessages(): Promise<void> {
-    this.logger.debug('loadMoreMessages called');
+    if (this.isLoadingMore() || this.isLoadingMoreMessages()) return;
+    const chatId = this.selectedChatId();
+    if (!chatId) return;
 
-    if (this.isLoadingMore()) {
-      this.logger.debug('Already loading more messages, skipping');
-      return;
-    }
-
-    const selectedChat = this.selectedChat();
-    if (!selectedChat) {
-      this.logger.debug('No selected chat, skipping loadMoreMessages');
-      return;
-    }
-
+    const request = ++this.historyRequest;
+    const pubkey = this.accountState.pubkey();
+    const isCurrent = () => request === this.historyRequest &&
+      chatId === this.selectedChatId() && pubkey === this.accountState.pubkey() &&
+      !this.destroyRef.destroyed;
     const scrollElement = this.messagesWrapper?.nativeElement;
-    const scrollHeight = scrollElement?.scrollHeight || 0;
-    const scrollTop = scrollElement?.scrollTop || 0;
-
-    if (this.hasHiddenRenderedMessages()) {
-      const expanded = this.expandRenderedMessageWindow();
-      if (expanded) {
-        setTimeout(() => {
-          if (!scrollElement) {
-            return;
-          }
-
-          const heightDiff = scrollElement.scrollHeight - scrollHeight;
-          scrollElement.scrollTop = scrollTop + heightDiff;
-        }, 50);
-      }
-      return;
-    }
-
-    this.logger.debug(`Loading more messages for chat: ${selectedChat.id}`);
+    const scrollHeight = scrollElement?.scrollHeight ?? 0;
+    const scrollTop = scrollElement?.scrollTop ?? 0;
     this.isLoadingMore.set(true);
-    this.isLoadingMoreMessages.set(true); // Prevent auto-scroll during loading
+    this.isLoadingMoreMessages.set(true);
 
     try {
-      const currentMessages = this.renderedThreadMessages();
-      const oldestTimestamp =
-        currentMessages.length > 0
-          ? Math.min(...currentMessages.map(m => m.created_at)) - 1
-          : undefined;
-
-      this.logger.debug(
-        `Current messages count: ${currentMessages.length}, oldest timestamp: ${oldestTimestamp}`
-      );
-
-      // Load older messages from the messaging service
-      const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
-
-      this.logger.debug(`Loaded ${olderMessages.length} older messages`);
-
-      // If no messages were loaded, there are no more messages to load
-      if (olderMessages.length === 0) {
-        this.hasMoreMessages.set(false);
-        this.logger.debug('No more messages to load, setting hasMoreMessages to false');
-      } else {
+      if (this.hasHiddenRenderedMessages()) {
         this.expandRenderedMessageWindow();
+      } else {
+        const result = await this.messaging.loadMoreMessages(chatId);
+        if (!isCurrent()) return;
+        // Empty/failed relay responses pause automatic loads, never manual retries.
+        this.hasMoreMessages.set(result.canAutoLoad);
+        if (result.messages.length > 0) this.expandRenderedMessageWindow();
       }
-
-      // Messages are automatically updated via the computed signal
-      // Just need to restore scroll position after DOM update
-      setTimeout(() => {
-        if (scrollElement) {
-          const newScrollHeight = scrollElement.scrollHeight;
-          const heightDiff = newScrollHeight - scrollHeight;
-          scrollElement.scrollTop = scrollTop + heightDiff;
-          this.logger.debug(
-            `Restored scroll position: ${scrollElement.scrollTop} (diff: ${heightDiff})`
-          );
-        }
-      }, 50);
-      // }
     } catch (err) {
+      if (!isCurrent()) return;
       this.logger.error('Failed to load more messages', err);
+      this.hasMoreMessages.set(false);
       this.error.set('Failed to load older messages. Please try again.');
     } finally {
-      this.isLoadingMore.set(false);
-      this.isLoadingMoreMessages.set(false); // Re-enable auto-scroll
+      if (isCurrent()) {
+        this.isLoadingMore.set(false);
+        afterNextRender(() => {
+          if (!isCurrent()) return;
+          if (scrollElement && scrollElement === this.messagesWrapper?.nativeElement) {
+            scrollElement.scrollTop = scrollTop + scrollElement.scrollHeight - scrollHeight;
+            this.lastScrollHeight = scrollElement.scrollHeight;
+          }
+          this.isLoadingMoreMessages.set(false);
+        }, { injector: this.injector });
+      }
     }
   }
 

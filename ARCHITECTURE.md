@@ -775,6 +775,8 @@ const encrypted = await encryption.encrypt(content, recipientPubkey);
 const decrypted = await encryption.decrypt(content, senderPubkey);
 ```
 
+DM history uses independent, inclusive outer-event timestamp cursors per account, relay, and filter. Thread and conversation loading share the NIP-17 inbox scan because gift wraps hide the sender; all decrypted conversations are retained. Legacy NIP-04 threads query both directions for the selected peer. Scans are serialized and bounded to three rounds per gesture, preserve timestamp ties, and retain cursors for manual retry after empty or failed relay responses. Account/cache resets invalidate pending history work. The message view expands cached history first and restores its scroll position after rendering.
+
 ### Encrypted Media Flow
 
 Private direct messages can attach encrypted media files. For image and video attachments, Nostria now performs optional client-side preprocessing before encryption so the encrypted payload itself is smaller.
