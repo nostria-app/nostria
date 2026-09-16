@@ -15,6 +15,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { LayoutService } from '../../services/layout.service';
+import { getCappedHashtags } from '../../utils/hashtags';
 
 interface MeetingSpace {
   event: Event;
@@ -202,9 +203,7 @@ export class MeetingsComponent implements OnDestroy {
   }
 
   getSpaceHashtags(space: Event): string[] {
-    return space.tags
-      .filter((tag: string[]) => tag[0] === 't')
-      .map((tag: string[]) => tag[1]);
+    return getCappedHashtags(space);
   }
 
   getSpaceHosts(space: Event): { pubkey: string; role: string }[] {

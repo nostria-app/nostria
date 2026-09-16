@@ -6,6 +6,7 @@ import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
+import { getCappedHashtags, MAX_EVENT_HASHTAGS } from '../utils/hashtags';
 
 /**
  * Create a mock Nostr event for testing.
@@ -169,6 +170,19 @@ describe('EventProcessorService', () => {
       const result = service.processEvent(event);
       expect(result.accepted).toBe(false);
       expect(result.reason).toBe('expired');
+    });
+
+    it('should accept notes with huge t-tag arrays and reuse the capped list', () => {
+      const event = createMockEvent({
+        tags: Array.from({ length: 5_000 }, (_, index) => ['t', `spam${index}`]),
+      });
+
+      const result = service.processEvent(event);
+
+      expect(result.accepted).toBe(true);
+      expect(result.event).toBe(event);
+      expect(getCappedHashtags(result.event)).toHaveLength(MAX_EVENT_HASHTAGS);
+      expect(getCappedHashtags(result.event)).toBe(getCappedHashtags(event));
     });
 
     it('should skip mute check when skipMuteCheck is true', () => {

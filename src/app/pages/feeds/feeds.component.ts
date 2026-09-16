@@ -76,6 +76,7 @@ import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../services/featu
 import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
 import { SettingsService } from '../../services/settings.service';
 import { localizedFeedLabel } from '../../utils/feed-labels';
+import { eventMatchesAnyCappedHashtag } from '../../utils/hashtags';
 
 // NavLink interface removed because it was unused.
 
@@ -458,7 +459,7 @@ export class FeedsComponent implements OnDestroy {
       return this.trendingEvents();
     } else {
       return this.trendingEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        eventMatchesAnyCappedHashtag(event.event, tags)
       );
     }
   });
@@ -469,7 +470,7 @@ export class FeedsComponent implements OnDestroy {
       return this.followingEvents();
     } else {
       return this.followingEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        eventMatchesAnyCappedHashtag(event.event, tags)
       );
     }
   });
@@ -480,7 +481,7 @@ export class FeedsComponent implements OnDestroy {
       return this.mediaEvents();
     } else {
       return this.mediaEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        eventMatchesAnyCappedHashtag(event.event, tags)
       );
     }
   });   // Computed signal to check if a column should show empty following message

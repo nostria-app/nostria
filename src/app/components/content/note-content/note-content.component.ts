@@ -561,7 +561,7 @@ export class NoteContentComponent implements OnDestroy {
 
       const parseResult = await this.parsing.parseContent(
         displayRecord.data,
-        displayRecord.event.tags,
+        displayRecord.event,
         displayRecord.event.pubkey
       );
 
