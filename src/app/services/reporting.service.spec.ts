@@ -610,6 +610,71 @@ describe('ReportingService', () => {
       expect(snackBar.open).not.toHaveBeenCalled();
     });
 
+    it('should publish the merged list when the only relay answers', async () => {
+      mockAccountRelayService.relays.set([{ url: writeRelay, read: true, write: true }]);
+      vi.mocked(mockUserRelays.getUserRelays).mockResolvedValue([]);
+      vi.mocked(mockEncryption.decryptNip44).mockResolvedValue(JSON.stringify([
+        ['p', 'private-user'],
+      ]));
+      deliverRelays({
+        [writeRelay]: [createMuteListEvent('only-event', 250, [
+          ['p', 'kept-user'],
+          ['client', 'amethyst'],
+        ], 'ciphertext')],
+      });
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(ensureRelay).toHaveBeenCalledTimes(1);
+      expect(ensureRelay).toHaveBeenCalledWith(writeRelay);
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        content: 're-encrypted',
+        tags: [
+          ['p', 'kept-user'],
+          ['client', 'amethyst'],
+          ['word', 'spoiler'],
+        ],
+      }));
+      expect(mockEncryption.encryptNip44).toHaveBeenCalledWith(
+        JSON.stringify([['p', 'private-user']]),
+        accountPubkey,
+      );
+      expect(snackBar.open).not.toHaveBeenCalled();
+    });
+
+    it('should not publish when the only relay stays silent', async () => {
+      mockAccountRelayService.relays.set([{ url: writeRelay, read: true, write: true }]);
+      vi.mocked(mockUserRelays.getUserRelays).mockResolvedValue([]);
+      deliverRelays({ [writeRelay]: [] }, { [writeRelay]: false });
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalledWith(
+        expect.stringContaining(writeRelay),
+        expect.any(String),
+        expect.any(Object),
+      );
+    });
+
+    it('should not publish when no write or outbox relays are configured', async () => {
+      mockAccountRelayService.relays.set([]);
+      vi.mocked(mockAccountRelayService.getRelayUrls).mockReturnValue([]);
+      vi.mocked(mockUserRelays.getUserRelays).mockResolvedValue([]);
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(ensureRelay).not.toHaveBeenCalled();
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalledWith(
+        expect.stringContaining('Couldn\'t load your mute list from relays'),
+        expect.any(String),
+        expect.any(Object),
+      );
+    });
+
     it('should not publish when outbox relay discovery fails', async () => {
       vi.mocked(mockUserRelays.getUserRelays).mockRejectedValue(new Error('discovery failed'));
       deliverRelays([createMuteListEvent('relay-event', 200, [['p', 'existing-user']])]);
