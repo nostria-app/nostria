@@ -122,6 +122,14 @@ export class ZapErrorHandlerService {
       };
     }
 
+    if (message.includes('signer response timed out')) {
+      return {
+        code: 'SIGNER_TIMEOUT',
+        message: "Your signer didn't respond. Nothing was changed.",
+        recoverable: true,
+      };
+    }
+
     if (message.includes('timeout') || message.includes('timed out')) {
       return {
         code: 'TIMEOUT_ERROR',
@@ -203,6 +211,8 @@ export class ZapErrorHandlerService {
     switch (error.code) {
       case 'NETWORK_ERROR':
         return 'Network error. Check your connection and try again.';
+      case 'SIGNER_TIMEOUT':
+        return "Your signer didn't respond. Nothing was changed.";
       case 'TIMEOUT_ERROR':
         return 'Request timed out. Please try again.';
       case 'NIP47_TIMEOUT':

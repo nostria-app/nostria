@@ -162,8 +162,9 @@ export class NostrService implements NostriaService {
   private isExtensionSigning = false;
 
   /**
-   * Past the nsec PIN prompt, extension popups, the NIP-55 dialog, and
-   * NIP-46 approvals (30s plus retries). A hung NIP-07 sign must leave the queue.
+   * Applies only to the NIP-07 extension signing queue. A hung
+   * window.nostr.signEvent must leave that queue. NIP-46, NIP-55, and the
+   * nsec PIN prompt are not covered by this limit.
    */
   static readonly SIGNER_RESPONSE_TIMEOUT_MS = 180_000;
   private extensionInteractionQueue: Promise<void> = Promise.resolve();
@@ -1066,8 +1067,9 @@ export class NostrService implements NostriaService {
 
     this.setExtensionSigningUiActive(true);
     try {
-      // Never time out acquiring the lock: a second window.nostr.signEvent while
-      // the previous prompt is open makes Alby throw
+      // The lock is released after SIGNER_RESPONSE_TIMEOUT_MS (180s) when the
+      // extension does not answer. The next signEvent can then be sent while
+      // the old Alby prompt is still open, and Alby may reject it with
       // `Insufficient permissions, required "nostr.signevent"`.
       const signed = await this.runExclusiveExtensionInteraction(async () => {
         this.logger.debug('[Extension Signing] signEvent', { kind: eventTemplate.kind });
