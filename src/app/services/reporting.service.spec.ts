@@ -16,7 +16,7 @@ import { PoolService } from './relays/pool.service';
 import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { MessagingService } from './messaging.service';
-import { applyMuteListChange, pickNewestMuteList } from '../utils/mute-list';
+import { applyMuteListChange, pickNewestMuteList, SIGNER_RESPONSE_TIMEOUT_MS } from '../utils/mute-list';
 
 describe('ReportingService', () => {
   describe('stripNostrUrisAndUrls', () => {
@@ -776,23 +776,43 @@ describe('ReportingService', () => {
       vi.useFakeTimers();
       try {
         let calls = 0;
+        let finishLate: (event: Event) => void = () => {};
         vi.mocked(mockNostrService.signEvent).mockImplementation((event) => {
           calls += 1;
-          if (calls === 1) return new Promise(() => undefined);
+          if (calls === 1) {
+            return new Promise(resolve => {
+              finishLate = resolve;
+            });
+          }
           return Promise.resolve({ ...event, pubkey: accountPubkey, id: 'signed-2', sig: 'sig' });
         });
         deliverRelays([createMuteListEvent('base-event', 40, [['p', 'kept']])]);
 
         const first = service.addWordToMuteListAndPublish('alpha');
         const second = service.addWordToMuteListAndPublish('beta');
-        await vi.advanceTimersByTimeAsync(15000);
+        await vi.advanceTimersByTimeAsync(SIGNER_RESPONSE_TIMEOUT_MS);
         await Promise.all([first, second]);
+        finishLate({
+          kind: 10000,
+          created_at: 1,
+          tags: [['word', 'alpha']],
+          content: '',
+          pubkey: accountPubkey,
+          id: 'late-sign',
+          sig: 'late-sig',
+        });
+        await Promise.resolve();
 
         expect(mockPublishService.publish).toHaveBeenCalledTimes(1);
         expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+          id: 'signed-2',
           tags: [['p', 'kept'], ['word', 'beta']],
         }));
-        expect(snackBar.open).toHaveBeenCalled();
+        expect(snackBar.open).toHaveBeenCalledWith(
+          expect.stringContaining('Your signer didn\'t respond, nothing was changed.'),
+          expect.any(String),
+          expect.any(Object),
+        );
       } finally {
         vi.useRealTimers();
       }

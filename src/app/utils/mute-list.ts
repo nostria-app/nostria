@@ -1,5 +1,11 @@
 import { Event } from 'nostr-tools';
 
+/**
+ * Longer than the nsec PIN prompt, extension popups, the NIP-55 dialog, and
+ * NIP-46 approvals (30s plus retries). A stuck signer must not hold the queue.
+ */
+export const SIGNER_RESPONSE_TIMEOUT_MS = 180_000;
+
 export interface MuteListChange {
   action: 'add' | 'remove';
   type: string;

@@ -35,6 +35,8 @@ describe('ReportDialogComponent', () => {
         createReportEvent: vi.fn(),
         notifyReportPublished: vi.fn(),
         createFreshMuteListEvent: vi.fn().mockResolvedValue(null),
+        muteEventAndPublish: vi.fn().mockResolvedValue(true),
+        muteUser: vi.fn().mockResolvedValue(true),
     };
 
     const mockAccountRelayService = {
@@ -193,5 +195,20 @@ describe('ReportDialogComponent', () => {
             expect(urlEl).toBeTruthy();
             expect(urlEl!.textContent).toContain('wss://relay.example.com');
         });
+    });
+
+    it('publishes an event block through the mute-list queue without signing again', async () => {
+        mockDialogData.target = {
+            type: 'content',
+            pubkey: mockDialogData.target.pubkey,
+            eventId: 'event-to-block',
+        };
+
+        const blocked = await component.blockTarget();
+
+        expect(blocked).toBe(true);
+        expect(mockReportingService.muteEventAndPublish).toHaveBeenCalledWith('event-to-block');
+        expect(mockPublishService.signAndPublishAuto).not.toHaveBeenCalled();
+        expect(mockNostrService.signEvent).not.toHaveBeenCalled();
     });
 });

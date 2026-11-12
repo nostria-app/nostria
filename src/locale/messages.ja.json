@@ -1945,6 +1945,7 @@
     "event.pin.pin-article": "ピン記事\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.signerTimeout": "Your signer didn't respond, nothing was changed.",
     "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
     "reporting.muteList.notLoadedRelays": "Couldn't load your mute list, so nothing was changed. No answer from {$relays}.",

@@ -21,6 +21,7 @@ import {
   MuteListChange,
   parsePrivateMuteTags,
   pickNewestMuteList,
+  SIGNER_RESPONSE_TIMEOUT_MS,
 } from '../utils/mute-list';
 
 export type ReportType =
@@ -80,8 +81,6 @@ export class ReportingService {
 
   // Same 5s bound as RelayPoolService.query and RelayServiceBase.get.
   private readonly muteListFetchTimeoutMs = 5000;
-  /** A stuck signer or decrypt prompt must not block later mute-list edits. */
-  private readonly muteListSignerTimeoutMs = 15000;
   /** Serializes mute-list edits so a second change re-reads the first result. */
   private muteListEditChain: Promise<void> = Promise.resolve();
 
@@ -443,6 +442,22 @@ export class ReportingService {
   }
 
   /**
+   * Mute an event. Signs and publishes inside the edit queue, like muteUser.
+   */
+  async muteEventAndPublish(eventId: string): Promise<boolean> {
+    const published = await this.enqueueMuteListEdit(async (startedPubkey) => {
+      const signed = await this.signMuteListChange(
+        { action: 'add', type: 'e', value: eventId },
+        startedPubkey,
+      );
+      if (!signed) return false;
+      await this.publishService.publish(signed);
+      return true;
+    });
+    return published === true;
+  }
+
+  /**
    * Unblock a user (removes from mute list)
    * Returns true if the operation succeeded, false if signing failed.
    */
@@ -643,7 +658,7 @@ export class ReportingService {
     try {
       const signedEvent = await this.withTimeout(
         this.nostr.signEvent(unsignedEvent),
-        this.muteListSignerTimeoutMs,
+        SIGNER_RESPONSE_TIMEOUT_MS,
         'Mute list signing',
       );
       if (signedEvent.pubkey !== startedPubkey || !this.accountMatches(startedPubkey)) {
@@ -662,7 +677,7 @@ export class ReportingService {
     } catch (error) {
       if (this.isEditTimeout(error)) {
         this.logger.warn('Refusing to publish mute list because signing timed out', error);
-        this.warnMuteListBlocked('fetch');
+        this.warnMuteListBlocked('signer');
       } else {
         this.logger.error('Error signing mute list', error);
       }
@@ -692,12 +707,17 @@ export class ReportingService {
       try {
         privateTags = await this.withTimeout(
           this.decryptPrivateMuteTags(base.content, startedPubkey),
-          this.muteListSignerTimeoutMs,
+          SIGNER_RESPONSE_TIMEOUT_MS,
           'Mute list decryption',
         );
       } catch (error) {
-        this.logger.warn('Refusing to publish mute list because private entries could not be decrypted', error);
-        this.warnMuteListBlocked('decrypt');
+        if (this.isEditTimeout(error)) {
+          this.logger.warn('Refusing to publish mute list because decryption timed out', error);
+          this.warnMuteListBlocked('signer');
+        } else {
+          this.logger.warn('Refusing to publish mute list because private entries could not be decrypted', error);
+          this.warnMuteListBlocked('decrypt');
+        }
         return null;
       }
     }
@@ -713,10 +733,19 @@ export class ReportingService {
       try {
         // NIP-51 private entries, re-encrypted with NIP-44. Amethyst's kind 10000
         // path reads both NIP-04 and NIP-44 (NostrSigner.decrypt) and writes NIP-44.
-        content = await this.encryption.encryptNip44(JSON.stringify(merged.privateTags), startedPubkey);
+        content = await this.withTimeout(
+          this.encryption.encryptNip44(JSON.stringify(merged.privateTags), startedPubkey),
+          SIGNER_RESPONSE_TIMEOUT_MS,
+          'Mute list re-encryption',
+        );
       } catch (error) {
-        this.logger.warn('Refusing to publish mute list because private entries could not be re-encrypted', error);
-        this.warnMuteListBlocked('decrypt');
+        if (this.isEditTimeout(error)) {
+          this.logger.warn('Refusing to publish mute list because re-encryption timed out', error);
+          this.warnMuteListBlocked('signer');
+        } else {
+          this.logger.warn('Refusing to publish mute list because private entries could not be re-encrypted', error);
+          this.warnMuteListBlocked('decrypt');
+        }
         return null;
       }
     }
@@ -756,8 +785,10 @@ export class ReportingService {
     this.accountState.muteList.set(event);
   }
 
-  private warnMuteListBlocked(reason: 'fetch' | 'decrypt', silentRelays: string[] = []): void {
-    const message = reason === 'decrypt'
+  private warnMuteListBlocked(reason: 'fetch' | 'decrypt' | 'signer', silentRelays: string[] = []): void {
+    const message = reason === 'signer'
+      ? $localize`:@@reporting.muteList.signerTimeout:Your signer didn't respond, nothing was changed.`
+      : reason === 'decrypt'
       ? $localize`:@@reporting.muteList.privateUnavailable:Couldn't read the private part of your mute list, so nothing was changed.`
       : this.muteListFetchWarning(silentRelays);
     this.snackBar.open(message, $localize`:@@common.dismiss:Dismiss`, { duration: 8000 });
