@@ -160,6 +160,13 @@ export class NostrService implements NostriaService {
     reject: (error: Error) => void;
   }[] = [];
   private isExtensionSigning = false;
+
+  /**
+   * Applies only to the NIP-07 extension signing queue. A hung
+   * window.nostr.signEvent must leave that queue. NIP-46, NIP-55, and the
+   * nsec PIN prompt are not covered by this limit.
+   */
+  static readonly SIGNER_RESPONSE_TIMEOUT_MS = 180_000;
   private extensionInteractionQueue: Promise<void> = Promise.resolve();
 
   // Default relays for new user accounts
@@ -962,6 +969,25 @@ export class NostrService implements NostriaService {
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
   }
 
+  private withSignerTimeout<T>(promise: Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error('Signer response timed out')),
+        NostrService.SIGNER_RESPONSE_TIMEOUT_MS,
+      );
+      promise.then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        error => {
+          clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
+    });
+  }
+
   /** Queue NIP-07 sign requests so only one extension prompt runs at a time. */
   private queueExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
     return new Promise((resolve, reject) => {
@@ -987,8 +1013,14 @@ export class NostrService implements NostriaService {
     try {
       while (this.extensionSigningQueue.length > 0) {
         const request = this.extensionSigningQueue.shift()!;
+        // Abandon a hung extension prompt so the next sign is not stuck behind it.
+        // A late approval cannot resolve this request.
+        const signing = this.performExtensionSigning(request.event);
+        signing.catch(error => {
+          this.logger.debug('[Extension Signing] In-flight sign settled after the queue moved on', error);
+        });
         try {
-          request.resolve(await this.performExtensionSigning(request.event));
+          request.resolve(await this.withSignerTimeout(signing));
         } catch (error) {
           this.logger.error('[Extension Signing] Failed', error);
           request.reject(error instanceof Error ? error : new Error(String(error)));
@@ -1035,18 +1067,25 @@ export class NostrService implements NostriaService {
 
     this.setExtensionSigningUiActive(true);
     try {
-      // Never time out acquiring the lock: a second window.nostr.signEvent while
-      // the previous prompt is open makes Alby throw
+      // The lock is released after SIGNER_RESPONSE_TIMEOUT_MS (180s) when the
+      // extension does not answer. The next signEvent can then be sent while
+      // the old Alby prompt is still open, and Alby may reject it with
       // `Insufficient permissions, required "nostr.signevent"`.
       const signed = await this.runExclusiveExtensionInteraction(async () => {
         this.logger.debug('[Extension Signing] signEvent', { kind: eventTemplate.kind });
 
-        const result = await new Promise<Event>((resolve, reject) => {
+        const result = await this.withSignerTimeout(new Promise<Event>((resolve, reject) => {
+          let settled = false;
+          const finish = (settle: () => void) => {
+            if (settled) return;
+            settled = true;
+            this.ngZone.run(settle);
+          };
           window.nostr!.signEvent(eventTemplate).then(
-            signedEvent => this.ngZone.run(() => resolve(signedEvent as Event)),
-            (err: Error) => this.ngZone.run(() => reject(err))
+            signedEvent => finish(() => resolve(signedEvent as Event)),
+            (err: Error) => finish(() => reject(err)),
           );
-        });
+        }));
 
         // Let the extension close its prompt before the next signEvent is sent.
         await new Promise<void>(resolve => setTimeout(resolve, 300));
