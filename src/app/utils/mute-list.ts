@@ -92,7 +92,9 @@ export function applyMuteListChange(
   return { publicTags: nextPublic, privateTags: nextPrivate };
 }
 
-/** Newest created_at wins. Equal timestamps keep the copy with more entries. */
+/**
+ * Newest created_at wins. NIP-01: when timestamps match, keep the lowest id.
+ */
 export function pickNewestMuteList(events: readonly Event[]): Event | null {
   let newest: Event | null = null;
 
@@ -107,9 +109,7 @@ export function pickNewestMuteList(events: readonly Event[]): Event | null {
       continue;
     }
 
-    const eventSize = event.tags.length + (event.content?.length ?? 0);
-    const newestSize = newest.tags.length + (newest.content?.length ?? 0);
-    if (eventSize > newestSize) newest = event;
+    if (event.id < newest.id) newest = event;
   }
 
   return newest;

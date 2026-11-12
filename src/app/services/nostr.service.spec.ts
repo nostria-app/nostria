@@ -61,6 +61,11 @@ describe('NostrService account metadata subscription', () => {
 
     const captured = subscribe.mock.results[0].value as CapturedSubscribe;
     expect(captured.filter['since']).toBeUndefined();
+    expect(captured.filter['kinds']).not.toContain(10000);
+
+    const muteList = subscribe.mock.results[1].value as CapturedSubscribe;
+    expect(muteList.filter['kinds']).toEqual([10000]);
+    expect(muteList.filter['since']).toBeUndefined();
   });
 
   it('uses since when the cached following list is already loaded', async () => {
@@ -70,5 +75,19 @@ describe('NostrService account metadata subscription', () => {
 
     const captured = subscribe.mock.results[0].value as CapturedSubscribe;
     expect(typeof captured.filter['since']).toBe('number');
+    expect(captured.filter['kinds']).not.toContain(10000);
+  });
+
+  it('loads kind 10000 without the metadata since filter', async () => {
+    const pubkey = '0'.repeat(64);
+    const { service, subscribe } = createService(true);
+
+    await service.subscribeToAccountMetadata(pubkey);
+
+    const muteList = subscribe.mock.results[1].value as CapturedSubscribe;
+    expect(muteList.filter).toEqual({
+      kinds: [10000],
+      authors: [pubkey],
+    });
   });
 });

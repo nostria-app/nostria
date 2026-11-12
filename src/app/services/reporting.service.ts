@@ -80,6 +80,8 @@ export class ReportingService {
 
   // Same 5s bound as RelayPoolService.query and RelayServiceBase.get.
   private readonly muteListFetchTimeoutMs = 5000;
+  /** Serializes mute-list edits so a second change re-reads the first result. */
+  private muteListEditChain: Promise<void> = Promise.resolve();
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -413,75 +415,16 @@ export class ReportingService {
   }
 
   /**
-   * Add an item to the mute list
-   */
-  async addToMuteList(item: MuteListItem): Promise<void> {
-    const account = this.accountState.account();
-    if (!account?.pubkey) {
-      this.logger.warn('No account available for mute list update');
-      return;
-    }
-
-    let muteList = this.accountState.muteList();
-
-    // Create new mute list if none exists
-    if (!muteList) {
-      muteList = this.utilities.createEvent(
-        10000, // NIP-51 mute list kind
-        '',
-        [],
-        account.pubkey
-      ) as Event;
-    }
-
-    // Check if item already exists
-    const existingTag = muteList.tags.find(tag => tag[0] === item.type && tag[1] === item.value);
-
-    if (existingTag) {
-      this.logger.debug('Item already in mute list', item);
-      return;
-    }
-
-    // Add new tag
-    muteList.tags.push([item.type, item.value]);
-
-    // Update the account state
-    this.accountState.updateMuteList(muteList);
-
-    this.logger.debug('Added item to mute list', item);
-  }
-
-  /**
-   * Remove an item from the mute list
-   */
-  async removeFromMuteList(item: MuteListItem): Promise<void> {
-    const muteList = this.accountState.muteList();
-    if (!muteList) {
-      this.logger.warn('No mute list available for update');
-      return;
-    }
-
-    // Remove the tag
-    muteList.tags = muteList.tags.filter(tag => !(tag[0] === item.type && tag[1] === item.value));
-
-    // Update the account state
-    this.accountState.updateMuteList(muteList);
-
-    this.logger.debug('Removed item from mute list', item);
-  }
-
-  /**
    * Mute a user (adds to mute list)
    * Returns true if the operation succeeded (event was signed and published),
    * false if signing failed (e.g. user dismissed PIN/extension dialog).
    */
   async muteUser(pubkey: string): Promise<boolean> {
-    // Create a fresh mute list event with the user
-    const freshMuteList = await this.createFreshMuteListEvent('user', pubkey);
-    if (freshMuteList) {
-      // Publish the already-signed mute list to account relays
-      await this.publishService.publish(freshMuteList);
+    return this.enqueueMuteListEdit(async () => {
+      const freshMuteList = await this.signMuteListChange({ action: 'add', type: 'p', value: pubkey });
+      if (!freshMuteList) return false;
 
+      await this.publishService.publish(freshMuteList);
       await this.messaging.deleteChatsForPubkeyLocally(pubkey, {
         addToDeadLetter: true,
         deadLetterReason: 'User blocked (NIP-51 mute list)',
@@ -490,8 +433,7 @@ export class ReportingService {
 
       this.logger.debug('Blocked user and published mute list:', pubkey);
       return true;
-    }
-    return false;
+    });
   }
 
   /**
@@ -499,43 +441,11 @@ export class ReportingService {
    * Returns true if the operation succeeded, false if signing failed.
    */
   async unblockUser(pubkey: string): Promise<boolean> {
-    // Create a fresh mute list event without the user
-    const freshMuteList = await this.createFreshMuteListWithoutUser(pubkey);
-    if (freshMuteList) {
-      // Publish the already-signed mute list to account relays
+    return this.enqueueMuteListEdit(async () => {
+      const freshMuteList = await this.signMuteListChange({ action: 'remove', type: 'p', value: pubkey });
+      if (!freshMuteList) return false;
       await this.publishService.publish(freshMuteList);
       return true;
-    }
-    return false;
-  }
-
-  /**
-   * Mute an event/thread (adds to mute list)
-   */
-  async muteEvent(eventId: string): Promise<void> {
-    await this.addToMuteList({
-      type: 'e',
-      value: eventId,
-    });
-  }
-
-  /**
-   * Mute a hashtag (adds to mute list)
-   */
-  async muteHashtag(hashtag: string): Promise<void> {
-    await this.addToMuteList({
-      type: 't',
-      value: hashtag.toLowerCase(),
-    });
-  }
-
-  /**
-   * Mute a word (adds to mute list)
-   */
-  async muteWord(word: string): Promise<void> {
-    await this.addToMuteList({
-      type: 'word',
-      value: word.toLowerCase(),
     });
   }
 
@@ -543,58 +453,22 @@ export class ReportingService {
    * Add a word to mute list and publish to relays
    */
   async addWordToMuteListAndPublish(word: string): Promise<void> {
-    const unsignedEvent = await this.createUnsignedMuteListWithItem('word', word.toLowerCase());
-    if (!unsignedEvent) return;
-
-    try {
-      // Sign the event
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
-
-      this.rememberPublishedMuteList(signedEvent);
-      await this.saveMuteListEvent(signedEvent);
-
-      // Publish the already-signed event
-      const result = await this.publishService.publish(signedEvent);
-
-      if (result.success) {
-        this.logger.debug('Added word to mute list and published:', word);
-      }
-    } catch (error) {
-      this.logger.error('Failed to add word to mute list:', error);
-    }
+    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+      action: 'add',
+      type: 'word',
+      value: word.toLowerCase(),
+    }, 'word', word));
   }
 
   /**
    * Add a tag to mute list and publish to relays
    */
   async addTagToMuteListAndPublish(tag: string): Promise<void> {
-    const unsignedEvent = await this.createUnsignedMuteListWithItem('t', tag.toLowerCase());
-    if (!unsignedEvent) return;
-
-    try {
-      // Sign the event
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
-
-      this.rememberPublishedMuteList(signedEvent);
-      await this.saveMuteListEvent(signedEvent);
-
-      // Publish the already-signed event
-      const result = await this.publishService.publish(signedEvent);
-
-      if (result.success) {
-        this.logger.debug('Added tag to mute list and published:', tag);
-      }
-    } catch (error) {
-      this.logger.error('Failed to add tag to mute list:', error);
-    }
-  }
-
-  /**
-   * Create an unsigned mute list event with a new item (does not sign or update state).
-   * Returns null when the latest list could not be loaded — callers must not publish.
-   */
-  private async createUnsignedMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): Promise<UnsignedEvent | null> {
-    return this.prepareMuteListUpdate({ action: 'add', type, value });
+    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+      action: 'add',
+      type: 't',
+      value: tag.toLowerCase(),
+    }, 'tag', tag));
   }
 
   /**
@@ -644,87 +518,34 @@ export class ReportingService {
    * Create a fresh mute list event with new timestamp
    */
   async createFreshMuteListEvent(type: 'user' | 'event', target: string): Promise<Event | null> {
-    const account = this.accountState.account();
-    if (!account?.pubkey) {
-      return null;
-    }
-
     const tagType = type === 'user' ? 'p' : 'e';
-    const muteListEvent = await this.prepareMuteListUpdate({
+    return this.enqueueMuteListEdit(() => this.signMuteListChange({
       action: 'add',
       type: tagType,
       value: target,
-    });
-    if (!muteListEvent) {
-      return null;
-    }
-
-    try {
-      // Sign the event
-      const signedEvent = await this.nostr.signEvent(muteListEvent);
-
-      this.rememberPublishedMuteList(signedEvent);
-      await this.saveMuteListEvent(signedEvent);
-
-      // Force update by accessing the signal to ensure change detection
-      this.accountState.muteList();
-
-      return signedEvent;
-    } catch (error) {
-      this.logger.error('Error creating fresh mute list event:', error);
-      return null;
-    }
+    }));
   }
 
   /**
    * Create a fresh mute list event without a specific user
    */
   async createFreshMuteListWithoutUser(pubkeyToRemove: string): Promise<Event | null> {
-    const unsignedEvent = await this.createUnsignedMuteListWithoutItem('p', pubkeyToRemove);
-    if (!unsignedEvent) return null;
-
-    try {
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      this.rememberPublishedMuteList(signedEvent);
-      await this.saveMuteListEvent(signedEvent);
-      return signedEvent;
-    } catch (error) {
-      this.logger.error('Error creating fresh mute list event:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Create an unsigned mute list event without a specific item (does not sign or update state).
-   * Returns null when the latest list could not be loaded — callers must not publish.
-   */
-  private async createUnsignedMuteListWithoutItem(type: string, value: string): Promise<UnsignedEvent | null> {
-    return this.prepareMuteListUpdate({ action: 'remove', type, value });
+    return this.enqueueMuteListEdit(() => this.signMuteListChange({
+      action: 'remove',
+      type: 'p',
+      value: pubkeyToRemove,
+    }));
   }
 
   /**
    * Remove an item from the mute list and publish to relays
    */
   async removeFromMuteListAndPublish(item: MuteListItem): Promise<void> {
-    const unsignedEvent = await this.createUnsignedMuteListWithoutItem(item.type, item.value);
-    if (!unsignedEvent) return;
-
-    try {
-      // Sign the event
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
-
-      this.rememberPublishedMuteList(signedEvent);
-      await this.saveMuteListEvent(signedEvent);
-
-      // Publish the already-signed event
-      const result = await this.publishService.publish(signedEvent);
-
-      if (result.success) {
-        this.logger.debug('Removed item from mute list and published:', item);
-      }
-    } catch (error) {
-      this.logger.error('Failed to remove item from mute list:', error);
-    }
+    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+      action: 'remove',
+      type: item.type,
+      value: item.value,
+    }, 'item', item));
   }
 
   /**
@@ -740,18 +561,78 @@ export class ReportingService {
     this.accountState.privateMuteTags.set([]);
   }
 
+  /** Run mute-list edits one at a time. Each edit re-reads after the previous one. */
+  private enqueueMuteListEdit<T>(edit: () => Promise<T>): Promise<T> {
+    const run = this.muteListEditChain.then(edit, edit);
+    this.muteListEditChain = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  private accountMatches(pubkey: string): boolean {
+    return this.accountState.account()?.pubkey === pubkey;
+  }
+
+  private async publishMuteListChange(
+    change: MuteListChange,
+    label: string,
+    detail: unknown,
+  ): Promise<void> {
+    const signedEvent = await this.signMuteListChange(change);
+    if (!signedEvent) return;
+
+    const result = await this.publishService.publish(signedEvent);
+    if (result.success) {
+      this.logger.debug(`Updated mute list (${label})`, detail);
+    }
+  }
+
   /**
-   * Build the next kind 10000 from the newest copy on write relays and outbox
-   * relays. A failed fetch, or private content that cannot be decrypted and
-   * re-encrypted, returns null so nothing is signed or published.
+   * Read, merge, and sign one mute-list edit for the account that started it.
+   * Does not publish. Callers that publish must stay inside the edit queue.
    */
-  private async prepareMuteListUpdate(change: MuteListChange): Promise<UnsignedEvent | null> {
-    const account = this.accountState.account();
-    if (!account?.pubkey) {
+  private async signMuteListChange(change: MuteListChange): Promise<Event | null> {
+    const startedPubkey = this.accountState.account()?.pubkey;
+    if (!startedPubkey) return null;
+
+    const unsignedEvent = await this.prepareMuteListUpdate(change, startedPubkey);
+    if (!unsignedEvent) return null;
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
       return null;
     }
 
-    const fetched = await this.fetchNewestMuteList(account.pubkey);
+    try {
+      const signedEvent = await this.nostr.signEvent(unsignedEvent);
+      if (signedEvent.pubkey !== startedPubkey || !this.accountMatches(startedPubkey)) {
+        this.logger.warn('Refusing to publish mute list because the account changed', {
+          startedPubkey,
+          signedPubkey: signedEvent.pubkey,
+          currentPubkey: this.accountState.account()?.pubkey,
+        });
+        this.warnMuteListBlocked('fetch');
+        return null;
+      }
+
+      this.rememberPublishedMuteList(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
+      return signedEvent;
+    } catch (error) {
+      this.logger.error('Error signing mute list', error);
+      return null;
+    }
+  }
+
+  private async prepareMuteListUpdate(change: MuteListChange, startedPubkey: string): Promise<UnsignedEvent | null> {
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
+      return null;
+    }
+
+    const fetched = await this.fetchNewestMuteList(startedPubkey);
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
+      return null;
+    }
     if (!fetched.ok) {
       this.warnMuteListBlocked('fetch', fetched.silentRelays);
       return null;
@@ -761,12 +642,17 @@ export class ReportingService {
     let privateTags: string[][] = [];
     if (base?.content?.trim()) {
       try {
-        privateTags = await this.decryptPrivateMuteTags(base.content, account.pubkey);
+        privateTags = await this.decryptPrivateMuteTags(base.content, startedPubkey);
       } catch (error) {
         this.logger.warn('Refusing to publish mute list because private entries could not be decrypted', error);
         this.warnMuteListBlocked('decrypt');
         return null;
       }
+    }
+
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
+      return null;
     }
 
     const merged = applyMuteListChange(base?.tags, privateTags, change);
@@ -775,12 +661,17 @@ export class ReportingService {
       try {
         // NIP-51 private entries, re-encrypted with NIP-44. Amethyst's kind 10000
         // path reads both NIP-04 and NIP-44 (NostrSigner.decrypt) and writes NIP-44.
-        content = await this.encryption.encryptNip44(JSON.stringify(merged.privateTags), account.pubkey);
+        content = await this.encryption.encryptNip44(JSON.stringify(merged.privateTags), startedPubkey);
       } catch (error) {
         this.logger.warn('Refusing to publish mute list because private entries could not be re-encrypted', error);
         this.warnMuteListBlocked('decrypt');
         return null;
       }
+    }
+
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
+      return null;
     }
 
     this.pendingPrivateTags = merged.privateTags;
@@ -790,7 +681,7 @@ export class ReportingService {
       created_at: Math.floor(Date.now() / 1000),
       content,
       tags: merged.publicTags,
-      pubkey: account.pubkey,
+      pubkey: startedPubkey,
     };
   }
 

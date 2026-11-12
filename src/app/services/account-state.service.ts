@@ -1469,25 +1469,6 @@ export class AccountStateService implements OnDestroy {
     return this.mutedAccounts().find(account => account === event.pubkey);
   }
 
-  async mutePubkey(pubkey: string) {
-    const currentMuteList = this.muteList();
-    if (!currentMuteList) {
-      console.warn('No mute list available to update.');
-      return;
-    }
-
-    // Check if the pubkey is already muted
-    if (this.mutedAccounts().includes(pubkey)) {
-      return;
-    }
-
-    // Add the pubkey to the mute list
-    currentMuteList.tags.push(['p', pubkey]);
-    this.updateMuteList(currentMuteList);
-
-    await this.publishEvent(currentMuteList);
-  }
-
   // Add a method to clean up subscriptions if needed
   ngOnDestroy(): void {
     this.destroy$.next();

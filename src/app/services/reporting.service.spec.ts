@@ -16,7 +16,7 @@ import { PoolService } from './relays/pool.service';
 import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { MessagingService } from './messaging.service';
-import { applyMuteListChange } from '../utils/mute-list';
+import { applyMuteListChange, pickNewestMuteList } from '../utils/mute-list';
 
 describe('ReportingService', () => {
   describe('stripNostrUrisAndUrls', () => {
@@ -265,6 +265,22 @@ describe('ReportingService', () => {
 
       expect(merged.publicTags).toEqual([['p', 'keep-user'], ['e', 'thread']]);
       expect(merged.privateTags).toEqual([['t', 'nostr']]);
+    });
+
+    it('keeps the lowest event id when created_at matches', () => {
+      const low = {
+        id: '000',
+        sig: 'low-sig',
+        kind: 10000,
+        created_at: 50,
+        content: '',
+        tags: [['p', 'low-id']],
+        pubkey: 'account',
+      };
+      const high = { ...low, id: 'fff', tags: [['p', 'high-id']] };
+
+      expect(pickNewestMuteList([high, low])?.id).toBe('000');
+      expect(pickNewestMuteList([low, high])?.id).toBe('000');
     });
   });
 
@@ -673,6 +689,132 @@ describe('ReportingService', () => {
         expect.any(String),
         expect.any(Object),
       );
+    });
+
+    it('should publish the lower event id when relays tie on created_at', async () => {
+      const low = createMuteListEvent('aaa', 200, [['p', 'low-id'], ['client', 'amethyst']]);
+      const high = createMuteListEvent('zzz', 200, [['p', 'high-id']]);
+      deliverRelays({
+        [writeRelay]: [high],
+        [outboxRelay]: [low],
+      });
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        tags: [['p', 'low-id'], ['client', 'amethyst'], ['word', 'spoiler']],
+      }));
+    });
+
+    it('should treat an event without EOSE as a relay answer', async () => {
+      const fromEvent = createMuteListEvent('event-only', 320, [['p', 'from-event'], ['word', 'kept']]);
+      deliverRelays(
+        { [writeRelay]: [fromEvent], [outboxRelay]: [] },
+        { [writeRelay]: false, [outboxRelay]: true },
+      );
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        tags: [['p', 'from-event'], ['word', 'kept'], ['word', 'spoiler']],
+      }));
+      expect(snackBar.open).not.toHaveBeenCalled();
+    });
+
+    it('should count a relay listed as both write and outbox once', async () => {
+      vi.mocked(mockUserRelays.getUserRelays).mockResolvedValue([writeRelay]);
+      deliverRelays({
+        [writeRelay]: [createMuteListEvent('shared-event', 180, [['p', 'shared-user']])],
+      });
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(ensureRelay).toHaveBeenCalledTimes(1);
+      expect(ensureRelay).toHaveBeenCalledWith(writeRelay);
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        tags: [['p', 'shared-user'], ['word', 'spoiler']],
+      }));
+    });
+
+    it('should not publish when the account changes during the relay read', async () => {
+      let releaseDiscovery: (relays: string[]) => void = () => {};
+      let discoveryStarted = false;
+      vi.mocked(mockUserRelays.getUserRelays).mockImplementation(() => {
+        discoveryStarted = true;
+        return new Promise(resolve => {
+          releaseDiscovery = resolve;
+        });
+      });
+
+      const pending = service.addWordToMuteListAndPublish('spoiler');
+      for (let i = 0; i < 20 && !discoveryStarted; i++) {
+        await Promise.resolve();
+      }
+      expect(discoveryStarted).toBe(true);
+
+      mockAccountStateService.account.set({
+        pubkey: 'other-account',
+        source: 'extension',
+        hasActivated: true,
+      });
+      releaseDiscovery([outboxRelay]);
+      await pending;
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+      expect(mockAccountStateService.muteList()).toBeUndefined();
+    });
+
+    it('should not publish when signing returns another account', async () => {
+      deliverRelays([createMuteListEvent('relay-event', 200, [['p', 'kept-user']])]);
+      vi.mocked(mockNostrService.signEvent).mockImplementation(async (event) => {
+        mockAccountStateService.account.set({
+          pubkey: 'other-account',
+          source: 'extension',
+          hasActivated: true,
+        });
+        return {
+          ...event,
+          pubkey: 'other-account',
+          id: 'wrong-account',
+          sig: 'sig',
+        };
+      });
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(mockDatabaseService.saveReplaceableEvent).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+      expect(mockAccountStateService.muteList()).toBeUndefined();
+    });
+
+    it('should keep both entries when two mute edits run together', async () => {
+      const base = createMuteListEvent('base-event', 100, [['p', 'kept']]);
+      ensureRelay.mockImplementation(async (url: string) => ({
+        url,
+        subscribe: (_filters: unknown, params: RelaySubParams) => {
+          params.onevent?.(base);
+          params.oneose?.();
+          return { close: vi.fn() };
+        },
+      }));
+      let signCount = 0;
+      vi.mocked(mockNostrService.signEvent).mockImplementation(async (event) => {
+        signCount += 1;
+        return { ...event, pubkey: accountPubkey, id: `signed-${signCount}`, sig: 'sig' };
+      });
+
+      await Promise.all([
+        service.addWordToMuteListAndPublish('alpha'),
+        service.addWordToMuteListAndPublish('beta'),
+      ]);
+
+      const published = vi.mocked(mockPublishService.publish).mock.calls.map(call => call[0]);
+      expect(published).toHaveLength(2);
+      expect(published[0].tags).toEqual([['p', 'kept'], ['word', 'alpha']]);
+      expect(published[1].tags).toEqual([['p', 'kept'], ['word', 'alpha'], ['word', 'beta']]);
     });
 
     it('should not publish when outbox relay discovery fails', async () => {
