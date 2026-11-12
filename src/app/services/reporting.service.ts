@@ -80,6 +80,8 @@ export class ReportingService {
 
   // Same 5s bound as RelayPoolService.query and RelayServiceBase.get.
   private readonly muteListFetchTimeoutMs = 5000;
+  /** A stuck signer or decrypt prompt must not block later mute-list edits. */
+  private readonly muteListSignerTimeoutMs = 15000;
   /** Serializes mute-list edits so a second change re-reads the first result. */
   private muteListEditChain: Promise<void> = Promise.resolve();
 
@@ -420,8 +422,11 @@ export class ReportingService {
    * false if signing failed (e.g. user dismissed PIN/extension dialog).
    */
   async muteUser(pubkey: string): Promise<boolean> {
-    return this.enqueueMuteListEdit(async () => {
-      const freshMuteList = await this.signMuteListChange({ action: 'add', type: 'p', value: pubkey });
+    const published = await this.enqueueMuteListEdit(async (startedPubkey) => {
+      const freshMuteList = await this.signMuteListChange(
+        { action: 'add', type: 'p', value: pubkey },
+        startedPubkey,
+      );
       if (!freshMuteList) return false;
 
       await this.publishService.publish(freshMuteList);
@@ -434,6 +439,7 @@ export class ReportingService {
       this.logger.debug('Blocked user and published mute list:', pubkey);
       return true;
     });
+    return published === true;
   }
 
   /**
@@ -441,34 +447,38 @@ export class ReportingService {
    * Returns true if the operation succeeded, false if signing failed.
    */
   async unblockUser(pubkey: string): Promise<boolean> {
-    return this.enqueueMuteListEdit(async () => {
-      const freshMuteList = await this.signMuteListChange({ action: 'remove', type: 'p', value: pubkey });
+    const published = await this.enqueueMuteListEdit(async (startedPubkey) => {
+      const freshMuteList = await this.signMuteListChange(
+        { action: 'remove', type: 'p', value: pubkey },
+        startedPubkey,
+      );
       if (!freshMuteList) return false;
       await this.publishService.publish(freshMuteList);
       return true;
     });
+    return published === true;
   }
 
   /**
    * Add a word to mute list and publish to relays
    */
   async addWordToMuteListAndPublish(word: string): Promise<void> {
-    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+    await this.enqueueMuteListEdit((startedPubkey) => this.publishMuteListChange({
       action: 'add',
       type: 'word',
       value: word.toLowerCase(),
-    }, 'word', word));
+    }, 'word', word, startedPubkey));
   }
 
   /**
    * Add a tag to mute list and publish to relays
    */
   async addTagToMuteListAndPublish(tag: string): Promise<void> {
-    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+    await this.enqueueMuteListEdit((startedPubkey) => this.publishMuteListChange({
       action: 'add',
       type: 't',
       value: tag.toLowerCase(),
-    }, 'tag', tag));
+    }, 'tag', tag, startedPubkey));
   }
 
   /**
@@ -519,33 +529,35 @@ export class ReportingService {
    */
   async createFreshMuteListEvent(type: 'user' | 'event', target: string): Promise<Event | null> {
     const tagType = type === 'user' ? 'p' : 'e';
-    return this.enqueueMuteListEdit(() => this.signMuteListChange({
+    const signed = await this.enqueueMuteListEdit((startedPubkey) => this.signMuteListChange({
       action: 'add',
       type: tagType,
       value: target,
-    }));
+    }, startedPubkey));
+    return signed ?? null;
   }
 
   /**
    * Create a fresh mute list event without a specific user
    */
   async createFreshMuteListWithoutUser(pubkeyToRemove: string): Promise<Event | null> {
-    return this.enqueueMuteListEdit(() => this.signMuteListChange({
+    const signed = await this.enqueueMuteListEdit((startedPubkey) => this.signMuteListChange({
       action: 'remove',
       type: 'p',
       value: pubkeyToRemove,
-    }));
+    }, startedPubkey));
+    return signed ?? null;
   }
 
   /**
    * Remove an item from the mute list and publish to relays
    */
   async removeFromMuteListAndPublish(item: MuteListItem): Promise<void> {
-    await this.enqueueMuteListEdit(() => this.publishMuteListChange({
+    await this.enqueueMuteListEdit((startedPubkey) => this.publishMuteListChange({
       action: 'remove',
       type: item.type,
       value: item.value,
-    }, 'item', item));
+    }, 'item', item, startedPubkey));
   }
 
   /**
@@ -561,23 +573,48 @@ export class ReportingService {
     this.accountState.privateMuteTags.set([]);
   }
 
-  /** Run mute-list edits one at a time. Each edit re-reads after the previous one. */
-  private enqueueMuteListEdit<T>(edit: () => Promise<T>): Promise<T> {
-    const run = this.muteListEditChain.then(edit, edit);
+  /**
+   * Run mute-list edits one at a time. The pubkey is the account at click time,
+   * not the account that happens to be active when the queued edit starts.
+   */
+  private enqueueMuteListEdit<T>(edit: (startedPubkey: string) => Promise<T>): Promise<T | undefined> {
+    const startedPubkey = this.accountState.account()?.pubkey;
+    const run = this.muteListEditChain.then(
+      () => this.runQueuedMuteListEdit(startedPubkey, edit),
+      () => this.runQueuedMuteListEdit(startedPubkey, edit),
+    );
     this.muteListEditChain = run.then(() => undefined, () => undefined);
     return run;
+  }
+
+  private async runQueuedMuteListEdit<T>(
+    startedPubkey: string | undefined,
+    edit: (startedPubkey: string) => Promise<T>,
+  ): Promise<T | undefined> {
+    if (!startedPubkey) return undefined;
+    if (!this.accountMatches(startedPubkey)) {
+      this.logger.warn('Refusing queued mute list edit because the account changed', { startedPubkey });
+      this.warnMuteListBlocked('fetch');
+      return undefined;
+    }
+    return edit(startedPubkey);
   }
 
   private accountMatches(pubkey: string): boolean {
     return this.accountState.account()?.pubkey === pubkey;
   }
 
+  private isEditTimeout(error: unknown): boolean {
+    return error instanceof Error && error.message.includes('timed out');
+  }
+
   private async publishMuteListChange(
     change: MuteListChange,
     label: string,
     detail: unknown,
+    startedPubkey: string,
   ): Promise<void> {
-    const signedEvent = await this.signMuteListChange(change);
+    const signedEvent = await this.signMuteListChange(change, startedPubkey);
     if (!signedEvent) return;
 
     const result = await this.publishService.publish(signedEvent);
@@ -590,9 +627,11 @@ export class ReportingService {
    * Read, merge, and sign one mute-list edit for the account that started it.
    * Does not publish. Callers that publish must stay inside the edit queue.
    */
-  private async signMuteListChange(change: MuteListChange): Promise<Event | null> {
-    const startedPubkey = this.accountState.account()?.pubkey;
-    if (!startedPubkey) return null;
+  private async signMuteListChange(change: MuteListChange, startedPubkey: string): Promise<Event | null> {
+    if (!this.accountMatches(startedPubkey)) {
+      this.warnMuteListBlocked('fetch');
+      return null;
+    }
 
     const unsignedEvent = await this.prepareMuteListUpdate(change, startedPubkey);
     if (!unsignedEvent) return null;
@@ -602,7 +641,11 @@ export class ReportingService {
     }
 
     try {
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
+      const signedEvent = await this.withTimeout(
+        this.nostr.signEvent(unsignedEvent),
+        this.muteListSignerTimeoutMs,
+        'Mute list signing',
+      );
       if (signedEvent.pubkey !== startedPubkey || !this.accountMatches(startedPubkey)) {
         this.logger.warn('Refusing to publish mute list because the account changed', {
           startedPubkey,
@@ -617,7 +660,12 @@ export class ReportingService {
       await this.saveMuteListEvent(signedEvent);
       return signedEvent;
     } catch (error) {
-      this.logger.error('Error signing mute list', error);
+      if (this.isEditTimeout(error)) {
+        this.logger.warn('Refusing to publish mute list because signing timed out', error);
+        this.warnMuteListBlocked('fetch');
+      } else {
+        this.logger.error('Error signing mute list', error);
+      }
       return null;
     }
   }
@@ -642,7 +690,11 @@ export class ReportingService {
     let privateTags: string[][] = [];
     if (base?.content?.trim()) {
       try {
-        privateTags = await this.decryptPrivateMuteTags(base.content, startedPubkey);
+        privateTags = await this.withTimeout(
+          this.decryptPrivateMuteTags(base.content, startedPubkey),
+          this.muteListSignerTimeoutMs,
+          'Mute list decryption',
+        );
       } catch (error) {
         this.logger.warn('Refusing to publish mute list because private entries could not be decrypted', error);
         this.warnMuteListBlocked('decrypt');

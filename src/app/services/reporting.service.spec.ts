@@ -722,18 +722,80 @@ describe('ReportingService', () => {
     });
 
     it('should count a relay listed as both write and outbox once', async () => {
+      const casedWriteRelay = 'wss://Write.Example/';
+      mockAccountRelayService.relays.set([{ url: casedWriteRelay, read: true, write: true }]);
       vi.mocked(mockUserRelays.getUserRelays).mockResolvedValue([writeRelay]);
       deliverRelays({
-        [writeRelay]: [createMuteListEvent('shared-event', 180, [['p', 'shared-user']])],
+        [casedWriteRelay]: [createMuteListEvent('shared-event', 180, [['p', 'shared-user']])],
       });
 
       await service.addWordToMuteListAndPublish('spoiler');
 
       expect(ensureRelay).toHaveBeenCalledTimes(1);
-      expect(ensureRelay).toHaveBeenCalledWith(writeRelay);
+      expect(ensureRelay).toHaveBeenCalledWith(casedWriteRelay);
       expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
         tags: [['p', 'shared-user'], ['word', 'spoiler']],
       }));
+    });
+
+    it('should drop a queued edit clicked before an account switch', async () => {
+      let releaseFirst: () => void = () => {};
+      let reads = 0;
+      vi.mocked(mockUserRelays.getUserRelays).mockImplementation(() => {
+        reads += 1;
+        if (reads === 1) {
+          return new Promise(resolve => {
+            releaseFirst = () => resolve([outboxRelay]);
+          });
+        }
+        return Promise.resolve([outboxRelay]);
+      });
+      deliverRelays([createMuteListEvent('base-event', 40, [['p', 'kept']])]);
+
+      const first = service.addWordToMuteListAndPublish('alpha');
+      const second = service.addWordToMuteListAndPublish('beta');
+      for (let i = 0; i < 20 && reads < 1; i++) {
+        await Promise.resolve();
+      }
+      expect(reads).toBe(1);
+
+      mockAccountStateService.account.set({
+        pubkey: 'account-b',
+        source: 'extension',
+        hasActivated: true,
+      });
+      releaseFirst();
+      await Promise.all([first, second]);
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+    });
+
+    it('should let the next edit run when signing times out', async () => {
+      vi.useFakeTimers();
+      try {
+        let calls = 0;
+        vi.mocked(mockNostrService.signEvent).mockImplementation((event) => {
+          calls += 1;
+          if (calls === 1) return new Promise(() => undefined);
+          return Promise.resolve({ ...event, pubkey: accountPubkey, id: 'signed-2', sig: 'sig' });
+        });
+        deliverRelays([createMuteListEvent('base-event', 40, [['p', 'kept']])]);
+
+        const first = service.addWordToMuteListAndPublish('alpha');
+        const second = service.addWordToMuteListAndPublish('beta');
+        await vi.advanceTimersByTimeAsync(15000);
+        await Promise.all([first, second]);
+
+        expect(mockPublishService.publish).toHaveBeenCalledTimes(1);
+        expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+          tags: [['p', 'kept'], ['word', 'beta']],
+        }));
+        expect(snackBar.open).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should not publish when the account changes during the relay read', async () => {
