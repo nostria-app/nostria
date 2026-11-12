@@ -335,19 +335,13 @@ export class ReportDialogComponent {
         });
         return true;
       } else if (this.data.target.eventId) {
-        // Create a fresh mute list event with the event
-        const freshMuteList = await this.createFreshMuteListWithEvent(this.data.target.eventId);
-        if (!freshMuteList) {
+        const success = await this.reportingService.muteEventAndPublish(this.data.target.eventId);
+        if (!success) {
           this.snackBar.open('Failed to block target', 'Dismiss', {
             duration: 3000,
           });
           return false;
         }
-
-        await this.publishService.signAndPublishAuto(
-          freshMuteList,
-          (event) => this.nostrService.signEvent(event)
-        );
 
         this.snackBar.open('Content blocked successfully', 'Dismiss', {
           duration: 3000,
@@ -364,7 +358,4 @@ export class ReportDialogComponent {
     }
   }
 
-  private async createFreshMuteListWithEvent(eventId: string): Promise<Event | null> {
-    return this.reportingService.createFreshMuteListEvent('event', eventId);
-  }
 }

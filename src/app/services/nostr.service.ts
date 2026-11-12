@@ -175,6 +175,8 @@ export class NostrService implements NostriaService {
   ];
   publishQueue: any[] = [];
   accountSubscription: any = null;
+  /** Kind 10000 is subscribed without the metadata `since` window. */
+  private muteListSubscription: { close?: () => void } | null = null;
 
   // These are cache-lookups for the metadata and relays of all users,
   // to avoid query the database all the time.
@@ -661,6 +663,7 @@ export class NostrService implements NostriaService {
       }
       this.accountSubscription = null;
     }
+    this.closeMuteListSubscription();
     // this.accountState.clearProfileCache();
     // this.accountsMetadata.set([]);
     // this.accountsRelays.set([]);
@@ -731,7 +734,6 @@ export class NostrService implements NostriaService {
       kinds: [
         kinds.Metadata,      // 0 - profile
         kinds.Contacts,      // 3 - following list
-        kinds.Mutelist,      // 10000 - mute list
         10001,               // 10001 - pinned notes
         kinds.RelayList,     // 10002 - relay configuration
         10023,               // 10023 - pinned articles
@@ -960,6 +962,23 @@ export class NostrService implements NostriaService {
     };
 
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
+    // Kind 10000 is often older than lastSync. Leaving it on the `since`
+    // filter skips the real list and the next edit can publish that partial cache.
+    this.closeMuteListSubscription();
+    this.muteListSubscription = this.accountRelay.subscribe({
+      kinds: [kinds.Mutelist],
+      authors: [pubkey],
+    }, onEvent);
+  }
+
+  private closeMuteListSubscription(): void {
+    if (!this.muteListSubscription) return;
+    try {
+      this.muteListSubscription.close?.();
+    } catch (error) {
+      this.logger.warn('Error closing mute list subscription', error);
+    }
+    this.muteListSubscription = null;
   }
 
   /** Queue NIP-07 sign requests so only one extension prompt runs at a time. */
