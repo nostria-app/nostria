@@ -13,7 +13,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
-import { NostrService } from '../../../services/nostr.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { ReportingService } from '../../../services/reporting.service';
@@ -51,7 +50,6 @@ import { LoggerService } from '../../../services/logger.service';
 })
 export class PrivacySettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);
-  nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
   imageCacheService = inject(ImageCacheService);
   reportingService = inject(ReportingService);
@@ -104,30 +102,14 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   @ViewChild('googleFaviconInfoContent')
   googleFaviconInfoContent!: TemplateRef<unknown>;
 
-  // Compute muted lists using getTags utility function
-  mutedAccounts = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList) return [];
-    return this.nostrService.getTags(muteList, 'p');
-  });
+  // Public tags plus decrypted private NIP-51 entries.
+  mutedAccounts = computed(() => this.reportingService.mutedPubkeys());
 
-  mutedTags = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList) return [];
-    return this.nostrService.getTags(muteList, 't');
-  });
+  mutedTags = computed(() => this.reportingService.mutedHashtags());
 
-  mutedWords = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList) return [];
-    return this.nostrService.getTags(muteList, 'word');
-  });
+  mutedWords = computed(() => this.reportingService.mutedWords());
 
-  mutedThreads = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList) return [];
-    return this.nostrService.getTags(muteList, 'e');
-  });
+  mutedThreads = computed(() => this.reportingService.mutedEvents());
 
   // Trusted media authors - users whose media is always revealed
   trustedMediaAuthors = computed(() => {

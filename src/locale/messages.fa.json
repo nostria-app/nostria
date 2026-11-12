@@ -1945,6 +1945,8 @@
     "event.pin.pin-article": "پین کردن مقاله\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
+    "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "scheduled.noRelays": "پیش از زمان‌بندی پست، یک رلهٔ نوشتن تنظیم کنید.",
     "scheduled.busy": "این پست در حال انتشار است. کمی بعد دوباره تلاش کنید.",
     "settings.wallet.overview": "",

@@ -19,6 +19,7 @@ import { PublishService } from './publish.service';
 import { EventFocusService } from './event-focus.service';
 import { LoggerService } from './logger.service';
 import { ContactListProfileMetadata, getContactListProfileMap, normalizeContactListTags } from '../utils/contact-list';
+import { collectMuteValues } from '../utils/mute-list';
 
 /** Temporary complimentary Premium so this npub can publish RSS podcasts. Remove after. */
 const TEMPORARY_PREMIUM_PUBKEYS = new Set([
@@ -178,6 +179,8 @@ export class AccountStateService implements OnDestroy {
   });
 
   muteList = signal<Event | undefined>(undefined);
+  /** Decrypted NIP-51 private mute tags for the current muteList event. */
+  privateMuteTags = signal<string[][]>([]);
 
   /**
    * Set of BOLT-11 invoice strings that have been verified as paid.
@@ -474,6 +477,7 @@ export class AccountStateService implements OnDestroy {
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
     this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
     this.muteList.set(undefined); // Clear mute list
+    this.privateMuteTags.set([]);
     this.paidInvoices.set(new Set()); // Clear paid invoices cache
     // Note: We don't clear subscriptions as they are persistent across account changes
   }
@@ -1434,30 +1438,23 @@ export class AccountStateService implements OnDestroy {
     }
   }
 
-  // Computed signals for different types of mutes
-  mutedAccounts = computed(() => {
-    const list = this.muteList();
-    if (!list || !list.tags) return [];
-    return list.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-  });
+  // Public tags plus decrypted NIP-51 private entries. Private tags stay out of
+  // the published `tags` array; they are only unioned here for filtering.
+  mutedAccounts = computed(() =>
+    collectMuteValues(this.muteList()?.tags, this.privateMuteTags(), 'p'),
+  );
 
-  mutedTags = computed(() => {
-    const list = this.muteList();
-    if (!list || !list.tags) return [];
-    return list.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
-  });
+  mutedTags = computed(() =>
+    collectMuteValues(this.muteList()?.tags, this.privateMuteTags(), 't'),
+  );
 
-  mutedWords = computed(() => {
-    const list = this.muteList();
-    if (!list || !list.tags) return [];
-    return list.tags.filter(tag => tag[0] === 'word').map(tag => tag[1]);
-  });
+  mutedWords = computed(() =>
+    collectMuteValues(this.muteList()?.tags, this.privateMuteTags(), 'word'),
+  );
 
-  mutedThreads = computed(() => {
-    const list = this.muteList();
-    if (!list || !list.tags) return [];
-    return list.tags.filter(tag => tag[0] === 'e').map(tag => tag[1]);
-  });
+  mutedThreads = computed(() =>
+    collectMuteValues(this.muteList()?.tags, this.privateMuteTags(), 'e'),
+  );
 
   // Method to update mute list
   updateMuteList(muteEvent: Event): void {

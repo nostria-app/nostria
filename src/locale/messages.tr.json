@@ -1945,6 +1945,8 @@
     "event.pin.pin-article": "Makaleyi sabitle\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
+    "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "scheduled.noRelays": "Bir gönderi planlamadan önce bir yazma aktarımı yapılandırın.",
     "scheduled.busy": "Bu yazı yayınlanıyor. Kısa süre sonra tekrar deneyin.",
     "settings.wallet.overview": "Cüzdan\n",

@@ -1,15 +1,27 @@
-import { inject, signal, computed, Service } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { PLATFORM_ID, inject, signal, computed, effect, untracked, Service } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event, kinds, UnsignedEvent } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
+import { EncryptionService } from './encryption.service';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
 import { SettingsService } from './settings.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
+import { PoolService } from './relays/pool.service';
+import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { MessagingService } from './messaging.service';
+import {
+  applyMuteListChange,
+  collectMuteValues,
+  MuteListChange,
+  parsePrivateMuteTags,
+  pickNewestMuteList,
+} from '../utils/mute-list';
 
 export type ReportType =
   | 'nudity'
@@ -49,8 +61,24 @@ export class ReportingService {
   private settings = inject(SettingsService);
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
+  private userRelays = inject(UserRelaysService);
+  private pool = inject(PoolService);
   private database = inject(DatabaseService);
   private messaging = inject(MessagingService);
+  private encryption = inject(EncryptionService);
+  private snackBar = inject(MatSnackBar);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
+
+  // Kind 10000 we built after a complete relay read. Newer than a slow relay echo.
+  private authoritativeMuteListId: string | null = null;
+  // Event id whose private content was already decrypted into account state.
+  private importedMuteListId: string | null = null;
+  private privateTagSyncGeneration = 0;
+  // Private tags waiting to be stored once the replacement event is signed.
+  private pendingPrivateTags: string[][] = [];
+
+  private readonly muteListFetchTimeoutMs = 8000;
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -59,30 +87,36 @@ export class ReportingService {
   // Contains the event ID and timestamp of the report
   private reportPublished = signal<{ eventId: string; timestamp: number } | null>(null);
 
-  // Computed signals for mute list items
-  mutedPubkeys = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList?.tags) return [];
-    return muteList.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-  });
+  constructor() {
+    // Decrypt is a browser crypto call, so it cannot be a computed. Import
+    // private NIP-51 entries whenever the cached list changes; publishing
+    // still refuses unless a fresh decrypt of the relay copy succeeds.
+    if (!this.isBrowser) return;
 
-  mutedEvents = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList?.tags) return [];
-    return muteList.tags.filter(tag => tag[0] === 'e').map(tag => tag[1]);
-  });
+    effect(() => {
+      const event = this.accountState.muteList();
+      untracked(() => {
+        void this.syncPrivateMuteTags(event);
+      });
+    });
+  }
 
-  mutedHashtags = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList?.tags) return [];
-    return muteList.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
-  });
+  // Computed signals for mute list items (public tags + decrypted private entries)
+  mutedPubkeys = computed(() =>
+    collectMuteValues(this.accountState.muteList()?.tags, this.accountState.privateMuteTags(), 'p'),
+  );
 
-  mutedWords = computed(() => {
-    const muteList = this.accountState.muteList();
-    if (!muteList?.tags) return [];
-    return muteList.tags.filter(tag => tag[0] === 'word').map(tag => tag[1]);
-  });
+  mutedEvents = computed(() =>
+    collectMuteValues(this.accountState.muteList()?.tags, this.accountState.privateMuteTags(), 'e'),
+  );
+
+  mutedHashtags = computed(() =>
+    collectMuteValues(this.accountState.muteList()?.tags, this.accountState.privateMuteTags(), 't'),
+  );
+
+  mutedWords = computed(() =>
+    collectMuteValues(this.accountState.muteList()?.tags, this.accountState.privateMuteTags(), 'word'),
+  );
 
   /**
    * Create a NIP-56 report event
@@ -515,8 +549,7 @@ export class ReportingService {
       // Sign the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
-      // Update local state immediately after signing
-      this.accountState.muteList.set(signedEvent);
+      this.rememberPublishedMuteList(signedEvent);
       await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
@@ -541,8 +574,7 @@ export class ReportingService {
       // Sign the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
-      // Update local state immediately after signing
-      this.accountState.muteList.set(signedEvent);
+      this.rememberPublishedMuteList(signedEvent);
       await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
@@ -557,36 +589,11 @@ export class ReportingService {
   }
 
   /**
-   * Create an unsigned mute list event with a new item (does not sign or update state)
+   * Create an unsigned mute list event with a new item (does not sign or update state).
+   * Returns null when the latest list could not be loaded — callers must not publish.
    */
   private async createUnsignedMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): Promise<UnsignedEvent | null> {
-    const account = this.accountState.account();
-    if (!account?.pubkey) {
-      return null;
-    }
-
-    // Get current mute list or create empty tags array
-    const currentMuteList = await this.getLatestMuteList(account.pubkey);
-    let existingTags: string[][] = [];
-
-    if (currentMuteList) {
-      existingTags = [...currentMuteList.tags];
-    }
-
-    // Check if item is already muted
-    const isAlreadyMuted = existingTags.some(tag => tag[0] === type && tag[1] === value);
-    if (!isAlreadyMuted) {
-      existingTags.push([type, value]);
-    }
-
-    // Create fresh event with current timestamp
-    return {
-      kind: 10000,
-      created_at: Math.floor(Date.now() / 1000),
-      content: '',
-      tags: existingTags,
-      pubkey: account.pubkey,
-    };
+    return this.prepareMuteListUpdate({ action: 'add', type, value });
   }
 
   /**
@@ -641,45 +648,21 @@ export class ReportingService {
       return null;
     }
 
-    // Get current mute list or create empty tags array
-    const currentMuteList = await this.getLatestMuteList(account.pubkey);
-    let existingTags: string[][] = [];
-
-    if (currentMuteList) {
-      existingTags = [...currentMuteList.tags];
+    const tagType = type === 'user' ? 'p' : 'e';
+    const muteListEvent = await this.prepareMuteListUpdate({
+      action: 'add',
+      type: tagType,
+      value: target,
+    });
+    if (!muteListEvent) {
+      return null;
     }
-
-    // Add the new target to the tags
-    if (type === 'user') {
-      // Check if user is already muted
-      const isAlreadyMuted = existingTags.some(tag => tag[0] === 'p' && tag[1] === target);
-      if (!isAlreadyMuted) {
-        existingTags.push(['p', target]);
-      }
-    } else if (type === 'event') {
-      // Check if event is already muted
-      const isAlreadyMuted = existingTags.some(tag => tag[0] === 'e' && tag[1] === target);
-      if (!isAlreadyMuted) {
-        existingTags.push(['e', target]);
-      }
-    }
-
-    // Create fresh event with current timestamp
-    const muteListEvent: UnsignedEvent = {
-      kind: 10000,
-      created_at: Math.floor(Date.now() / 1000), // Fresh timestamp
-      content: '',
-      tags: existingTags,
-      pubkey: account.pubkey,
-    };
 
     try {
       // Sign the event
       const signedEvent = await this.nostr.signEvent(muteListEvent);
 
-      // Update the account state with the new mute list
-      // Use update() to force signal change detection
-      this.accountState.muteList.set(signedEvent);
+      this.rememberPublishedMuteList(signedEvent);
       await this.saveMuteListEvent(signedEvent);
 
       // Force update by accessing the signal to ensure change detection
@@ -701,7 +684,7 @@ export class ReportingService {
 
     try {
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      this.accountState.muteList.set(signedEvent);
+      this.rememberPublishedMuteList(signedEvent);
       await this.saveMuteListEvent(signedEvent);
       return signedEvent;
     } catch (error) {
@@ -711,33 +694,11 @@ export class ReportingService {
   }
 
   /**
-   * Create an unsigned mute list event without a specific item (does not sign or update state)
+   * Create an unsigned mute list event without a specific item (does not sign or update state).
+   * Returns null when the latest list could not be loaded — callers must not publish.
    */
   private async createUnsignedMuteListWithoutItem(type: string, value: string): Promise<UnsignedEvent | null> {
-    const account = this.accountState.account();
-    if (!account?.pubkey) {
-      return null;
-    }
-
-    // Get current mute list or create empty tags array
-    const currentMuteList = await this.getLatestMuteList(account.pubkey);
-    let existingTags: string[][] = [];
-
-    if (currentMuteList) {
-      // Filter out the item to be removed
-      existingTags = currentMuteList.tags.filter(
-        tag => !(tag[0] === type && tag[1] === value)
-      );
-    }
-
-    // Create fresh event with current timestamp
-    return {
-      kind: 10000,
-      created_at: Math.floor(Date.now() / 1000),
-      content: '',
-      tags: existingTags,
-      pubkey: account.pubkey,
-    };
+    return this.prepareMuteListUpdate({ action: 'remove', type, value });
   }
 
   /**
@@ -751,8 +712,7 @@ export class ReportingService {
       // Sign the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
-      // Update local state immediately after signing
-      this.accountState.muteList.set(signedEvent);
+      this.rememberPublishedMuteList(signedEvent);
       await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
@@ -772,34 +732,326 @@ export class ReportingService {
   clear(): void {
     // Reset content overrides
     this.contentOverrides.set(new Set());
+    this.authoritativeMuteListId = null;
+    this.importedMuteListId = null;
+    this.pendingPrivateTags = [];
+    this.privateTagSyncGeneration++;
+    this.accountState.privateMuteTags.set([]);
   }
 
-  private async getLatestMuteList(pubkey: string): Promise<Event | undefined> {
-    const currentMuteList = this.accountState.muteList();
+  /**
+   * Build the next kind 10000 from the newest copy on write relays and outbox
+   * relays. A failed fetch, or private content that cannot be decrypted and
+   * re-encrypted, returns null so nothing is signed or published.
+   */
+  private async prepareMuteListUpdate(change: MuteListChange): Promise<UnsignedEvent | null> {
+    const account = this.accountState.account();
+    if (!account?.pubkey) {
+      return null;
+    }
+
+    const fetched = await this.fetchNewestMuteList(account.pubkey);
+    if (!fetched.ok) {
+      this.warnMuteListBlocked('fetch');
+      return null;
+    }
+
+    const base = this.chooseMuteListBase(fetched.event);
+    let privateTags: string[][] = [];
+    if (base?.content?.trim()) {
+      try {
+        privateTags = await this.decryptPrivateMuteTags(base.content, account.pubkey);
+      } catch (error) {
+        this.logger.warn('Refusing to publish mute list because private entries could not be decrypted', error);
+        this.warnMuteListBlocked('decrypt');
+        return null;
+      }
+    }
+
+    const merged = applyMuteListChange(base?.tags, privateTags, change);
+    let content = '';
+    if (merged.privateTags.length > 0) {
+      try {
+        // NIP-51: private entries are a JSON tag array, encrypted to the author.
+        content = await this.encryption.encryptNip44(JSON.stringify(merged.privateTags), account.pubkey);
+      } catch (error) {
+        this.logger.warn('Refusing to publish mute list because private entries could not be re-encrypted', error);
+        this.warnMuteListBlocked('decrypt');
+        return null;
+      }
+    }
+
+    this.pendingPrivateTags = merged.privateTags;
+
+    return {
+      kind: kinds.Mutelist,
+      created_at: Math.floor(Date.now() / 1000),
+      content,
+      tags: merged.publicTags,
+      pubkey: account.pubkey,
+    };
+  }
+
+  private chooseMuteListBase(relayEvent: Event | null): Event | null {
+    const local = this.accountState.muteList();
+    if (
+      local?.id &&
+      local.id === this.authoritativeMuteListId &&
+      (!relayEvent || local.created_at >= relayEvent.created_at)
+    ) {
+      return local;
+    }
+    return relayEvent;
+  }
+
+  private rememberPublishedMuteList(event: Event): void {
+    this.authoritativeMuteListId = event.id;
+    this.importedMuteListId = event.id;
+    this.accountState.privateMuteTags.set(this.pendingPrivateTags.map(tag => [...tag]));
+    this.accountState.muteList.set(event);
+  }
+
+  private warnMuteListBlocked(reason: 'fetch' | 'decrypt'): void {
+    const message = reason === 'fetch'
+      ? $localize`:@@reporting.muteList.notLoaded:Couldn't load your mute list from relays, so nothing was changed.`
+      : $localize`:@@reporting.muteList.privateUnavailable:Couldn't read the private part of your mute list, so nothing was changed.`;
+    this.snackBar.open(message, $localize`:@@common.dismiss:Dismiss`, { duration: 6000 });
+  }
+
+  private async syncPrivateMuteTags(event: Event | undefined): Promise<void> {
+    const generation = ++this.privateTagSyncGeneration;
+    if (!event?.content?.trim()) {
+      if (this.accountState.privateMuteTags().length > 0) {
+        this.accountState.privateMuteTags.set([]);
+      }
+      this.importedMuteListId = event?.id ?? null;
+      return;
+    }
+
+    if (event.id === this.importedMuteListId) return;
+
+    const pubkey = event.pubkey || this.accountState.account()?.pubkey;
+    if (!pubkey) return;
 
     try {
-      const [relayMuteList, storedMuteList] = await Promise.all([
-        this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist),
-        this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist),
-      ]);
+      const tags = await this.decryptPrivateMuteTags(event.content, pubkey);
+      if (generation !== this.privateTagSyncGeneration) return;
+      if (this.accountState.muteList()?.id !== event.id) return;
+      this.accountState.privateMuteTags.set(tags);
+      this.importedMuteListId = event.id;
+    } catch (error) {
+      if (generation !== this.privateTagSyncGeneration) return;
+      this.logger.warn('Mute list private entries are not available yet', error);
+      if (this.accountState.muteList()?.id === event.id) {
+        this.accountState.privateMuteTags.set([]);
+      }
+      this.importedMuteListId = event.id;
+    }
+  }
 
-      const latestMuteList = [currentMuteList, storedMuteList, relayMuteList]
-        .filter((event): event is Event => !!event)
-        .sort((left, right) => right.created_at - left.created_at)[0];
+  /**
+   * NIP-44 first, then NIP-04. A failure here must propagate so the edit is
+   * dropped instead of publishing an empty `content`.
+   */
+  private async decryptPrivateMuteTags(content: string, pubkey: string): Promise<string[][]> {
+    let plaintext: string | undefined;
+    let nip44Error: unknown;
 
-      if (latestMuteList && (!currentMuteList || latestMuteList.id !== currentMuteList.id)) {
-        this.accountState.muteList.set(latestMuteList);
+    try {
+      plaintext = await this.encryption.decryptNip44(content, pubkey);
+    } catch (error) {
+      nip44Error = error;
+    }
+
+    if (plaintext === undefined) {
+      try {
+        plaintext = await this.encryption.decryptNip04(content, pubkey);
+      } catch (nip04Error) {
+        this.logger.warn('NIP-44 and NIP-04 decryption failed for mute list', { nip44Error, nip04Error });
+        throw nip04Error instanceof Error ? nip04Error : new Error('Mute list decryption failed');
+      }
+    }
+
+    return parsePrivateMuteTags(plaintext);
+  }
+
+  private async fetchNewestMuteList(pubkey: string): Promise<{ ok: true; event: Event | null } | { ok: false }> {
+    let outboxRelays: string[];
+    try {
+      outboxRelays = await this.withTimeout(
+        this.userRelays.getUserRelays(pubkey),
+        this.muteListFetchTimeoutMs,
+        'Outbox relay discovery',
+      );
+    } catch (error) {
+      this.logger.warn('Refusing to publish mute list because outbox relays could not be loaded', error);
+      return { ok: false };
+    }
+
+    const writeRelays = this.getWriteRelayUrls();
+    const outboxUrls = this.uniqueRelayUrls(outboxRelays);
+    if (writeRelays.length === 0 && outboxUrls.length === 0) {
+      this.logger.warn('Refusing to publish mute list because no write or outbox relays are available', { pubkey });
+      return { ok: false };
+    }
+
+    try {
+      // One subscription over the union so a relay that is both a write relay
+      // and an outbox relay is not queried twice. Each group still has to EOSE.
+      const query = await this.queryMuteListRelays(
+        this.uniqueRelayUrls([...writeRelays, ...outboxUrls]),
+        pubkey,
+      );
+
+      const writeLoaded = this.groupReachedEose(writeRelays, query.eoseUrls);
+      const outboxLoaded = this.groupReachedEose(outboxUrls, query.eoseUrls);
+      if (!writeLoaded || !outboxLoaded) {
+        this.logger.warn('Refusing to publish mute list because a relay query timed out before EOSE', {
+          pubkey,
+          writeLoaded,
+          outboxLoaded,
+          writeRelays,
+          outboxUrls,
+        });
+        return { ok: false };
       }
 
-      return latestMuteList;
+      return {
+        ok: true,
+        event: pickNewestMuteList(query.events),
+      };
     } catch (error) {
-      this.logger.warn('Unable to sync mute list from relays before update. Changes will use local state only.', {
-        pubkey,
-        hasLocalMuteList: !!currentMuteList,
-        error,
-      });
-      return currentMuteList;
+      this.logger.warn('Refusing to publish mute list because the relay query failed', error);
+      return { ok: false };
     }
+  }
+
+  private getWriteRelayUrls(): string[] {
+    const marked = this.accountRelay.relays()
+      .filter(relay => relay.write !== false && !!relay.url)
+      .map(relay => relay.url);
+    if (marked.length > 0) {
+      return this.uniqueRelayUrls(marked);
+    }
+    return this.uniqueRelayUrls(this.accountRelay.getRelayUrls());
+  }
+
+  private uniqueRelayUrls(urls: string[]): string[] {
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const url of urls) {
+      const trimmed = url?.trim();
+      if (!trimmed) continue;
+      const key = this.normalizeRelayUrl(trimmed);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(trimmed);
+    }
+    return unique;
+  }
+
+  private normalizeRelayUrl(url: string): string {
+    return url.trim().replace(/\/+$/, '').toLowerCase();
+  }
+
+  private groupReachedEose(urls: string[], eoseUrls: Set<string>): boolean {
+    if (urls.length === 0) return true;
+    const reached = new Set([...eoseUrls].map(url => this.normalizeRelayUrl(url)));
+    // Every relay in the group must EOSE. A timeout on one relay can hide a
+    // newer kind 10000, and publishing the copy we did see would replace it.
+    return urls.every(url => reached.has(this.normalizeRelayUrl(url)));
+  }
+
+  /**
+   * Read kind 10000 from each relay until that relay sends EOSE, fails, or the
+   * deadline passes. nostr-tools treats its own eose timer as a real EOSE, so
+   * this waits on the relay's oneose callback and keeps that timer past our
+   * deadline. A relay that only times out must not look like an empty list.
+   */
+  private queryMuteListRelays(urls: string[], pubkey: string): Promise<{ events: Event[]; eoseUrls: Set<string> }> {
+    if (urls.length === 0) {
+      return Promise.resolve({ events: [], eoseUrls: new Set() });
+    }
+
+    const events: Event[] = [];
+    const eoseUrls = new Set<string>();
+    const pending = new Set(urls.map(url => this.normalizeRelayUrl(url)));
+    const subscriptions: { close: () => void }[] = [];
+    let settled = false;
+
+    return new Promise(resolve => {
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        for (const subscription of subscriptions) {
+          try {
+            subscription.close();
+          } catch {
+            // The relay may already have closed this subscription.
+          }
+        }
+        resolve({ events, eoseUrls });
+      };
+
+      const markDone = (url: string, reachedEose: boolean) => {
+        if (settled) return;
+        const key = this.normalizeRelayUrl(url);
+        if (!pending.has(key)) return;
+        pending.delete(key);
+        if (reachedEose) eoseUrls.add(key);
+        if (pending.size === 0) finish();
+      };
+
+      const timer = setTimeout(() => finish(), this.muteListFetchTimeoutMs);
+
+      void Promise.all(urls.map(async url => {
+        try {
+          const relay = await this.withTimeout(
+            this.pool.pool.ensureRelay(url),
+            this.muteListFetchTimeoutMs,
+            `Mute list relay ${url}`,
+          );
+          if (settled) return;
+
+          const subscription = relay.subscribe(
+            [{ authors: [pubkey], kinds: [kinds.Mutelist], limit: 1 }],
+            {
+              // Longer than our deadline so the library's fake EOSE timer
+              // cannot mark a silent relay as finished.
+              eoseTimeout: this.muteListFetchTimeoutMs + 5000,
+              onevent: (event: Event) => {
+                if (event.pubkey === pubkey && event.kind === kinds.Mutelist) {
+                  events.push(event);
+                }
+              },
+              oneose: () => markDone(url, true),
+              onclose: () => markDone(url, false),
+            },
+          );
+          subscriptions.push(subscription);
+        } catch (error) {
+          this.logger.warn('Mute list relay did not connect', { url, error });
+          markDone(url, false);
+        }
+      }));
+    });
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+      promise.then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        error => {
+          clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
+    });
   }
 
   private async saveMuteListEvent(event: Event): Promise<void> {

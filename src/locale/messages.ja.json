@@ -1945,6 +1945,8 @@
     "event.pin.pin-article": "ピン記事\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
+    "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "scheduled.noRelays": "投稿を予約する前に書き込み用リレーを設定してください。",
     "scheduled.busy": "この投稿は送信中です。しばらくしてからもう一度お試しください。",
     "settings.wallet.overview": "ウォレット\n",

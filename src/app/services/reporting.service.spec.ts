@@ -1,17 +1,22 @@
-import { signal } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { ReportingService } from './reporting.service';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
+import { EncryptionService } from './encryption.service';
 import { LoggerService } from './logger.service';
 import { NostrService, NostrUser } from './nostr.service';
 import { SettingsService } from './settings.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
+import { PoolService } from './relays/pool.service';
+import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { MessagingService } from './messaging.service';
+import { applyMuteListChange } from '../utils/mute-list';
 
 describe('ReportingService', () => {
   describe('stripNostrUrisAndUrls', () => {
@@ -226,28 +231,107 @@ describe('ReportingService', () => {
     });
   });
 
+  describe('mute list merge', () => {
+    it('keeps unknown public tags and private tags when one entry is added', () => {
+      const merged = applyMuteListChange(
+        [
+          ['p', 'public-user'],
+          ['client', 'amethyst', 'extra'],
+        ],
+        [
+          ['p', 'private-user', 'wss://relay.example'],
+          ['word', 'secret'],
+        ],
+        { action: 'add', type: 'word', value: 'spoiler' },
+      );
+
+      expect(merged.publicTags).toEqual([
+        ['p', 'public-user'],
+        ['client', 'amethyst', 'extra'],
+        ['word', 'spoiler'],
+      ]);
+      expect(merged.privateTags).toEqual([
+        ['p', 'private-user', 'wss://relay.example'],
+        ['word', 'secret'],
+      ]);
+    });
+
+    it('removes an entry from both the public and private copies', () => {
+      const merged = applyMuteListChange(
+        [['p', 'keep-user'], ['e', 'thread']],
+        [['p', 'remove-user'], ['t', 'nostr']],
+        { action: 'remove', type: 'p', value: 'remove-user' },
+      );
+
+      expect(merged.publicTags).toEqual([['p', 'keep-user'], ['e', 'thread']]);
+      expect(merged.privateTags).toEqual([['t', 'nostr']]);
+    });
+  });
+
   describe('mute list updates', () => {
     let service: ReportingService;
-    let mockAccountStateService: Pick<AccountStateService, 'account' | 'muteList' | 'updateMuteList'>;
-    let mockAccountRelayService: Pick<AccountRelayService, 'getEventByPubkeyAndKind'>;
-    let mockDatabaseService: Pick<DatabaseService, 'getEventByPubkeyAndKind' | 'saveReplaceableEvent'>;
+    let mockAccountStateService: Pick<AccountStateService, 'account' | 'muteList' | 'privateMuteTags' | 'updateMuteList'>;
+    let mockAccountRelayService: Pick<AccountRelayService, 'relays' | 'getRelayUrls'>;
+    let mockDatabaseService: Pick<DatabaseService, 'saveReplaceableEvent'>;
     let mockNostrService: Pick<NostrService, 'signEvent'>;
     let mockPublishService: Pick<PublishService, 'publish'>;
     let mockLoggerService: Pick<LoggerService, 'debug' | 'error' | 'info' | 'warn'>;
+    let mockUserRelays: Pick<UserRelaysService, 'getUserRelays'>;
+    let mockEncryption: Pick<EncryptionService, 'decryptNip44' | 'decryptNip04' | 'encryptNip44'>;
+    let ensureRelay: ReturnType<typeof vi.fn>;
+    let snackBar: { open: ReturnType<typeof vi.fn> };
 
     const accountPubkey = 'account-pubkey';
+    const writeRelay = 'wss://write.example';
+    const outboxRelay = 'wss://outbox.example';
 
-    const createMuteListEvent = (id: string, createdAt: number, tags: string[][]): Event => ({
+    interface RelaySubParams {
+      onevent?: (event: Event) => void;
+      oneose?: () => void;
+      onclose?: (reason: string) => void;
+    }
+
+    const createMuteListEvent = (
+      id: string,
+      createdAt: number,
+      tags: string[][],
+      content = '',
+    ): Event => ({
       id,
       sig: `${id}-sig`,
       kind: 10000,
       created_at: createdAt,
-      content: '',
+      content,
       tags,
       pubkey: accountPubkey,
     });
 
+    const deliverRelays = (
+      events: Event[] | Record<string, Event[]>,
+      eose: boolean | Record<string, boolean> = true,
+    ) => {
+      ensureRelay.mockImplementation(async (url: string) => ({
+        url,
+        subscribe: (_filters: unknown, params: RelaySubParams) => {
+          const relayEvents = Array.isArray(events) ? events : events[url] ?? [];
+          for (const event of relayEvents) params.onevent?.(event);
+          const reached = typeof eose === 'boolean' ? eose : eose[url] ?? true;
+          if (reached) params.oneose?.();
+          else params.onclose?.('timeout');
+          return { close: vi.fn() };
+        },
+      }));
+    };
+
     beforeEach(() => {
+      ensureRelay = vi.fn(async (url: string) => ({
+        url,
+        subscribe: (_filters: unknown, params: RelaySubParams) => {
+          params.oneose?.();
+          return { close: vi.fn() };
+        },
+      }));
+      snackBar = { open: vi.fn() };
       mockAccountStateService = {
         account: signal<NostrUser | null>({
           pubkey: accountPubkey,
@@ -255,13 +339,22 @@ describe('ReportingService', () => {
           hasActivated: true,
         }),
         muteList: signal<Event | undefined>(undefined),
+        privateMuteTags: signal<string[][]>([]),
         updateMuteList: vi.fn(),
       };
       mockAccountRelayService = {
-        getEventByPubkeyAndKind: vi.fn(),
+        relays: signal([{ url: writeRelay, read: true, write: true }]),
+        getRelayUrls: vi.fn().mockReturnValue([writeRelay]),
+      };
+      mockUserRelays = {
+        getUserRelays: vi.fn().mockResolvedValue([outboxRelay]),
+      };
+      mockEncryption = {
+        decryptNip44: vi.fn().mockRejectedValue(new Error('not nip44')),
+        decryptNip04: vi.fn().mockRejectedValue(new Error('not nip04')),
+        encryptNip44: vi.fn().mockResolvedValue('re-encrypted'),
       };
       mockDatabaseService = {
-        getEventByPubkeyAndKind: vi.fn(),
         saveReplaceableEvent: vi.fn().mockResolvedValue(true),
       };
       mockNostrService = {
@@ -287,6 +380,7 @@ describe('ReportingService', () => {
 
       TestBed.configureTestingModule({
         providers: [
+          provideZonelessChangeDetection(),
           ReportingService,
           { provide: AccountStateService, useValue: mockAccountStateService },
           { provide: UtilitiesService, useValue: { createEvent: vi.fn() } },
@@ -298,6 +392,10 @@ describe('ReportingService', () => {
           { provide: AccountRelayService, useValue: mockAccountRelayService },
           { provide: DatabaseService, useValue: mockDatabaseService },
           { provide: MessagingService, useValue: {} },
+          { provide: UserRelaysService, useValue: mockUserRelays },
+          { provide: PoolService, useValue: { pool: { ensureRelay } } },
+          { provide: EncryptionService, useValue: mockEncryption },
+          { provide: MatSnackBar, useValue: snackBar },
         ],
       });
 
@@ -306,27 +404,25 @@ describe('ReportingService', () => {
 
     it('should preserve the latest relay mute list when creating a fresh mute list event', async () => {
       const relayMuteList = createMuteListEvent('relay-event', 200, [['p', 'existing-user']]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+      deliverRelays([relayMuteList]);
 
       const signedEvent = await service.createFreshMuteListEvent('user', 'new-user');
 
       expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
         pubkey: accountPubkey,
+        content: '',
         tags: [['p', 'existing-user'], ['p', 'new-user']],
       }));
       expect(mockDatabaseService.saveReplaceableEvent).toHaveBeenCalledWith(signedEvent);
       expect(mockAccountStateService.muteList()).toEqual(signedEvent);
     });
 
-    it('should preserve other mute entries when unblocking a user without local mute state', async () => {
-      const storedMuteList = createMuteListEvent('stored-event', 150, [
+    it('should preserve other mute entries when unblocking a user', async () => {
+      deliverRelays([createMuteListEvent('relay-event', 150, [
         ['p', 'keep-user'],
         ['p', 'remove-user'],
         ['e', 'muted-event'],
-      ]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(null);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+      ])]);
 
       const signedEvent = await service.createFreshMuteListWithoutUser('remove-user');
 
@@ -338,40 +434,76 @@ describe('ReportingService', () => {
       expect(mockAccountStateService.muteList()).toEqual(signedEvent);
     });
 
-    it('should prefer the newest mute list between relay and storage', async () => {
-      const storedMuteList = createMuteListEvent('stored-event', 150, [['p', 'stored-user']]);
-      const relayMuteList = createMuteListEvent('relay-event', 250, [['p', 'relay-user']]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+    it('should prefer the newest mute list across write relays and outbox relays', async () => {
+      const writeMuteList = createMuteListEvent('write-event', 150, [['p', 'write-user']]);
+      const outboxMuteList = createMuteListEvent('outbox-event', 250, [['p', 'outbox-user']]);
+      deliverRelays({
+        [writeRelay]: [writeMuteList],
+        [outboxRelay]: [outboxMuteList],
+      });
 
       await service.createFreshMuteListEvent('user', 'new-user');
 
+      expect(ensureRelay).toHaveBeenCalledWith(writeRelay);
+      expect(ensureRelay).toHaveBeenCalledWith(outboxRelay);
       expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
         pubkey: accountPubkey,
-        tags: [['p', 'relay-user'], ['p', 'new-user']],
+        tags: [['p', 'outbox-user'], ['p', 'new-user']],
       }));
     });
 
-    it('should hydrate the latest relay mute list before adding a muted word', async () => {
-      const relayMuteList = createMuteListEvent('relay-event', 220, [['p', 'existing-user']]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+    it('should keep public tags, unknown tags, and private entries when adding one word', async () => {
+      const privateTags = [
+        ['p', 'private-user', 'wss://relay.example'],
+        ['word', 'secret'],
+      ];
+      vi.mocked(mockEncryption.decryptNip44).mockResolvedValue(JSON.stringify(privateTags));
+      deliverRelays([createMuteListEvent('relay-event', 300, [
+        ['p', 'public-user'],
+        ['word', 'spoiler'],
+        ['t', 'nostr'],
+        ['e', 'thread-id'],
+        ['client', 'amethyst', 'extra'],
+      ], 'nip44-ciphertext')]);
 
-      await service.addWordToMuteListAndPublish('Spoiler');
+      await service.addWordToMuteListAndPublish('NewWord');
 
+      expect(mockEncryption.encryptNip44).toHaveBeenCalledWith(JSON.stringify(privateTags), accountPubkey);
       expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
-        pubkey: accountPubkey,
-        tags: [['p', 'existing-user'], ['word', 'spoiler']],
+        content: 're-encrypted',
+        tags: [
+          ['p', 'public-user'],
+          ['word', 'spoiler'],
+          ['t', 'nostr'],
+          ['e', 'thread-id'],
+          ['client', 'amethyst', 'extra'],
+          ['word', 'newword'],
+        ],
       }));
       expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
-        tags: [['p', 'existing-user'], ['word', 'spoiler']],
+        content: 're-encrypted',
+        tags: expect.arrayContaining([['word', 'newword'], ['client', 'amethyst', 'extra']]),
+      }));
+    });
+
+    it('should fall back to NIP-04 when NIP-44 decryption fails and still re-encrypt private entries', async () => {
+      const privateTags = [['p', 'private-user']];
+      vi.mocked(mockEncryption.decryptNip44).mockRejectedValue(new Error('nip44 failed'));
+      vi.mocked(mockEncryption.decryptNip04).mockResolvedValue(JSON.stringify(privateTags));
+      deliverRelays([createMuteListEvent('relay-event', 300, [['p', 'public-user']], 'nip04-ciphertext')]);
+
+      await service.addTagToMuteListAndPublish('Nostr');
+
+      expect(mockEncryption.decryptNip04).toHaveBeenCalled();
+      expect(mockEncryption.encryptNip44).toHaveBeenCalledWith(JSON.stringify(privateTags), accountPubkey);
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        content: 're-encrypted',
+        tags: [['p', 'public-user'], ['t', 'nostr']],
       }));
     });
 
     it('should hydrate the latest relay mute list before adding a muted tag', async () => {
-      const relayMuteList = createMuteListEvent('relay-event', 220, [['p', 'existing-user']]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+      deliverRelays([createMuteListEvent('relay-event', 220, [['p', 'existing-user']])]);
 
       await service.addTagToMuteListAndPublish('Nostr');
 
@@ -384,14 +516,12 @@ describe('ReportingService', () => {
       }));
     });
 
-    it('should hydrate the latest stored mute list before removing an item', async () => {
-      const storedMuteList = createMuteListEvent('stored-event', 180, [
+    it('should hydrate the latest relay mute list before removing an item', async () => {
+      deliverRelays([createMuteListEvent('relay-event', 180, [
         ['p', 'keep-user'],
         ['word', 'spoiler'],
         ['t', 'nostr'],
-      ]);
-      vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(null);
-      vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+      ])]);
 
       await service.removeFromMuteListAndPublish({ type: 'word', value: 'spoiler' });
 
@@ -402,6 +532,80 @@ describe('ReportingService', () => {
       expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
         tags: [['p', 'keep-user'], ['t', 'nostr']],
       }));
+    });
+
+    it('should publish a new list when write and outbox relays confirm there is none', async () => {
+      deliverRelays([]);
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        content: '',
+        tags: [['word', 'spoiler']],
+      }));
+    });
+
+    it('should not publish when the latest mute list times out', async () => {
+      mockAccountStateService.muteList.set(createMuteListEvent('cached-event', 900, [
+        ['p', 'cached-user'],
+        ['word', 'cached-word'],
+      ]));
+      deliverRelays(
+        { [writeRelay]: [createMuteListEvent('partial-event', 100, [['p', 'only-partial']])] },
+        { [writeRelay]: true, [outboxRelay]: false },
+      );
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+      expect(mockAccountStateService.muteList()?.id).toBe('cached-event');
+    });
+
+    it('should not publish when outbox relay discovery fails', async () => {
+      vi.mocked(mockUserRelays.getUserRelays).mockRejectedValue(new Error('discovery failed'));
+      deliverRelays([createMuteListEvent('relay-event', 200, [['p', 'existing-user']])]);
+
+      await service.muteUser('new-user');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+    });
+
+    it('should not publish when private mute list content cannot be decrypted', async () => {
+      vi.mocked(mockEncryption.decryptNip44).mockRejectedValue(new Error('nip44 failed'));
+      vi.mocked(mockEncryption.decryptNip04).mockRejectedValue(new Error('nip04 failed'));
+      deliverRelays([createMuteListEvent('relay-event', 300, [['p', 'public-user']], 'ciphertext')]);
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+      expect(mockEncryption.encryptNip44).not.toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalled();
+    });
+
+    it('should not publish when decrypted private content is not a tag list', async () => {
+      vi.mocked(mockEncryption.decryptNip44).mockResolvedValue('not-json');
+      deliverRelays([createMuteListEvent('relay-event', 300, [['p', 'public-user']], 'ciphertext')]);
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should not publish when private entries cannot be re-encrypted', async () => {
+      vi.mocked(mockEncryption.decryptNip44).mockResolvedValue(JSON.stringify([['p', 'private-user']]));
+      vi.mocked(mockEncryption.encryptNip44).mockRejectedValue(new Error('encrypt failed'));
+      deliverRelays([createMuteListEvent('relay-event', 300, [['p', 'public-user']], 'ciphertext')]);
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockNostrService.signEvent).not.toHaveBeenCalled();
+      expect(mockPublishService.publish).not.toHaveBeenCalled();
     });
   });
 });

@@ -1945,6 +1945,8 @@
     "event.pin.pin-article": "Segnala articolo\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
+    "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "scheduled.noRelays": "Configura un relay di scrittura prima di programmare un post.",
     "scheduled.busy": "Questo post è in fase di pubblicazione. Riprova tra poco.",
     "settings.wallet.overview": "Portafoglio\n",

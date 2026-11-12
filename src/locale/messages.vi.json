@@ -1945,6 +1945,8 @@
     "event.pin.pin-article": "Ghim bài viết\n",
     "podcasts.favorites.signIn": "Sign in to save favorites",
     "podcasts.favorites.publishLabel": "Favorite podcasts",
+    "reporting.muteList.notLoaded": "Couldn't load your mute list from relays, so nothing was changed.",
+    "reporting.muteList.privateUnavailable": "Couldn't read the private part of your mute list, so nothing was changed.",
     "scheduled.noRelays": "Định cấu hình chuyển tiếp ghi trước khi lên lịch đăng bài.",
     "scheduled.busy": "Bài đăng này đang được xuất bản. Hãy thử lại ngay.",
     "settings.wallet.overview": "Ví\n",
