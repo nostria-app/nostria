@@ -284,6 +284,7 @@ describe('ReportingService', () => {
     const accountPubkey = 'account-pubkey';
     const writeRelay = 'wss://write.example';
     const outboxRelay = 'wss://outbox.example';
+    const deadRelay = 'wss://dead.example';
 
     interface RelaySubParams {
       onevent?: (event: Event) => void;
@@ -545,7 +546,7 @@ describe('ReportingService', () => {
       }));
     });
 
-    it('should not publish when the latest mute list times out', async () => {
+    it('should not publish when fewer than two relays answer', async () => {
       mockAccountStateService.muteList.set(createMuteListEvent('cached-event', 900, [
         ['p', 'cached-user'],
         ['word', 'cached-word'],
@@ -559,8 +560,54 @@ describe('ReportingService', () => {
 
       expect(mockNostrService.signEvent).not.toHaveBeenCalled();
       expect(mockPublishService.publish).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalledWith(
+        expect.stringContaining(outboxRelay),
+        expect.any(String),
+        expect.any(Object),
+      );
+      expect(snackBar.open.mock.calls[0][0]).not.toContain(writeRelay);
       expect(mockAccountStateService.muteList()?.id).toBe('cached-event');
+    });
+
+    it('should publish the merged list when one relay is dead and the quorum is met', async () => {
+      mockAccountRelayService.relays.set([
+        { url: writeRelay, read: true, write: true },
+        { url: deadRelay, read: true, write: true },
+      ]);
+      const older = createMuteListEvent('write-event', 100, [['p', 'old-user'], ['client', 'amethyst']]);
+      const newer = createMuteListEvent('outbox-event', 400, [
+        ['p', 'kept-user'],
+        ['word', 'secret'],
+        ['client', 'amethyst', 'extra'],
+      ], 'ciphertext');
+      vi.mocked(mockEncryption.decryptNip44).mockResolvedValue(JSON.stringify([
+        ['p', 'private-user'],
+      ]));
+      deliverRelays(
+        {
+          [writeRelay]: [older],
+          [outboxRelay]: [newer],
+          [deadRelay]: [],
+        },
+        {
+          [writeRelay]: true,
+          [outboxRelay]: true,
+          [deadRelay]: false,
+        },
+      );
+
+      await service.addWordToMuteListAndPublish('spoiler');
+
+      expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+        content: 're-encrypted',
+        tags: [
+          ['p', 'kept-user'],
+          ['word', 'secret'],
+          ['client', 'amethyst', 'extra'],
+          ['word', 'spoiler'],
+        ],
+      }));
+      expect(snackBar.open).not.toHaveBeenCalled();
     });
 
     it('should not publish when outbox relay discovery fails', async () => {

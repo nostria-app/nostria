@@ -78,7 +78,8 @@ export class ReportingService {
   // Private tags waiting to be stored once the replacement event is signed.
   private pendingPrivateTags: string[][] = [];
 
-  private readonly muteListFetchTimeoutMs = 8000;
+  // Same 5s bound as RelayPoolService.query and RelayServiceBase.get.
+  private readonly muteListFetchTimeoutMs = 5000;
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -752,7 +753,7 @@ export class ReportingService {
 
     const fetched = await this.fetchNewestMuteList(account.pubkey);
     if (!fetched.ok) {
-      this.warnMuteListBlocked('fetch');
+      this.warnMuteListBlocked('fetch', fetched.silentRelays);
       return null;
     }
 
@@ -772,7 +773,8 @@ export class ReportingService {
     let content = '';
     if (merged.privateTags.length > 0) {
       try {
-        // NIP-51: private entries are a JSON tag array, encrypted to the author.
+        // NIP-51 private entries, re-encrypted with NIP-44. Amethyst's kind 10000
+        // path reads both NIP-04 and NIP-44 (NostrSigner.decrypt) and writes NIP-44.
         content = await this.encryption.encryptNip44(JSON.stringify(merged.privateTags), account.pubkey);
       } catch (error) {
         this.logger.warn('Refusing to publish mute list because private entries could not be re-encrypted', error);
@@ -811,11 +813,19 @@ export class ReportingService {
     this.accountState.muteList.set(event);
   }
 
-  private warnMuteListBlocked(reason: 'fetch' | 'decrypt'): void {
-    const message = reason === 'fetch'
-      ? $localize`:@@reporting.muteList.notLoaded:Couldn't load your mute list from relays, so nothing was changed.`
-      : $localize`:@@reporting.muteList.privateUnavailable:Couldn't read the private part of your mute list, so nothing was changed.`;
-    this.snackBar.open(message, $localize`:@@common.dismiss:Dismiss`, { duration: 6000 });
+  private warnMuteListBlocked(reason: 'fetch' | 'decrypt', silentRelays: string[] = []): void {
+    const message = reason === 'decrypt'
+      ? $localize`:@@reporting.muteList.privateUnavailable:Couldn't read the private part of your mute list, so nothing was changed.`
+      : this.muteListFetchWarning(silentRelays);
+    this.snackBar.open(message, $localize`:@@common.dismiss:Dismiss`, { duration: 8000 });
+  }
+
+  private muteListFetchWarning(silentRelays: string[]): string {
+    if (silentRelays.length === 0) {
+      return $localize`:@@reporting.muteList.notLoaded:Couldn't load your mute list from relays, so nothing was changed.`;
+    }
+    const relays = silentRelays.join(', ');
+    return $localize`:@@reporting.muteList.notLoadedRelays:Couldn't load your mute list, so nothing was changed. No answer from ${relays}:relays:.`;
   }
 
   private async syncPrivateMuteTags(event: Event | undefined): Promise<void> {
@@ -875,7 +885,9 @@ export class ReportingService {
     return parsePrivateMuteTags(plaintext);
   }
 
-  private async fetchNewestMuteList(pubkey: string): Promise<{ ok: true; event: Event | null } | { ok: false }> {
+  private async fetchNewestMuteList(
+    pubkey: string,
+  ): Promise<{ ok: true; event: Event | null } | { ok: false; silentRelays: string[] }> {
     let outboxRelays: string[];
     try {
       outboxRelays = await this.withTimeout(
@@ -885,35 +897,33 @@ export class ReportingService {
       );
     } catch (error) {
       this.logger.warn('Refusing to publish mute list because outbox relays could not be loaded', error);
-      return { ok: false };
+      return { ok: false, silentRelays: [] };
     }
 
     const writeRelays = this.getWriteRelayUrls();
     const outboxUrls = this.uniqueRelayUrls(outboxRelays);
     if (writeRelays.length === 0 && outboxUrls.length === 0) {
       this.logger.warn('Refusing to publish mute list because no write or outbox relays are available', { pubkey });
-      return { ok: false };
+      return { ok: false, silentRelays: [] };
     }
 
-    try {
-      // One subscription over the union so a relay that is both a write relay
-      // and an outbox relay is not queried twice. Each group still has to EOSE.
-      const query = await this.queryMuteListRelays(
-        this.uniqueRelayUrls([...writeRelays, ...outboxUrls]),
-        pubkey,
-      );
+    const urls = this.uniqueRelayUrls([...writeRelays, ...outboxUrls]);
 
-      const writeLoaded = this.groupReachedEose(writeRelays, query.eoseUrls);
-      const outboxLoaded = this.groupReachedEose(outboxUrls, query.eoseUrls);
-      if (!writeLoaded || !outboxLoaded) {
-        this.logger.warn('Refusing to publish mute list because a relay query timed out before EOSE', {
+    try {
+      // One query over the union so a relay that is both a write relay and an
+      // outbox relay is not counted twice. A dead relay must not block the edit
+      // once two relays (or every relay, when fewer than two are configured)
+      // have sent EOSE or a kind 10000.
+      const query = await this.queryMuteListRelays(urls, pubkey);
+      const answered = urls.filter(url => query.answeredUrls.has(this.normalizeRelayUrl(url)));
+      if (!this.muteListQuorumMet(urls.length, answered.length)) {
+        const silentRelays = urls.filter(url => !query.answeredUrls.has(this.normalizeRelayUrl(url)));
+        this.logger.warn('Refusing to publish mute list because too few relays answered', {
           pubkey,
-          writeLoaded,
-          outboxLoaded,
-          writeRelays,
-          outboxUrls,
+          answered,
+          silentRelays,
         });
-        return { ok: false };
+        return { ok: false, silentRelays };
       }
 
       return {
@@ -922,8 +932,15 @@ export class ReportingService {
       };
     } catch (error) {
       this.logger.warn('Refusing to publish mute list because the relay query failed', error);
-      return { ok: false };
+      return { ok: false, silentRelays: urls };
     }
+  }
+
+  /** Two answers, or every relay when fewer than two are configured. */
+  private muteListQuorumMet(configured: number, answered: number): boolean {
+    if (configured === 0) return false;
+    const required = configured < 2 ? configured : 2;
+    return answered >= required;
   }
 
   private getWriteRelayUrls(): string[] {
@@ -954,27 +971,22 @@ export class ReportingService {
     return url.trim().replace(/\/+$/, '').toLowerCase();
   }
 
-  private groupReachedEose(urls: string[], eoseUrls: Set<string>): boolean {
-    if (urls.length === 0) return true;
-    const reached = new Set([...eoseUrls].map(url => this.normalizeRelayUrl(url)));
-    // Every relay in the group must EOSE. A timeout on one relay can hide a
-    // newer kind 10000, and publishing the copy we did see would replace it.
-    return urls.every(url => reached.has(this.normalizeRelayUrl(url)));
-  }
-
   /**
-   * Read kind 10000 from each relay until that relay sends EOSE, fails, or the
-   * deadline passes. nostr-tools treats its own eose timer as a real EOSE, so
-   * this waits on the relay's oneose callback and keeps that timer past our
-   * deadline. A relay that only times out must not look like an empty list.
+   * Read kind 10000 until each relay sends EOSE, fails, or the deadline passes.
+   * nostr-tools treats its own eose timer as a real EOSE, so this waits on the
+   * relay's oneose callback and keeps that timer past our deadline. A kind 10000
+   * event also counts as an answer when EOSE never arrives.
    */
-  private queryMuteListRelays(urls: string[], pubkey: string): Promise<{ events: Event[]; eoseUrls: Set<string> }> {
+  private queryMuteListRelays(
+    urls: string[],
+    pubkey: string,
+  ): Promise<{ events: Event[]; answeredUrls: Set<string> }> {
     if (urls.length === 0) {
-      return Promise.resolve({ events: [], eoseUrls: new Set() });
+      return Promise.resolve({ events: [], answeredUrls: new Set() });
     }
 
     const events: Event[] = [];
-    const eoseUrls = new Set<string>();
+    const answeredUrls = new Set<string>();
     const pending = new Set(urls.map(url => this.normalizeRelayUrl(url)));
     const subscriptions: { close: () => void }[] = [];
     let settled = false;
@@ -991,7 +1003,11 @@ export class ReportingService {
             // The relay may already have closed this subscription.
           }
         }
-        resolve({ events, eoseUrls });
+        resolve({ events, answeredUrls });
+      };
+
+      const markAnswered = (url: string) => {
+        answeredUrls.add(this.normalizeRelayUrl(url));
       };
 
       const markDone = (url: string, reachedEose: boolean) => {
@@ -999,7 +1015,7 @@ export class ReportingService {
         const key = this.normalizeRelayUrl(url);
         if (!pending.has(key)) return;
         pending.delete(key);
-        if (reachedEose) eoseUrls.add(key);
+        if (reachedEose) markAnswered(url);
         if (pending.size === 0) finish();
       };
 
@@ -1023,6 +1039,7 @@ export class ReportingService {
               onevent: (event: Event) => {
                 if (event.pubkey === pubkey && event.kind === kinds.Mutelist) {
                   events.push(event);
+                  markAnswered(url);
                 }
               },
               oneose: () => markDone(url, true),
